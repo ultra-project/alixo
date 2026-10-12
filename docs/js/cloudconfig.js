@@ -7,8 +7,11 @@
                             présence (`online`, `activity`, `lastSeen`) écrite ici (1.12) ;
                             1.26 : `storage` (tailles), `ageGroup`, `plusConsent` — lisible par le titulaire et les admins seulement
    - inbox/{uid}/msgs/{id} → messages directs de l'administrateur (1.12)
-   - plans/{uid}          → Alixo+ (1.16) : { plus, until, since, by, note } posé par l'administrateur ;
-                            config/public.plusPrice / plusUrl / plusNote : l'offre affichée dans l'application
+   - plans/{uid}          → Alixo+ (1.16) : { plus, until, since, by, note } posé par l'administrateur, une clé, ou
+                            le serveur de paiement Stripe (1.30, by: 'stripe') ;
+                            config/public.plusPrice / plusUrl / plusNote : l'offre affichée dans l'application ;
+                            config/public.billingApi : adresse du serveur de paiement (billing/)
+   - billing/{uid}        → état de l'abonnement Stripe (1.30), écrit par le serveur, lu par le titulaire
    Règles Firestore : voir SETUP-COMPTES.md § 6 (panneau admin).
    Chargé APRÈS app.js, notify.js. Sans compte : inactif.
    ============================================================ */
@@ -80,6 +83,7 @@ window.AlixoCloud = (() => {
       notify({ id: 'ann_' + a.id, kind: 'admin', title: a.title, text: a.text || '', ts: +a.ts || Date.now(), action: a.url ? { type: 'url', url: a.url } : null, silent: !!a.silent });
     }
     if (window.AlixoApp && AlixoApp.setPlusOffer) AlixoApp.setPlusOffer({ price: d.plusPrice || '', url: d.plusUrl || '', note: d.plusNote || '' });
+    setBillingApi(d.billingApi || DEFAULT_BILLING_API);   // 1.30 : adresse du serveur de paiement (Stripe), réglable depuis le panneau admin
     if (d.latestVersion && window.AlixoApp && cmpVer(d.latestVersion, AlixoApp.version) > 0 && !(window.alixoDesktop && alixoDesktop.onUpdate)) {
       notify({ id: 'latest_' + d.latestVersion, kind: 'update', title: `Alixo ${d.latestVersion} est disponible`, text: d.latestNote || 'Téléchargez la nouvelle version depuis la page d’Alixo.', action: { type: 'url', url: d.downloadUrl || 'https://alixoapp.com/versions/' } });
     }
@@ -157,6 +161,50 @@ window.AlixoCloud = (() => {
       notify({ id: 'plus_' + at, kind: 'key', title: 'Alixo+ est activé sur votre compte', text: (d.note ? d.note + ' — ' : '') + (d.until ? `Jusqu’au ${new Date(+d.until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}. ` : '') + 'Tous les thèmes, toutes les polices, l’IA, les tâches et le stockage au-delà de 3 Go sont ouverts.', action: { type: 'settings' } });
     } else if (!active && lsGet(PLAN_AT_LS)) lsSet(PLAN_AT_LS, '');
   }, err => { if (!permErr(err)) console.error('Cloud (Alixo+) :', err); });
+
+  /* ---------------- Alixo+ par Stripe (1.30) ----------------
+     Le serveur de paiement (dossier billing/, Worker Cloudflare) crée les pages de paiement et le portail client, et
+     écrit plans/{uid} + billing/{uid} à chaque événement Stripe. L'application lui parle avec le jeton Firebase du
+     compte (jamais de clé Stripe côté client) ; son adresse vient de firebase-config.js (ALIXO_BILLING.api) ou de
+     config/public.billingApi. billing/{uid} (lecture seule) : { customerId, subscriptionId, status, plan, periodEnd,
+     cancelAtPeriodEnd, paymentFailedAt, lastInvoiceUrl… } → AlixoApp.setBilling. */
+  const DEFAULT_BILLING_API = String(window.ALIXO_BILLING && window.ALIXO_BILLING.api || '').replace(/\/+$/, '');
+  let billingApi = '', offerFor = '';
+  async function idToken() { const u = firebase.auth().currentUser; if (!u) throw new Error('Connectez-vous à votre compte Alixo.'); return u.getIdToken(); }
+  async function bapi(path, body) {
+    if (!billingApi) throw new Error('Le paiement en ligne n’est pas encore ouvert.');
+    let res;
+    try { res = await fetch(billingApi + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : { method: 'GET' }); }
+    catch { throw new Error('serveur de paiement injoignable (hors ligne ?)'); }
+    let j; try { j = await res.json(); } catch { j = {}; }
+    if (!res.ok) throw new Error(j.error || ('erreur ' + res.status));
+    return j;
+  }
+  async function loadOffer() {
+    if (!billingApi || offerFor === billingApi) return;
+    offerFor = billingApi;
+    try { const o = await bapi('/api/offer'); if (window.AlixoApp && AlixoApp.setBillingOffer) AlixoApp.setBillingOffer(o); }
+    catch (e) { offerFor = ''; console.warn('Paiement (tarifs) :', e && e.message); if (window.AlixoApp && AlixoApp.setBillingOffer) AlixoApp.setBillingOffer(null); }
+  }
+  function setBillingApi(url) {
+    const u = String(url || '').trim().replace(/\/+$/, '');
+    if (u && !/^https:\/\//.test(u) && !/^http:\/\/(localhost|127\.0\.0\.1)/.test(u)) return;
+    if (u === billingApi) return;
+    billingApi = u;
+    if (!u && window.AlixoApp && AlixoApp.setBillingOffer) AlixoApp.setBillingOffer(null);
+    loadOffer();
+  }
+  const billing = {
+    ready: () => !!billingApi,
+    api: () => billingApi,
+    checkout: async plan => bapi('/api/checkout', { idToken: await idToken(), plan: plan === 'yearly' ? 'yearly' : 'monthly', nonce: Date.now().toString(36) }),
+    portal: async () => bapi('/api/portal', { idToken: await idToken() }),
+    sync: async () => bapi('/api/sync', { idToken: await idToken() })
+  };
+  setBillingApi(DEFAULT_BILLING_API);
+  db.collection('billing').doc(uid).onSnapshot(snap => {
+    if (window.AlixoApp && AlixoApp.setBilling) AlixoApp.setBilling(snap.exists ? snap.data() : null);
+  }, err => { if (!permErr(err)) console.error('Cloud (abonnement) :', err); });
 
   /* ---------------- compte suspendu par l'administrateur ---------------- */
   db.collection('profiles').doc(uid).onSnapshot(snap => {
@@ -244,5 +292,5 @@ window.AlixoCloud = (() => {
     return { ok: true, msg: until ? `Alixo+ activé jusqu’au ${new Date(until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Alixo+ activé sans limite de durée' };
   }
 
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing };
 })();

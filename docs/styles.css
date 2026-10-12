@@ -1054,6 +1054,19 @@ body.mode-editor .tbtn.only-editor { display: grid; }
 .plus-precontract { display: grid; gap: 6px; margin-bottom: 12px; }
 .plus-precontract .acc-fact b { font-weight: 550; }
 .plus-precontract a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+/* 1.30 : achat Alixo+ par Stripe — choix de la formule, état de l'abonnement */
+.plus-plans { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 2px 0 14px; }
+.plus-plan { position: relative; gap: 4px; padding: 14px 14px 12px; }
+.plus-plan b { font-size: 14px; }
+.plus-plan .plus-price { font-size: 21px; font-weight: 700; color: var(--ink); letter-spacing: -.01em; line-height: 1.1; }
+.plus-plan .plus-price small { font-size: 12px; font-weight: 500; color: var(--ink-2); letter-spacing: 0; }
+.plus-plan.on { border-color: #c8892e; background: color-mix(in srgb, #d9a441 10%, var(--surface)); box-shadow: 0 0 0 1px #c8892e inset; }
+.plus-tag { position: absolute; top: -9px; right: 10px; font-size: 10px; font-weight: 800; letter-spacing: .05em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: linear-gradient(120deg, #b3762a, #d9a441); color: #fff; }
+.plus-state.warn, .plus-sub.warn { border-color: color-mix(in srgb, #d9534f 55%, var(--border)); background: color-mix(in srgb, #d9534f 8%, var(--surface)); }
+.plus-sub { display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.plus-sub > span { color: var(--ink); }
+.cta.small { padding: 6px 12px; font-size: 12.5px; }
+@media (max-width: 560px) { .plus-plans { grid-template-columns: 1fr; } }
 #pm-url { flex: 1; min-width: 0; font: inherit; font-size: 12.5px; padding: 8px 10px; border: 1px solid var(--border); border-radius: var(--r); background: var(--bg); color: var(--ink); }
 
 /* ============================================================

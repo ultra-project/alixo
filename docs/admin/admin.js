@@ -21,7 +21,7 @@
    - plans/{uid}             → Alixo+ (1.16) : { plus, until (0 = sans fin), since, by, note }  (posé ici, lu par l'utilisateur ;
                                 depuis 1.19 aussi écrit par l'utilisateur lui-même avec une clé d'activation)
    - codes/{code}            → clés d'activation Alixo+ (1.19) : { kind: 'plus', months, label, createdAt, by, usedBy, usedAt, usedEmail, applied }
-   - config/public           → + plusPrice, plusUrl, plusNote : l'offre Alixo+ affichée dans l'application (1.16)
+   - config/public           → + plusPrice, plusUrl, plusNote : l'offre Alixo+ affichée dans l'application (1.16) ; billingApi : serveur de paiement Stripe (1.30)
    Règles : SETUP-COMPTES.md § 6.
    ============================================================ */
 'use strict';
@@ -438,7 +438,7 @@
         ${row('Spécialités', `<div class="chips">${specChips(p, 99)}</div>`)}
         ${row('Séances', esc(p.nDocs ?? '—'))}
         ${row('Stockage', st ? `${fmtBytes(st.total)} <span class="muted small">(${st.nFiles ?? 0} fichier${(st.nFiles || 0) > 1 ? 's' : ''})</span>` : '<span class="muted">non mesuré</span>')}
-        ${row('Formule', planActive(pl) ? `Alixo+ · ${esc(planLabel(pl))}${pl.note ? `<div class="cell-sub">${esc(pl.note)}</div>` : ''}` : pl && pl.plus ? 'Alixo+ expiré' : 'Gratuite')}
+        ${row('Formule', (planActive(pl) ? `Alixo+ · ${esc(planLabel(pl))}${pl.note ? `<div class="cell-sub">${esc(pl.note)}</div>` : ''}` : pl && pl.plus ? 'Alixo+ expiré' : 'Gratuite') + (pl && pl.stripe && pl.stripe.customerId ? `<div class="cell-sub">Stripe : ${esc(pl.stripe.status || '')}${pl.stripe.cancelAtPeriodEnd ? ', résiliation programmée' : ''} · <a href="https://dashboard.stripe.com/customers/${esc(pl.stripe.customerId)}" target="_blank" rel="noopener">fiche client</a></div>` : ''))}
         ${row('Accès IA', keyChip(p) + (a && a.note ? `<div class="cell-sub">${esc(a.note)}</div>` : ''))}
         ${row('UID', `<code class="key-mask" data-copy-uid>${esc(p.uid)}</code>`)}
       </div>
@@ -461,6 +461,7 @@
     const on = planActive(cur);
     const base = on && cur.until ? +cur.until : Date.now();
     modal(`<h3>Alixo+ de ${esc(p.email || p.uid)}</h3>
+      ${cur && cur.by === 'stripe' ? `<p class="muted"><b>Abonnement Stripe</b> (${esc(cur.note || '')}${cur.stripe && cur.stripe.status ? ', ' + esc(cur.stripe.status) : ''}) : il se gère dans <a href="https://dashboard.stripe.com/${cur.stripe && cur.stripe.subscriptionId ? 'subscriptions/' + esc(cur.stripe.subscriptionId) : 'subscriptions'}" target="_blank" rel="noopener">Stripe</a> (remboursement, résiliation). Une durée posée ici sera remplacée au prochain événement Stripe ; « Retirer » n’arrête pas le prélèvement.</p>` : ''}
       <p class="muted">${on ? `Alixo+ est actif (${esc(planLabel(cur))}${cur.since ? ', depuis le ' + when(cur.since) : ''}). Une nouvelle durée <b>prolonge</b> à partir de la fin actuelle.` : 'Ouvre tous les thèmes, toutes les polices, l’IA, les tâches et le stockage au-delà de 3 Go sur ce compte, sur tous ses appareils, dès sa prochaine synchronisation.'}</p>
       <label class="field">Durée<select id="pl-dur"><option value="1">1 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12" selected>12 mois</option><option value="0">Sans fin</option><option value="custom">Jusqu’à une date…</option></select></label>
       <label class="field" id="pl-until-w" hidden>Fin<input id="pl-until" type="date" value="${on && cur.until ? new Date(+cur.until).toISOString().slice(0, 10) : ''}"></label>
@@ -671,6 +672,7 @@
     if (document.activeElement !== $('#plus-price')) $('#plus-price').value = pub.plusPrice || '';
     if (document.activeElement !== $('#plus-url')) $('#plus-url').value = pub.plusUrl || '';
     if (document.activeElement !== $('#plus-note')) $('#plus-note').value = pub.plusNote || '';
+    if (document.activeElement !== $('#plus-api')) $('#plus-api').value = pub.billingApi || '';
     const A = (pub.announcements || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     const aud = a => ({ all: 'tous', droit: 'Droit', economie: 'Économie', sante: 'Santé', commerce: 'Commerce', staps: 'STAPS' })[a.audience || 'all'] || a.audience;
     $('#ann-tbl tbody').innerHTML = A.length ? A.map(a => `<tr data-aid="${esc(a.id)}"><td><b>${esc(a.title)}</b><div class="muted small">${esc(a.text || '')}${a.url ? ` · <a href="${esc(a.url)}" target="_blank" rel="noopener">lien</a>` : ''}</div></td><td><span class="chip dim">${esc(aud(a))}</span>${a.silent ? ' <span class="chip dim">discrète</span>' : ''}</td><td>${when(a.ts)}</td><td>${a.until ? (a.until < Date.now() ? '<span class="chip bad">expirée</span> ' : '') + when(a.until) : '—'}</td><td><div class="acts"><button data-aa="del" class="danger">Supprimer</button></div></td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucune annonce.</td></tr>';
@@ -686,7 +688,10 @@
   $('#plus-save').addEventListener('click', async () => {
     const url = $('#plus-url').value.trim();
     if (url && !/^https?:\/\//.test(url)) { toast('Le lien doit commencer par https://'); return; }
-    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim() }); toast('Offre Alixo+ enregistrée');
+    const api = $('#plus-api').value.trim().replace(/\/+$/, '');
+    if (api && !/^https:\/\//.test(api)) { toast('L’adresse du serveur de paiement doit commencer par https://'); return; }
+    if (api) { try { const r = await fetch(api + '/'); const j = await r.json(); if (!j.ok) throw new Error(); if (!j.prices.monthly || !j.prices.yearly) toast('Serveur joignable, mais un tarif manque (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY dans wrangler.toml)'); } catch { toast('Serveur de paiement injoignable à cette adresse : vérifiez le déploiement (billing/README.md)'); return; } }
+    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim(), billingApi: api }); toast('Offre Alixo+ enregistrée');
   });
   $('#ann-add').addEventListener('click', () => {
     modal(`<h3>Nouvelle annonce</h3><label class="field">Titre<input id="an-title" maxlength="140" placeholder="Ex. Maintenance dimanche matin"></label><label class="field">Texte<textarea id="an-text" maxlength="600" placeholder="Détails (facultatif)"></textarea></label><label class="field">Lien (facultatif)<input id="an-url" placeholder="https://…"></label>
@@ -839,7 +844,7 @@
      Façon phpMyAdmin : collections racine, documents par pages de 50, recherche locale, filtre serveur,
      document complet avec ses sous-collections connues. Firestore ne liste pas les sous-collections
      depuis le navigateur : elles sont déclarées ici. */
-  const DB_ROOTS = ['profiles', 'admins', 'keys', 'plans', 'codes', 'inbox', 'config', 'shares', 'mail', 'audit'];   // 1.26 : plus de users/ (contenu des cours)
+  const DB_ROOTS = ['profiles', 'admins', 'keys', 'plans', 'billing', 'codes', 'inbox', 'config', 'shares', 'mail', 'audit'];   // 1.26 : plus de users/ (contenu des cours)
   const DB_SUBS = { shares: ['log', 'presence'], inbox: ['msgs'] };   // 1.26 : plus de users/** ni de contenu de partage
   const DB_PAGE = 50;
   const dbs = { path: '', docs: [], last: null, where: null, done: false, busy: false, ready: false };

@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.29.0';
+const ALIXO_VERSION = '1.30.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1988,6 +1988,29 @@ const PLUS_FEATURES = [
 ];
 let planInfo = (() => { try { return JSON.parse(localStorage.getItem(PLUS_LS)) || {}; } catch { return {}; } })();
 let plusOffer = { price: '', url: '', note: '' };
+/* 1.30 : paiement en ligne par Stripe (serveur billing/, adresse donnée par firebase-config.js ou config/public.billingApi) :
+   `billingOffer` = les deux tarifs lus chez Stripe ; `billingInfo` = billing/{uid}, l'état de l'abonnement du compte */
+let billingOffer = null, billingInfo = null;
+const SUB_GRANTING = ['active', 'trialing', 'past_due'];
+const billingReady = () => !!(window.AlixoCloud && AlixoCloud.enabled && AlixoCloud.billing && AlixoCloud.billing.ready());
+const canCheckout = () => billingReady() && !!(billingOffer && (billingOffer.monthly || billingOffer.yearly));
+const subActive = () => !!(billingInfo && billingInfo.subscriptionId && SUB_GRANTING.includes(billingInfo.status));
+const fmtMoney = (cents, cur) => { try { return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: String(cur || 'eur').toUpperCase() }); } catch { return (cents / 100).toFixed(2).replace('.', ',') + ' €'; } };
+const fmtLongDate = ts => new Date(+ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+/* « 14,99 €/mois ou 149,99 €/an » */
+function offerLabel() {
+  if (!billingOffer) return plusOffer.price || '';
+  const parts = [];
+  if (billingOffer.monthly) parts.push(fmtMoney(billingOffer.monthly.amount, billingOffer.monthly.currency) + '/mois');
+  if (billingOffer.yearly) parts.push(fmtMoney(billingOffer.yearly.amount, billingOffer.yearly.currency) + '/an');
+  return parts.join(' ou ');
+}
+/* mois « offerts » par la formule annuelle, par rapport à douze mois au tarif mensuel */
+function yearlySavingMonths() {
+  const m = billingOffer && billingOffer.monthly, y = billingOffer && billingOffer.yearly;
+  if (!m || !y || !m.amount) return 0;
+  return Math.max(0, Math.round((12 * m.amount - y.amount) / m.amount));
+}
 const planActive = p => !!(p && p.plus && (!p.until || +p.until > Date.now()));
 /* Alixo+ actif sur ce compte ? (sans service en ligne : tout est ouvert) */
 /* version personnalisée (1.19) : clé codée dans js/editions.js, activée dans Paramètres › Alixo+ ; suit le compte */
@@ -2048,6 +2071,21 @@ function removeEdition() {
   const ov = $('#setov'); if (ov && !ov.hidden) renderSettingsBody();
   toast('Version personnalisée retirée');
 }
+/* 1.30 : Paramètres › Alixo+ › Votre abonnement (Stripe) */
+function subscriptionHTML() {
+  const b = billingInfo; if (!b || !b.subscriptionId || !billingReady()) return '';
+  const st = subscriptionStatusText(); if (!st) return '';
+  return `<div class="set-sect"><div class="po-label">Votre abonnement</div>
+      <div class="plus-sub ${b.status === 'past_due' ? 'warn' : ''}"><span>${esc(st)}</span>
+        <div class="po-row" style="gap:8px; margin:0">${subActive() ? '<button class="cta plus-cta small" id="plus-manage2" type="button">Gérer mon abonnement</button>' : ''}${b.lastInvoiceUrl ? `<button class="cta ghost small" id="plus-invoice" type="button">Dernière facture</button>` : ''}<button class="cta ghost small" id="plus-sync" type="button" title="Relire l’abonnement chez Stripe">Actualiser</button></div>
+      </div>
+      <div class="po-hint" style="margin-top:8px">Carte bancaire, factures, passage du mensuel à l’annuel et résiliation se font dans « Gérer mon abonnement » (portail sécurisé Stripe). Les changements apparaissent ici en quelques secondes.</div></div>`;
+}
+function bindSubscription(root) {
+  const mg = root.querySelector('#plus-manage2'); if (mg) mg.addEventListener('click', e => openBillingPortal(e.currentTarget));
+  const inv = root.querySelector('#plus-invoice'); if (inv) inv.addEventListener('click', () => openExternalUrl(billingInfo.lastInvoiceUrl));
+  const sy = root.querySelector('#plus-sync'); if (sy) sy.addEventListener('click', async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Vérification…'; try { await AlixoCloud.billing.sync(); toast('Abonnement vérifié auprès de Stripe'); } catch (err) { toast('Vérification impossible : ' + (err && err.message || '')); } b.disabled = false; b.textContent = 'Actualiser'; });
+}
 function activationHTML() {
   const ed = editionInfo();
   return `<div class="set-sect"><div class="po-label">Clé d’activation</div>
@@ -2073,7 +2111,14 @@ function bindActivation(root) {
   inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
   const rm = root.querySelector('#set-edrm'); if (rm) rm.addEventListener('click', removeEdition);
 }
-function setPlusOffer(o) { plusOffer = Object.assign({ price: '', url: '', note: '' }, o || {}); const ov = $('#plusov'); if (ov) openPlusDialog(ov.dataset.feature || ''); }
+function refreshPlusDialogs() {
+  const ov = $('#plusov'); if (ov) openPlusDialog(ov.dataset.feature || '');
+  const so = $('#setov'); if (so && !so.hidden && settingsCat === 'plus') renderSettingsBody();
+}
+function setPlusOffer(o) { plusOffer = Object.assign({ price: '', url: '', note: '' }, o || {}); refreshPlusDialogs(); }
+/* appelés par js/cloudconfig.js : tarifs Stripe (GET /api/offer) et état de l'abonnement (billing/{uid}) */
+function setBillingOffer(o) { billingOffer = o && (o.monthly || o.yearly) ? o : null; refreshPlusDialogs(); }
+function setBilling(d) { const next = d && typeof d === 'object' ? d : null; if (JSON.stringify(next) === JSON.stringify(billingInfo)) return; billingInfo = next; refreshPlusDialogs(); }
 /* vrai si la fonction est disponible ; sinon ouvre la fenêtre Alixo+ et renvoie faux */
 function requirePlus(feature) { if (isPlus()) return true; openPlusDialog(feature); return false; }
 /* limite de stockage du compte gratuit : vrai si `bytes` octets de plus tiennent encore */
@@ -2126,6 +2171,7 @@ function openExternalUrl(url) {
 /* 1.26 : avant le lien de paiement — informations précontractuelles (C. conso., art. L. 221-5), acceptation des CGV
    et renonciation expresse au droit de rétractation (art. L. 221-28) ; un mineur est renvoyé vers un parent. */
 function openPlusUrl() {
+  if (canCheckout()) { openPlusCheckout(); return; }
   const url = plusOffer.url;
   if (!url) return;
   const ag = ageGroup();
@@ -2164,16 +2210,132 @@ function openPlusUrl() {
       });
     } });
 }
+/* 1.30 : choix de la formule (mensuelle / annuelle) — tuiles de la fenêtre d'achat */
+function planTilesHTML(sel) {
+  const m = billingOffer.monthly, y = billingOffer.yearly, saved = yearlySavingMonths();
+  const tile = (k, p, title, hint, tag) => `<button type="button" class="set-tile plus-plan ${sel === k ? 'on' : ''}" data-plan="${k}" role="radio" aria-checked="${sel === k}">${tag ? `<span class="plus-tag">${esc(tag)}</span>` : ''}<b>${title}</b><span class="plus-price">${esc(fmtMoney(p.amount, p.currency))}<small> / ${k === 'yearly' ? 'an' : 'mois'}</small></span><span>${hint}</span></button>`;
+  return `<div class="plus-plans" role="radiogroup" aria-label="Formule">
+    ${m ? tile('monthly', m, 'Mensuel', 'Sans engagement, résiliable à tout moment') : ''}
+    ${y ? tile('yearly', y, 'Annuel', m ? `soit ${esc(fmtMoney(Math.round(y.amount / 12), y.currency))} par mois` : 'Une seule fois par an', saved ? `${saved} mois offert${saved > 1 ? 's' : ''}` : '') : ''}
+  </div>`;
+}
+function bindPlanTiles(card, onChange) {
+  card.querySelectorAll('.plus-plan').forEach(b => b.addEventListener('click', () => { card.querySelectorAll('.plus-plan').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); onChange(b.dataset.plan); }));
+}
+/* ouvre la page de paiement Stripe (navigateur système en version PC, nouvel onglet sur le web) */
+async function startCheckout(plan, btn) {
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Ouverture du paiement…'; }
+  try {
+    if (window.AlixoCloud && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: offerLabel(), plan, cgv: true, waiver: true, version: ALIXO_VERSION, via: 'stripe' });
+    const r = await AlixoCloud.billing.checkout(plan);
+    if (!r || !r.url) throw new Error('Pas d’adresse de paiement reçue.');
+    return r.url;
+  } catch (e) {
+    toast('Paiement indisponible : ' + (e && e.message || 'réessayez dans un instant'), { duration: 7000 });
+    if (btn) { btn.disabled = false; btn.textContent = label; }
+    return '';
+  }
+}
+function openPlusCheckout() {
+  const ag = ageGroup();
+  const def = billingOffer.yearly ? 'yearly' : 'monthly';
+  if (ag === 'u15' || ag === '15-17') {
+    openDialog({ id: 'plusminor', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Demande à un parent',
+      sub: 'Un abonnement est un contrat : avant 18 ans, c’est un parent ou un tuteur qui l’achète.',
+      body: `${planTilesHTML(def)}<div class="po-hint">Choisis la formule, puis copie le lien de paiement : ton parent ou tuteur l’ouvre, lit les <a href="${LEGAL_URLS.cgv}" target="_blank" rel="noopener">conditions générales de vente</a> et paie. Alixo+ s’active aussitôt sur ton compte, sur tous tes appareils. Le lien est valable 24 heures.</div>
+        <div class="po-row" id="pm-row" hidden><input id="pm-url" readonly><button class="pobtn" id="pm-copy" type="button">Copier</button></div>`,
+      foot: '<button class="cta ghost" type="button" data-dlg-close>Fermer</button><button class="cta plus-cta" type="button" id="pm-make">Créer le lien de paiement</button>',
+      onMount: card => {
+        let plan = def; bindPlanTiles(card, p => { plan = p; card.querySelector('#pm-row').hidden = true; });
+        const copy = async url => { try { await navigator.clipboard.writeText(url); toast('Lien de paiement copié'); } catch { card.querySelector('#pm-url').select(); } };
+        card.querySelector('#pm-make').addEventListener('click', async e => { const btn = e.currentTarget; const url = await startCheckout(plan, btn); if (!url) return; const row = card.querySelector('#pm-row'); row.hidden = false; card.querySelector('#pm-url').value = url; btn.textContent = 'Nouveau lien'; btn.disabled = false; copy(url); });
+        card.querySelector('#pm-copy').addEventListener('click', () => copy(card.querySelector('#pm-url').value));
+      } });
+    return;
+  }
+  if (!ag && window.AlixoAuth && AlixoAuth.account()) { openOnboarding(true, { ageOnly: true }); return; }
+  openDialog({ id: 'plusbuy', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Choisissez votre formule',
+    sub: 'Ce que vous achetez, et vos droits.',
+    body: `${planTilesHTML(def)}
+      <div class="plus-precontract">
+        <div class="acc-fact"><span>Offre</span><b id="pb-offer"></b></div>
+        <div class="acc-fact"><span>Durée</span><b id="pb-duration"></b></div>
+        <div class="acc-fact"><span>Résiliation</span><b>À tout moment, en deux clics : Paramètres › Alixo+ › Gérer mon abonnement. Alixo+ reste ouvert jusqu’à la fin de la période déjà payée, rien n’est débité ensuite.</b></div>
+        <div class="acc-fact"><span>Activation</span><b>Immédiate après le paiement, sur tous vos appareils (PC, Mac, web, téléphone)</b></div>
+        <div class="acc-fact"><span>Vendeur</span><b>L’éditeur d’Alixo, identifié dans les <a href="https://alixoapp.com/mentions-legales.html" target="_blank" rel="noopener">mentions légales</a></b></div>
+        <div class="acc-fact"><span>Rétractation</span><b>14 jours après l’achat, sauf si vous demandez l’accès immédiat ci-dessous ; la résiliation reste possible à tout moment</b></div>
+      </div>
+      <label class="plus-chk"><input type="checkbox" id="pb-cgv"> J’ai lu et j’accepte les <a href="${LEGAL_URLS.cgv}" target="_blank" rel="noopener">conditions générales de vente</a> et la <a href="${LEGAL_URLS.privacy}" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
+      <label class="plus-chk"><input type="checkbox" id="pb-ret"> Je demande l’accès immédiat à Alixo+ et je reconnais perdre mon droit de rétractation une fois Alixo+ activé (Code de la consommation, art. L. 221-28).</label>
+      <div class="po-hint">Le paiement se fait sur la page sécurisée de Stripe (carte bancaire, Apple Pay, Google Pay) ; Alixo ne voit jamais votre numéro de carte. Vous recevrez votre facture par e-mail.</div>`,
+    foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="pb-go" disabled>Continuer vers le paiement</button>`,
+    onMount: (card, close) => {
+      let plan = def;
+      const describe = () => {
+        const p = billingOffer[plan]; if (!p) return;
+        card.querySelector('#pb-offer').textContent = `Alixo+ — abonnement ${plan === 'yearly' ? 'annuel' : 'mensuel'}, ${fmtMoney(p.amount, p.currency)} par ${plan === 'yearly' ? 'an' : 'mois'}${billingOffer.tax ? ' (TVA incluse)' : ''}${billingOffer.trialDays ? `, après ${billingOffer.trialDays} jours d’essai gratuit` : ''}`;
+        card.querySelector('#pb-duration').textContent = plan === 'yearly'
+          ? 'Un an, renouvelé automatiquement chaque année au même tarif ; un e-mail vous le rappelle avant chaque renouvellement'
+          : 'Un mois, renouvelé automatiquement chaque mois au même tarif, sans engagement';
+      };
+      bindPlanTiles(card, p => { plan = p; describe(); }); describe();
+      const cgv = card.querySelector('#pb-cgv'), ret = card.querySelector('#pb-ret'), go = card.querySelector('#pb-go');
+      const sync = () => { go.disabled = !(cgv.checked && ret.checked); };
+      cgv.addEventListener('change', sync); ret.addEventListener('change', sync);
+      go.addEventListener('click', async () => {
+        const url = await startCheckout(plan, go); if (!url) return;
+        close();
+        openExternalUrl(url);
+        toast('La page de paiement s’est ouverte dans votre navigateur. Alixo+ s’activera ici dès le paiement.', { duration: 8000 });
+      });
+    } });
+}
+/* retour de la page de paiement (version PC) : alixo://plus/ok ou alixo://plus/retour */
+if (window.alixoDesktop && alixoDesktop.onDeepLink) alixoDesktop.onDeepLink(url => {
+  const m = /^alixo:\/\/plus\/(\w+)/i.exec(String(url || '')); if (!m) return;
+  if (m[1] === 'ok') { if (!isPlus()) toast('Merci ! Alixo+ s’active sur votre compte dans quelques secondes.', { duration: 7000 }); settingsCat = 'plus'; openSettings(); }
+  else toast('Paiement annulé : rien n’a été débité.');
+});
+/* portail client Stripe : moyen de paiement, factures, changement de formule, résiliation */
+async function openBillingPortal(btn) {
+  if (!billingReady()) return;
+  const label = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Ouverture…'; }
+  try { const r = await AlixoCloud.billing.portal(); if (!r || !r.url) throw new Error('Pas d’adresse reçue.'); openExternalUrl(r.url); }
+  catch (e) { toast('Portail indisponible : ' + (e && e.message || 'réessayez'), { duration: 6000 }); }
+  if (btn) { btn.disabled = false; btn.textContent = label; }
+}
+/* ligne d'état de l'abonnement Stripe (Paramètres › Alixo+ et fenêtre Alixo+) */
+function subscriptionStatusText() {
+  const b = billingInfo; if (!b || !b.subscriptionId) return '';
+  const formula = b.plan === 'yearly' ? 'annuel' : b.plan === 'monthly' ? 'mensuel' : '';
+  const price = billingOffer && billingOffer[b.plan] ? ` (${fmtMoney(billingOffer[b.plan].amount, billingOffer[b.plan].currency)} par ${b.plan === 'yearly' ? 'an' : 'mois'})` : '';
+  if (b.status === 'past_due' || (b.paymentFailedAt && SUB_GRANTING.includes(b.status))) return `Abonnement ${formula}${price} — le dernier paiement a échoué : mettez à jour votre moyen de paiement dans « Gérer mon abonnement ». L’accès reste ouvert quelques jours.`;
+  if (b.status === 'trialing') return `Essai gratuit jusqu’au ${fmtLongDate(b.trialEnd || b.periodEnd)}, puis abonnement ${formula}${price}.`;
+  if (SUB_GRANTING.includes(b.status)) return b.cancelAtPeriodEnd ? `Abonnement ${formula}${price} — renouvellement arrêté : Alixo+ reste actif jusqu’au ${fmtLongDate(b.periodEnd)}.` : `Abonnement ${formula}${price} — prochain renouvellement le ${fmtLongDate(b.periodEnd)}.`;
+  if (b.status === 'canceled') return `Abonnement ${formula} terminé${b.canceledAt ? ' le ' + fmtLongDate(b.periodEnd && b.periodEnd < Date.now() ? b.periodEnd : b.canceledAt) : ''}. Vous pouvez vous réabonner à tout moment.`;
+  if (b.status === 'unpaid' || b.status === 'incomplete_expired') return `Abonnement ${formula} interrompu : le paiement n’a pas pu être encaissé.`;
+  return '';
+}
 /* bloc « comment s'abonner » (fenêtre Alixo+ et Paramètres › Alixo+) */
 function plusCtaHTML() {
   const A = window.AlixoAuth;
-  if (isPlus()) return `<div class="plus-state on">${PLUS_ICO.star}<div><b>${esc(planLabel())}</b><span>Toutes les fonctions sont ouvertes sur ce compte.${planInfo.note ? ' ' + esc(planInfo.note) : ''}</span></div></div>`;
+  if (isPlus()) {
+    const st = subActive() ? subscriptionStatusText() : '';
+    return `<div class="plus-state on ${billingInfo && billingInfo.status === 'past_due' ? 'warn' : ''}">${PLUS_ICO.star}<div><b>${esc(planLabel())}</b><span>${st ? esc(st) : 'Toutes les fonctions sont ouvertes sur ce compte.' + (planInfo.note ? ' ' + esc(planInfo.note) : '')}</span></div>${subActive() && billingReady() ? '<button class="cta ghost" id="plus-manage" type="button">Gérer mon abonnement</button>' : ''}</div>`;
+  }
   if (A && A.isConfigured && !A.account()) return `<div class="plus-state"><div><b>Connectez-vous pour activer Alixo+</b><span>L’abonnement suit votre compte Alixo, sur tous vos appareils.</span></div><button class="cta" id="plus-login" type="button">Se connecter</button></div>`;
+  if (canCheckout()) {
+    const ended = billingInfo && billingInfo.subscriptionId && !subActive() ? subscriptionStatusText() : '';
+    return `<div class="plus-state"><div><b>${esc('Alixo+ — ' + offerLabel())}</b><span>${esc(ended || plusOffer.note || 'Paiement sécurisé par Stripe, activation immédiate sur tous vos appareils, résiliable à tout moment.')}</span></div><button class="cta plus-cta" id="plus-go" type="button">Passer à Alixo+</button></div>`;
+  }
   if (plusOffer.url) return `<div class="plus-state"><div><b>${esc(plusOffer.price ? `Alixo+ — ${plusOffer.price}` : 'Passer à Alixo+')}</b><span>${esc(plusOffer.note || 'Paiement sécurisé ; l’abonnement est activé sur votre compte dès réception.')}</span></div><button class="cta plus-cta" id="plus-go" type="button">Passer à Alixo+</button></div>`;
   return `<div class="plus-state"><div><b>${esc(plusOffer.price ? `Alixo+ — ${plusOffer.price}` : 'Alixo+ arrive')}</b><span>${esc(plusOffer.note || 'Le lien d’abonnement n’est pas encore ouvert : l’administrateur d’Alixo peut activer Alixo+ sur votre compte.')}</span></div></div>`;
 }
 function bindPlusCta(root, close) {
   const go = root.querySelector('#plus-go'); if (go) go.addEventListener('click', openPlusUrl);
+  const mg = root.querySelector('#plus-manage'); if (mg) mg.addEventListener('click', e => openBillingPortal(e.currentTarget));
   const lg = root.querySelector('#plus-login'); if (lg) lg.addEventListener('click', () => { if (close) close(); closeSettings(); window.AlixoAuth.openAuthOverlay(); });
 }
 function plusTableHTML(feature) {
@@ -2191,7 +2353,7 @@ function openPlusDialog(feature) {
     sub: f ? `${f.text} Cette fonction fait partie d’Alixo+.` : 'Toutes les fonctions d’Alixo, sans limite, sur tous vos appareils.',
     body: `${plusCtaHTML()}${plusTableHTML(feature)}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div>`,
-    foot: `<button class="cta ghost" type="button" data-dlg-close>${isPlus() ? 'Fermer' : 'Plus tard'}</button>${!isPlus() && plusOffer.url ? '<button class="cta plus-cta" type="button" id="plus-go2">Passer à Alixo+</button>' : ''}`,
+    foot: `<button class="cta ghost" type="button" data-dlg-close>${isPlus() ? 'Fermer' : 'Plus tard'}</button>${!isPlus() && (canCheckout() || plusOffer.url) ? '<button class="cta plus-cta" type="button" id="plus-go2">Passer à Alixo+</button>' : ''}`,
     onMount: (card, close) => { bindPlusCta(card, close); const g2 = card.querySelector('#plus-go2'); if (g2) g2.addEventListener('click', openPlusUrl); }
   });
   ov.dataset.feature = feature || '';
@@ -2421,6 +2583,7 @@ function settingsSectionHTML(k) {
       <div class="po-hint" style="margin:0">Les symboles « >= », « +/- », « -> » sont mis en forme pour tout le monde. Avec une spécialité Santé dans le profil, la notation médicale (Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L), les abréviations et les blocs Santé du menu « / » sont activés automatiquement${healthMode() ? ' <b>(actif)</b>' : ''}. Les blocs proposés dépendent des spécialités choisies : Compte › Modifier mon profil.</div></div>`;
   if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction et la mise en forme par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7), avec le modèle ouvert Qwen3.8-27B : sur votre ordinateur (Ollama), chez un hébergeur de votre choix ou avec la clé fournie par l’administrateur.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
   if (k === 'plus') return `<div class="set-sect">${plusCtaHTML()}</div>
+    ${subscriptionHTML()}
     ${activationHTML()}
     <div class="set-sect"><div class="po-label">Ce que change Alixo+</div>${plusTableHTML('')}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>`;
@@ -2534,6 +2697,7 @@ function bindSettingsSection(k, root) {
   }
   if (k === 'plus' || (k === 'ia' && !isPlus())) {
     bindPlusCta(root, null);
+    bindSubscription(root);
     bindActivation(root);
     const more = root.querySelector('#set-plusmore'); if (more) more.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); });
     return;
@@ -9753,7 +9917,7 @@ window.AlixoApp = {
   showWhatsNew,
   openTodoHome, openSharedHome, openDoc, openSettings,
   /* Alixo+ (1.16) et fenêtres centrales : utilisés par js/cloudconfig.js, js/share.js, js/files.js, js/todo.js */
-  isPlus, setPlan, setPlusOffer, openPlusDialog, requirePlus, storageAllows, openDialog, closeDialog,
+  isPlus, setPlan, setPlusOffer, setBillingOffer, setBilling, openPlusDialog, requirePlus, storageAllows, openDialog, closeDialog,
   storageUsage, ageGroup,   /* 1.26 : tailles et tranche d'âge envoyées par js/cloudconfig.js au panneau admin */
   showUpdatePopup, closeUpdatePopup,
   mergeRemoteDoc, renderAccess, onPresence: () => { renderAccess(); renderPeers(); if (!currentDocId && (libMode === 'docs' || libMode === 'shfolder')) renderLibrary(); },
@@ -9856,7 +10020,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo Mail arrive : une messagerie indépendante avec votre adresse @alixoapp.com (en ligne dès que le serveur sera ouvert). L’adresse e-mail est confirmée à l’inscription. Dans l’éditeur : le double-clic entre deux blocs ou sous le dernier insère de nouveau un paragraphe, les blocs d’une spécialité non choisie ne sont plus insérables, et une faute mineure repérée plus tard par l’IA se corrige seule comme une faute de frappe.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo+ s’achète désormais en ligne : 14,99 € par mois ou 149,99 € par an, paiement sécurisé par Stripe (carte, Apple Pay, Google Pay), activation immédiate sur tous vos appareils, résiliation en deux clics depuis Paramètres › Alixo+ › Gérer mon abonnement. Les clés d’activation continuent de fonctionner.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

@@ -22,6 +22,11 @@ window.ALIXO_GOOGLE_DESKTOP_CLIENT = null;
    Team ID, Key ID, clé privée — voir SETUP-COMPTES.md § 2). Rien à renseigner ici depuis la 1.27.1. */
 window.ALIXO_APPLE_CONFIG = null;
 
+/* Paiement d'Alixo+ par Stripe (1.30) : adresse du serveur de paiement (dossier billing/, Worker Cloudflare —
+   voir billing/README.md). Vide : l'application utilise config/public.billingApi (panneau admin › Annonces ›
+   Offre Alixo+ › Serveur de paiement), sinon l'ancien lien de paiement manuel. */
+window.ALIXO_BILLING = { api: "" };
+
 /* E-mails d'invitation d'Alixo Share (facultatif — voir SETUP-COMPTES.md § 3 ter).
    Sans réglage : Alixo ouvre un brouillon prêt à envoyer (Gmail ou messagerie de l'ordinateur).
    Envoi automatique : { webhook: "https://script.google.com/macros/s/…/exec", key: "…" } (Google Apps Script)
