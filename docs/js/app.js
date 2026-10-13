@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.30.0';
+const ALIXO_VERSION = '1.31.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -65,6 +65,7 @@ function save() {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
     if (window.AlixoSync) window.AlixoSync.onLocalSave();
     if (window.AlixoShare && window.AlixoShare.enabled) window.AlixoShare.onLocalSave();
+    if (window.AlixoWidgets) window.AlixoWidgets.onSave();
     setSaveStatus('saved');
   }, 350);
 }
@@ -1977,6 +1978,7 @@ const PLUS_ICO = {
   polices: '<svg viewBox="0 0 24 24"><path d="M5 19 11 5h2l6 14M7.5 14h9"/></svg>',
   ia: '<svg viewBox="0 0 24 24"><path d="M4 17c3-1 6-9 8-9s3 8 8 7"/><path d="m3 20 2-2M19 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg>',
   taches: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.5 7 1.4 1.4L8.5 5.6M11 7h10M11 17h10"/><rect x="3" y="14" width="6" height="6" rx="1.2"/></svg>',
+  widgets: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/></svg>'
 };
 const PLUS_FEATURES = [
@@ -1984,7 +1986,8 @@ const PLUS_FEATURES = [
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
   { k: 'polices', name: 'Toutes les polices d’écriture', free: '3 polices', plus: 'Toutes les polices', text: 'Georgia, Garamond, Cambria, Calibri, Verdana, Trebuchet, Monospace, Comic Sans… en plus des trois polices gratuites.' },
   { k: 'ia', name: 'Intelligence artificielle', free: '—', plus: 'Incluse', text: 'Correction de l’orthographe et de la grammaire, mise en forme et reformulations par IA, pendant la frappe ou à la demande (F7).' },
-  { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' }
+  { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
+  { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' }
 ];
 let planInfo = (() => { try { return JSON.parse(localStorage.getItem(PLUS_LS)) || {}; } catch { return {}; } })();
 let plusOffer = { price: '', url: '', note: '' };
@@ -2164,6 +2167,7 @@ function refreshPlusUi() {
   const t = $('#ln-todo'); if (t) t.classList.toggle('plus-locked', locked);
   applyAppLogo();
   if (window.AlixoTodo) AlixoTodo.refresh();
+  if (window.AlixoWidgets) AlixoWidgets.sync();
 }
 function openExternalUrl(url) {
   if (window.alixoDesktop && alixoDesktop.openExternal) alixoDesktop.openExternal(url); else window.open(url, '_blank', 'noopener');
@@ -2406,7 +2410,8 @@ const SET_ICO = {
   ia: '<svg viewBox="0 0 24 24"><path d="M4 17c3-1 6-9 8-9s3 8 8 7"/><path d="m3 20 2-2M19 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg>',
   export: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
   apropos: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
-  plus: PLUS_ICO.star
+  plus: PLUS_ICO.star,
+  widgets: PLUS_ICO.widgets
 };
 /* thèmes de l'application : base clair / sombre + jeux de couleurs (voir styles.css, html[data-skin]) */
 const APP_THEMES = [
@@ -2461,6 +2466,7 @@ const SET_CATS = [
   { k: 'ecriture', name: 'Écriture', sub: 'Raccourcis de frappe et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
   { k: 'export', name: 'Export', sub: 'PDF, archives .zip des dossiers' },
+  { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
 ];
 let settingsCat = 'compte';
@@ -2541,6 +2547,7 @@ function bindPlanEditor(root) {
 }
 
 function settingsSectionHTML(k) {
+  if (k === 'widgets') return window.AlixoWidgets ? AlixoWidgets.settingsHTML() : '<div class="set-sect"><div class="po-hint">Module des widgets indisponible.</div></div>';
   const fmt = state.settings.exportFormat || 'pdf';
   const theme = state.settings.theme || 'auto';
   const view = state.settings.libView || 'grid';
@@ -2624,6 +2631,7 @@ function settingsSectionHTML(k) {
 }
 
 function bindSettingsSection(k, root) {
+  if (k === 'widgets') { if (window.AlixoWidgets) AlixoWidgets.bindSettings(root); return; }
   if (k === 'compte') {
     const stor = root.querySelector('#po-storage');
     if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
@@ -8558,6 +8566,7 @@ function applyTheme() {
   applyDocFont();
   setWindowBg();
   if (window.AlixoGalaxy && AlixoGalaxy.onTheme) AlixoGalaxy.onTheme();
+  if (window.AlixoWidgets) AlixoWidgets.publish();
 }
 $('#btn-theme').addEventListener('click', () => {
   const cur = document.documentElement.dataset.theme;
@@ -9979,6 +9988,7 @@ window.AlixoApp = {
         state.settingsAt = remoteAt;
         lastSettingsJson = JSON.stringify(state.settings);
         applyTheme(); syncHealthUI();
+        if (window.AlixoWidgets) { AlixoWidgets.sync(); const sov = $('#setov'); if (sov && !sov.hidden && settingsCat === 'widgets') renderSettingsBody(); }
       } else if (!remoteAt && !localAt) {
         // anciennes versions (réglages non datés) des deux côtés : fusion comme avant 1.16
         state.settings = Object.assign({}, state.settings, settings);
@@ -10020,7 +10030,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo+ s’achète désormais en ligne : 14,99 € par mois ou 149,99 € par an, paiement sécurisé par Stripe (carte, Apple Pay, Google Pay), activation immédiate sur tous vos appareils, résiliation en deux clics depuis Paramètres › Alixo+ › Gérer mon abonnement. Les clés d’activation continuent de fonctionner.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Des widgets sur le bureau de votre ordinateur (Alixo+) : tâches du jour, agenda, minuteur, Jour J avant le partiel, bilan de la semaine, question de quiz, pense-bête… Composez votre bureau dans Paramètres › Widgets, en glisser-déposer ; Alixo reste dans la zone de notification pour les tenir à jour.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

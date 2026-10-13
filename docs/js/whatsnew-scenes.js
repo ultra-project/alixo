@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.30.0 (ou nouveautes.html?v=1.30.0 en page seule).
+   Aperçu : index.html?nouveautes=1.31.0 (ou nouveautes.html?v=1.31.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.31.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Des widgets sur votre <em>bureau</em>', text: 'Tâches, agenda, minuteur, Jour J… posés sur le bureau de l’ordinateur, toujours à jour. Avec Alixo+.', dur: 5000 },
+    { title: 'Composez votre <em>bureau</em>', text: 'Paramètres › Widgets : un faux bureau aux dimensions de votre écran, et un catalogue à glisser-déposer.',
+      bullets: ['<b>Glissez</b> un widget du catalogue, déplacez-le, cliquez-le pour ses options', '<b>Aperçu</b> en vrai, avec vos données, avant de l’ajouter', '<b>Disposition</b> enregistrée avec le compte, d’un ordinateur à l’autre'],
+      art: 'board', accent: '#33658a', accent2: '#b3762a', dur: 7500 },
+    { title: 'Votre <em>journée</em> en un coup d’œil', text: 'Les widgets vivent avec l’application : cocher une tâche, lancer le minuteur, rouvrir une séance, sans ouvrir Alixo.',
+      bullets: ['<b>Tâches du jour</b> : à cocher depuis le bureau, une ligne pour en ajouter', '<b>Agenda</b> : le cours en cours et le temps qu’il reste', '<b>Minuteur</b> : 25 min, 5 min, 45 min… le même que dans les cours', '<b>Jour J</b> : les jours restants avant le partiel, en grand'],
+      art: 'list', accent: '#2e8b6a', accent2: '#c04343', dur: 8500 },
+    { title: 'Pour <em>réviser</em> un peu chaque jour', text: 'Une question de vos quiz, votre semaine en chiffres, vos dernières séances et un post-it sous les yeux.',
+      bullets: ['<b>Question du jour</b> : quatre réponses, la bonne s’allume', '<b>Bilan de la semaine</b> : mots écrits, jours d’affilée, graphique', '<b>Reprendre</b>, <b>Pense-bête</b>, <b>Horloge</b> avec le numéro de semaine'],
+      art: 'quiz', accent: '#2e8b8b', accent2: '#8a4b9c', dur: 8000 },
+    { title: 'Toujours <em>à jour</em>', text: 'Fermer la fenêtre ne quitte plus Alixo : il reste dans la zone de notification pour tenir les widgets à jour.',
+      bullets: ['<b>Toujours au-dessus</b> des fenêtres, ou posés sur le bureau (Windows + D)', '<b>Lancement</b> avec la session : les widgets apparaissent directement', '<b>Opacité</b> réglable, thème clair ou sombre suivi'],
+      art: { icon: '🖥️' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.30.0', {
   scenes: [
@@ -52,19 +71,6 @@ AlixoWhatsNew.register('1.29.0', {
     { title: 'Les fautes <em>mineures</em> se corrigent seules', text: 'Un accent oublié, une lettre doublée ou inversée repérés plus tard par l’IA : la correction s’applique comme une faute de frappe, sans Tab.',
       bullets: ['<b>Un seul mot</b>, d’une lettre ou d’un accent, vers un mot connu', '<b>Ctrl+Z</b> pour revenir ; le mot est appris', '<b>Accords et homophones</b> restent proposés sous le paragraphe'],
       art: 'text', accent: '#c04343', accent2: '#b3762a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.28.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une <em>correction</em> pour le quiz', text: 'Le fichier audio personnalisé s’importe à nouveau.', dur: 4500 },
-    { title: 'Votre <em>musique</em> dans le quiz', text: 'Dans Quiz › Apparence › Musique, « Mon fichier audio » marche de nouveau : le bouton Choisir… ouvre bien la boîte de sélection.',
-      bullets: ['<b>Choisir…</b> : un morceau à vous (25 Mo au plus), gardé sur cet appareil', '<b>Écoute ▶</b> des musiques intégrées de nouveau active', '<b>Thèmes</b> : les vignettes se choisissent comme avant'],
-      art: { icon: '🎧' }, accent: '#8a4b9c', accent2: '#b3762a', dur: 8000 },
-    { title: 'Pour mémoire : l’IA est <em>ouverte</em>', text: 'Depuis la 1.28, la correction par IA tourne sur Qwen3.8-27B, un modèle libre : vous choisissez où il tourne dans Paramètres › Correction par IA.',
-      bullets: ['<b>OpenRouter</b> ou <b>Alibaba Cloud</b> : un compte et une clé', '<b>Sur votre ordinateur</b> avec Ollama : gratuit, hors ligne, sans clé'],
-      art: 'cards', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });

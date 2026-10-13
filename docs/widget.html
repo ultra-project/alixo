@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; script-src 'self'; connect-src 'none'">
+<title>Widget Alixo</title>
+<!-- Alixo 1.31 — page d'un widget de bureau : widget.html?k=<clé>&id=<identifiant> (fenêtre flottante créée par main.js)
+     ou widget.html?k=<clé>&preview=1 (aperçu dans Paramètres › Widgets, alimenté par postMessage). Aucun accès réseau. -->
+<link rel="stylesheet" href="widget.css">
+</head>
+<body>
+<div class="wg" id="wg" hidden>
+  <header class="wg-head" id="wg-head"><i class="wg-ico" id="wg-ico"></i><b id="wg-name"></b><span class="wg-btns"><button type="button" class="wg-b" id="wg-open" title="Ouvrir dans Alixo"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9"/><path d="M19 13v6H5V5h6"/></svg></button><button type="button" class="wg-b" id="wg-x" title="Retirer du bureau" hidden><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></span></header>
+  <div class="wg-body" id="wg-body"></div>
+</div>
+<script src="js/widgets-catalog.js"></script>
+<script src="js/widget.js"></script>
+</body>
+</html>
