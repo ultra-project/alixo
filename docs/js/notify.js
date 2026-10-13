@@ -56,7 +56,7 @@ window.AlixoNotify = (() => {
       if (a.type === 'shared') AlixoApp.openSharedHome();
       else if (a.type === 'todo') AlixoApp.openTodoHome();
       else if (a.type === 'doc' && a.id) AlixoApp.openDoc(a.id);
-      else if (a.type === 'settings') AlixoApp.openSettings();
+      else if (a.type === 'settings') AlixoApp.openSettings(a.cat || undefined);
       else if (a.type === 'msg' && a.msg) { if (window.AlixoCloud && AlixoCloud.showMessage) AlixoCloud.showMessage(a.id, a.msg); }
       else if (a.type === 'url' && a.url) { if (window.alixoDesktop && alixoDesktop.openExternal) alixoDesktop.openExternal(a.url); else window.open(a.url, '_blank', 'noopener'); }
       else if (a.type === 'whatsnew' && window.AlixoWhatsNew && AlixoWhatsNew.has(a.version)) AlixoWhatsNew.open(a.version);

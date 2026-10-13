@@ -207,8 +207,13 @@ window.AlixoCloud = (() => {
   }, err => { if (!permErr(err)) console.error('Cloud (abonnement) :', err); });
 
   /* ---------------- compte suspendu par l'administrateur ---------------- */
-  db.collection('profiles').doc(uid).onSnapshot(snap => {
+  const profRef = db.collection('profiles').doc(uid);
+  let firstSeenDone = false;
+  profRef.onSnapshot(snap => {
     const d = snap.exists ? snap.data() : null;
+    /* 1.32 : date de première apparition du compte (Alixo Business : seul un compte récent peut rejoindre une entreprise) ;
+       la date de création du compte Firebase, sinon la dernière ouverture connue d'un profil ancien */
+    if (!firstSeenDone && !(snap.metadata && snap.metadata.fromCache)) { firstSeenDone = true; if (!d || !d.firstSeen) { const u = A.user(); const created = u && u.metadata && Date.parse(u.metadata.creationTime || ''); profRef.set({ firstSeen: created > 0 ? created : (d && d.lastSeen ? +d.lastSeen : Date.now()) }, { merge: true }).catch(() => {}); } }
     if (!d || !d.disabled) { const ov = $('#suspov'); if (ov) ov.remove(); return; }
     if ($('#suspov')) return;
     const ov = document.createElement('div'); ov.id = 'suspov';
@@ -222,7 +227,6 @@ window.AlixoCloud = (() => {
   /* ---------------- présence et statistiques d'usage (panneau admin) ----------------
      Un « battement » toutes les 60 s tant que l'application est ouverte : dernière ouverture, version,
      nombre de séances, activité en cours (bibliothèque / rédaction / inactif). Aucun contenu de cours. */
-  const profRef = db.collection('profiles').doc(uid);
   const HEART_MS = 60000, IDLE_MS = 5 * 60000;
   let lastInput = Date.now(), lastBeat = 0, ended = false;
   const activity = () => {

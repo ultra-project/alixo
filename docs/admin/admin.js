@@ -109,7 +109,7 @@
 
   /* ---------------- navigation ----------------
      refonte 2026 : barre latérale (tiroir sur tablette / téléphone) + barre d'onglets en bas sur téléphone ; les deux portent data-view */
-  const TITLES = { dash: 'Tableau de bord', users: 'Utilisateurs', msg: 'Messages', ann: 'Annonces et version', codes: 'Clés Alixo+', keys: 'Accès IA', db: 'Base de données', admins: 'Administrateurs' };
+  const TITLES = { dash: 'Tableau de bord', users: 'Utilisateurs', msg: 'Messages', ann: 'Annonces et version', codes: 'Clés Alixo+', orgs: 'Entreprises', keys: 'Accès IA', db: 'Base de données', admins: 'Administrateurs' };
   function showView(name) {
     $$('[data-view]').forEach(x => x.classList.toggle('on', x.dataset.view === name));
     /* « Plus » (téléphone) reste allumé pour les vues qui ne sont pas dans la barre d'onglets */
@@ -161,6 +161,9 @@
     unsubs.push(db.collection('config').doc('public').onSnapshot(s => { state.pub = s.exists ? s.data() : {}; renderAnn(); renderDash(); }, err => toast('Config publique : ' + err.message)));
     unsubs.push(db.collection('codes').onSnapshot(s => { state.codes = s.docs.map(d => Object.assign({ code: d.id }, d.data())); renderCodes(); renderDash(); }, err => toast('Clés Alixo+ : ' + err.message + ' (règles Firestore à redéployer ?)')));
     unsubs.push(db.collection('admins').onSnapshot(s => { state.admins = s.docs.map(d => Object.assign({ uid: d.id }, d.data())); renderAdmins(); renderDash(); }, err => toast('Administrateurs : ' + err.message)));
+    /* 1.32 : entreprises Alixo Business + tous leurs membres (requête de groupe de collections) */
+    unsubs.push(db.collection('orgs').onSnapshot(s => { state.orgs = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderOrgs(); }, err => toast('Entreprises : ' + err.message + ' (règles Firestore à redéployer : npm run rules)')));
+    unsubs.push(db.collectionGroup('members').onSnapshot(s => { state.orgMembers = s.docs.map(d => Object.assign({ uid: d.id, orgId: d.ref.parent.parent.id }, d.data())); renderOrgs(); }, err => console.warn('Membres des entreprises :', err.message)));
     unsubs.push(db.collection('audit').orderBy('ts', 'desc').limit(7).onSnapshot(s => renderAudit(s.docs.map(d => d.data())), err => { $('#dash-audit').innerHTML = `<div class="empty">Journal illisible : ${esc(err.message)}</div>`; }));
     unsubs.push(db.collection('config').doc('msglog').onSnapshot(s => { const d = s.exists ? s.data() : {}; state.msglog = Array.isArray(d.items) ? d.items : []; renderMsgLog(); }, err => toast('Journal des messages : ' + err.message)));
     /* les durées relatives (« il y a 3 min », présence) se rafraîchissent d'elles-mêmes */
@@ -661,6 +664,124 @@
     }
   });
 
+  /* ---------------- entreprises (Alixo Business, 1.32) ----------------
+     orgs/{orgId} + orgs/{orgId}/members/{uid} + orgcodes/{code} + profiles/{uid}.org + plans/{uid} (by: 'business').
+     Créée ici pour un dirigeant (compte existant) : le dirigeant reçoit Alixo+ (plans/{uid}, by: 'business'). */
+  state.orgs = []; state.orgMembers = [];
+  const ORG_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  const newOrgCode = () => { const g = () => Array.from({ length: 4 }, () => ORG_ALPHA[Math.floor(Math.random() * ORG_ALPHA.length)]).join(''); return `ALXB-${g()}-${g()}`; };
+  const orgMembersOf = id => state.orgMembers.filter(m => m.orgId === id);
+  const orgOnline = m => !!m.lastSeen && Date.now() - m.lastSeen < 5 * 60000;
+  const orgPlusUsed = id => orgMembersOf(id).filter(m => m.plus || m.role === 'owner').length;
+  function renderOrgs() {
+    if (!$('#orgs-tbl')) return;
+    const q = ($('#orgs-q').value || '').trim().toLowerCase();
+    const list = state.orgs.filter(o => !q || [o.name, o.ownerEmail, o.ownerName, o.id, o.code].some(v => String(v || '').toLowerCase().includes(q))).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+    $('#orgs-count').textContent = state.orgs.length ? `${list.length} / ${state.orgs.length}` : '';
+    const nb = $('#nav-orgs'); if (nb) { nb.textContent = state.orgs.length; nb.hidden = !state.orgs.length; }
+    $('#orgs-tbl tbody').innerHTML = list.length ? list.map(o => { const ms = orgMembersOf(o.id); const on = ms.filter(orgOnline).length; return `<tr data-org="${esc(o.id)}" class="${o.disabled ? 'off' : ''}">
+      <td><div class="u-main"><b>${esc(o.name || '—')}</b></div><div class="cell-sub"><code>${esc(o.code || '')}</code></div></td>
+      <td>${esc(o.ownerName || '')}<div class="cell-sub">${esc(o.ownerEmail || o.ownerUid || '')}</div></td>
+      <td class="num">${ms.length} / ${o.seats || 10}${on ? `<div class="cell-sub"><i class="dot ok"></i> ${on} en ligne</div>` : ''}</td>
+      <td class="num">${orgPlusUsed(o.id)} / ${o.plusSeats || 5}</td>
+      <td><span class="chip dim">${o.by === 'stripe' ? 'Stripe' : 'manuel'}</span></td>
+      <td>${o.disabled ? '<span class="chip bad">suspendue</span>' : '<span class="chip ok">active</span>'}</td>
+      <td>${when(o.createdAt)}</td>
+      <td class="menu-cell"><button class="btn ghost small" data-orgcard="${esc(o.id)}">Fiche</button></td></tr>`; }).join('') : '<tr><td colspan="8" class="empty">Aucune entreprise. Cliquez sur « Créer une entreprise ».</td></tr>';
+  }
+  $('#orgs-q').addEventListener('input', renderOrgs);
+  $('#v-orgs').addEventListener('click', e => { const b = e.target.closest('[data-orgcard]') || e.target.closest('tr[data-org]'); if (!b) return; const id = b.dataset.orgcard || b.dataset.org; const o = state.orgs.find(x => x.id === id); if (o) openOrgCard(o); });
+  const findProfile = v => { v = String(v || '').trim().toLowerCase(); if (!v) return null; return state.profiles.find(x => (x.email || '').toLowerCase() === v || (x.emailLower || '') === v || x.uid === v) || null; };
+  async function setOwnerPlus(o, p) {
+    await db.collection('plans').doc(p.uid).set({ plus: true, until: 0, since: Date.now(), updatedAt: Date.now(), by: 'business', orgId: o.id, note: 'Alixo Business — ' + o.name + ' (dirigeant)', email: p.email || '' });
+  }
+  $('#org-new').addEventListener('click', () => {
+    modal(`<h3>Créer une entreprise</h3><p class="muted">Le dirigeant doit avoir un compte Alixo (il s’est connecté au moins une fois). Il reçoit Alixo+ et le code d’invitation s’affiche dans ses Paramètres › Entreprise.</p>
+      <label class="field">Nom de l’entreprise<input id="on-name" maxlength="60" placeholder="Ex. Cabinet Durand"></label>
+      <label class="field">Dirigeant (e-mail ou UID d’un compte Alixo)<input id="on-owner" placeholder="patron@entreprise.fr" autocomplete="off"></label>
+      <div class="row wrap"><label>Places d’employés<input id="on-seats" type="number" min="1" max="500" value="10" style="width:90px"></label><label>Licences Alixo+<input id="on-plus" type="number" min="1" max="500" value="5" style="width:90px"></label></div>
+      <label class="field">Note (interne)<input id="on-note" maxlength="140" placeholder="Ex. offre de lancement, facturée à part"></label>
+      <div class="modal-foot"><button class="btn ghost" data-close>Annuler</button><button class="btn" id="on-ok">Créer</button></div>`, (c, close) => {
+      c.querySelector('#on-ok').onclick = async () => {
+        const name = c.querySelector('#on-name').value.trim(); const p = findProfile(c.querySelector('#on-owner').value);
+        if (!name) { toast('Indiquez le nom'); return; }
+        if (!p) { toast('Dirigeant introuvable : e-mail ou UID d’un compte qui s’est déjà connecté'); return; }
+        if (state.orgs.some(o => o.ownerUid === p.uid)) { toast('Ce compte dirige déjà une entreprise'); return; }
+        if (state.orgMembers.some(m => m.uid === p.uid)) { toast('Ce compte est déjà membre d’une entreprise'); return; }
+        const seats = Math.max(1, +c.querySelector('#on-seats').value || 10), plusSeats = Math.max(1, +c.querySelector('#on-plus').value || 5);
+        const id = p.uid, code = newOrgCode(), now = Date.now();
+        const o = { name, ownerUid: id, ownerEmail: p.email || '', ownerName: p.name || p.pseudo || '', plan: 'basic', seats, plusSeats, code, codeAt: now, disabled: false, by: me.email || me.uid, note: c.querySelector('#on-note').value.trim(), createdAt: now, updatedAt: now };
+        try {
+          const b = db.batch();
+          b.set(db.collection('orgs').doc(id), o);
+          b.set(db.collection('orgs').doc(id).collection('members').doc(id), { uid: id, name: o.ownerName || (o.ownerEmail || '').split('@')[0], email: o.ownerEmail, emailLower: (o.ownerEmail || '').toLowerCase(), nameLower: String(o.ownerName || '').toLowerCase(), role: 'owner', plus: true, joinedAt: now, lastSeen: 0, online: false });
+          b.set(db.collection('orgcodes').doc(code), { orgId: id, name, createdAt: now, by: me.email || me.uid });
+          b.set(db.collection('profiles').doc(id), { org: { id, name, role: 'owner' } }, { merge: true });
+          await b.commit();
+          await setOwnerPlus(Object.assign({ id }, o), p);
+        } catch (e) { toast('Création impossible : ' + e.message); return; }
+        audit('org.create', id, { name, seats, plusSeats }); close(); toast(`Entreprise « ${name} » créée — code ${code}`);
+      };
+    });
+  });
+  function openOrgCard(o) {
+    const ms = orgMembersOf(o.id).slice().sort((a, b) => (b.role === 'owner') - (a.role === 'owner') || (a.name || '').localeCompare(b.name || ''));
+    const row = (l, v) => `<div class="kv"><span>${l}</span><div>${v}</div></div>`;
+    modal(`<div class="ucard-head"><span class="avatar" style="background:#2e8b6a">${esc((o.name || '?')[0].toUpperCase())}</span><div class="u-txt"><h3>${esc(o.name || '—')}</h3><div class="u-mail">${esc(o.ownerName || '')} · ${esc(o.ownerEmail || o.ownerUid || '')}</div><div class="chips">${o.disabled ? '<span class="chip bad">suspendue</span>' : '<span class="chip ok">active</span>'}<span class="chip dim">${o.by === 'stripe' ? 'abonnement Stripe' : 'créée à la main'}</span></div></div></div>
+      <div class="kvs">
+        ${row('Code d’invitation', `<code class="key-mask" data-copy="${esc(o.code || '')}">${esc(o.code || '—')}</code> <button class="btn ghost small" data-oact="code">Changer</button>`)}
+        ${row('Places', `${ms.length} / ${o.seats || 10} employés · ${orgPlusUsed(o.id)} / ${o.plusSeats || 5} licences Alixo+ <button class="btn ghost small" data-oact="seats">Modifier</button>`)}
+        ${row('Dirigeant', `${esc(o.ownerEmail || o.ownerUid || '')} <button class="btn ghost small" data-oact="owner">Changer</button>`)}
+        ${row('Identifiant', `<code class="key-mask">${esc(o.id)}</code>`)}
+        ${o.note ? row('Note', esc(o.note)) : ''}
+        ${o.stripe && o.stripe.subscriptionId ? row('Stripe', `<a href="https://dashboard.stripe.com/subscriptions/${esc(o.stripe.subscriptionId)}" target="_blank" rel="noopener">${esc(o.stripe.subscriptionId)}</a> · ${esc(o.stripe.status || '')}`) : ''}
+      </div>
+      <h4 style="margin:14px 0 6px">Membres</h4>
+      <div class="table-card flat"><table class="rtable"><thead><tr><th>Membre</th><th>Rôle</th><th>Alixo+</th><th>Vu</th><th></th></tr></thead><tbody>${ms.length ? ms.map(m => `<tr><td><b>${esc(m.name || m.email || m.uid)}</b><div class="cell-sub">${esc(m.email || '')}</div></td><td>${m.role === 'owner' ? '<span class="chip brand">dirigeant</span>' : m.role === 'mod' ? '<span class="chip">modérateur</span>' : 'membre'}</td><td>${m.plus || m.role === 'owner' ? '<span class="chip brand"><svg class="ic xs"><use href="#i-crown"/></svg>Alixo+</span>' : '—'}</td><td>${orgOnline(m) ? '<span class="st-line"><i class="dot ok"></i>en ligne</span>' : esc(when(m.lastSeen))}</td><td class="menu-cell">${m.role !== 'owner' ? `<button class="btn ghost small danger" data-orm="${esc(m.uid)}">Retirer</button>` : ''}</td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucun membre pour l’instant.</td></tr>'}</tbody></table></div>
+      <div class="ucard-acts"><button class="btn ghost" data-oact="rename">Renommer</button><button class="btn ghost" data-oact="${o.disabled ? 'enable' : 'disable'}">${o.disabled ? 'Réactiver' : 'Suspendre'}</button><button class="btn ghost danger" data-oact="delete">Supprimer</button></div>
+      <div class="modal-foot"><button class="btn ghost" data-close>Fermer</button></div>`, (c, close) => {
+      c.classList.add('ucard');
+      const ref = db.collection('orgs').doc(o.id);
+      c.querySelectorAll('[data-copy]').forEach(el => el.onclick = async () => { try { await navigator.clipboard.writeText(el.dataset.copy); toast('Code copié'); } catch { /* */ } });
+      c.querySelectorAll('[data-orm]').forEach(b => b.onclick = async () => {
+        const m = ms.find(x => x.uid === b.dataset.orm); if (!m) return;
+        if (!await confirmBox(`Retirer ${m.name || m.email} ?`, 'Il perd l’accès à l’entreprise et la licence Alixo+ qu’elle lui donnait.', 'Retirer', true)) return;
+        const b2 = db.batch();
+        b2.delete(ref.collection('members').doc(m.uid));
+        b2.set(db.collection('profiles').doc(m.uid), { org: FV.delete() }, { merge: true });
+        if (m.plus) b2.set(db.collection('plans').doc(m.uid), { plus: false, until: 0, since: 0, endedAt: Date.now(), updatedAt: Date.now(), by: 'business', orgId: o.id, note: 'Alixo Business — ' + o.name, email: m.email || '' });
+        try { await b2.commit(); } catch (e) { toast('Impossible : ' + e.message); return; }
+        audit('org.member.remove', o.id, { uid: m.uid }); close(); toast('Membre retiré');
+      });
+      c.querySelectorAll('[data-oact]').forEach(b => b.onclick = async () => {
+        const act = b.dataset.oact;
+        if (act === 'rename') { const n = prompt('Nom de l’entreprise', o.name || ''); if (n === null || !n.trim()) return; const name = n.trim().slice(0, 60); await ref.update({ name, updatedAt: Date.now() }); if (o.code) await db.collection('orgcodes').doc(o.code).set({ orgId: o.id, name }, { merge: true }); audit('org.rename', o.id, { name }); close(); toast('Renommée'); }
+        if (act === 'seats') { const s = prompt('Places d’employés', String(o.seats || 10)); if (s === null) return; const p = prompt('Licences Alixo+', String(o.plusSeats || 5)); if (p === null) return; await ref.update({ seats: Math.max(1, +s || 10), plusSeats: Math.max(1, +p || 5), updatedAt: Date.now() }); audit('org.seats', o.id, { seats: +s, plusSeats: +p }); close(); toast('Places mises à jour'); }
+        if (act === 'code') { if (!await confirmBox('Nouveau code d’invitation ?', 'L’ancien code ne fonctionnera plus.', 'Changer')) return; const code = newOrgCode(); const b3 = db.batch(); b3.set(db.collection('orgcodes').doc(code), { orgId: o.id, name: o.name || '', createdAt: Date.now(), by: me.email || me.uid }); b3.update(ref, { code, codeAt: Date.now(), updatedAt: Date.now() }); if (o.code) b3.delete(db.collection('orgcodes').doc(o.code)); await b3.commit(); audit('org.code', o.id); close(); toast('Nouveau code : ' + code); }
+        if (act === 'owner') {
+          const v = prompt('Nouveau dirigeant : e-mail ou UID d’un membre de l’entreprise (ou d’un compte Alixo)', ''); if (!v) return;
+          const p = findProfile(v); if (!p) { toast('Compte introuvable'); return; }
+          const b4 = db.batch(); const now = Date.now();
+          b4.update(ref, { ownerUid: p.uid, ownerEmail: p.email || '', ownerName: p.name || p.pseudo || '', updatedAt: now });
+          b4.set(ref.collection('members').doc(p.uid), { uid: p.uid, name: p.name || p.pseudo || (p.email || '').split('@')[0], email: p.email || '', emailLower: (p.email || '').toLowerCase(), nameLower: String(p.name || p.pseudo || '').toLowerCase(), role: 'owner', plus: true, joinedAt: now, lastSeen: 0, online: false }, { merge: true });
+          if (o.ownerUid && o.ownerUid !== p.uid) b4.set(ref.collection('members').doc(o.ownerUid), { role: 'mod', updatedAt: now }, { merge: true });
+          b4.set(db.collection('profiles').doc(p.uid), { org: { id: o.id, name: o.name || '', role: 'owner' } }, { merge: true });
+          try { await b4.commit(); await setOwnerPlus(o, p); } catch (e) { toast('Impossible : ' + e.message); return; }
+          audit('org.owner', o.id, { uid: p.uid }); close(); toast('Dirigeant changé (l’ancien devient modérateur)');
+        }
+        if (act === 'disable' || act === 'enable') { await ref.update({ disabled: act === 'disable', updatedAt: Date.now() }); audit('org.' + act, o.id); close(); toast(act === 'disable' ? 'Entreprise suspendue' : 'Entreprise réactivée'); }
+        if (act === 'delete') {
+          if (!await confirmBox(`Supprimer « ${o.name} » ?`, 'Les membres gardent leurs comptes et leurs cours ; ils perdent l’entreprise et les licences Alixo+ qu’elle donnait. Définitif.', 'Supprimer', true)) return;
+          const b5 = db.batch(); const now = Date.now();
+          for (const m of ms) { b5.delete(ref.collection('members').doc(m.uid)); b5.set(db.collection('profiles').doc(m.uid), { org: FV.delete() }, { merge: true }); if (m.plus || m.role === 'owner') b5.set(db.collection('plans').doc(m.uid), { plus: false, until: 0, since: 0, endedAt: now, updatedAt: now, by: 'business', orgId: o.id, note: 'Alixo Business — ' + o.name, email: m.email || '' }); }
+          if (o.code) b5.delete(db.collection('orgcodes').doc(o.code));
+          b5.delete(ref);
+          try { await b5.commit(); } catch (e) { toast('Suppression impossible : ' + e.message); return; }
+          audit('org.delete', o.id, { name: o.name, members: ms.length }); close(); toast('Entreprise supprimée');
+        }
+      });
+    });
+  }
   /* ---------------- annonces + version ---------------- */
   const savePub = patch => db.collection('config').doc('public').set(Object.assign({ updatedAt: Date.now() }, patch), { merge: true });
   function renderAnn() {

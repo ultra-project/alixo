@@ -182,6 +182,40 @@ window.AlixoWidget = (() => {
     onTick();
   }
 
+  /* ---------------- 1.32 : déplacement après appui long (version PC) ----------------
+     Un appui maintenu 450 ms n'importe où sur le widget (hors champs de saisie) le fait trembler : on le déplace alors
+     à la souris, l'emplacement est enregistré en relâchant. Un clic ou un glissement court ne déplacent rien. */
+  let press = null, moving = false, swallowClick = false;
+  function bindLongPress() {
+    if (!bridge || preview || !bridge.drag) return;
+    const wg = $('#wg');
+    wg.addEventListener('pointerdown', e => {
+      if (e.button !== 0 || e.target.closest('input, textarea, select, button, a, [data-opt]')) return;
+      press = { x: e.clientX, y: e.clientY, id: e.pointerId, tm: setTimeout(() => {
+        moving = true; document.body.classList.add('moving');
+        try { wg.setPointerCapture(press.id); } catch { /* */ }
+        bridge.drag({ phase: 'start', sx: e.screenX, sy: e.screenY });
+      }, 450) };
+    });
+    const cancel = () => { if (press) { clearTimeout(press.tm); press = null; } };
+    wg.addEventListener('pointermove', e => {
+      if (moving) { bridge.drag({ phase: 'move', sx: e.screenX, sy: e.screenY }); return; }
+      if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 6) cancel();
+    });
+    const end = e => {
+      if (moving) {
+        moving = false; swallowClick = true; document.body.classList.remove('moving');
+        try { wg.releasePointerCapture(e.pointerId); } catch { /* */ }
+        bridge.drag({ phase: 'end', sx: e.screenX, sy: e.screenY });
+        setTimeout(() => { swallowClick = false; }, 50);
+      }
+      cancel();
+    };
+    wg.addEventListener('pointerup', end); wg.addEventListener('pointercancel', end);
+    wg.addEventListener('click', e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && moving) end(e); });
+  }
+
   /* ---------------- démarrage ---------------- */
   document.addEventListener('DOMContentLoaded', () => {
     const wg = $('#wg'); wg.hidden = false; wg.classList.add('k-' + kind);
@@ -189,7 +223,7 @@ window.AlixoWidget = (() => {
     $('#wg-ico').innerHTML = def.ico; $('#wg-name').textContent = def.name; document.title = `${def.name} — Alixo`;
     if (bridge && !preview) { $('#wg-x').hidden = false; document.body.classList.add('desktop'); }
     if (preview) document.body.classList.add('preview');
-    bind(); render();
+    bind(); bindLongPress(); render();
     tick = setInterval(onTick, 1000);
     if (bridge) { bridge.onData(feed); bridge.ready().then(s => { if (s) feed(s); }).catch(() => {}); }
     window.addEventListener('message', e => { if (e.data && e.data.alixoWidget) feed(e.data.alixoWidget); });

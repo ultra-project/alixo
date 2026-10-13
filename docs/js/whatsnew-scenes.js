@@ -11,9 +11,25 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.31.0 (ou nouveautes.html?v=1.31.0 en page seule).
+   Aperçu : index.html?nouveautes=1.32.0 (ou nouveautes.html?v=1.32.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.32.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Voici <em>Alixo Business</em>', text: 'Alixo pour une entreprise : une équipe, des licences Alixo+, le partage entre collègues. Et deux widgets plus dociles.', dur: 5500 },
+    { title: 'Une <em>entreprise</em>, une équipe', text: 'Le dirigeant invite ses employés par un code ; chacun crée son compte professionnel, séparé de ses cours personnels.',
+      bullets: ['<b>10 employés</b>, dont 5 licences Alixo+ à attribuer d’un interrupteur', '<b>Paramètres › Entreprise</b> : qui est en ligne, rôles, code d’invitation', '<b>Modérateurs</b> nommés par le dirigeant'],
+      art: { image: 'logo-business.png', alt: 'Alixo Business' }, accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
+    { title: 'Partager en <em>4 lettres</em>', text: 'Dans la fenêtre Partager, tapez quatre lettres du nom d’un collègue : il apparaît, avec sa présence en direct.',
+      bullets: ['<b>Sans e-mail ni pseudo</b> : la liste des collègues suffit', '<b>Vers l’extérieur</b> : un modérateur autorise, l’invitation part toute seule', '<b>À toute l’entreprise</b> : séance, dossier ou fichier pour tous, en lecture'],
+      art: 'cards', accent: '#33658a', accent2: '#2e8b6a', dur: 8500 },
+    { title: 'Des widgets plus <em>dociles</em>', text: 'Deux corrections demandées : un widget ne passe plus devant vos fenêtres, et on le déplace d’un appui long.',
+      bullets: ['<b>Derrière les fenêtres</b> : un widget posé ne vous interrompt plus', '<b>Appui long</b> : il tremble, vous le glissez, l’emplacement est enregistré', '<b>Partout sur le widget</b>, plus de zone de prise en haut'],
+      art: 'board', accent: '#b3762a', accent2: '#3d6bb5', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.31.0', {
   scenes: [
@@ -49,28 +65,6 @@ AlixoWhatsNew.register('1.30.0', {
     { title: 'Vos <em>droits</em>, avant de payer', text: 'Une fenêtre claire rappelle l’offre, la durée, la résiliation et le droit de rétractation, puis demande votre accord.',
       bullets: ['<b>Conditions de vente</b> et confidentialité à accepter', '<b>Moins de 18 ans</b> : un lien de paiement à transmettre à un parent'],
       art: { icon: '🛡️' }, accent: '#8a4b9c', accent2: '#c04343', dur: 6500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.29.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Alixo <em>Mail</em> arrive,<br>et l’éditeur se corrige', text: 'Une messagerie à vous, un compte mieux protégé, trois gênes de l’éditeur réglées — en moins d’une minute.', dur: 5000 },
-    { title: 'Votre adresse <em>@alixoapp.com</em>', text: 'Alixo Mail est une messagerie indépendante de l’application : seul votre compte Alixo est commun.',
-      bullets: ['<b>Webmail</b> : dossiers, fils, recherche, pièces jointes, raccourcis, sombre', '<b>Outlook, Apple Mail, téléphone</b> : mots de passe d’application, configuration automatique', '<b>Répondeur, filtres, alias</b> réglés depuis les paramètres', '<b>Ouverture</b> dès que le serveur sera en ligne : vous serez prévenu ici'],
-      art: { icon: '✉️' }, accent: '#2e8b6a', accent2: '#1d8a5e', dur: 8500 },
-    { title: 'Une adresse <em>confirmée</em>', text: 'À l’inscription par e-mail, un lien de confirmation protège désormais votre compte avant la première ouverture.',
-      bullets: ['<b>Un clic</b> dans l’e-mail reçu, Alixo s’ouvre tout seul', '<b>Pas reçu ?</b> Renvoyer l’e-mail ou changer d’adresse', '<b>Comptes existants</b> : rien ne bloque, la cloche propose le lien'],
-      art: 'list', accent: '#33658a', accent2: '#3d6bb5', dur: 7000 },
-    { title: 'Le <em>double-clic</em> entre les blocs', text: 'Double-cliquez sous le dernier bloc, entre deux blocs ou au-dessus du premier : un paragraphe s’insère à cet endroit, aussi en vue par pages.',
-      bullets: ['<b>Sous le dernier bloc</b> : bas de la feuille, fin de page ou fond gris', '<b>Entre deux blocs</b> espacés : titre, tableau, image', '<b>Au-dessus du premier</b> : un paragraphe en tête'],
-      art: 'text', accent: '#b3762a', accent2: '#33658a', dur: 7500 },
-    { title: 'Chacun ses <em>spécialités</em>', text: 'Les blocs d’une spécialité que vous n’avez pas choisie ne s’insèrent plus, par aucune porte.',
-      bullets: ['<b>Barre d’outils, bibliothèque de formules, graphiques</b> : filtrés selon votre profil', '<b>Collés depuis un autre cours</b> : ils deviennent du texte simple', '<b>Profil conservé</b> lors de la synchronisation entre appareils'],
-      art: 'cards', accent: '#8a4b9c', accent2: '#c04343', dur: 7500 },
-    { title: 'Les fautes <em>mineures</em> se corrigent seules', text: 'Un accent oublié, une lettre doublée ou inversée repérés plus tard par l’IA : la correction s’applique comme une faute de frappe, sans Tab.',
-      bullets: ['<b>Un seul mot</b>, d’une lettre ou d’un accent, vers un mot connu', '<b>Ctrl+Z</b> pour revenir ; le mot est appris', '<b>Accords et homophones</b> restent proposés sous le paragraphe'],
-      art: 'text', accent: '#c04343', accent2: '#b3762a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });

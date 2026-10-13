@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.31.0';
+const ALIXO_VERSION = '1.32.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1997,6 +1997,7 @@ let billingOffer = null, billingInfo = null;
 const SUB_GRANTING = ['active', 'trialing', 'past_due'];
 const billingReady = () => !!(window.AlixoCloud && AlixoCloud.enabled && AlixoCloud.billing && AlixoCloud.billing.ready());
 const canCheckout = () => billingReady() && !!(billingOffer && (billingOffer.monthly || billingOffer.yearly));
+const canCheckoutBusiness = () => billingReady() && !!(billingOffer && billingOffer.business);
 const subActive = () => !!(billingInfo && billingInfo.subscriptionId && SUB_GRANTING.includes(billingInfo.status));
 const fmtMoney = (cents, cur) => { try { return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: String(cur || 'eur').toUpperCase() }); } catch { return (cents / 100).toFixed(2).replace('.', ',') + ' €'; } };
 const fmtLongDate = ts => new Date(+ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -2120,7 +2121,7 @@ function refreshPlusDialogs() {
 }
 function setPlusOffer(o) { plusOffer = Object.assign({ price: '', url: '', note: '' }, o || {}); refreshPlusDialogs(); }
 /* appelés par js/cloudconfig.js : tarifs Stripe (GET /api/offer) et état de l'abonnement (billing/{uid}) */
-function setBillingOffer(o) { billingOffer = o && (o.monthly || o.yearly) ? o : null; refreshPlusDialogs(); }
+function setBillingOffer(o) { billingOffer = o && (o.monthly || o.yearly || o.business) ? o : null; refreshPlusDialogs(); }
 function setBilling(d) { const next = d && typeof d === 'object' ? d : null; if (JSON.stringify(next) === JSON.stringify(billingInfo)) return; billingInfo = next; refreshPlusDialogs(); }
 /* vrai si la fonction est disponible ; sinon ouvre la fenêtre Alixo+ et renvoie faux */
 function requirePlus(feature) { if (isPlus()) return true; openPlusDialog(feature); return false; }
@@ -2151,8 +2152,9 @@ function exportWatermark(on) {
   document.body.appendChild(el);
 }
 /* logo de l'application : le « A » Alixo+ (orange, avec le +) dès que le compte a Alixo+ */
-const APP_LOGO = 'logo.png', APP_LOGO_PLUS = 'logo-plus.png';
-const appLogoSrc = () => (hasPlusPlan() ? APP_LOGO_PLUS : APP_LOGO);
+const APP_LOGO = 'logo.png', APP_LOGO_PLUS = 'logo-plus.png', APP_LOGO_BUSINESS = 'logo-business.png';
+/* 1.32 : un membre d'une entreprise (Alixo Business) voit le logo Business */
+const appLogoSrc = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? APP_LOGO_BUSINESS : hasPlusPlan() ? APP_LOGO_PLUS : APP_LOGO);
 function applyAppLogo() {
   const src = appLogoSrc();
   $$('.app-logo-img').forEach(img => { if (img.getAttribute('src') !== src) img.setAttribute('src', src); });
@@ -2411,7 +2413,8 @@ const SET_ICO = {
   export: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
   apropos: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
   plus: PLUS_ICO.star,
-  widgets: PLUS_ICO.widgets
+  widgets: PLUS_ICO.widgets,
+  business: '<svg viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 8h2M7 12h2M7 16h2M17 13h1M17 17h1"/></svg>'
 };
 /* thèmes de l'application : base clair / sombre + jeux de couleurs (voir styles.css, html[data-skin]) */
 const APP_THEMES = [
@@ -2467,6 +2470,7 @@ const SET_CATS = [
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
   { k: 'export', name: 'Export', sub: 'PDF, archives .zip des dossiers' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
+  { k: 'business', name: 'Entreprise', sub: 'Alixo Business : équipe, licences Alixo+, partages' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
 ];
 let settingsCat = 'compte';
@@ -2548,6 +2552,7 @@ function bindPlanEditor(root) {
 
 function settingsSectionHTML(k) {
   if (k === 'widgets') return window.AlixoWidgets ? AlixoWidgets.settingsHTML() : '<div class="set-sect"><div class="po-hint">Module des widgets indisponible.</div></div>';
+  if (k === 'business') return window.AlixoBusiness && AlixoBusiness.enabled ? AlixoBusiness.settingsHTML() : `<div class="set-sect">${window.AlixoBusiness ? AlixoBusiness.offerHTML() : ''}<div class="po-hint">Alixo Business demande un compte Alixo connecté (Paramètres › Compte).</div></div>`;
   const fmt = state.settings.exportFormat || 'pdf';
   const theme = state.settings.theme || 'auto';
   const view = state.settings.libView || 'grid';
@@ -2593,7 +2598,8 @@ function settingsSectionHTML(k) {
     ${subscriptionHTML()}
     ${activationHTML()}
     <div class="set-sect"><div class="po-label">Ce que change Alixo+</div>${plusTableHTML('')}
-      <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>`;
+      <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>
+    ${window.AlixoBusiness && !(AlixoBusiness.enabled && AlixoBusiness.active()) ? `<div class="set-sect"><div class="po-label">Pour une entreprise</div>${AlixoBusiness.offerHTML()}<div class="po-hint">Le détail (équipe, licences, modérateurs) est dans Paramètres › Entreprise.</div></div>` : ''}`;
   if (k === 'ia') { const o = aiOpt(); return `<div class="set-sect"><div class="po-label">Serveur, clé et activation</div><div id="po-aisetup">${aiSetupHTML('settings')}</div></div>
     <div class="set-sect"><div class="po-label">Ce que l’IA propose</div>
       <div class="set-checks" id="set-ai">
@@ -2632,6 +2638,8 @@ function settingsSectionHTML(k) {
 
 function bindSettingsSection(k, root) {
   if (k === 'widgets') { if (window.AlixoWidgets) AlixoWidgets.bindSettings(root); return; }
+  if (k === 'business') { if (window.AlixoBusiness) AlixoBusiness.bindSettings(root); return; }
+  if (k === 'plus' && window.AlixoBusiness) { const bb = root.querySelector('#biz-buy'); if (bb) bb.addEventListener('click', async e => { const url = await startCheckout('business', e.currentTarget); if (url) openExternalUrl(url); }); }
   if (k === 'compte') {
     const stor = root.querySelector('#po-storage');
     if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
@@ -10030,7 +10038,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Des widgets sur le bureau de votre ordinateur (Alixo+) : tâches du jour, agenda, minuteur, Jour J avant le partiel, bilan de la semaine, question de quiz, pense-bête… Composez votre bureau dans Paramètres › Widgets, en glisser-déposer ; Alixo reste dans la zone de notification pour les tenir à jour.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo Business arrive : une entreprise, jusqu’à 10 employés dont 5 licences Alixo+, invitation par code, recherche d’un collègue en 4 lettres pour partager, modérateurs pour les partages vers l’extérieur (Paramètres › Entreprise). Widgets : un appui long les déplace sur le bureau, et ils ne passent plus devant les autres fenêtres.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

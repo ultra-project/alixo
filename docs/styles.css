@@ -3880,3 +3880,70 @@ body.printing-quiz #toast, body.printing-quiz #print-summary, body.printing-quiz
 .wd-right { position: sticky; top: 0; }
 .wd-optempty { padding: 12px; border: 1px dashed var(--border); border-radius: 9px; color: var(--ink-3); font-size: 12px; text-align: center; margin-top: 28px; }
 @media (max-width: 1100px) { .wd-layout { grid-template-columns: 1fr; } .wd-right { position: static; } .wd-optempty { display: none; } }
+
+/* ============================================================
+   1.32 — Alixo Business (js/business.js) : Paramètres › Entreprise, recherche de collègues, offre
+   ============================================================ */
+.biz-offer { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid #2e8b6a; border-radius: 10px; background: color-mix(in srgb, #2e8b6a 8%, var(--bg)); max-width: 640px; }
+.biz-offer img { width: 48px; height: 48px; flex: none; }
+.biz-offer > div { flex: 1; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.biz-offer > div > b { font-size: 14px; color: var(--ink); }
+.biz-cta { background: linear-gradient(120deg, #2e8b6a, #4cc46a); color: #fff; }
+.biz-head { display: flex; align-items: center; gap: 12px; max-width: 640px; }
+.biz-head img { width: 44px; height: 44px; flex: none; }
+.biz-hid { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.biz-hid b { font-size: 16px; color: var(--ink); }
+.biz-hid span { font-size: 12.5px; color: var(--ink-2); }
+.biz-seats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; max-width: 640px; margin-top: 12px; }
+.biz-seats > div { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-2); }
+.biz-seats i { display: block; height: 8px; border-radius: 999px; background: var(--border); overflow: hidden; }
+.biz-seats i b { display: block; height: 100%; background: #2e8b6a; border-radius: 999px; }
+.biz-seats i b.plus { background: linear-gradient(120deg, #b3762a, #d9a441); }
+.biz-seats small { font-weight: 700; color: var(--ink); }
+.biz-code { display: flex; align-items: center; gap: 6px; max-width: 640px; }
+.biz-code code { font-family: var(--font-mono); font-size: 16px; font-weight: 700; letter-spacing: .08em; padding: 7px 12px; border: 1px dashed #2e8b6a; border-radius: 8px; background: var(--bg); color: #2e8b6a; }
+.biz-code .pobtn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; }
+.biz-members { display: flex; flex-direction: column; gap: 4px; max-width: 640px; }
+.biz-m { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 10px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.biz-m.me { border-color: color-mix(in srgb, #2e8b6a 50%, var(--border)); }
+.biz-av { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; background: var(--border); color: var(--ink); position: relative; flex: none; }
+.biz-av.on::after { content: ""; position: absolute; right: -1px; bottom: -1px; width: 9px; height: 9px; border-radius: 50%; background: #2e8b6a; border: 2px solid var(--bg); }
+.biz-mi { display: flex; flex-direction: column; min-width: 0; font-size: 13px; }
+.biz-mi b, .biz-mi small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.biz-mi small { font-size: 11.5px; color: var(--ink-3); }
+.biz-mi em.on { font-style: normal; color: #2e8b6a; font-weight: 600; }
+.biz-chip { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: var(--border); color: var(--ink-2); white-space: nowrap; }
+.biz-chip.owner { background: #2e8b6a; color: #fff; }
+.biz-chip.mod { background: #3d6bb5; color: #fff; }
+.biz-mr select { font: inherit; font-size: 12px; color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 4px 6px; }
+.biz-sw { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.biz-sw input { position: absolute; opacity: 0; width: 0; height: 0; }
+.biz-sw span:first-of-type { width: 30px; height: 17px; border-radius: 999px; background: var(--border); position: relative; transition: background .15s; flex: none; }
+.biz-sw span:first-of-type::after { content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: left .15s; }
+.biz-sw input:checked + span { background: #b3762a; }
+.biz-sw input:checked + span::after { left: 15px; }
+.biz-sw input:disabled + span { opacity: .4; }
+.biz-sw .plus-badge { margin-left: 0; }
+.biz-mx .pobtn { width: 26px; height: 26px; padding: 0; font-size: 16px; line-height: 1; }
+.biz-reqs { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.biz-req { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #b3762a; border-radius: 9px; background: color-mix(in srgb, #b3762a 7%, var(--bg)); font-size: 13px; }
+.biz-req .biz-mi b, .biz-req .biz-mi small { white-space: normal; }
+.biz-ract { display: flex; gap: 6px; }
+.biz-badge { display: inline-flex; margin-left: 6px; background: #c04343; color: #fff; border-radius: 999px; padding: 0 7px; font-size: 11px; line-height: 17px; text-transform: none; letter-spacing: 0; }
+.biz-shares { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 8px; max-width: 640px; }
+.biz-share { display: flex; flex-direction: column; gap: 2px; text-align: left; padding: 9px 11px; border: 1px solid var(--border); border-left: 4px solid var(--mc, #2e8b6a); border-radius: 9px; background: var(--bg); font-size: 13px; }
+.biz-share:hover { border-color: var(--mc, #2e8b6a); }
+.biz-share small { font-size: 11.5px; color: var(--ink-3); }
+.biz-share u { cursor: pointer; }
+/* liste de collègues sous le champ « inviter » (Alixo Share) */
+:is(#popover, .po-scope) .sh-inv { position: relative; }
+.biz-sugg { position: absolute; left: 0; right: 0; top: 100%; z-index: 5; margin-top: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14); overflow: hidden; }
+.biz-sugg button { display: flex; align-items: center; gap: 9px; width: 100%; text-align: left; padding: 7px 10px; }
+.biz-sugg button:hover { background: var(--hover); }
+.biz-sugg .biz-av { width: 26px; height: 26px; font-size: 12px; }
+.biz-sn { display: flex; flex-direction: column; min-width: 0; font-size: 12.5px; }
+.biz-sn small { font-size: 11px; color: var(--ink-3); }
+.biz-sugg-hint { padding: 8px 10px; font-size: 11.5px; color: var(--ink-3); }
+.biz-share-btn { border-color: #2e8b6a; color: #2e8b6a; }
+#authov .auth-org { font-family: var(--font-mono); letter-spacing: .06em; text-transform: uppercase; }
+#authov .auth-org::placeholder { font-family: var(--font-ui); letter-spacing: 0; text-transform: none; }

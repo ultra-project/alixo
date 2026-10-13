@@ -25,15 +25,21 @@ body.preview { padding: 12px; }
 body.preview .wg { box-shadow: 0 4px 16px rgba(0, 0, 0, .14); }
 
 /* en-tête : zone de prise pour déplacer la fenêtre */
-.wg-head { display: flex; align-items: center; gap: 7px; padding: 8px 8px 6px 11px; font-size: 12.5px; font-weight: 650; color: var(--ink-2); -webkit-app-region: drag; user-select: none; }
+.wg-head { display: flex; align-items: center; gap: 7px; padding: 8px 8px 6px 11px; font-size: 12.5px; font-weight: 650; color: var(--ink-2); user-select: none; }
 .wg-head b { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
 .wg-ico { display: inline-flex; width: 18px; height: 18px; flex: none; color: var(--wc); }
 .wg-ico svg, .wg-b svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.wg-btns { display: flex; gap: 2px; -webkit-app-region: no-drag; opacity: 0; transition: opacity .15s; }
+.wg-btns { display: flex; gap: 2px; opacity: 0; transition: opacity .15s; }
 .wg:hover .wg-btns, body.preview .wg-btns { opacity: 1; }
 .wg-b { width: 24px; height: 24px; padding: 5px; border-radius: 6px; color: var(--ink-3); }
 .wg-b:hover { background: var(--hover); color: var(--ink); }
-.wg-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 10px 10px; -webkit-app-region: no-drag; }
+.wg-body { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 10px 10px; }
+/* 1.32 : appui long → tremblement, puis déplacement à la souris (widget.js) */
+body.desktop .wg { touch-action: none; }
+body.moving { cursor: grabbing; }
+body.moving .wg { animation: wg-wobble .28s ease-in-out infinite; box-shadow: 0 14px 34px rgba(0, 0, 0, .3), 0 2px 6px rgba(0, 0, 0, .18); border-color: var(--tint); }
+body.moving .wg * { pointer-events: none; }
+@keyframes wg-wobble { 0% { transform: rotate(-1.2deg) scale(1.02); } 50% { transform: rotate(1.2deg) scale(1.02); } 100% { transform: rotate(-1.2deg) scale(1.02); } }
 
 .wg-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; color: var(--ink-2); padding: 8px 6px; line-height: 1.45; }
 .wg-empty.small { font-size: 12.5px; }

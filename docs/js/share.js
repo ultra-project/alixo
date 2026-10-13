@@ -47,8 +47,11 @@ window.AlixoShare = (() => {
   const now = () => Date.now();
   const norm2 = s => String(s || '').trim().toLowerCase();
   const isOwner = sh => sh && sh.owner === uid;
-  const myRole = sh => (sh && sh.members && sh.members[uid] && sh.members[uid].role) || '';
-  const isMember = sh => !!(sh && Array.isArray(sh.memberIds) && sh.memberIds.includes(uid));
+  const myRole = sh => (sh && sh.members && sh.members[uid] && sh.members[uid].role) || (isOrgShare(sh) ? 'read' : '');
+  /* 1.32 : un partage « à l'entreprise » (sh.org) est lu par tous les membres de l'entreprise (Alixo Business) */
+  const bizOrg = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? AlixoBusiness.orgId() : '');
+  const isOrgShare = sh => !!(sh && sh.org && sh.org === bizOrg());
+  const isMember = sh => !!(sh && ((Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)) || isOrgShare(sh)));
   const isInvited = sh => !!(sh && Array.isArray(sh.inviteEmails) && me.email && sh.inviteEmails.includes(me.email));
   const fmtWhen = ts => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const kindLabel = k => ({ doc: 'séance', folder: 'dossier', event: 'événement', file: 'fichier' }[k] || k);
@@ -513,7 +516,7 @@ window.AlixoShare = (() => {
     // partages disparus de cette requête (retiré, supprimé, invitation retirée)
     for (const [sid, sh] of [...shares]) {
       if (seen.has(sid)) continue;
-      const mine = source === 'owner' ? isOwner(sh) : source === 'member' ? (isMember(sh) && !isOwner(sh)) : (isInvited(sh) && !isMember(sh) && !isOwner(sh));
+      const mine = source === 'owner' ? isOwner(sh) : source === 'member' ? (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid) && !isOwner(sh)) : source === 'org' ? (isOrgShare(sh) && !isOwner(sh) && !(Array.isArray(sh.memberIds) && sh.memberIds.includes(uid))) : (isInvited(sh) && !isMember(sh) && !isOwner(sh));
       if (!mine) continue;
       shares.delete(sid); stopDocs(sid);
       if (sh.kind === 'event') dropEvent(sid);
@@ -623,6 +626,24 @@ window.AlixoShare = (() => {
     const curF = cur === rootId ? { id: rootId, nom: sh.title || 'Dossier', couleur: sh.color || DEFAULT_TINT, icone: sh.folder && sh.folder.root ? sh.folder.root.icone : '' } : fs.find(x => x.id === cur);
     return { sid, sh: { title: sh.title, owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh), color: sh.color || DEFAULT_TINT }, rootId, cur: curF, path, folders, docs, files: sharedFilesIn(sid, cur), state: docsState.get(sid) ? docsState.get(sid).st : 'ready' };
   }
+  /* 1.32 : partages à toute l'entreprise (Alixo Business) — écoute lancée quand l'entreprise est connue */
+  let orgUnsub = null, orgNow = '';
+  function setOrg(oid) {
+    oid = String(oid || '');
+    if (oid === orgNow) return;
+    if (orgUnsub) { try { orgUnsub(); } catch { /* */ } orgUnsub = null; }
+    const prevOrg = orgNow; orgNow = oid;
+    if (!oid) { if (prevOrg) applyShareSnapshot([], 'org'); return; }
+    orgUnsub = sharesRef.where('org', '==', oid).onSnapshot(s => applyShareSnapshot(s.docs, 'org'), err => console.error('Share (entreprise) :', err));
+  }
+  const orgShares = () => [...shares.values()].filter(sh => sh.org && sh.org === bizOrg()).sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  function openShared(sid) {
+    const sh = shares.get(sid); if (!sh) { toast('Ce partage n’est plus disponible'); return; }
+    if (sh.kind === 'doc') { if (docById(sh.target)) openDoc(sh.target); else { AlixoApp.openSharedHome(); } }
+    else if (sh.kind === 'folder') openSharedFolder(sid, null);
+    else if (sh.kind === 'file') openSharedFile(sid, sh.target);
+    else AlixoApp.openSharedHome();
+  }
   function start() {
     sharesRef.where('owner', '==', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'owner'), err => console.error('Share (mes partages) :', err));
     sharesRef.where('memberIds', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'member'), err => console.error('Share (reçus) :', err));
@@ -671,13 +692,19 @@ window.AlixoShare = (() => {
     schedulePush();
     return sh;
   }
-  async function invite(sid, who, role) {
+  async function invite(sid, who, role, opts) {
     const sh = shares.get(sid); if (!sh) throw new Error('Partage introuvable');
     const u = await findUser(who);
     if (!u || !u.email) throw new Error('Personne introuvable — indiquez un e-mail ou un pseudo Alixo existant');
     if (u.email === me.email) throw new Error('C’est votre propre adresse');
     if (u.uid && sh.members && sh.members[u.uid]) throw new Error(`${u.name} est déjà membre`);
     if ((sh.inviteEmails || []).includes(u.email)) throw new Error('Invitation déjà envoyée à cette adresse');
+    /* 1.32 : Alixo Business — une adresse extérieure à l'entreprise attend l'accord d'un modérateur (le dirigeant et les
+       modérateurs partagent librement) ; l'invitation part d'elle-même une fois la demande approuvée */
+    if (!(opts && opts.direct) && window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.gate(u.email) === 'external') {
+      const rid = await AlixoBusiness.request({ sid, kind: sh.kind, title: sh.title, to: u.email, role: role === 'write' ? 'write' : 'read' });
+      return { pending: true, email: u.email, name: u.name || '', role, rid };
+    }
     const inv = { email: u.email, role: role === 'write' ? 'write' : 'read', name: u.name || '', by: me.name, ts: now() };
     await sharesRef.doc(sid).update({ invites: FV.arrayUnion(inv), inviteEmails: FV.arrayUnion(u.email), updatedAt: now() });
     sh.invites = [...(sh.invites || []), inv]; sh.inviteEmails = [...(sh.inviteEmails || []), u.email];
@@ -953,7 +980,7 @@ window.AlixoShare = (() => {
           <div class="sh-how"><b>Comment ça marche</b><ol><li>Vous invitez par e-mail ou pseudo.</li><li>La personne accepte dans « Partagés avec moi ».</li><li>Elle voit vos modifications en direct ; vous gérez les droits et le contenu à tout moment.</li></ol></div>
           ${roleHelpHTML}
         </aside></div>`,
-      foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta" id="sh-ok" type="button">Inviter</button>`,
+      foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button>${window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.isMod() ? '<button class="cta ghost biz-share-btn" id="sh-org" type="button" title="Tous les membres de l’entreprise le voient, en lecture">Partager à l’entreprise</button>' : ''}<button class="cta" id="sh-ok" type="button">Inviter</button>`,
       onMount: (card, close) => {
         const who = card.querySelector('#sh-who'), msg = card.querySelector('#sh-msg');
         const ok = async () => {
@@ -964,12 +991,23 @@ window.AlixoShare = (() => {
             const sh = await createShare(kind, target);
             const inv = await invite(sh.id, w, card.querySelector('#sh-role').value);
             close();
+            if (inv.pending) { toast(`Demande envoyée : un modérateur de l’entreprise doit autoriser le partage avec ${inv.email}. L’invitation partira toute seule.`, { duration: 10000 }); return; }
             openShareManager(sh.id);
             afterInvite(sh, inv);
           } catch (err) { console.error('Share :', err); msg.textContent = friendly(err); msg.className = 'ai-keymsg err'; card.querySelector('#sh-ok').disabled = false; }
         };
         card.querySelector('#sh-ok').addEventListener('click', ok);
         who.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
+        /* 1.32 : collègues de l'entreprise (4 lettres du nom) et partage à toute l'entreprise (dirigeant, modérateurs) */
+        if (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active()) {
+          AlixoBusiness.attachSearch(who);
+          const org = card.querySelector('#sh-org');
+          if (org) org.addEventListener('click', async () => {
+            org.disabled = true; msg.textContent = 'Partage…'; msg.className = 'ai-keymsg';
+            try { const sh = await createShare(kind, target); await AlixoBusiness.shareToOrg(sh.id, true); close(); toast(`« ${sh.title} » est partagé à toute l’entreprise (lecture)`); }
+            catch (err) { msg.textContent = friendly(err); msg.className = 'ai-keymsg err'; org.disabled = false; }
+          });
+        }
         setTimeout(() => who.focus(), 60);
       }
     });
@@ -1052,10 +1090,11 @@ window.AlixoShare = (() => {
             if (e.target.closest('#sh-add')) {
               const who = card.querySelector('#sh-who'); const w = who ? who.value.trim() : ''; if (!w) { if (who) who.focus(); return; }
               const msg = msgEl(); if (msg) { msg.textContent = 'Envoi…'; msg.className = 'ai-keymsg'; }
-              try { const inv = await invite(sid, w, card.querySelector('#sh-role').value); openShareManager(sid); afterInvite(cur(), inv); } catch (x) { err(x); }
+              try { const inv = await invite(sid, w, card.querySelector('#sh-role').value); openShareManager(sid); if (inv.pending) toast(`Demande envoyée : un modérateur de l’entreprise doit autoriser le partage avec ${inv.email}.`, { duration: 10000 }); else afterInvite(cur(), inv); } catch (x) { err(x); }
             }
           });
           card.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'sh-who') { e.preventDefault(); const b = card.querySelector('#sh-add'); if (b) b.click(); } });
+          if (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active()) { const w0 = card.querySelector('#sh-who'); if (w0) AlixoBusiness.attachSearch(w0); }
         }
       });
       ov.dataset.mode = 'manage'; ov.dataset.sid = sid;
@@ -1116,5 +1155,7 @@ window.AlixoShare = (() => {
   })();
 
   return { enabled: true, docById, sharedDocs, canWrite, infoFor, tintFor, labelFor, onLocalSave: schedulePush, invites: () => [...shares.values()].filter(sh => isInvited(sh) && !isMember(sh)), pendingCount, renderSharedHome, openShareFor, openShareManager, openInfo, setPseudo, pseudo: () => profile.pseudo, noteOpened, leaveEvent, mySharesOf, copyToLibrary, fetchImage, eventDeleted, accessFor, sharedFolders, sharedDocsAlone, sharedFolderView, setPresence, peersFor, colorFor, me: () => me,
-    sharedFilesIn, sharedFileById, shareMeta, fetchFile, openSharedFile };
+    sharedFilesIn, sharedFileById, shareMeta, fetchFile, openSharedFile,
+    /* 1.32 : Alixo Business */
+    setOrg, orgShares, openShared, inviteDirect: (sid, who, role) => invite(sid, who, role, { direct: true }), afterInvite: (sid, inv) => { const sh = shares.get(sid); if (sh) afterInvite(sh, inv); } };
 })();

@@ -152,6 +152,7 @@ window.AlixoAuth = (() => {
           <input id="auth-name" class="auth-in" type="text" placeholder="Prénom (ou pseudo)" autocomplete="name" hidden>
           <input id="auth-email" class="auth-in" type="email" placeholder="Adresse e-mail" autocomplete="email" required>
           <input id="auth-pass" class="auth-in" type="password" placeholder="Mot de passe" autocomplete="current-password" required>
+          <input id="auth-org" class="auth-in auth-org" type="text" placeholder="Code entreprise (facultatif, Alixo Business)" autocomplete="off" spellcheck="false" hidden>
           <button id="auth-submit" class="cta auth-cta" type="submit">Se connecter</button>
         </form>
 
@@ -184,9 +185,15 @@ window.AlixoAuth = (() => {
     const err = msg => { const e = $a('#auth-error'); e.textContent = msg || ''; e.hidden = !msg; };
     const busy = on => { ov.classList.toggle('busy', !!on); $a('#auth-submit').disabled = !!on; };
 
+    /* 1.32 : code d'entreprise (Alixo Business) — saisi à la création du compte, ou pris dans l'adresse ?join=CODE */
+    const JOIN_LS = 'alixo.joinCode';
+    const joinParam = (() => { try { return new URLSearchParams(location.search).get('join') || ''; } catch { return ''; } })();
+    const orgCode = () => ($a('#auth-org').value || '').trim().toUpperCase().replace(/\s+/g, '');
+    const keepOrgCode = () => { try { const c = orgCode(); if (c) localStorage.setItem(JOIN_LS, c); } catch { /* stockage indisponible */ } };
     function setMode(m) {
       mode = m; err('');
       $a('#auth-name').hidden = m !== 'signup';
+      $a('#auth-org').hidden = m !== 'signup';
       $a('#auth-pass').autocomplete = m === 'signup' ? 'new-password' : 'current-password';
       $a('#auth-submit').textContent = m === 'signup' ? 'Créer mon compte' : 'Se connecter';
       $a('#auth-toggle').textContent = m === 'signup' ? 'J’ai déjà un compte' : 'Créer un compte';
@@ -195,6 +202,7 @@ window.AlixoAuth = (() => {
         : 'Connectez-vous pour retrouver vos cours sur tous vos appareils.';
     }
     $a('#auth-toggle').addEventListener('click', () => setMode(mode === 'signup' ? 'login' : 'signup'));
+    if (joinParam) { $a('#auth-org').value = joinParam.toUpperCase(); setMode('signup'); $a('.auth-sub').textContent = 'Votre entreprise vous invite sur Alixo Business : créez votre compte professionnel, le code est déjà rempli.'; }
 
     async function done(user) { setSession(user); location.reload(); }
 
@@ -254,13 +262,14 @@ window.AlixoAuth = (() => {
         let cred;
         if (mode === 'signup') {
           cred = await auth.createUserWithEmailAndPassword(email, pass);
-          markNewAccount(cred.user);
+          markNewAccount(cred.user); keepOrgCode();
           const name = $a('#auth-name').value.trim();
           if (name) { await cred.user.updateProfile({ displayName: name }); }
           busy(false); showVerify(cred.user); return;        // 1.29 : l'adresse doit être confirmée avant d'entrer
         } else {
           cred = await auth.signInWithEmailAndPassword(email, pass);
           if (mustVerify(cred.user)) { busy(false); showVerify(cred.user); return; }
+          if (orgCode()) { err('Un code d’entreprise s’utilise avec un nouveau compte (« Créer un compte »), pas avec un compte existant.'); busy(false); return; }
         }
         await done(cred.user);
       } catch (ex) { err(frError(ex)); }
@@ -292,10 +301,10 @@ window.AlixoAuth = (() => {
           const tok = await window.alixoDesktop.googleOAuth(GOOGLE_DESKTOP.clientId, GOOGLE_DESKTOP.clientSecret || '');
           const gcred = firebase.auth.GoogleAuthProvider.credential(tok.idToken, tok.accessToken || null);
           cred = await auth.signInWithCredential(gcred);
-          if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) markNewAccount(cred.user);
+          if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) { markNewAccount(cred.user); keepOrgCode(); }
         } else {
           cred = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
-          if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) markNewAccount(cred.user);
+          if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) { markNewAccount(cred.user); keepOrgCode(); }
         }
         await done(cred.user);
       } catch (ex) { err(frError(ex)); }
@@ -328,7 +337,7 @@ window.AlixoAuth = (() => {
           }
         }
         await appleName(cred);
-        if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) markNewAccount(cred.user);
+        if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) { markNewAccount(cred.user); keepOrgCode(); }
         await done(cred.user);
       } catch (ex) { err(frError(ex)); }
       busy(false);
