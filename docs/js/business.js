@@ -51,7 +51,10 @@ window.AlixoBusiness = (() => {
     const onErr = tag => err => { if (!/permission|insufficient/i.test(String(err && err.message))) console.error('Business (' + tag + ') :', err); };
     return {
       listenProfile: cb => profRef.onSnapshot(s => cb(s.exists ? s.data() : null), onErr('profil')),
-      listenOrg: (oid, cb) => orgs.doc(oid).onSnapshot(s => cb(s.exists ? Object.assign({ id: s.id }, s.data()) : null), err => { onErr('entreprise')(err); cb(null); }),
+      /* 1.33.1 : une erreur de lecture (réseau, déconnexion, règles) ne vaut PAS « entreprise supprimée » : cb(undefined) */
+      listenOrg: (oid, cb) => orgs.doc(oid).onSnapshot(s => cb(s.exists ? Object.assign({ id: s.id }, s.data()) : null), err => { onErr('entreprise')(err); cb(undefined); }),
+      /* 1.33.1 : l'entreprise que ce compte dirige (si le lien du profil manque) */
+      findOwned: async () => { const q = await orgs.where('ownerUid', '==', uid).limit(1).get(); return q.empty ? null : Object.assign({ id: q.docs[0].id }, q.docs[0].data()); },
       listenMembers: (oid, cb) => orgs.doc(oid).collection('members').onSnapshot(s => cb(s.docs.map(d => Object.assign({ uid: d.id }, d.data()))), onErr('membres')),
       listenRequests: (oid, cb) => orgs.doc(oid).collection('requests').where('state', '==', 'pending').onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), onErr('demandes')),
       listenMyRequests: (oid, cb) => orgs.doc(oid).collection('requests').where('by', '==', uid).onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), onErr('mes demandes')),
@@ -124,8 +127,9 @@ window.AlixoBusiness = (() => {
     if (!oid || oid === orgId) return;
     stopOrg(); orgId = oid;
     unsubs.push(store.listenOrg(oid, o => {
+      if (o === undefined) return;   // lecture impossible pour l'instant : on garde le lien
       org = o;
-      if (!o) { /* entreprise supprimée ou retirée : on oublie */ stopOrg(); orgId = ''; store.setProfileOrg(null).catch(() => {}); refreshUI(); return; }
+      if (!o) { /* entreprise supprimée : on oublie */ stopOrg(); orgId = ''; store.setProfileOrg(null).catch(() => {}); refreshUI(); return; }
       refreshUI();
     }));
     unsubs.push(store.listenMembers(oid, ms => {
@@ -265,6 +269,12 @@ window.AlixoBusiness = (() => {
   async function shareToOrg(sid, on) { if (!isMod()) throw new Error('Réservé au dirigeant et aux modérateurs'); await store.shareToOrg(sid, on ? orgId : ''); }
 
   /* ---------------- démarrage ---------------- */
+  /* 1.33.1 : le dirigeant dont le profil a perdu le lien vers son entreprise le retrouve tout seul */
+  let repairTried = false;
+  async function repairOwned() {
+    if (repairTried || !store.findOwned) return; repairTried = true;
+    try { const o = await store.findOwned(); if (o && !orgId) { await store.setProfileOrg({ id: o.id, name: o.name || '', role: 'owner' }); startOrg(o.id); } } catch { /* pas d'entreprise */ }
+  }
   function start() {
     if (started) return; started = true;
     store.listenProfile(p => {
@@ -272,7 +282,7 @@ window.AlixoBusiness = (() => {
       const o = p && p.org && p.org.id ? p.org.id : '';
       if (o && o !== orgId) startOrg(o);
       else if (!o && orgId && !fake) { /* retiré côté serveur */ }
-      if (!o) joinPending();
+      if (!o) { joinPending(); repairOwned(); }
     });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else setTimeout(start, 0);

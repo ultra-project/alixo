@@ -43,6 +43,10 @@
     return {
       listenProfile: cb => db.collection('profiles').doc(uid()).onSnapshot(s => cb(s.exists ? s.data() : null), () => cb(null)),
       listenOrg: (oid, cb) => orgs.doc(oid).onSnapshot(s => cb(s.exists ? Object.assign({ id: s.id }, s.data()) : null), () => cb(null)),
+      /* 1.33.1 : l'entreprise que ce compte dirige, puis celle de l'adresse ?org= — si le lien du profil manque */
+      findOwned: async () => { const q = await orgs.where('ownerUid', '==', uid()).limit(1).get(); return q.empty ? null : Object.assign({ id: q.docs[0].id }, q.docs[0].data()); },
+      getOrg: async oid => { const d = await orgs.doc(oid).get(); return d.exists ? Object.assign({ id: d.id }, d.data()) : null; },
+      setProfileOrg: o => db.collection('profiles').doc(uid()).set({ org: o }, { merge: true }),
       listenMembers: (oid, cb) => orgs.doc(oid).collection('members').onSnapshot(s => cb(s.docs.map(d => Object.assign({ uid: d.id }, d.data()))), () => cb([])),
       listenRequests: (oid, cb) => orgs.doc(oid).collection('requests').where('state', '==', 'pending').onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => cb([])),
       listenMyRequests: (oid, cb) => orgs.doc(oid).collection('requests').where('by', '==', uid()).onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), () => cb([])),
@@ -282,15 +286,27 @@
   /* ============================================================
      Démarrage : compte connecté → entreprise du profil
      ============================================================ */
+  /* le profil ne relie ce compte à aucune entreprise : est-il le dirigeant d'une entreprise (ou membre de celle de ?org=) ?
+     Si oui, le lien du profil est réparé (il sert aussi à l'application). */
+  async function findOrg() {
+    let o = null;
+    try { if (store.findOwned) o = await store.findOwned(); } catch { o = null; }
+    const want = new URLSearchParams(location.search).get('org');
+    if (!o && want && store.getOrg) { try { o = await store.getOrg(want); } catch { o = null; } }
+    if (o && store.setProfileOrg) store.setProfileOrg({ id: o.id, name: o.name || '', role: o.ownerUid === me.uid ? 'owner' : 'member' }).catch(() => {});
+    return o;
+  }
   function signedIn(user) {
     me = user;
     $('#me-name').textContent = me.name || me.email.split('@')[0];
     $('#me-mail').textContent = me.email;
     $('#me-av').textContent = initial(me.name || me.email);
-    store.listenProfile(p => {
+    store.listenProfile(async p => {
       const oid = p && p.org && p.org.id ? p.org.id : '';
-      if (!oid) { stop(); $('#noorg-mail').textContent = me.email; show('noorg'); return; }
-      startOrg(oid);
+      if (oid) { startOrg(oid); return; }
+      const found = await findOrg();
+      if (found) { startOrg(found.id); return; }
+      stop(); $('#noorg-mail').textContent = me.email; $('#noorg-uid').textContent = me.uid; show('noorg');
     });
   }
   document.querySelectorAll('[data-logout]').forEach(b => b.addEventListener('click', () => { if (auth) auth.signOut(); else location.reload(); }));

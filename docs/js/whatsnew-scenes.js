@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.33.0 (ou nouveautes.html?v=1.33.0 en page seule).
+   Aperçu : index.html?nouveautes=1.33.1 (ou nouveautes.html?v=1.33.1 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.33.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Votre entreprise,<br><em>toujours là</em>', text: 'Une correction pour Alixo Business : le tableau de bord retrouve l’entreprise de son dirigeant.', dur: 5000 },
+    { title: 'Fini, « <em>Aucune entreprise</em> »', text: 'Le dirigeant retrouve son entreprise sur le tableau de bord en ligne et dans Paramètres › Entreprise.',
+      bullets: ['<b>Lien réparé</b> tout seul entre le compte et l’entreprise', '<b>Erreur réseau</b> : le lien n’est plus effacé', '<b>Deux comptes</b> pour une adresse ? L’identifiant s’affiche'],
+      art: { image: 'logo-business.png', alt: 'Alixo Business' }, accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
+    { title: 'Rappel de la <em>1.33</em>', text: 'Si vous arrivez de la 1.32 : voici ce qui a changé la semaine dernière.',
+      bullets: ['<b>Fond d’écran</b> derrière vos documents (Alixo+)', '<b>Bibliothèque des blocs</b> avec aperçu animé', '<b>Messagerie d’équipe</b> pour Alixo Business'],
+      art: 'palette', accent: '#8a4b9c', accent2: '#b3762a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.33.0', {
   scenes: [
@@ -46,25 +59,6 @@ AlixoWhatsNew.register('1.32.0', {
     { title: 'Des widgets plus <em>dociles</em>', text: 'Deux corrections demandées : un widget ne passe plus devant vos fenêtres, et on le déplace d’un appui long.',
       bullets: ['<b>Derrière les fenêtres</b> : un widget posé ne vous interrompt plus', '<b>Appui long</b> : il tremble, vous le glissez, l’emplacement est enregistré', '<b>Partout sur le widget</b>, plus de zone de prise en haut'],
       art: 'board', accent: '#b3762a', accent2: '#3d6bb5', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.31.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Des widgets sur votre <em>bureau</em>', text: 'Tâches, agenda, minuteur, Jour J… posés sur le bureau de l’ordinateur, toujours à jour. Avec Alixo+.', dur: 5000 },
-    { title: 'Composez votre <em>bureau</em>', text: 'Paramètres › Widgets : un faux bureau aux dimensions de votre écran, et un catalogue à glisser-déposer.',
-      bullets: ['<b>Glissez</b> un widget du catalogue, déplacez-le, cliquez-le pour ses options', '<b>Aperçu</b> en vrai, avec vos données, avant de l’ajouter', '<b>Disposition</b> enregistrée avec le compte, d’un ordinateur à l’autre'],
-      art: 'board', accent: '#33658a', accent2: '#b3762a', dur: 7500 },
-    { title: 'Votre <em>journée</em> en un coup d’œil', text: 'Les widgets vivent avec l’application : cocher une tâche, lancer le minuteur, rouvrir une séance, sans ouvrir Alixo.',
-      bullets: ['<b>Tâches du jour</b> : à cocher depuis le bureau, une ligne pour en ajouter', '<b>Agenda</b> : le cours en cours et le temps qu’il reste', '<b>Minuteur</b> : 25 min, 5 min, 45 min… le même que dans les cours', '<b>Jour J</b> : les jours restants avant le partiel, en grand'],
-      art: 'list', accent: '#2e8b6a', accent2: '#c04343', dur: 8500 },
-    { title: 'Pour <em>réviser</em> un peu chaque jour', text: 'Une question de vos quiz, votre semaine en chiffres, vos dernières séances et un post-it sous les yeux.',
-      bullets: ['<b>Question du jour</b> : quatre réponses, la bonne s’allume', '<b>Bilan de la semaine</b> : mots écrits, jours d’affilée, graphique', '<b>Reprendre</b>, <b>Pense-bête</b>, <b>Horloge</b> avec le numéro de semaine'],
-      art: 'quiz', accent: '#2e8b8b', accent2: '#8a4b9c', dur: 8000 },
-    { title: 'Toujours <em>à jour</em>', text: 'Fermer la fenêtre ne quitte plus Alixo : il reste dans la zone de notification pour tenir les widgets à jour.',
-      bullets: ['<b>Toujours au-dessus</b> des fenêtres, ou posés sur le bureau (Windows + D)', '<b>Lancement</b> avec la session : les widgets apparaissent directement', '<b>Opacité</b> réglable, thème clair ou sombre suivi'],
-      art: { icon: '🖥️' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });

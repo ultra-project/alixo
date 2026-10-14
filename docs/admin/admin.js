@@ -691,7 +691,14 @@
   }
   $('#orgs-q').addEventListener('input', renderOrgs);
   $('#v-orgs').addEventListener('click', e => { const b = e.target.closest('[data-orgcard]') || e.target.closest('tr[data-org]'); if (!b) return; const id = b.dataset.orgcard || b.dataset.org; const o = state.orgs.find(x => x.id === id); if (o) openOrgCard(o); });
-  const findProfile = v => { v = String(v || '').trim().toLowerCase(); if (!v) return null; return state.profiles.find(x => (x.email || '').toLowerCase() === v || (x.emailLower || '') === v || x.uid === v) || null; };
+  /* 1.33.1 : une même adresse peut porter plusieurs comptes (Google, mot de passe…) : on prend le plus récemment vu, et on le dit */
+  const findProfile = v => {
+    v = String(v || '').trim().toLowerCase(); if (!v) return null;
+    const byUid = state.profiles.find(x => x.uid === v); if (byUid) return byUid;
+    const list = state.profiles.filter(x => (x.email || '').toLowerCase() === v || (x.emailLower || '') === v).sort((a, b) => (+b.lastSeen || 0) - (+a.lastSeen || 0));
+    if (list.length > 1) toast(`${list.length} comptes portent l’adresse ${v} : le plus récemment connecté est retenu (${list[0].uid}). Indiquez l’UID pour en choisir un autre.`);
+    return list[0] || null;
+  };
   async function setOwnerPlus(o, p) {
     await db.collection('plans').doc(p.uid).set({ plus: true, until: 0, since: Date.now(), updatedAt: Date.now(), by: 'business', orgId: o.id, note: 'Alixo Business — ' + o.name + ' (dirigeant)', email: p.email || '' });
   }

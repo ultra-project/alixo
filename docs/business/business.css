@@ -184,3 +184,4 @@ h1, h2 { margin: 0; }
   .bz-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
   .bz-req { flex-direction: column; align-items: flex-start; }
 }
+.bz-uid { font: 600 11.5px ui-monospace, Consolas, monospace; padding: 1px 6px; border-radius: 6px; background: var(--surface-2); color: var(--ink); user-select: all; overflow-wrap: anywhere; }
