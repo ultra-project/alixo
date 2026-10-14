@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.32.0';
+const ALIXO_VERSION = '1.33.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1979,6 +1979,7 @@ const PLUS_ICO = {
   ia: '<svg viewBox="0 0 24 24"><path d="M4 17c3-1 6-9 8-9s3 8 8 7"/><path d="m3 20 2-2M19 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg>',
   taches: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.5 7 1.4 1.4L8.5 5.6M11 7h10M11 17h10"/><rect x="3" y="14" width="6" height="6" rx="1.2"/></svg>',
   widgets: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>',
+  fond: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><rect x="8" y="7" width="8" height="10" rx="1"/><path d="m3 15 4-4M17 9l4-3"/></svg>',
   star: '<svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/></svg>'
 };
 const PLUS_FEATURES = [
@@ -1987,6 +1988,7 @@ const PLUS_FEATURES = [
   { k: 'polices', name: 'Toutes les polices d’écriture', free: '3 polices', plus: 'Toutes les polices', text: 'Georgia, Garamond, Cambria, Calibri, Verdana, Trebuchet, Monospace, Comic Sans… en plus des trois polices gratuites.' },
   { k: 'ia', name: 'Intelligence artificielle', free: '—', plus: 'Incluse', text: 'Correction de l’orthographe et de la grammaire, mise en forme et reformulations par IA, pendant la frappe ou à la demande (F7).' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
+  { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' }
 ];
 let planInfo = (() => { try { return JSON.parse(localStorage.getItem(PLUS_LS)) || {}; } catch { return {}; } })();
@@ -2465,12 +2467,12 @@ function applyDocFont() {
 const SET_CATS = [
   { k: 'compte', name: 'Compte', sub: 'Connexion, profil, stockage, pseudo Alixo Share' },
   { k: 'plus', name: 'Alixo+', sub: 'Votre formule, clé d’activation' },
-  { k: 'apparence', name: 'Apparence', sub: 'Thème clair ou sombre, affichage de la bibliothèque' },
+  { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Raccourcis de frappe et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
   { k: 'export', name: 'Export', sub: 'PDF, archives .zip des dossiers' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
-  { k: 'business', name: 'Entreprise', sub: 'Alixo Business : équipe, licences Alixo+, partages' },
+  { k: 'business', name: 'Entreprise', sub: 'Alixo Business : votre entreprise, tableau de bord en ligne, messagerie' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
 ];
 let settingsCat = 'compte';
@@ -2570,7 +2572,7 @@ function settingsSectionHTML(k) {
       <div class="set-tiles" id="set-view">
         ${[['grid', 'Grille', 'Cartes des dossiers et séances'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
       </div>
-      <div class="po-hint">Le bouton en haut de la bibliothèque permet aussi de changer d’affichage à tout moment.</div></div>`;
+      <div class="po-hint">Le bouton en haut de la bibliothèque permet aussi de changer d’affichage à tout moment.</div></div>${window.AlixoWall ? AlixoWall.settingsHTML() : ''}`;
   if (k === 'ecriture') return `<div class="set-sect"><div class="po-label">Police des cours</div>
       <div class="po-hint" style="margin:0 0 10px">Police du texte des séances (paragraphes, listes, encadrés). Les titres suivent la même police, sauf choix contraire ci-dessous. L’export PDF l’utilise aussi.</div>
       <div class="set-tiles set-tiles4 set-fonts" id="set-font">
@@ -2670,6 +2672,7 @@ function bindSettingsSection(k, root) {
       root.querySelectorAll('#set-view .set-tile').forEach(t => t.classList.toggle('on', t === b));
       if (!currentDocId) renderLibrary();
     });
+    if (window.AlixoWall) AlixoWall.bindSettings(root);
     return;
   }
   if (k === 'ecriture') {
@@ -6012,6 +6015,8 @@ $('#pp-slash').addEventListener('click', () => {
   const empty = isEmptyPara(b);
   if (!empty) { const nb = { id: uid(), type: 'p', text: '' }; d.blocks.splice(blockIndex(b ? b.id : d.blocks[d.blocks.length - 1].id) + 1, 0, nb); touch(); renderBlocks(nb.id, 'start'); b = nb; }
   else focusBlock(b.id, 'start');
+  // 1.33 : la bibliothèque des blocs (recherche + aperçu animé) ; le « / » tapé dans le texte garde le menu compact
+  if (window.AlixoBlockPicker) { AlixoBlockPicker.open(b.id); return; }
   const el = $(`#blocks > .block[data-id="${b.id}"]`); if (el) openSlashMenu(el);
 });
 $('#pp-collapse').addEventListener('click', () => {
@@ -6985,8 +6990,8 @@ function renderCalNow() {
   if (!st) { el.hidden = true; el.className = 'cal-now'; return; }
   el.hidden = false;
   const title = st.o.ev.title || 'Événement';
-  if (st.kind === 'now') { el.className = 'cal-now live'; el.innerHTML = `<span>${esc(title)}</span><span class="cn-left">· reste ${fmtLeft(st.left)}</span>`; el.title = `En cours jusqu’à ${pad2(st.o.end.getHours())}:${pad2(st.o.end.getMinutes())} — cliquer pour l’agenda`; }
-  else { el.className = 'cal-now'; el.innerHTML = `<span class="cn-left">Prochain</span><span>${pad2(st.o.start.getHours())}:${pad2(st.o.start.getMinutes())} ${esc(title)}</span><span class="cn-left">· dans ${fmtLeft(st.in)}</span>`; el.title = 'Prochain événement aujourd’hui — cliquer pour l’agenda'; }
+  if (st.kind === 'now') { el.className = 'cal-now live'; el.innerHTML = `<span class="cn-title">${esc(title)}</span><span class="cn-left">· reste ${fmtLeft(st.left)}</span>`; el.title = `En cours jusqu’à ${pad2(st.o.end.getHours())}:${pad2(st.o.end.getMinutes())} — cliquer pour l’agenda`; }
+  else { el.className = 'cal-now'; el.innerHTML = `<span class="cn-left">Prochain</span><span class="cn-left cn-time">${pad2(st.o.start.getHours())}:${pad2(st.o.start.getMinutes())}</span><span class="cn-title">${esc(title)}</span><span class="cn-left">· dans ${fmtLeft(st.in)}</span>`; el.title = `Prochain : ${pad2(st.o.start.getHours())}:${pad2(st.o.start.getMinutes())} ${title} — dans ${fmtLeft(st.in)} (cliquer pour l’agenda)`; }
 }
 setInterval(renderCalNow, 30000);
 $('#cal-now').addEventListener('click', () => { if (currentDocId) openCalPanel(); else openAgendaHome(); });
@@ -8575,6 +8580,7 @@ function applyTheme() {
   setWindowBg();
   if (window.AlixoGalaxy && AlixoGalaxy.onTheme) AlixoGalaxy.onTheme();
   if (window.AlixoWidgets) AlixoWidgets.publish();
+  if (window.AlixoWall) AlixoWall.apply();   // 1.33 : fond d'écran des documents (suit Alixo+ et le thème)
 }
 $('#btn-theme').addEventListener('click', () => {
   const cur = document.documentElement.dataset.theme;
@@ -10038,7 +10044,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo Business arrive : une entreprise, jusqu’à 10 employés dont 5 licences Alixo+, invitation par code, recherche d’un collègue en 4 lettres pour partager, modérateurs pour les partages vers l’extérieur (Paramètres › Entreprise). Widgets : un appui long les déplace sur le bureau, et ils ne passent plus devant les autres fenêtres.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Un fond d’écran à vous derrière vos séances, présentations et tableurs (Alixo+, Paramètres › Apparence) ; « Insérer un bloc » ouvre une bibliothèque avec recherche et aperçu animé ; Alixo Business se gère sur un tableau de bord en ligne, avec une messagerie d’équipe en option ; l’agenda affiche de nouveau « dans 40 min » en entier.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

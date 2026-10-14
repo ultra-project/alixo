@@ -19,6 +19,7 @@ window.AlixoBusiness = (() => {
   const acc = A && A.isConfigured && A.account();
   const JOIN_LS = 'alixo.joinCode';
   const SEATS = { seats: 10, plusSeats: 5 };
+  const BUSINESS_URL = 'https://alixoapp.com/docs/business/';   // 1.33 : tableau de bord en ligne (app/business/) ; business.alixoapp.com une fois le sous-domaine posé : config/public.businessUrl (panneau admin)
   const ONLINE_MS = 5 * 60000;
   const MIN_SEARCH = 4;
   const ICO = {
@@ -29,7 +30,7 @@ window.AlixoBusiness = (() => {
     copy: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>'
   };
   const fake = window.ALIXO_BUSINESS_FAKE || null;
-  if (!acc && !fake) return { enabled: false, active: () => false, orgId: () => '', isMember: () => false, isMod: () => false, settingsHTML: () => '', bindSettings() {}, offerHTML: () => '', colleagues: () => [], gate: () => 'free', attachSearch() {}, request: async () => null, ICO };
+  if (!acc && !fake) return { enabled: false, active: () => false, chatOn: () => false, dashUrl: () => BUSINESS_URL, orgId: () => '', isMember: () => false, isMod: () => false, settingsHTML: () => '', bindSettings() {}, offerHTML: () => '', colleagues: () => [], gate: () => 'free', attachSearch() {}, request: async () => null, ICO };
 
   const me = fake ? fake.me : { uid: acc.uid, email: (acc.email || '').toLowerCase(), name: acc.name || (acc.email || '').split('@')[0] };
   const uid = me.uid;
@@ -79,7 +80,19 @@ window.AlixoBusiness = (() => {
       createRequest: async (oid, r) => { const ref = await orgs.doc(oid).collection('requests').add(Object.assign({ by: uid, byName: me.name, byEmail: me.email, state: 'pending', createdAt: now() }, r)); return ref.id; },
       decideRequest: (oid, rid, state) => orgs.doc(oid).collection('requests').doc(rid).update({ state, decidedBy: uid, decidedByName: me.name, decidedAt: now(), updatedAt: now() }),
       doneRequest: (oid, rid) => orgs.doc(oid).collection('requests').doc(rid).update({ state: 'done', doneAt: now(), updatedAt: now() }),
-      shareToOrg: (sid, oid) => db.collection('shares').doc(sid).update({ org: oid || FV.delete(), updatedAt: now() })
+      shareToOrg: (sid, oid) => db.collection('shares').doc(sid).update({ org: oid || FV.delete(), updatedAt: now() }),
+      /* 1.33 : vitrine de l'entreprise (photo, bannière, description), modifiée sur le tableau de bord en ligne */
+      listenBrand: (oid, cb) => orgs.doc(oid).collection('brand').doc('profile').onSnapshot(s => cb(s.exists ? s.data() : null), err => { onErr('vitrine')(err); cb(null); }),
+      /* 1.33 : messagerie d'équipe — convs/{all | dm_<uid>_<uid>} et convs/{cid}/msgs/{id} */
+      listenConvs: (oid, cb) => orgs.doc(oid).collection('convs').where('parts', 'array-contains', uid).onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data()))), onErr('conversations')),
+      listenConvAll: (oid, cb) => orgs.doc(oid).collection('convs').doc('all').onSnapshot(s => cb(s.exists ? Object.assign({ id: 'all' }, s.data()) : null), onErr('conversation d’équipe')),
+      listenMsgs: (oid, cid, cb) => orgs.doc(oid).collection('convs').doc(cid).collection('msgs').orderBy('at', 'desc').limit(80).onSnapshot(s => cb(s.docs.map(d => Object.assign({ id: d.id }, d.data())).reverse()), onErr('messages')),
+      sendMsg: async (oid, cid, parts, text) => {
+        const conv = orgs.doc(oid).collection('convs').doc(cid);
+        const m = { by: uid, byName: me.name, text, at: now() };
+        await conv.collection('msgs').add(m);
+        await conv.set({ parts, lastAt: m.at, lastBy: uid, lastByName: me.name, lastText: text.slice(0, 140) }, { merge: true });
+      }
     };
   }
   const store = fake || firestoreStore();
@@ -87,7 +100,7 @@ window.AlixoBusiness = (() => {
   /* ============================================================
      État
      ============================================================ */
-  let profile = null, org = null, members = [], requests = [], myRequests = [];
+  let profile = null, org = null, members = [], requests = [], myRequests = [], brand = null;
   let orgId = '', unsubs = [], beatTm = 0, started = false;
   const myMember = () => members.find(m => m.uid === uid) || null;
   const role = () => (org && org.ownerUid === uid ? 'owner' : (myMember() || {}).role || '');
@@ -96,15 +109,17 @@ window.AlixoBusiness = (() => {
   const seats = () => ({ seats: +(org && org.seats) || SEATS.seats, plusSeats: +(org && org.plusSeats) || SEATS.plusSeats });
   const plusUsed = () => members.filter(m => m.plus || m.role === 'owner').length;
   const isOnline = m => !!m.lastSeen && now() - m.lastSeen < ONLINE_MS;
+  const chatOn = () => active() && org.chat === true;   // 1.33 : option messagerie (entreprises de 50 employés et plus), activée par Alixo
   const emailIsMember = email => members.some(m => m.emailLower === norm(email) || m.email === norm(email));
 
   function refreshUI() {
     if (typeof applyAppLogo === 'function') applyAppLogo();
     const ov = $('#setov'); if (ov && !ov.hidden && typeof settingsCat !== 'undefined' && (settingsCat === 'business' || settingsCat === 'plus')) renderSettingsBody();
     if (window.AlixoShare && AlixoShare.enabled && AlixoShare.setOrg) AlixoShare.setOrg(active() ? orgId : '');
+    if (window.AlixoBizChat) AlixoBizChat.sync();
     const ln = $('#ln-biz'); if (ln) { ln.hidden = !active(); const n = isMod() ? requests.length : 0; const b = ln.querySelector('.ln-badge'); if (b) { b.textContent = n; b.hidden = !n; } }
   }
-  function stopOrg() { unsubs.forEach(u => { try { u(); } catch { /* */ } }); unsubs = []; clearInterval(beatTm); beatTm = 0; org = null; members = []; requests = []; myRequests = []; }
+  function stopOrg() { unsubs.forEach(u => { try { u(); } catch { /* */ } }); unsubs = []; clearInterval(beatTm); beatTm = 0; org = null; members = []; requests = []; myRequests = []; brand = null; }
   function startOrg(oid) {
     if (!oid || oid === orgId) return;
     stopOrg(); orgId = oid;
@@ -118,8 +133,9 @@ window.AlixoBusiness = (() => {
       if (org && org.ownerUid !== uid && !ms.some(m => m.uid === uid)) { /* retiré de l'entreprise */ toast('Vous ne faites plus partie de ' + (org.name || 'l’entreprise')); stopOrg(); orgId = ''; store.setProfileOrg(null).catch(() => {}); refreshUI(); return; }
       refreshUI();
     }));
-    unsubs.push(store.listenRequests(oid, rs => { requests = rs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); refreshUI(); if (isMod() && rs.length && window.AlixoNotify) rs.forEach(r => AlixoNotify.push({ id: 'bizreq_' + r.id, kind: 'share', title: 'Demande de partage vers l’extérieur', text: `${r.byName || r.byEmail} veut partager « ${r.title} » avec ${r.to}. À valider dans Paramètres › Entreprise.`, action: { type: 'settings', cat: 'business' } })); }));
+    unsubs.push(store.listenRequests(oid, rs => { requests = rs.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); refreshUI(); if (isMod() && rs.length && window.AlixoNotify) rs.forEach(r => AlixoNotify.push({ id: 'bizreq_' + r.id, kind: 'share', title: 'Demande de partage vers l’extérieur', text: `${r.byName || r.byEmail} veut partager « ${r.title} » avec ${r.to}. À valider sur le tableau de bord Alixo Business (Paramètres › Entreprise).`, action: { type: 'settings', cat: 'business' } })); }));
     unsubs.push(store.listenMyRequests(oid, rs => { myRequests = rs; onMyRequests(rs); }));
+    if (store.listenBrand) unsubs.push(store.listenBrand(oid, b => { brand = b; refreshUI(); }));
     beatTm = setInterval(() => { if (active() && !document.hidden) store.beat(oid).catch(() => {}); }, 120000);
     store.beat(oid).catch(() => {});
   }
@@ -203,42 +219,35 @@ window.AlixoBusiness = (() => {
     return `<div class="biz-offer"><img src="logo-business.png" alt=""><div><b>Alixo Business</b><span>Pour une entreprise : jusqu’à <b>10 employés</b>, dont <b>5 licences Alixo+</b>, un espace d’équipe, le partage par simple recherche d’un collègue, et des modérateurs pour les partages vers l’extérieur.${price ? ` <b>${esc(price)}</b>, sans engagement.` : ''}</span></div>
       ${b ? '<button class="cta biz-cta" type="button" id="biz-buy">Souscrire</button>' : `<a class="cta ghost" href="mailto:contact@alixoapp.com?subject=Alixo%20Business" target="_blank" rel="noopener">Nous contacter</a>`}</div>`;
   }
+  /* 1.33 : la gestion de l'entreprise (équipe, licences, rôles, invitations, demandes, vitrine) se fait sur le tableau de
+     bord en ligne (BUSINESS_URL). Ici : la fiche de l'entreprise, le lien vers le tableau de bord, la messagerie, les dossiers
+     partagés à toute l'entreprise et « Quitter ». */
+  function dashUrl() { const c = window.AlixoCloud && AlixoCloud.publicConfig ? AlixoCloud.publicConfig() : null; return (c && c.businessUrl) || BUSINESS_URL; }
+  function openDashboard() { const u = dashUrl() + (orgId ? '?org=' + encodeURIComponent(orgId) : ''); if (typeof openExternalUrl === 'function') openExternalUrl(u); else window.open(u, '_blank', 'noopener'); }
   function settingsHTML() {
+    const dashBtn = `<button class="cta biz-dash" type="button" id="biz-dash">${ICO.building}Ouvrir le tableau de bord Alixo Business<svg class="ext" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5"/></svg></button>`;
     if (!active()) {
       return `<div class="set-sect">${offerHTML()}</div>
         <div class="set-sect"><div class="po-label">Rejoindre une entreprise</div>
-        <div class="po-hint" style="margin:0">Votre employeur vous a remis un <b>code d’entreprise</b> ? Il se saisit <b>à la création d’un nouveau compte</b> (écran de connexion › Créer un compte › Code entreprise) : les comptes personnels existants ne rejoignent pas une entreprise, pour garder séparés les cours personnels et le travail.${orgId && org && org.disabled ? '<br><br><b>Votre entreprise est suspendue</b> : contactez votre dirigeant.' : ''}</div></div>`;
+        <div class="po-hint" style="margin:0">Votre employeur vous a remis un <b>code d’entreprise</b> ? Il se saisit <b>à la création d’un nouveau compte</b> (écran de connexion › Créer un compte › Code entreprise) : les comptes personnels existants ne rejoignent pas une entreprise, pour garder séparés les cours personnels et le travail.${orgId && org && org.disabled ? '<br><br><b>Votre entreprise est suspendue</b> : contactez votre dirigeant.' : ''}</div></div>
+        <div class="set-sect"><div class="po-label">Vous dirigez une entreprise ?</div><div class="po-hint" style="margin:0 0 10px">L’équipe, les licences Alixo+, les invitations et la personnalisation se gèrent sur le tableau de bord en ligne, <b>${esc(dashUrl().replace(/^https?:\/\//, '').replace(/\/$/, ''))}</b>.</div>${dashBtn}</div>`;
     }
     const r = role(); const S = seats(); const used = plusUsed();
     const online = members.filter(isOnline).length;
-    const meM = myMember();
-    const head = `<div class="set-sect"><div class="biz-head"><img src="logo-business.png" alt=""><div class="biz-hid"><b id="biz-name">${esc(org.name || 'Mon entreprise')}</b><span>${r === 'owner' ? 'Vous êtes le dirigeant' : r === 'mod' ? 'Vous êtes modérateur' : 'Vous êtes membre'} · ${members.length} membre${members.length > 1 ? 's' : ''}, ${online} en ligne · ${used} / ${S.plusSeats} licence${S.plusSeats > 1 ? 's' : ''} Alixo+${meM && (meM.plus || r === 'owner') ? ' · <b>Alixo+ actif sur votre compte</b>' : ''}</span></div>
-      ${r === 'owner' ? '<button class="cta ghost small" type="button" id="biz-rename">Renommer</button>' : '<button class="cta ghost small" type="button" id="biz-leave">Quitter l’entreprise</button>'}</div>
-      <div class="biz-seats"><div><span>Membres</span><i><b style="width:${Math.min(100, members.length / S.seats * 100)}%"></b></i><small>${members.length} / ${S.seats}</small></div><div><span>Licences Alixo+</span><i><b class="plus" style="width:${Math.min(100, used / S.plusSeats * 100)}%"></b></i><small>${used} / ${S.plusSeats}</small></div></div></div>`;
-    const invite = r === 'owner' || r === 'mod' ? `<div class="set-sect"><div class="po-label">Inviter un employé</div>
-      <div class="po-hint" style="margin:0 0 8px">L’employé crée un <b>nouveau compte Alixo</b> (écran de connexion › Créer un compte) et saisit ce code dans « Code entreprise ». Il rejoint l’entreprise aussitôt.${members.length >= S.seats ? ' <b>Toutes les places sont prises.</b>' : ''}</div>
-      <div class="biz-code"><code id="biz-codeval">${esc(org.code || '—')}</code><button class="pobtn" type="button" id="biz-copy" title="Copier le code">${ICO.copy}</button><button class="pobtn" type="button" id="biz-link" title="Copier le lien d’inscription">Lien</button>${r === 'owner' ? '<button class="pobtn" type="button" id="biz-regen" title="Nouveau code : l’ancien ne marche plus">Changer</button>' : ''}</div></div>` : '';
-    const memberRow = m => {
-      const isOwnerM = m.role === 'owner' || m.uid === org.ownerUid;
-      const canPlus = (r === 'owner' || r === 'mod') && !isOwnerM;
-      const canRole = r === 'owner' && !isOwnerM;
-      const canRm = (r === 'owner' || r === 'mod') && !isOwnerM && m.uid !== uid;
-      return `<div class="biz-m ${m.uid === uid ? 'me' : ''}" data-uid="${esc(m.uid)}"><span class="biz-av ${isOnline(m) ? 'on' : ''}" title="${isOnline(m) ? 'En ligne' : 'Vu ' + fmtWhen(m.lastSeen)}">${esc(initial(m.name || m.email))}</span>
-        <span class="biz-mi"><b>${esc(m.name || m.email)}${m.uid === uid ? ' (vous)' : ''}</b><small>${esc(m.email)} · ${isOnline(m) ? '<em class="on">en ligne</em>' : 'vu ' + esc(fmtWhen(m.lastSeen))}</small></span>
-        <span class="biz-mr">${canRole ? `<select data-role="${esc(m.uid)}"><option value="member" ${m.role === 'member' ? 'selected' : ''}>Membre</option><option value="mod" ${m.role === 'mod' ? 'selected' : ''}>Modérateur</option></select>` : `<span class="biz-chip ${isOwnerM ? 'owner' : m.role === 'mod' ? 'mod' : ''}">${isOwnerM ? 'Dirigeant' : m.role === 'mod' ? 'Modérateur' : 'Membre'}</span>`}</span>
-        <span class="biz-mp">${isOwnerM ? plusBadge() : canPlus ? `<label class="biz-sw" title="Licence Alixo+"><input type="checkbox" data-plus="${esc(m.uid)}" ${m.plus ? 'checked' : ''} ${!m.plus && used >= S.plusSeats ? 'disabled' : ''}><span></span>${plusBadge(m.plus ? 'Alixo+' : 'Gratuit')}</label>` : (m.plus ? plusBadge() : '<span class="biz-chip">Gratuit</span>')}</span>
-        <span class="biz-mx">${canRm ? `<button type="button" class="pobtn" data-rm="${esc(m.uid)}" title="Retirer de l’entreprise">×</button>` : ''}</span></div>`;
-    };
-    const team = `<div class="set-sect"><div class="po-label">Équipe <span class="wd-screen">${members.length} membre${members.length > 1 ? 's' : ''}</span></div>
-      <div class="po-row" style="margin-bottom:8px"><input type="search" id="biz-q" placeholder="Rechercher un collègue (4 lettres au moins)…" autocomplete="off" style="flex:1"></div>
-      <div class="biz-members" id="biz-members">${members.slice().sort((a, b) => (b.role === 'owner') - (a.role === 'owner') || isOnline(b) - isOnline(a) || (a.name || '').localeCompare(b.name || '')).map(memberRow).join('')}</div>
-      ${r === 'owner' || r === 'mod' ? '<div class="po-hint">Les licences Alixo+ ouvrent toutes les fonctions (thèmes, polices, IA, tâches, widgets, stockage) sur le compte de l’employé ; le dirigeant en a toujours une. Le dirigeant nomme les modérateurs, qui valident les partages vers l’extérieur et peuvent attribuer les licences.</div>' : '<div class="po-hint">Pour partager une séance ou un dossier avec un collègue : bouton Partager, puis tapez au moins 4 lettres de son nom. Un partage vers une personne extérieure à l’entreprise attend l’accord d’un modérateur.</div>'}</div>`;
-    const reqs = (r === 'owner' || r === 'mod') ? `<div class="set-sect"><div class="po-label">Partages vers l’extérieur à valider ${requests.length ? `<span class="ln-badge biz-badge">${requests.length}</span>` : ''}</div>
-      ${requests.length ? `<div class="biz-reqs">${requests.map(q => `<div class="biz-req" data-rid="${esc(q.id)}"><span class="biz-av">${esc(initial(q.byName || q.byEmail))}</span><span class="biz-mi"><b>${esc(q.byName || q.byEmail)}</b> veut partager ${q.kind === 'folder' ? 'le dossier' : q.kind === 'file' ? 'le fichier' : q.kind === 'event' ? 'l’événement' : 'la séance'} <b>« ${esc(q.title)} »</b> avec <b>${esc(q.to)}</b> (${q.role === 'write' ? 'écriture' : 'lecture'})<small>${esc(fmtWhen(q.createdAt))}</small></span><span class="biz-ract"><button type="button" class="cta small" data-ok="${esc(q.id)}">Autoriser</button><button type="button" class="cta ghost small" data-no="${esc(q.id)}">Refuser</button></span></div>`).join('')}</div>` : '<div class="po-hint" style="margin:0">Aucune demande en attente. Les membres peuvent partager librement entre collègues ; un partage vers une adresse extérieure apparaît ici.</div>'}</div>` : '';
-    const mine = myRequests.filter(q => q.state === 'pending');
-    const myReqs = mine.length ? `<div class="set-sect"><div class="po-label">Mes demandes en attente</div><div class="biz-reqs">${mine.map(q => `<div class="biz-req"><span class="biz-mi"><b>« ${esc(q.title)} »</b> avec ${esc(q.to)}<small>En attente d’un modérateur · ${esc(fmtWhen(q.createdAt))}</small></span><span class="biz-ract"><button type="button" class="cta ghost small" data-cancel="${esc(q.id)}">Annuler</button></span></div>`).join('')}</div></div>` : '';
+    const B = brand || {};
+    const card = `<div class="set-sect"><div class="biz-card" style="--bz:${esc(B.accent || '#2e8b6a')}">
+        <div class="biz-banner"${B.banner ? ` style="background-image:url('${esc(B.banner)}')"` : ''}></div>
+        <div class="biz-cardin"><span class="biz-photo">${B.photo ? `<img src="${esc(B.photo)}" alt="">` : `<img src="logo-business.png" alt="">`}</span>
+          <div class="biz-cardtxt"><b id="biz-name">${esc(org.name || 'Mon entreprise')}</b>${B.description ? `<p>${esc(B.description)}</p>` : ''}
+          <span>${r === 'owner' ? 'Vous êtes le dirigeant' : r === 'mod' ? 'Vous êtes modérateur' : 'Vous êtes membre'} · ${members.length} membre${members.length > 1 ? 's' : ''}, ${online} en ligne · ${used} / ${S.plusSeats} licence${S.plusSeats > 1 ? 's' : ''} Alixo+</span></div></div></div></div>`;
+    const dash = `<div class="set-sect"><div class="po-label">Gérer l’entreprise</div>
+      <div class="po-hint" style="margin:0 0 10px">${r === 'owner' || r === 'mod' ? `Équipe, licences Alixo+, modérateurs, code d’invitation, partages à valider${r === 'owner' ? ', photo, bannière et description de l’entreprise' : ''} : tout se trouve sur le <b>tableau de bord en ligne</b>, accessible depuis n’importe quel navigateur.` : 'L’annuaire de l’équipe et vos demandes de partage sont sur le <b>tableau de bord en ligne</b>.'}${isMod() && requests.length ? ` <b class="biz-pending">${requests.length} partage${requests.length > 1 ? 's' : ''} vers l’extérieur à valider.</b>` : ''}</div>${dashBtn}</div>`;
+    const chat = `<div class="set-sect"><div class="po-label">Messagerie de l’équipe ${chatOn() ? '' : '<span class="biz-chip">option</span>'}</div>
+      ${chatOn() ? `<div class="po-hint" style="margin:0 0 10px">Discutez avec toute l’équipe ou avec un collègue, directement dans Alixo (bouton <b>Messagerie</b> de la bibliothèque).</div><button class="cta ghost" type="button" id="biz-chat">Ouvrir la messagerie</button>`
+        : `<div class="po-hint" style="margin:0">La messagerie entre employés est une <b>option premium</b> d’Alixo Business, proposée aux entreprises <b>à partir de 50 employés</b>.${r === 'owner' ? ' Elle s’active depuis le tableau de bord (rubrique Messagerie).' : ' Votre dirigeant peut l’activer.'}</div>`}</div>`;
     const shared = `<div class="set-sect"><div class="po-label">Dossiers et séances de l’entreprise</div>${orgSharesHTML()}</div>`;
-    return head + invite + team + reqs + myReqs + shared;
+    const leave = r !== 'owner' ? `<div class="set-sect"><button class="cta ghost small" type="button" id="biz-leave">Quitter l’entreprise</button></div>` : '';
+    return card + dash + chat + shared + leave;
   }
   function orgSharesHTML() {
     const list = window.AlixoShare && AlixoShare.enabled && AlixoShare.orgShares ? AlixoShare.orgShares() : [];
@@ -247,24 +256,10 @@ window.AlixoBusiness = (() => {
   }
   function bindSettings(root) {
     const buy = root.querySelector('#biz-buy'); if (buy) buy.addEventListener('click', async e => { if (typeof startCheckout !== 'function') return; const url = await startCheckout('business', e.currentTarget); if (url) openExternalUrl(url); });
+    const dash = root.querySelector('#biz-dash'); if (dash) dash.addEventListener('click', openDashboard);
     if (!active()) return;
-    const q = root.querySelector('#biz-q');
-    if (q) q.addEventListener('input', () => { const s = norm(q.value); root.querySelectorAll('#biz-members .biz-m').forEach(row => { const m = members.find(x => x.uid === row.dataset.uid); row.hidden = s.length >= MIN_SEARCH ? !((m.nameLower || norm(m.name)).includes(s) || (m.emailLower || '').includes(s)) : (s.length > 0 && s.length < MIN_SEARCH ? false : false); }); const hint = root.querySelector('#biz-qhint'); if (hint) hint.hidden = !(s.length > 0 && s.length < MIN_SEARCH); });
-    const rename = root.querySelector('#biz-rename'); if (rename) rename.addEventListener('click', () => { const n = prompt('Nom de l’entreprise', org.name || ''); if (n === null) return; const name = n.trim().slice(0, 60); if (!name) return; store.updateOrg(orgId, { name }).then(() => { if (org.code) store.setCode(orgId, org.code, name, '').catch(() => {}); toast('Entreprise renommée'); }).catch(e => toast('Impossible : ' + e.message)); });
+    const ch = root.querySelector('#biz-chat'); if (ch) ch.addEventListener('click', () => { closeSettings(); if (window.AlixoBizChat) AlixoBizChat.open('all'); });
     const leave = root.querySelector('#biz-leave'); if (leave) leave.addEventListener('click', async () => { if (!confirm(`Quitter ${org.name || 'l’entreprise'} ? Vous perdrez la licence Alixo+ attribuée par l’entreprise et l’accès à ses dossiers.`)) return; try { await store.removeMember(orgId, uid); await store.setProfileOrg(null); stopOrg(); orgId = ''; refreshUI(); toast('Vous avez quitté l’entreprise'); } catch (e) { toast('Impossible : ' + e.message); } });
-    const copy = async (txt, msg) => { try { await navigator.clipboard.writeText(txt); toast(msg); } catch { prompt(msg, txt); } };
-    const cp = root.querySelector('#biz-copy'); if (cp) cp.addEventListener('click', () => copy(org.code || '', 'Code copié'));
-    const lk = root.querySelector('#biz-link'); if (lk) lk.addEventListener('click', () => copy(`https://alixoapp.com/docs/?join=${encodeURIComponent(org.code || '')}`, 'Lien d’inscription copié'));
-    const rg = root.querySelector('#biz-regen'); if (rg) rg.addEventListener('click', async () => { if (!confirm('Créer un nouveau code ? L’ancien ne fonctionnera plus.')) return; try { await store.setCode(orgId, genCode(), org.name || '', org.code || ''); toast('Nouveau code créé'); } catch (e) { toast('Impossible : ' + e.message); } });
-    root.querySelectorAll('[data-role]').forEach(sel => sel.addEventListener('change', async () => { try { await store.setRole(orgId, sel.dataset.role, sel.value); toast(sel.value === 'mod' ? 'Nommé modérateur' : 'Redevenu membre'); } catch (e) { toast('Impossible : ' + e.message); renderSettingsBody(); } }));
-    root.querySelectorAll('[data-plus]').forEach(cb => cb.addEventListener('change', async () => {
-      const m = members.find(x => x.uid === cb.dataset.plus); if (!m) return;
-      if (cb.checked && plusUsed() >= seats().plusSeats) { cb.checked = false; toast('Toutes les licences Alixo+ sont attribuées'); return; }
-      try { await store.setPlus(orgId, m, cb.checked, org.name || ''); toast(cb.checked ? `Alixo+ attribué à ${m.name || m.email}` : `Alixo+ retiré à ${m.name || m.email}`); } catch (e) { cb.checked = !cb.checked; toast('Impossible : ' + e.message); }
-    }));
-    root.querySelectorAll('[data-rm]').forEach(b => b.addEventListener('click', async () => { const m = members.find(x => x.uid === b.dataset.rm); if (!m) return; if (!confirm(`Retirer ${m.name || m.email} de l’entreprise ?`)) return; try { if (m.plus) await store.setPlus(orgId, m, false, org.name || ''); await store.removeMember(orgId, m.uid); toast('Membre retiré'); } catch (e) { toast('Impossible : ' + e.message); } }));
-    root.querySelectorAll('[data-ok],[data-no]').forEach(b => b.addEventListener('click', async () => { const rid = b.dataset.ok || b.dataset.no; try { await store.decideRequest(orgId, rid, b.dataset.ok ? 'approved' : 'denied'); toast(b.dataset.ok ? 'Partage autorisé' : 'Partage refusé'); } catch (e) { toast('Impossible : ' + e.message); } }));
-    root.querySelectorAll('[data-cancel]').forEach(b => b.addEventListener('click', async () => { try { await store.doneRequest(orgId, b.dataset.cancel); toast('Demande annulée'); } catch (e) { toast('Impossible : ' + e.message); } }));
     root.querySelectorAll('[data-sid]').forEach(b => b.addEventListener('click', e => { const un = e.target.closest('[data-unshare]'); if (un) { e.stopPropagation(); store.shareToOrg(un.dataset.unshare, '').then(() => toast('Retiré de l’entreprise')).catch(x => toast('Impossible : ' + x.message)); return; } closeSettings(); if (window.AlixoShare && AlixoShare.openShared) AlixoShare.openShared(b.dataset.sid); }));
   }
   async function shareToOrg(sid, on) { if (!isMod()) throw new Error('Réservé au dirigeant et aux modérateurs'); await store.shareToOrg(sid, on ? orgId : ''); }
@@ -282,5 +277,5 @@ window.AlixoBusiness = (() => {
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else setTimeout(start, 0);
 
-  return { enabled: true, ICO, active, isMod, orgId: () => orgId, org: () => org, role, members: () => members.slice(), requests: () => requests.slice(), colleagues, attachSearch, gate, request, joinByCode, shareToOrg, settingsHTML, bindSettings, offerHTML, refreshUI, get store() { return store; } };
+  return { enabled: true, ICO, active, isMod, chatOn, brand: () => brand, me, dashUrl, openDashboard, orgId: () => orgId, org: () => org, role, members: () => members.slice(), requests: () => requests.slice(), colleagues, attachSearch, gate, request, joinByCode, shareToOrg, settingsHTML, bindSettings, offerHTML, refreshUI, get store() { return store; } };
 })();

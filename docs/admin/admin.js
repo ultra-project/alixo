@@ -732,6 +732,7 @@
         ${row('Code d’invitation', `<code class="key-mask" data-copy="${esc(o.code || '')}">${esc(o.code || '—')}</code> <button class="btn ghost small" data-oact="code">Changer</button>`)}
         ${row('Places', `${ms.length} / ${o.seats || 10} employés · ${orgPlusUsed(o.id)} / ${o.plusSeats || 5} licences Alixo+ <button class="btn ghost small" data-oact="seats">Modifier</button>`)}
         ${row('Dirigeant', `${esc(o.ownerEmail || o.ownerUid || '')} <button class="btn ghost small" data-oact="owner">Changer</button>`)}
+        ${row('Messagerie (1.33)', `${o.chat ? '<span class="chip ok">activée</span>' : '<span class="chip dim">désactivée</span>'} <button class="btn ghost small" data-oact="chat">${o.chat ? 'Désactiver' : 'Activer'}</button> <span class="muted small">option premium, entreprises de 50 employés et plus</span>`)}
         ${row('Identifiant', `<code class="key-mask">${esc(o.id)}</code>`)}
         ${o.note ? row('Note', esc(o.note)) : ''}
         ${o.stripe && o.stripe.subscriptionId ? row('Stripe', `<a href="https://dashboard.stripe.com/subscriptions/${esc(o.stripe.subscriptionId)}" target="_blank" rel="noopener">${esc(o.stripe.subscriptionId)}</a> · ${esc(o.stripe.status || '')}`) : ''}
@@ -769,6 +770,10 @@
           try { await b4.commit(); await setOwnerPlus(o, p); } catch (e) { toast('Impossible : ' + e.message); return; }
           audit('org.owner', o.id, { uid: p.uid }); close(); toast('Dirigeant changé (l’ancien devient modérateur)');
         }
+        if (act === 'chat') {
+          if (!o.chat && (o.seats || 10) < 50 && !await confirmBox('Activer la messagerie ?', `Cette entreprise a ${o.seats || 10} places : l’option est prévue à partir de 50 employés.`, 'Activer quand même')) return;
+          await ref.update({ chat: !o.chat, chatAt: Date.now(), updatedAt: Date.now() }); audit('org.chat', o.id, { on: !o.chat }); close(); toast(o.chat ? 'Messagerie désactivée' : 'Messagerie activée');
+        }
         if (act === 'disable' || act === 'enable') { await ref.update({ disabled: act === 'disable', updatedAt: Date.now() }); audit('org.' + act, o.id); close(); toast(act === 'disable' ? 'Entreprise suspendue' : 'Entreprise réactivée'); }
         if (act === 'delete') {
           if (!await confirmBox(`Supprimer « ${o.name} » ?`, 'Les membres gardent leurs comptes et leurs cours ; ils perdent l’entreprise et les licences Alixo+ qu’elle donnait. Définitif.', 'Supprimer', true)) return;
@@ -794,6 +799,7 @@
     if (document.activeElement !== $('#plus-url')) $('#plus-url').value = pub.plusUrl || '';
     if (document.activeElement !== $('#plus-note')) $('#plus-note').value = pub.plusNote || '';
     if (document.activeElement !== $('#plus-api')) $('#plus-api').value = pub.billingApi || '';
+    if (document.activeElement !== $('#biz-url')) $('#biz-url').value = pub.businessUrl || '';
     const A = (pub.announcements || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     const aud = a => ({ all: 'tous', droit: 'Droit', economie: 'Économie', sante: 'Santé', commerce: 'Commerce', staps: 'STAPS' })[a.audience || 'all'] || a.audience;
     $('#ann-tbl tbody').innerHTML = A.length ? A.map(a => `<tr data-aid="${esc(a.id)}"><td><b>${esc(a.title)}</b><div class="muted small">${esc(a.text || '')}${a.url ? ` · <a href="${esc(a.url)}" target="_blank" rel="noopener">lien</a>` : ''}</div></td><td><span class="chip dim">${esc(aud(a))}</span>${a.silent ? ' <span class="chip dim">discrète</span>' : ''}</td><td>${when(a.ts)}</td><td>${a.until ? (a.until < Date.now() ? '<span class="chip bad">expirée</span> ' : '') + when(a.until) : '—'}</td><td><div class="acts"><button data-aa="del" class="danger">Supprimer</button></div></td></tr>`).join('') : '<tr><td colspan="5" class="empty">Aucune annonce.</td></tr>';
@@ -812,7 +818,9 @@
     const api = $('#plus-api').value.trim().replace(/\/+$/, '');
     if (api && !/^https:\/\//.test(api)) { toast('L’adresse du serveur de paiement doit commencer par https://'); return; }
     if (api) { try { const r = await fetch(api + '/'); const j = await r.json(); if (!j.ok) throw new Error(); if (!j.prices.monthly || !j.prices.yearly) toast('Serveur joignable, mais un tarif manque (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY dans wrangler.toml)'); } catch { toast('Serveur de paiement injoignable à cette adresse : vérifiez le déploiement (billing/README.md)'); return; } }
-    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim(), billingApi: api }); toast('Offre Alixo+ enregistrée');
+    const biz = $('#biz-url').value.trim();
+    if (biz && !/^https:\/\//.test(biz)) { toast('L’adresse du tableau de bord Business doit commencer par https://'); return; }
+    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim(), billingApi: api, businessUrl: biz ? biz.replace(/\/?$/, '/') : '' }); toast('Offre Alixo+ enregistrée');
   });
   $('#ann-add').addEventListener('click', () => {
     modal(`<h3>Nouvelle annonce</h3><label class="field">Titre<input id="an-title" maxlength="140" placeholder="Ex. Maintenance dimanche matin"></label><label class="field">Texte<textarea id="an-text" maxlength="600" placeholder="Détails (facultatif)"></textarea></label><label class="field">Lien (facultatif)<input id="an-url" placeholder="https://…"></label>

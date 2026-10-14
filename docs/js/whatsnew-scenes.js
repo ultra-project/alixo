@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.32.0 (ou nouveautes.html?v=1.32.0 en page seule).
+   Aperçu : index.html?nouveautes=1.33.0 (ou nouveautes.html?v=1.33.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.33.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Vos documents<br>sur <em>votre fond</em>', text: 'Un fond d’écran à vous, une bibliothèque des blocs animée, Alixo Business en ligne. Et l’agenda réparé.', dur: 5500 },
+    { title: 'Un <em>fond d’écran</em> à vous', text: 'Une image de votre choix s’affiche derrière vos documents : la page reste au centre, votre fond tout autour.',
+      bullets: ['<b>Séances</b>, présentations, tableurs et planches', '<b>Paramètres › Apparence</b> : votre image ou six dégradés prêts', '<b>Assombrir et flou</b> pour garder le texte lisible'],
+      art: 'palette', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 8000 },
+    { title: 'La <em>bibliothèque</em> des blocs', text: '« Insérer un bloc », dans le volet de gauche, ouvre tous les blocs avec une recherche et un aperçu animé.',
+      bullets: ['<b>Recherche</b> : « tableau », « encadré », « formule »…', '<b>Aperçu animé</b> de chaque bloc avant de l’insérer', '<b>Le « / »</b> dans le texte garde le menu rapide'],
+      art: 'text', accent: '#33658a', accent2: '#b3762a', dur: 8000 },
+    { title: 'Alixo Business <em>en ligne</em>', text: 'L’entreprise se gère sur un tableau de bord en ligne, ouvert depuis Paramètres › Entreprise.',
+      bullets: ['<b>Équipe</b>, licences Alixo+, invitations, partages à valider', '<b>Personnaliser</b> : nom, description, photo, bannière', '<b>Messagerie d’équipe</b> en option, dès 50 employés'],
+      art: { image: 'logo-business.png', alt: 'Alixo Business' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8500 },
+    { title: 'L’agenda <em>réparé</em>', text: 'La pastille « Prochain » de la barre du haut n’avale plus la fin : seul le titre se raccourcit.',
+      bullets: ['<b>« dans 40 min »</b> toujours entier', '<b>Survol</b> : le titre complet de l’événement'],
+      art: 'list', accent: '#c04343', accent2: '#33658a', dur: 6500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.32.0', {
   scenes: [
@@ -46,25 +65,6 @@ AlixoWhatsNew.register('1.31.0', {
     { title: 'Toujours <em>à jour</em>', text: 'Fermer la fenêtre ne quitte plus Alixo : il reste dans la zone de notification pour tenir les widgets à jour.',
       bullets: ['<b>Toujours au-dessus</b> des fenêtres, ou posés sur le bureau (Windows + D)', '<b>Lancement</b> avec la session : les widgets apparaissent directement', '<b>Opacité</b> réglable, thème clair ou sombre suivi'],
       art: { icon: '🖥️' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.30.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Alixo+ s’achète <em>en ligne</em>', text: 'Mensuel ou annuel, paiement sécurisé, activation immédiate — et vous gérez tout depuis l’application.', dur: 5000 },
-    { title: 'Deux <em>formules</em>, au choix', text: 'Paramètres › Alixo+ › Passer à Alixo+ : choisissez, puis payez sur la page sécurisée Stripe.',
-      bullets: ['<b>14,99 € par mois</b> : sans engagement, résiliable à tout moment', '<b>149,99 € par an</b> : deux mois offerts, soit 12,50 € par mois', '<b>Carte, Apple Pay, Google Pay</b> : Alixo ne voit jamais votre numéro'],
-      art: 'cards', accent: '#b3762a', accent2: '#33658a', dur: 8000 },
-    { title: 'Activation <em>immédiate</em>', text: 'Dès le paiement, Alixo+ s’active sur votre compte, sur tous vos appareils : plus de clé à recopier.',
-      bullets: ['<b>PC, Mac, web, téléphone</b> : une seule fois pour tout', '<b>Thèmes, polices, IA, tâches, stockage</b> : tout s’ouvre aussitôt', '<b>Clés d’activation</b> : elles continuent de fonctionner'],
-      art: { icon: '⚡' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
-    { title: 'Vous gardez la <em>main</em>', text: 'Paramètres › Alixo+ › Votre abonnement montre où vous en êtes, et le bouton Gérer mon abonnement fait le reste.',
-      bullets: ['<b>Résilier</b> en deux clics : l’accès reste ouvert jusqu’à la fin de la période payée', '<b>Changer</b> de carte, passer du mensuel à l’annuel, retrouver vos factures', '<b>Paiement échoué ?</b> Alixo vous prévient, l’accès est conservé quelques jours'],
-      art: 'list', accent: '#3d6bb5', accent2: '#8a4b9c', dur: 8000 },
-    { title: 'Vos <em>droits</em>, avant de payer', text: 'Une fenêtre claire rappelle l’offre, la durée, la résiliation et le droit de rétractation, puis demande votre accord.',
-      bullets: ['<b>Conditions de vente</b> et confidentialité à accepter', '<b>Moins de 18 ans</b> : un lien de paiement à transmettre à un parent'],
-      art: { icon: '🛡️' }, accent: '#8a4b9c', accent2: '#c04343', dur: 6500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });

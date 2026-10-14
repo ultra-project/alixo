@@ -21,6 +21,7 @@ window.AlixoNotify = (() => {
     message: { label: 'Message de l’administrateur', ico: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>', color: '#8a4b9c' },
     key: { label: 'Intelligence artificielle', ico: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M15 8l2 2M18 5l2 2"/></svg>', color: '#7a6852' },
     todo: { label: 'Tâches', ico: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.5 7 1.4 1.4L8.5 5.6M11 7h10M11 17h10"/><rect x="3" y="14" width="6" height="6" rx="1.2"/></svg>', color: '#c04343' },
+    chat: { label: 'Messagerie de l’équipe', ico: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H9l-5 4Z"/><path d="M8 9h8M8 12h5"/></svg>', color: '#2e8b6a' },
     info: { label: 'Information', ico: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 10v6M12 7h.01"/></svg>', color: '#5b6b8c' }
   };
   const when = ts => {
@@ -60,6 +61,7 @@ window.AlixoNotify = (() => {
       else if (a.type === 'msg' && a.msg) { if (window.AlixoCloud && AlixoCloud.showMessage) AlixoCloud.showMessage(a.id, a.msg); }
       else if (a.type === 'url' && a.url) { if (window.alixoDesktop && alixoDesktop.openExternal) alixoDesktop.openExternal(a.url); else window.open(a.url, '_blank', 'noopener'); }
       else if (a.type === 'whatsnew' && window.AlixoWhatsNew && AlixoWhatsNew.has(a.version)) AlixoWhatsNew.open(a.version);
+      else if (a.type === 'chat' && window.AlixoBizChat) AlixoBizChat.open(a.cid || 'all');
       else if (a.type === 'verify-email' && window.AlixoAuth && AlixoAuth.sendVerification) AlixoAuth.sendVerification().then(em => toast('E-mail de confirmation envoyé à ' + em + ' — cliquez sur le lien qu’il contient.')).catch(e => toast('Envoi impossible : ' + (e && e.message || e)));
       else if (a.type === 'update-install') { if (window.alixoDesktop && alixoDesktop.installUpdate) alixoDesktop.installUpdate(); else toast('Redémarrez Alixo pour appliquer la mise à jour'); }
     } catch (e) { console.error(e); }

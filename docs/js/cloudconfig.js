@@ -83,6 +83,7 @@ window.AlixoCloud = (() => {
       notify({ id: 'ann_' + a.id, kind: 'admin', title: a.title, text: a.text || '', ts: +a.ts || Date.now(), action: a.url ? { type: 'url', url: a.url } : null, silent: !!a.silent });
     }
     if (window.AlixoApp && AlixoApp.setPlusOffer) AlixoApp.setPlusOffer({ price: d.plusPrice || '', url: d.plusUrl || '', note: d.plusNote || '' });
+    pubConf = { businessUrl: typeof d.businessUrl === 'string' && /^https:\/\//.test(d.businessUrl) ? d.businessUrl : '' };   // 1.33 : adresse du tableau de bord Alixo Business
     setBillingApi(d.billingApi || DEFAULT_BILLING_API);   // 1.30 : adresse du serveur de paiement (Stripe), réglable depuis le panneau admin
     if (d.latestVersion && window.AlixoApp && cmpVer(d.latestVersion, AlixoApp.version) > 0 && !(window.alixoDesktop && alixoDesktop.onUpdate)) {
       notify({ id: 'latest_' + d.latestVersion, kind: 'update', title: `Alixo ${d.latestVersion} est disponible`, text: d.latestNote || 'Téléchargez la nouvelle version depuis la page d’Alixo.', action: { type: 'url', url: d.downloadUrl || 'https://alixoapp.com/versions/' } });
@@ -95,6 +96,7 @@ window.AlixoCloud = (() => {
     updPrompt();
   }, err => { if (!permErr(err)) console.error('Cloud (config) :', err); });
   let updInfo = null, updReady = false;
+  var pubConf = {};
   function updPrompt() {
     if (!updInfo || !window.AlixoApp || !AlixoApp.showUpdatePopup) return;
     if ($('#obov') || $('#authov') && !$('#authov').hidden) { setTimeout(updPrompt, 15000); return; }   // après le questionnaire de bienvenue / la connexion
@@ -296,5 +298,5 @@ window.AlixoCloud = (() => {
     return { ok: true, msg: until ? `Alixo+ activé jusqu’au ${new Date(until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Alixo+ activé sans limite de durée' };
   }
 
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf };
 })();
