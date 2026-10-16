@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.34.0';
+const ALIXO_VERSION = '1.34.1';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -2463,8 +2463,12 @@ function applyDocFont() {
   if (f.css) r.setProperty('--doc-font', f.css); else r.removeProperty('--doc-font');
   if (fh && fh.css) r.setProperty('--doc-font-head', fh.css); else r.removeProperty('--doc-font-head');
   const sz = DOC_SIZES.find(x => x[0] === (state.settings.docSize || 'm')) || DOC_SIZES[1];
-  const k = Math.round(sz[2] * (window.AlixoZoom ? AlixoZoom.get('doc') : 1) * 1000) / 1000;   // 1.34 : × zoom du document (Ctrl + molette)
-  if (k !== 1) r.setProperty('--doc-scale', String(k)); else r.removeProperty('--doc-scale');
+  if (sz[2] !== 1) r.setProperty('--doc-scale', String(sz[2])); else r.removeProperty('--doc-scale');
+  // 1.34.1 : zoom façon Word — toute la feuille s'agrandit (largeur, marges, texte), la page défile si besoin ;
+  // la taille du texte (Paramètres › Écriture) reste un réglage à part
+  const z = window.AlixoZoom ? AlixoZoom.get('doc') : 1;
+  if (z !== 1) r.setProperty('--doc-zoom', String(z)); else r.removeProperty('--doc-zoom');
+  document.body.classList.toggle('doc-zoomed', z !== 1);
   if (pagesActive()) schedulePaginate(true);
 }
 const SET_CATS = [
@@ -7355,6 +7359,7 @@ function openEventPopover(ev, preset) {
 let vwUrl = null;   // object URL en cours (à révoquer)
 let vwCurrent = null;   // { name, path, docId } : document affiché
 let vwBuf = null;       // 1.34 : son contenu (pour « Modifier dans Alixo »)
+let vwDispose = null;   // 1.34.1 : nettoyage de l'aperçu Word / OpenDocument
 function openViewer() {
   openRightPanel('#viewpanel');
   const root = document.documentElement;
@@ -7448,10 +7453,12 @@ $('#vw-body').addEventListener('click', e => {
   const rc = e.target.closest('[data-recent]');
   if (rc) { const d = doc(); const f = d && d.files && d.files[+rc.dataset.recent]; if (f && f.path && window.alixoDesktop) window.alixoDesktop.readFile(f.path).then(r => { if (r && r.data) showViewerFile(r.name, r.data, f.path); else toast('Fichier introuvable — il a peut-être été déplacé'); }); }
 });
+/* 1.34.1 : « Modifier dans Alixo » ouvre le document dans l'éditeur Word / OpenDocument (js/docedit.js) ; un fichier de
+   la bibliothèque est réenregistré à sa place, un fichier de l'ordinateur est ajouté à la bibliothèque au premier enregistrement */
 $('#vw-edit').addEventListener('click', () => {
-  if (!vwCurrent || !vwBuf || !window.AlixoOffice) return;
+  if (!vwCurrent || !vwBuf || !window.AlixoDocEdit) return;
   const d = doc();
-  AlixoOffice.importAsDoc({ name: vwCurrent.name, buf: vwBuf, folderId: d ? d.folderId : null, path: vwCurrent.path });
+  AlixoDocEdit.open({ name: vwCurrent.name, buf: vwBuf.slice(0), fileId: vwCurrent.fileId || null, folderId: d ? d.folderId : null, path: vwCurrent.path });
 });
 $('#vw-file').addEventListener('change', async e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
@@ -7476,7 +7483,7 @@ function rememberViewerFile(name, path) {
   d.vwOpen = true;
   d.updatedAt = Date.now(); save();
 }
-async function showViewerFile(name, data, path) {
+async function showViewerFile(name, data, path, fileId) {
   const body = $('#vw-body');
   const buf = data instanceof ArrayBuffer ? data : (data && data.buffer ? data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) : null);
   if (!buf) { toast('Fichier illisible'); return; }
@@ -7484,9 +7491,10 @@ async function showViewerFile(name, data, path) {
   if (vwUrl) { URL.revokeObjectURL(vwUrl); vwUrl = null; }
   $('#vw-title').textContent = name;
   body.dataset.loaded = '1';
-  vwCurrent = { name, path: path || '', docId: currentDocId };
+  vwCurrent = { name, path: path || '', docId: currentDocId, fileId: fileId || null };
   vwBuf = buf;
-  { const eb = $('#vw-edit'); if (eb) eb.hidden = !(window.AlixoOffice && AlixoOffice.canEdit(name)); }
+  { const eb = $('#vw-edit'); if (eb) eb.hidden = !(window.AlixoDocEdit && AlixoDocEdit.canOpen(name)); }
+  if (vwDispose) { try { vwDispose(); } catch { /* */ } vwDispose = null; }
   rememberViewerFile(name, path);
   openRightPanel('#viewpanel');
   try {
@@ -7496,16 +7504,16 @@ async function showViewerFile(name, data, path) {
     } else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
       vwUrl = URL.createObjectURL(new Blob([buf]));
       body.innerHTML = `<img class="vw-img" src="${vwUrl}" alt="${esc(name)}">`;
-    } else if (ext === 'docx') {
-      body.innerHTML = `<div class="vw-empty">Conversion du document Word…</div>`;
-      if (typeof mammoth === 'undefined') throw new Error('Convertisseur Word indisponible');
-      const r = await mammoth.convertToHtml({ arrayBuffer: buf });
-      body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
-    } else if (ext === 'odt') {   // 1.34 : OpenDocument (LibreOffice, OpenOffice)
-      body.innerHTML = `<div class="vw-empty">Lecture du document OpenDocument…</div>`;
-      if (!window.AlixoOffice) throw new Error('Lecteur OpenDocument indisponible');
-      const h = await AlixoOffice.odtToHtml(buf);
-      body.innerHTML = `<div class="vw-doc">${h || '<i>Document vide</i>'}</div>`;
+    } else if ((ext === 'docx' || ext === 'odt') && window.AlixoDocEdit) {
+      // 1.34.1 : les pages telles qu'elles ont été écrites, ajustées à la largeur du panneau
+      body.innerHTML = `<div class="vw-empty">Ouverture du document…</div>`;
+      try { vwDispose = await AlixoDocEdit.preview(body, { name, buf: buf.slice(0) }); }
+      catch (e) {
+        console.error(e);
+        if (ext !== 'docx' || typeof mammoth === 'undefined') throw e;
+        const r = await mammoth.convertToHtml({ arrayBuffer: buf });
+        body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+      }
     } else if (ext === 'pptx') {
       body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
       body.innerHTML = await pptxToHtml(buf);
@@ -8745,7 +8753,8 @@ function paginate(force) {
   const cs = getComputedStyle(docEl);
   const padTop = parseFloat(cs.paddingTop) * s, padBottom = parseFloat(cs.paddingBottom) * s;
   const top0 = docEl.getBoundingClientRect().top + padTop;      // haut de la zone utile de la page 1
-  const H = PG_H - PG_SAFE, GAPT = padBottom + PG_BAND + padTop;  // hauteur utile ; espace entre deux zones utiles
+  const zf = window.AlixoZoom ? AlixoZoom.get('doc') : 1;          // 1.34.1 : zoom de la feuille (les pages grandissent avec)
+  const H = (PG_H - PG_SAFE) * zf, GAPT = padBottom + PG_BAND * zf + padTop;  // hauteur utile ; espace entre deux zones utiles
   const rects = kids.map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top - top0, bottom: r.bottom - top0, pb: el.classList.contains('pb') }; });
   let shift = 0, pageBase = 0, forced = false, pages = 1;
   const ends = [];   // fin de chaque page terminée par une bande grise (coordonnées finales, depuis top0) et son numéro
@@ -8774,7 +8783,7 @@ function paginate(force) {
   for (let y = pageBase + H, k = pages; y < lastBottom; y += H, k++) cuts.push({ y, k });   // dernier bloc étalé sur plusieurs pages
   if (rects.length) blocksEl.style.paddingBottom = Math.max(0, (lastEnd - lastBottom) / s) + 'px';
   const num = (y, k) => `<div class="pg-num" style="top:${((padTop + y + padBottom / 2) / s - 7).toFixed(1)}px">${k} / ${n}</div>`;
-  layer.innerHTML = ends.map(e => `<div class="pg-gap" style="top:${((padTop + e.y + padBottom) / s).toFixed(1)}px;height:${(PG_BAND / s).toFixed(1)}px"></div>` + num(e.y, e.k)).join('')
+  layer.innerHTML = ends.map(e => `<div class="pg-gap" style="top:${((padTop + e.y + padBottom) / s).toFixed(1)}px;height:${(PG_BAND * zf / s).toFixed(1)}px"></div>` + num(e.y, e.k)).join('')
     + cuts.map(c => `<div class="pg-cut" style="top:${((padTop + c.y) / s).toFixed(1)}px"><span>${c.k} / ${n} · suite page ${c.k + 1} ↓</span></div>`).join('')
     + num(lastEnd, n);
   if (caretEl) {   // le bloc du curseur a bougé (une page s'est ouverte ou fermée au-dessus) : on suit
@@ -8865,6 +8874,7 @@ $('#btn-export').addEventListener('click', exportDoc);
    dans l'éditeur sans curseur : tout le cours ; ailleurs (bibliothèque, agenda…) : rien. */
 document.addEventListener('keydown', e => {
   if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== 'a') return;
+  if (document.body.classList.contains('wdx-open')) return;   // éditeur Word / OpenDocument : sélection native
   const t = e.target;
   if (t && (t.isContentEditable || (t.closest && t.closest('input, textarea')))) return;
   e.preventDefault();
@@ -10045,6 +10055,7 @@ if (window.AlixoZoom) {
   AlixoZoom.onChange('doc', () => applyDocFont());
   AlixoZoom.bindWheel($('#docwrap'), 'doc');
   if (window.alixoDesktop && alixoDesktop.onZoom) alixoDesktop.onZoom(dir => {
+    if (window.AlixoDocEdit && AlixoDocEdit.desktopZoom(dir)) return;   // document Word / OpenDocument ouvert
     const kind = document.body.classList.contains('mode-slides') ? 'slides' : document.body.classList.contains('mode-sheet') ? 'sheet' : (document.body.classList.contains('mode-editor') && currentDocId) ? 'doc' : '';
     if (!kind) { if (alixoDesktop.zoomPage) alixoDesktop.zoomPage(dir); return; }
     if (dir === 0) AlixoZoom.reset(kind); else AlixoZoom.step(kind, dir);
@@ -10074,7 +10085,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Quiz IA et fiches de révision (Alixo+) : depuis une séance, une présentation ou un tableur, l’IA génère un QCM, un vrai / faux, des réponses courtes ou une fiche de révision (bouton ✨ Quiz IA, F8). Les documents Word et OpenDocument s’ouvrent et se modifient dans Alixo. Zoom des documents : Ctrl + molette, Ctrl + / −.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les documents Word et OpenDocument s’ouvrent tels qu’ils ont été écrits (pages, polices, images) et se modifient comme dans Word ; l’enregistrement remplace le même fichier. Zoom façon Word : toute la page s’agrandit. Quiz IA réparé avec les clés au crédit limité.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

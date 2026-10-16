@@ -281,16 +281,17 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     finally { clearTimeout(tm); }
   }
   /* cfg : { endpoint, model, key } (ou null → configuration enregistrée). `models` (ancien paramètre) est ignoré. */
-  async function call(cfg, { system, user, maxTokens, timeoutMs = 25000, temperature = 0 }) {
+  async function call(cfg, { system, user, maxTokens, minTokens = 0, timeoutMs = 25000, temperature = 0 }) {
     const c = cfg && typeof cfg === 'object' ? normConfig(cfg) : getConfig();
     if (!configured(c)) return { ok: false, status: 0, error: 'Aucun serveur d’IA configuré (Paramètres › Correction par IA).' };
     const url = c.endpoint + '/chat/completions';
     const q = quirks[c.endpoint] || (quirks[c.endpoint] = {});
     const where = PROVIDERS[c.provider].needsKey ? PROVIDERS[c.provider].label.replace(/ \(.*$/, '') : (isLocalUrl(c.endpoint) ? 'le serveur local' : 'le serveur');
     let last = null;
+    let maxT = maxTokens, shrunk = 0;   // 1.34.1 : longueur de réponse réduite si le crédit de la clé ne couvre pas la demande
     for (let attempt = 0; attempt < 3; attempt++) {
       if (attempt) await sleep(1500 * attempt);
-      const body = { model: c.model, temperature, max_tokens: maxTokens, stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };
+      const body = { model: c.model, temperature, max_tokens: maxT, stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };
       if (!q.noFormat) body.response_format = { type: 'json_object' };
       if (!q.noThink) { body.chat_template_kwargs = { enable_thinking: false }; body.enable_thinking = false; body.reasoning = { enabled: false }; }
       let res;
@@ -317,7 +318,14 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
       if (res.status === 400 && !q.noFormat && /response_format|json_object|json mode|structured/i.test(detail)) { q.noFormat = true; continue; }
       if (res.status === 404 || /not found|does not exist|not supported|unknown model|no such model|try pulling/i.test(detail)) return { ok: false, status: 404, error: `Modèle « ${c.model} » introuvable sur ${where}${c.provider === 'ollama' ? ' — dans un terminal : ollama pull ' + c.model : ''}.` };
       if (res.status === 401 || (res.status === 400 && /api key|authentication/i.test(detail))) return { ok: false, status: 401, error: `Clé refusée par ${where} : elle est incomplète, révoquée ou mal copiée.` };
-      if (res.status === 402) return { ok: false, status: 402, error: `Crédit épuisé sur ${where} — rechargez le compte qui a créé la clé.` };
+      if (res.status === 402) {
+        // OpenRouter réserve le prix de la réponse la plus longue demandée (max_tokens) : « can only afford N » → on redemande avec N
+        const m = /afford\s+(\d+)/i.exec(detail || ''); const afford = m ? +m[1] : 0;
+        if (afford && afford < maxT && afford >= Math.max(200, minTokens) && shrunk < 2) { maxT = Math.floor(afford * 0.92); shrunk++; attempt--; continue; }
+        return { ok: false, status: 402, afford, error: afford
+          ? `Crédit insuffisant sur ${where} pour cette demande : la clé permet encore environ ${afford} jetons de réponse, il en faut au moins ${Math.max(minTokens, 200)}. Rechargez le compte qui a créé la clé (ou demandez une génération plus courte).`
+          : `Crédit épuisé sur ${where} — rechargez le compte qui a créé la clé.` };
+      }
       if (res.status === 403) return { ok: false, status: 403, error: 'Clé reconnue mais sans accès (' + (detail || 'HTTP 403') + '). Vérifiez les droits de la clé et le crédit du compte.' };
       if (res.status === 503 || res.status === 502 || res.status === 500 || res.status === 429 || /overloaded|capacity|rate limit|too many/i.test(detail)) {
         last = { ok: false, status: res.status, error: res.status === 429 ? 'Limite de requêtes atteinte pour l’instant (ou crédit épuisé) — réessayez dans une minute.' : `Le serveur est saturé pour l’instant (${res.status}) — réessayez dans un instant.` };

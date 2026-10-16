@@ -1,0 +1,104 @@
+/* ============================================================
+   Alixo — éditeur de documents Word / OpenDocument (js/docedit.js) : fenêtre, pages, impression
+   Les pages restent blanches et le texte noir, en thème clair comme en thème sombre (c'est le document).
+   ============================================================ */
+.wdx-ov { position: fixed; inset: 0; z-index: 2600; display: flex; flex-direction: column; background: var(--bg, #f1f3f4); color: var(--ink, #202124); font-family: var(--font-ui, system-ui, sans-serif); }
+body.wdx-open { overflow: hidden; }
+.wdx-top { max-width: none; width: auto; margin: 0; border-radius: 0; box-shadow: none; display: flex; align-items: center; gap: 10px; height: 52px; padding: 0 14px; background: var(--surface, #fff); border-bottom: 1px solid var(--border, #dadce0); flex: none; }
+.wdx-back { width: 34px; height: 34px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-2, #5f6368); }
+.wdx-back:hover { background: var(--hover, #eef0f3); color: var(--ink, #202124); }
+.wdx-back svg, .wdx-acts svg, .wdx-bar svg, .wdx-status svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wdx-fico { width: 30px; height: 30px; border-radius: 6px; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff; background: #2b5fb4; flex: none; }
+.wdx-fico.odt { background: #1f8a70; font-size: 10px; }
+.wdx-title { min-width: 0; flex: 1; }
+.wdx-name { font-size: 14.5px; font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wdx-state { font-size: 11.5px; color: var(--ink-3, #80868b); margin-top: 1px; }
+.wdx-acts { display: flex; gap: 8px; flex: none; }
+.wdx-acts .cta { display: inline-flex; align-items: center; gap: 6px; }
+.wdx-bar { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; min-height: 44px; padding: 4px 12px; background: var(--surface, #fff); border-bottom: 1px solid var(--border, #dadce0); flex: none; }
+.wdx-grp { display: flex; align-items: center; gap: 2px; }
+.wdx-sep { width: 1px; height: 24px; background: var(--border, #dadce0); margin: 0 6px; }
+.wdx-bar button { min-width: 30px; height: 30px; padding: 0 6px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; color: var(--ink-2, #5f6368); position: relative; }
+.wdx-bar button:hover { background: var(--hover, #eef0f3); color: var(--ink, #202124); }
+.wdx-bar button.on { background: var(--tint-soft, #e3edf5); color: var(--tint, #33658a); }
+.wdx-bar button:disabled { opacity: .35; pointer-events: none; }
+.wdx-bar select { height: 30px; border: 1px solid var(--border, #dadce0); border-radius: 6px; background: var(--surface, #fff); color: var(--ink, #202124); font: inherit; font-size: 13px; padding: 0 6px; }
+.wdx-bar .wdx-style { width: 150px; } .wdx-bar .wdx-font { width: 170px; } .wdx-bar .wdx-size { width: 62px; }
+.wdx-colbtn { flex-direction: column; gap: 0 !important; }
+.wdx-colbtn .wdx-a { font-weight: 700; font-size: 14px; line-height: 16px; }
+.wdx-colbtn .wdx-hla { font-size: 12px; }
+.wdx-colbtn .wdx-bar-c { display: block; width: 18px; height: 4px; border-radius: 1px; border: 1px solid rgba(0,0,0,.15); }
+.wdx-body { flex: 1; min-height: 0; position: relative; }
+.wdx-status { display: flex; align-items: center; gap: 18px; height: 30px; padding: 0 12px; font-size: 12px; color: var(--ink-2, #5f6368); background: var(--surface, #fff); border-top: 1px solid var(--border, #dadce0); flex: none; }
+.wdx-note { color: var(--ink-3, #80868b); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.wdx-zoom { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.wdx-zoom button { min-width: 24px; height: 24px; border-radius: 5px; color: var(--ink-2, #5f6368); font-size: 15px; display: inline-grid; place-items: center; }
+.wdx-zoom button:hover { background: var(--hover, #eef0f3); color: var(--ink, #202124); }
+.wdx-zoom .wdx-zp { min-width: 46px; font-size: 12px; font-variant-numeric: tabular-nums; }
+.wdx-zoom input[type=range] { width: 130px; accent-color: var(--tint, #33658a); }
+.wdx-err { padding: 40px; text-align: center; color: var(--ink-2, #5f6368); }
+.wdx-menu { position: fixed; z-index: 2700; background: var(--surface, #fff); border: 1px solid var(--border, #dadce0); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.18); padding: 10px; width: 206px; font-family: var(--font-ui, system-ui, sans-serif); }
+.wdx-mtitle { font-size: 11.5px; font-weight: 700; color: var(--ink-2, #5f6368); margin-bottom: 8px; }
+.wdx-swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 4px; }
+.wdx-swatches button { width: 20px; height: 20px; border-radius: 4px; border: 1px solid rgba(0,0,0,.18); cursor: pointer; }
+.wdx-swatches button.none { background: linear-gradient(135deg, transparent 45%, #c04343 45%, #c04343 55%, transparent 55%) !important; }
+.wdx-mauto { margin-top: 8px; width: 100%; height: 26px; border-radius: 6px; border: 1px solid var(--border, #dadce0); font-size: 12px; background: var(--surface, #fff); color: var(--ink, #202124); cursor: pointer; }
+
+/* ---------------- surface des pages ---------------- */
+.wdx-scroll { position: absolute; inset: 0; overflow: auto; background: #e6e7e9; padding: 24px 0 40px; }
+html[data-theme="dark"] .wdx-scroll { background: #2b2c2f; }
+.wdx-scaler { position: relative; margin: 0 auto; }
+.wdx-canvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.wdx-pages { position: absolute; left: 0; top: 0; right: 0; z-index: 0; }
+.wdx-page { position: absolute; left: 0; z-index: 0; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.18), 0 2px 10px rgba(0,0,0,.08); overflow: hidden; }
+.wdx-pgbdr { position: absolute; pointer-events: none; }
+.wdx-hdr, .wdx-ftr, .wdx-fns { position: absolute; color: #000; pointer-events: none; }
+.wdx-fns .wdx-fnsep { width: 160px; border-top: 1px solid #000; margin-bottom: 4px; }
+.wdx-measure { position: absolute; left: -100000px; top: 0; visibility: hidden; color: #000; }
+.wdx-flow { position: absolute; left: 0; top: 0; z-index: 1; color: #000; outline: none; caret-color: #000; font-kerning: normal; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased; }
+.wdx-flow, .wdx-hdr, .wdx-ftr, .wdx-fns, .wdx-measure { font-family: "Times New Roman", "Liberation Serif", Tinos, Times, serif; font-size: 10pt; }
+.wdx-flow ::selection, .wdx-hdr ::selection { background: rgba(51, 101, 138, .3); }
+.wdx-ov div.wp, .wdx-preview div.wp, .wdx-measure div.wp { margin-top: 0; margin-bottom: 0; white-space: pre-wrap; overflow-wrap: break-word; position: relative; box-sizing: border-box; min-height: 1em; }
+.wdx-ov .wr, .wdx-preview .wr { white-space: pre-wrap; }
+.wtab { display: inline-block; width: 0; height: 1px; vertical-align: baseline; text-indent: 0; user-select: none; }
+.wtab.lead-dot { background-image: radial-gradient(circle, #000 0.7px, transparent 0.9px); background-size: 4px 2px; background-repeat: repeat-x; background-position: left bottom 0.25em; height: 1em; }
+.wtab.lead-line { border-bottom: 1px solid #000; }
+.wtab.lead-dash { border-bottom: 1px dashed #000; }
+.wpbr { display: inline-block; width: 0; height: 1em; user-select: none; }
+.wdx-ov .wpbr::after { content: ''; }
+.wnum { text-indent: 0; user-select: none; white-space: pre; display: inline; }
+.wkeep { user-select: none; }
+.wkeep.wfc { display: none; }
+.wmath { font-style: italic; }
+.wfnref { font-size: .65em; vertical-align: super; line-height: 0; }
+.wdx-fn div.wp { margin-left: 0 !important; margin-right: 0 !important; }
+a.wh { color: inherit; text-decoration: none; cursor: text; }
+.wdx-ov a.wh:hover { cursor: pointer; }
+.wdx-hdr a.wh, .wdx-ftr a.wh { color: inherit; }
+table.wt { border-collapse: collapse; table-layout: fixed; box-sizing: border-box; position: relative; }
+table.wt td { box-sizing: border-box; overflow-wrap: break-word; }
+.wtxbx { overflow: visible; text-indent: 0; white-space: normal; }
+.wtxbx-in { outline: none; }
+.wshape { box-sizing: border-box; }
+.wchart { display: grid; place-items: center; width: 100%; height: 100%; border: 1px dashed #9aa0a6; color: #5f6368; font: 12px var(--font-ui, sans-serif); }
+.wimg-missing { display: grid; place-items: center; width: 100%; height: 100%; min-height: 20px; background: #f1f3f4; color: #80868b; font: 11px var(--font-ui, sans-serif); border: 1px dashed #c4c7cb; }
+.wdx-flow img, .wdx-hdr img, .wdx-ftr img { max-width: none; }
+
+/* ---------------- aperçu (fenêtre d'un fichier, panneau « à côté du cours ») ---------------- */
+.wdx-preview { position: relative; width: 100%; height: 100%; min-height: 300px; }
+.wdx-preview .wdx-scroll { padding: 14px 0 24px; }
+.fv-body .wdx-preview, #vw-body .wdx-preview { position: absolute; inset: 0; }
+#vw-body:has(.wdx-preview), .fv-body:has(.wdx-preview) { position: relative; }
+
+/* ---------------- impression : une feuille par page (#wdx-print, construit par js/docedit.js) ---------------- */
+#wdx-print { display: none; }
+@media print {
+  body.wdx-printing > *:not(#wdx-print) { display: none !important; }
+  body.wdx-printing { background: #fff !important; margin: 0 !important; }
+  body.wdx-printing #wdx-print { display: block; }
+  #wdx-print .wdx-ppage { position: relative; overflow: hidden; break-after: page; page-break-after: always; background: #fff; }
+  #wdx-print .wdx-ppage:last-child { break-after: auto; page-break-after: auto; }
+  #wdx-print .wdx-page { box-shadow: none; }
+  #wdx-print .wdx-flow { position: absolute; }
+  #wdx-print .wpbr::after { display: none; }
+}

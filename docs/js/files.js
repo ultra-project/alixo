@@ -9,7 +9,8 @@
      users/{uid}/files/{id}/chunks/{n} (contenu, par morceaux de 700 Ko — un document Firestore est limité à 1 Mio).
      Le contenu n'est téléchargé sur un autre appareil qu'à la première ouverture.
    - Ouverture dans l'application : PDF, images, Word (.docx), OpenDocument (.odt), PowerPoint (.pptx), Excel (.xlsx), texte, audio, vidéo ;
-     1.34 : un .docx ou .odt s'ouvre aussi « dans Alixo » (js/office.js) : il devient une séance modifiable ;
+     1.34.1 : un .docx ou un .odt s'affiche tel qu'il a été écrit (pages, polices, images : js/docedit.js) et se modifie
+     dans l'éditeur « Modifier dans Alixo » ; l'enregistrement remplace le contenu du même fichier (replaceData) ;
      les autres formats s'ouvrent avec l'application associée (version PC) ou s'enregistrent.
    - Partage (1.17, js/share.js) : un fichier seul ou les fichiers d'un dossier partagé sont recopiés dans
      shares/{sid}/files/{id}. Les fiches reçues ({ sid, id, name, … }) s'ouvrent dans la même visionneuse,
@@ -124,6 +125,16 @@ window.AlixoFiles = (() => {
     if (tooBig) toast(`${tooBig} fichier${tooBig > 1 ? 's' : ''} de plus de 300 Mo non importé${tooBig > 1 ? 's' : ''}`, { duration: 6000 });
     else if (failed && !added.length) toast('Import impossible (un dossier ? glissez plutôt les fichiers qu’il contient)', { duration: 6000 });
     return added;
+  }
+  /* 1.34.1 : nouveau contenu pour un fichier existant (même fiche, même place) ; renvoyé au nuage, les autres
+     appareils jettent leur copie (rev) */
+  async function replaceData(id, buf) {
+    const f = byId(id); if (!f) throw new Error('fichier introuvable');
+    const ab = buf instanceof ArrayBuffer ? buf : buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+    await putLocal(id, ab);
+    f.size = ab.byteLength; f.updatedAt = Date.now(); f.rev = (f.rev || 0) + 1; f.cloud = false;
+    save(); refreshLibrary(); Cloud.schedule();
+    return f;
   }
   function uniqueName(name, folderId) {
     const taken = new Set(inFolder(folderId).map(f => f.name.toLowerCase()));
@@ -261,7 +272,7 @@ window.AlixoFiles = (() => {
       if (k === 'save') saveCopy(src);
       if (k === 'ext') openExternal(src);
       if (k === 'side') { closeViewer(); showBeside(src); }
-      if (k === 'edit') { const v = viewing; if (!v || !v.buf || !window.AlixoOffice) return; const f = v.h.f; closeViewer(); AlixoOffice.importAsDoc({ name: f.name, buf: v.buf, folderId: v.h.shared ? null : (f.folderId || null), fileId: v.h.shared ? null : f.id }); }
+      if (k === 'edit') { const v = viewing; if (!v || !v.buf || !window.AlixoDocEdit) return; const f = v.h.f; const buf = v.buf; closeViewer(); AlixoDocEdit.open({ name: f.name, buf, fileId: v.h.shared ? null : f.id, folderId: v.h.shared ? null : (f.folderId || null), shared: !!v.h.shared }); }
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) { e.preventDefault(); e.stopPropagation(); closeViewer(); } }, true);
     return ov;
@@ -301,7 +312,7 @@ window.AlixoFiles = (() => {
       return;
     }
     viewing.buf = buf;
-    ov.querySelector('[data-fv="edit"]').hidden = !(window.AlixoOffice && AlixoOffice.canEdit(f.name));
+    ov.querySelector('[data-fv="edit"]').hidden = !(window.AlixoDocEdit && AlixoDocEdit.canOpen(f.name));
     viewing.cleanup = await render(body, f.name, buf);
   }
   const openShared = f => open(f);
@@ -313,16 +324,16 @@ window.AlixoFiles = (() => {
     try {
       if (ext === 'pdf') body.innerHTML = `<iframe src="${blobUrl('application/pdf')}#toolbar=1&navpanes=0&view=FitH" title="${esc(name)}"></iframe>`;
       else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'].includes(ext)) body.innerHTML = `<div class="fv-imgwrap"><img class="vw-img" src="${blobUrl(MIME[ext])}" alt="${esc(name)}"></div>`;
-      else if (ext === 'docx') {
-        body.innerHTML = `<div class="vw-empty">Conversion du document Word…</div>`;
-        if (typeof mammoth === 'undefined') throw new Error('Convertisseur Word indisponible');
-        const r = await mammoth.convertToHtml({ arrayBuffer: buf });
-        body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
-      } else if (ext === 'odt') {   // 1.34 : OpenDocument
-        body.innerHTML = `<div class="vw-empty">Lecture du document OpenDocument…</div>`;
-        if (!window.AlixoOffice) throw new Error('Lecteur OpenDocument indisponible');
-        const h = await AlixoOffice.odtToHtml(buf);
-        body.innerHTML = `<div class="vw-doc">${h || '<i>Document vide</i>'}</div>`;
+      else if ((ext === 'docx' || ext === 'odt') && window.AlixoDocEdit) {
+        // 1.34.1 : le document tel qu'il a été écrit (pages, polices, images), en lecture
+        body.innerHTML = `<div class="vw-empty">Ouverture du document…</div>`;
+        try { const dispose = await AlixoDocEdit.preview(body, { name, buf: buf.slice(0) }); return () => { dispose(); if (url) URL.revokeObjectURL(url); }; }
+        catch (e) {
+          console.error(e);
+          if (ext !== 'docx' || typeof mammoth === 'undefined') throw e;
+          const r = await mammoth.convertToHtml({ arrayBuffer: buf });   // secours : le texte seul
+          body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+        }
       } else if (ext === 'pptx') {
         body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
         body.innerHTML = `<div class="fv-slides">${await pptxToHtml(buf)}</div>`;
@@ -402,7 +413,7 @@ window.AlixoFiles = (() => {
   async function showBeside(x) {
     const h = handleOf(x); if (!h || !currentDocId) return;
     const buf = await h.data(); if (!buf) { toast('Contenu indisponible sur cet appareil'); return; }
-    showViewerFile(h.f.name, buf, '');
+    showViewerFile(h.f.name, buf, '', h.shared ? null : h.f.id);
   }
 
   /* ---------------- bibliothèque : cartes, arbre, menus ---------------- */
@@ -529,7 +540,7 @@ window.AlixoFiles = (() => {
     const Blob_ = firebase.firestore.Blob;
     let tm = null, busy = false, again = false, denied = false, started = false;
     const pushedMeta = new Map();   // id → JSON de la fiche connue du nuage
-    const metaOf = f => ({ name: f.name, size: f.size, mime: f.mime || '', folderId: f.folderId || null, createdAt: f.createdAt || 0, updatedAt: f.updatedAt || 0 });
+    const metaOf = f => ({ name: f.name, size: f.size, mime: f.mime || '', folderId: f.folderId || null, createdAt: f.createdAt || 0, updatedAt: f.updatedAt || 0, rev: f.rev || 0 });
 
     function schedule() { if (denied) return; clearTimeout(tm); tm = setTimeout(push, 1800); }
     async function delRemote(id) {
@@ -602,11 +613,11 @@ window.AlixoFiles = (() => {
           }
           const m = ch.doc.data(); if (!m || !m.chunks) return;
           if (isTombstoned('files', id, m.updatedAt || 0)) { schedule(); pushedMeta.set(id, ''); return; }   // supprimé ici : le nuage suivra
-          const meta = { name: m.name, size: m.size, mime: m.mime || '', folderId: m.folderId || null, createdAt: m.createdAt || 0, updatedAt: m.updatedAt || 0 };
+          const meta = { name: m.name, size: m.size, mime: m.mime || '', folderId: m.folderId || null, createdAt: m.createdAt || 0, updatedAt: m.updatedAt || 0, rev: m.rev || 0 };
           const f = byId(id);
           if (!f) { files().push(Object.assign({ id, cloud: true }, meta)); pushedMeta.set(id, JSON.stringify(meta)); changed = true; return; }
           if (!f.cloud) { f.cloud = true; changed = true; }
-          if ((m.updatedAt || 0) > (f.updatedAt || 0)) { Object.assign(f, meta); pushedMeta.set(id, JSON.stringify(meta)); changed = true; }
+          if ((m.updatedAt || 0) > (f.updatedAt || 0)) { if ((m.rev || 0) !== (f.rev || 0)) delLocal(id); Object.assign(f, meta); pushedMeta.set(id, JSON.stringify(meta)); changed = true; }   // contenu modifié ailleurs : la copie locale est jetée
           else if (!pushedMeta.has(id)) pushedMeta.set(id, JSON.stringify(meta));
         });
         if (!started) { started = true; schedule(); }
@@ -625,5 +636,5 @@ window.AlixoFiles = (() => {
   // la bibliothèque a pu être dessinée avant le chargement de ce module
   setTimeout(() => { try { refreshLibrary(); } catch { /* pas encore prête */ } }, 0);
 
-  return { open, openShared, openSharedMenu, pick, addFiles, remove, rename, move, openMove, openMenu, getData, gridHTML, sharedGridHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
+  return { open, openShared, openSharedMenu, pick, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, gridHTML, sharedGridHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
 })();

@@ -94,7 +94,27 @@ window.AlixoAIQuiz = (() => {
   };
   const kindLine = k => k === 'qcm' ? 'Toutes les questions sont des QCM (type "qcm").' : k === 'vf' ? 'Toutes les questions sont des affirmations vrai / faux (type "vf").' : k === 'courte' ? 'Toutes les questions sont à réponse courte (type "courte") : un mot, un nom, une date, un chiffre ou une expression de trois mots au plus.' : 'Mélange les types : environ la moitié de "qcm", un quart de "vf", un quart de "courte" (réponse d’un à trois mots).';
   const levelLine = l => l === 'facile' ? 'Niveau facile : les notions principales, formulées comme dans le document.' : l === 'difficile' ? 'Niveau difficile : détails, exceptions, cas limites, raisonnement ; distracteurs plausibles.' : 'Niveau moyen : comprendre et distinguer les notions, pas seulement les reconnaître.';
-  async function genQuiz(ctx) {
+  /* 1.34.1 : génération par lots de 5 questions (réponses courtes : la clé n'a pas à couvrir 8 000 jetons d'un coup),
+     chaque lot évite les questions déjà posées ; onProgress(k, n) fait avancer l'écran d'attente */
+  const BATCH = 5;
+  async function genQuiz(ctx, onProgress) {
+    const all = []; let title = '', tokIn = 0, tokOut = 0, model = '', lastErr = '';
+    for (let b = 0; b < Math.ceil(ctx.n / BATCH) && all.length < ctx.n; b++) {
+      const k = Math.min(BATCH, ctx.n - all.length);
+      const avoid = all.length ? `\n\nQuestions déjà posées (n'en reprends aucune, interroge sur d'autres passages du document) :\n${all.map(q => '- ' + q.text).join('\n')}` : '';
+      const r = await genQuizBatch(Object.assign({}, ctx, { n: k }), avoid);
+      if (!r.ok) { lastErr = r.error; if (all.length) break; throw new Error(r.error); }
+      tokIn += r.tokIn || 0; tokOut += r.tokOut || 0; model = r.model || model;
+      if (!title && r.title) title = r.title;
+      const seen = new Set(all.map(q => C().norm(q.text)));
+      for (const q of r.questions) { if (all.length >= ctx.n) break; if (seen.has(C().norm(q.text))) continue; seen.add(C().norm(q.text)); all.push(q); }
+      if (onProgress) onProgress(all.length, ctx.n);
+      if (!r.questions.length) break;
+    }
+    if (!all.length) throw new Error(lastErr || 'Aucune question exploitable dans la réponse du modèle — réessayez.');
+    return { title: title || ('Quiz — ' + (ctx.title || 'révision')), questions: all, tokIn, tokOut, model, partial: all.length < ctx.n ? lastErr : '' };
+  }
+  async function genQuizBatch(ctx, avoid) {
     const system = `Tu es un enseignant qui prépare un quiz de révision pour un étudiant (droit, économie, commerce, médecine et santé, STAPS…), à partir de SES notes de cours.
 Règles : les questions portent uniquement sur le contenu fourni ; une seule bonne réponse par QCM, quatre propositions courtes et homogènes ; les affirmations vrai/faux sont tranchées ; chaque question a une explication d'une ou deux phrases qui cite l'élément du cours. Varie les parties du document. Français soigné (typographie : « », apostrophe ’).
 ${kindLine(ctx.kind)} ${levelLine(ctx.level)} Exactement ${ctx.n} questions.
@@ -105,15 +125,14 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
  {"type":"courte","question":"…","reponses":["réponse attendue","variante acceptée"],"explication":"…"}
 ]}
 "reponse" d'un QCM = l'indice (0 à 3) de la bonne proposition dans "choix".`;
-    const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}`;
-    const r = await AlixoCorr.call(null, { system, user, maxTokens: Math.min(8000, 700 + ctx.n * 260), timeoutMs: 150000, temperature: 0.35 });
-    if (!r.ok) throw new Error(r.error || 'Le modèle n’a pas répondu');
+    const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}${avoid || ''}`;
+    const r = await AlixoCorr.call(null, { system, user, maxTokens: 350 + ctx.n * 240, minTokens: 120 + ctx.n * 110, timeoutMs: 120000, temperature: 0.35 });
+    if (!r.ok) return { ok: false, error: r.error || 'Le modèle n’a pas répondu' };
     const j = parseJson(r.text);
     const arr = j && (Array.isArray(j) ? j : j.questions);
-    if (!Array.isArray(arr) || !arr.length) throw new Error('Le modèle n’a pas renvoyé de questions lisibles — réessayez (ou réduisez le nombre de questions).');
+    if (!Array.isArray(arr) || !arr.length) return { ok: false, error: 'Le modèle n’a pas renvoyé de questions lisibles — réessayez.' };
     const qs = arr.map(toQuestion).filter(Boolean).slice(0, ctx.n);
-    if (!qs.length) throw new Error('Aucune question exploitable dans la réponse du modèle — réessayez.');
-    return { title: S(j && j.titre) || ('Quiz — ' + (ctx.title || 'révision')), questions: qs, tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+    return { ok: true, title: S(j && j.titre), questions: qs, tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
   }
   /* une question de l'IA → une question QuizCore */
   function toQuestion(x) {
@@ -147,7 +166,7 @@ Règles : ne rien inventer, tout vient du document ; phrases courtes ; définiti
 Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
 {"titre":"…","resume":"deux ou trois phrases qui situent le sujet","parties":[{"titre":"…","points":["…","…"],"definitions":[{"terme":"…","definition":"…"}]}],"retenir":["l'essentiel en 3 à 6 phrases"],"pieges":["erreurs fréquentes, confusions à éviter (0 à 4)"]}`;
     const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}`;
-    const r = await AlixoCorr.call(null, { system, user, maxTokens: 6000, timeoutMs: 150000, temperature: 0.25 });
+    const r = await AlixoCorr.call(null, { system, user, maxTokens: 3200, minTokens: 900, timeoutMs: 150000, temperature: 0.25 });
     if (!r.ok) throw new Error(r.error || 'Le modèle n’a pas répondu');
     const j = parseJson(r.text);
     if (!j || typeof j !== 'object' || !Array.isArray(j.parties)) throw new Error('Le modèle n’a pas renvoyé de fiche lisible — réessayez.');
@@ -229,10 +248,11 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     body.innerHTML = loadingHTML(quiz ? `${opts.n} questions, niveau ${LEVELS.find(l => l[0] === opts.level)[1].toLowerCase()}` : 'rédaction de la fiche');
     try {
       const ctx = { title: cur.title, text: cur.text, kind: opts.kind, n: opts.n, level: opts.level };
-      const res = quiz ? await genQuiz(ctx) : await genSheet(ctx);
+      const res = quiz ? await genQuiz(ctx, (k, n) => { const el = body.querySelector('.aq-loading p'); if (el && cur && cur.gen === gen) el.textContent = `${k} question${k > 1 ? 's' : ''} sur ${n} — la suite arrive…`; }) : await genSheet(ctx);
       if (cur.gen !== gen) return;   // annulé entre-temps
       cur.result = res; cur.resultMode = quiz ? 'quiz' : 'fiche';
-      if (quiz) startPlay(body); else body.innerHTML = sheetHTML(res);
+      if (quiz) { startPlay(body); if (res.partial) toast(`${res.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 }); }
+      else body.innerHTML = sheetHTML(res);
     } catch (err) {
       if (cur && cur.gen === gen) body.innerHTML = errorHTML(err && err.message || String(err));
     }
@@ -392,14 +412,25 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     const html = cur.resultMode === 'fiche'
       ? document.querySelector('#aq-body .aq-fiche').outerHTML
       : `<article class="aq-fiche"><h2>${esc(r.title)}</h2><ol class="aq-pq">${r.questions.map(q => `<li><div>${esc(q.text)}</div>${q.t === 'mcq' ? `<ul>${q.opts.map((o, k) => `<li>${'ABCDEF'[k]}. ${esc(o.text)}</li>`).join('')}</ul>` : q.t === 'tf' ? '<div class="aq-pvf">☐ Vrai &nbsp; ☐ Faux</div>' : '<div class="aq-pline"></div>'}</li>`).join('')}</ol><h3 class="aq-pbreak">Corrigé</h3><ol class="aq-pq">${r.questions.map(q => `<li><b>${esc(Q.correctText(q))}</b>${q.expl ? ` — ${esc(q.expl)}` : ''}</li>`).join('')}</ol></article>`;
-    const w = window.open('', '_blank', 'width=900,height=1000');
-    if (!w) { toast('Autorisez les fenêtres surgissantes pour imprimer'); return; }
-    w.document.write(`<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${esc(r.title)}</title><style>
-      body{font-family:Georgia,serif;max-width:760px;margin:30px auto;color:#202124;line-height:1.5}h2{font-size:24px;margin:0 0 10px}h3{font-size:17px;margin:18px 0 6px}p{margin:0 0 8px}ul,ol{margin:4px 0 10px;padding-left:22px}li{margin:3px 0}
-      dl{margin:6px 0 10px}dt{font-weight:700;margin-top:6px}dd{margin:0 0 4px 16px}.aq-box{border:1px solid #cfd3d8;border-radius:8px;padding:10px 14px;margin:12px 0}.aq-box b{display:block;margin-bottom:4px}
-      .aq-pq>li{margin:0 0 14px}.aq-pq ul{list-style:none;padding-left:14px}.aq-pline{border-bottom:1px solid #9aa0a6;height:26px;width:70%}.aq-pvf{margin-top:4px}.aq-pbreak{page-break-before:always}.aq-resume{font-style:italic}
-      footer{margin-top:30px;font-size:12px;color:#5f6368}</style></head><body>${html}<footer>Généré par Alixo (Quiz IA) à partir de « ${esc(cur.title)} » — alixoapp.com</footer><script>setTimeout(()=>print(),250)</script></body></html>`);
-    w.document.close();
+    // 1.34.1 : impression dans la page même (la version PC n'ouvre pas de fenêtre surgissante)
+    let box = document.getElementById('aq-print');
+    if (!box) { box = document.createElement('div'); box.id = 'aq-print'; document.body.appendChild(box); }
+    box.innerHTML = `<style>
+      @media screen { #aq-print { display: none; } }
+      @media print { body.aq-printing > *:not(#aq-print) { display: none !important; } body.aq-printing { background: #fff !important; }
+        #aq-print { display: block; font-family: Georgia, serif; color: #202124; line-height: 1.5; max-width: 760px; margin: 0 auto; }
+        #aq-print .aq-fiche { border: none; max-height: none; overflow: visible; padding: 0; background: none; }
+        #aq-print h2 { font-size: 22px; margin: 0 0 10px; } #aq-print h3 { font-size: 16px; margin: 16px 0 6px; }
+        #aq-print ul, #aq-print ol { margin: 4px 0 10px; padding-left: 22px; } #aq-print li { margin: 3px 0; }
+        #aq-print dt { font-weight: 700; margin-top: 6px; } #aq-print dd { margin: 0 0 4px 16px; }
+        #aq-print .aq-box { border: 1px solid #cfd3d8; border-radius: 8px; padding: 10px 14px; margin: 12px 0; } #aq-print .aq-box b { display: block; margin-bottom: 4px; }
+        #aq-print .aq-pq > li { margin: 0 0 14px; } #aq-print .aq-pq ul { list-style: none; padding-left: 14px; } #aq-print .aq-pline { border-bottom: 1px solid #9aa0a6; height: 26px; width: 70%; }
+        #aq-print .aq-pbreak { break-before: page; } #aq-print footer { margin-top: 30px; font-size: 11px; color: #5f6368; } }
+      </style>${html}<footer>Généré par Alixo (Quiz IA) à partir de « ${esc(cur.title)} » — alixoapp.com</footer>`;
+    document.body.classList.add('aq-printing');
+    const done = () => { window.removeEventListener('afterprint', done); document.body.classList.remove('aq-printing'); };
+    window.addEventListener('afterprint', done);
+    setTimeout(() => { window.print(); setTimeout(() => { if (document.body.classList.contains('aq-printing')) done(); }, 500); }, 50);
   }
 
   const buttonHTML = (attr, cls = '') => `<button type="button" ${attr} class="${cls}" title="Quiz IA et fiche de révision : QCM, vrai / faux, réponses courtes ou fiche de révision générés par l’IA à partir de ce document (Alixo+)">${ICON}<span>Quiz IA</span></button>`;
