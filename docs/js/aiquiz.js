@@ -1,5 +1,5 @@
 /* ============================================================
-   Alixo — Quiz IA et fiches de révision (1.34, Alixo+)
+   Alixo — Quiz IA et fiches de révision (1.34, Alixo+ ; 1.35 : vue en onglet)
    Depuis une séance, une présentation ou un tableur, l'IA (le serveur configuré dans Paramètres › IA,
    moteur js/corr.js) lit le document et propose :
    - un quiz à jouer sur place : QCM, vrai / faux, réponses courtes ou mélange, 5 à 20 questions, trois
@@ -8,8 +8,11 @@
    - une fiche de révision : résumé, parties avec points clés et définitions, « à retenir », pièges ;
      insérée à la fin de la séance, posée dans une nouvelle séance ou copiée.
    Les questions sont au format de QuizCore (js/quizcore.js) : mêmes widgets, même vérification des réponses.
-   Chargé APRÈS app.js et quizcore.js : utilise leurs globales (doc, state, save, openDoc, requirePlus,
-   openDialog, closeDialog, toast, esc, uid, blockPlain, renderBlocks, touch, AlixoCorr, QuizCore…).
+   1.35 : plus de fenêtre surgissante — le Quiz IA est un onglet « Quiz IA — <document> » de la barre des onglets
+   (AlixoApp.tabs, section #view-aiquiz, styles dans quiz.css § Quiz IA) : paramétrage en grandes cartes, animation
+   de génération, question lisible en clair comme en sombre, « Question suivante » aussi par Entrée.
+   Chargé APRÈS app.js et quizcore.js : utilise leurs globales (doc, findDoc, state, save, openDoc, requirePlus,
+   openSettings, toast, esc, uid, blockPlain, renderBlocks, AlixoCorr, QuizCore…).
    ============================================================ */
 'use strict';
 
@@ -175,110 +178,273 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     return { title: S(j.titre) || ('Fiche de révision — ' + (ctx.title || '')), resume: S(j.resume), parties, retenir: (Array.isArray(j.retenir) ? j.retenir : []).map(S).filter(Boolean), pieges: (Array.isArray(j.pieges) ? j.pieges : []).map(S).filter(Boolean), tokIn: r.tokIn, tokOut: r.tokOut };
   }
 
-  /* ---------------- fenêtre ---------------- */
+  /* ============================================================
+     La vue (1.35) : un vrai onglet « Quiz IA — <document> » dans la barre des onglets (API AlixoApp.tabs,
+     section #view-aiquiz), plus de fenêtre surgissante. Chaque document a sa propre session (paramétrage,
+     génération en cours, partie jouée, fiche), gardée tant que l'onglet est ouvert : on peut revenir à la
+     séance et retrouver le quiz là où on l'a laissé.
+     Étapes d'une session : form → gen → play → result | sheet | error ; noai / empty quand rien n'est possible.
+     ============================================================ */
   const ICON = '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4Z"/><path d="M5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9Z"/><path d="M19 14l.6 1.4 1.4.6-1.4.6L19 18l-.6-1.4L17 16l1.4-.6Z"/></svg>';
-  const DLG = 'aiquiz';
-  let cur = null;   // { d, title, text, cut, nWords, result, play }
-  const settingsLink = () => `<button class="cta ghost small" type="button" data-aq="settings">Configurer l’IA (Paramètres › IA)</button>`;
+  const I = {
+    quiz: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="m7.5 12 2.5 2.5 6-6"/></svg>',
+    sheet: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4M9 12h6M9 16h4"/></svg>',
+    mix: '<svg viewBox="0 0 24 24"><path d="M4 7h4l8 10h4M4 17h4l2-2.5M14 9.5 16 7h4"/><path d="m18 5 2 2-2 2M18 15l2 2-2 2"/></svg>',
+    qcm: '<svg viewBox="0 0 24 24"><circle cx="6" cy="7" r="2"/><circle cx="6" cy="17" r="2"/><path d="M11 7h9M11 17h9"/></svg>',
+    vf: '<svg viewBox="0 0 24 24"><path d="m4 12 3.5 3.5L14 9"/><path d="m15 15 5 5M20 15l-5 5"/></svg>',
+    courte: '<svg viewBox="0 0 24 24"><path d="M4 18h16M4 6h10M4 12h7"/><path d="M15 12h5"/></svg>',
+    back: '<svg viewBox="0 0 24 24"><path d="m14 6-6 6 6 6"/></svg>',
+    doc: '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>',
+    slides: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8"/></svg>',
+    sheetdoc: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 4v16M15 4v16"/></svg>',
+    arrow: '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>',
+    replay: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 8M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-14 5.3L4 16M4 20v-4h4"/></svg>',
+    print: '<svg viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H4v-6a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v6h-3"/><rect x="7" y="14" width="10" height="7"/></svg>',
+    save: '<svg viewBox="0 0 24 24"><path d="M5 3h11l3 3v15H5Z"/><path d="M8 3v6h7V3M8 21v-7h8v7"/></svg>',
+    gear: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/></svg>'
+  };
+  const KIND_ICON = { mix: I.mix, qcm: I.qcm, vf: I.vf, courte: I.courte };
+  const LEVEL_DOT = { facile: '#2e8b6a', moyen: '#b3762a', difficile: '#c04343' };
+  const TAB_KIND = 'aiq';
+  const tabId = d => TAB_KIND + ':' + d.id;
+  const sessions = new Map();   // docId → session { d, tab, title, text, cut, nWords, step, result, resultMode, play, gen, root }
+  let cur = null;               // session affichée
+  let view = null;              // la section #view-aiquiz
+  const kindWord = d => (d.kind === 'slides' ? 'présentation' : d.kind === 'sheet' ? 'tableur' : d.kind === 'board' ? 'planche' : 'séance');
+  const docIco = d => (d.kind === 'slides' ? I.slides : d.kind === 'sheet' ? I.sheetdoc : I.doc);
+  const srcReadOnly = d => !!(typeof isSharedDoc === 'function' && isSharedDoc(d.id) && !(window.AlixoShare && AlixoShare.canWrite(d.id)));
+  const settingsLink = () => `<button class="aq-btn ghost" type="button" data-aq="settings">${I.gear}<span>Configurer l’IA (Paramètres › IA)</span></button>`;
 
+  /* ---------------- ouverture : depuis le bouton ✨ Quiz IA, F8 (séance, présentation, tableur) ---------------- */
   function open(d) {
     d = d || (typeof doc === 'function' ? doc() : null);
+    if (!d && cur) d = cur.d;   // F8 depuis l'onglet du quiz : on reste dessus
     if (!d) { toast('Ouvrez d’abord une séance, une présentation ou un tableur'); return; }
     if (d.kind === 'quiz') { toast('Le Quiz IA se lance depuis une séance, une présentation ou un tableur'); return; }
     if (typeof requirePlus === 'function' && !requirePlus('quizia')) return;
+    if (!window.AlixoApp || !AlixoApp.tabs) { toast('Onglets indisponibles'); return; }
+    ensureView();
+    const s = session(d);
+    AlixoApp.tabs.open({ id: s.tab, kind: TAB_KIND, title: 'Quiz IA — ' + s.title, icon: ICON, data: { docId: d.id, folderId: d.folderId || null } });
+  }
+  function session(d) {
+    let s = sessions.get(d.id);
+    if (s) { s.d = d; return s; }
     const raw = docText(d);
     const nWords = words(raw);
     const { text, cut } = shorten(raw);
-    cur = { d, title: S(d.titre) || (d.kind === 'slides' ? 'Présentation' : d.kind === 'sheet' ? 'Tableur' : 'Séance'), text, cut, nWords, result: null, play: null };
-    const ready = typeof AlixoCorr !== 'undefined' && AlixoCorr.configured();
-    openDialog({
-      id: DLG, cls: 'aq-dlg', eyebrow: 'Alixo+ · intelligence artificielle',
-      title: 'Quiz et fiche de révision',
-      sub: `À partir de « ${esc(cur.title)} » — ${nWords.toLocaleString('fr-FR')} mot${nWords > 1 ? 's' : ''}${cut ? ' (document long : le modèle en lit un extrait de chaque partie)' : ''}.`,
-      body: `<div id="aq-body">${ready ? formHTML() : noAiHTML()}</div>`,
-      onMount: card => bind(card),
-      onClose: () => { cur = null; }
-    });
-    const t = document.querySelector(`#${DLG} .set-htitle`); if (t) t.innerHTML = `${ICON} Quiz et fiche de révision`;
+    s = { d, tab: tabId(d), title: S(d.titre) || (d.kind === 'slides' ? 'Présentation' : d.kind === 'sheet' ? 'Tableur' : 'Séance'), text, cut, nWords, step: 'form', result: null, resultMode: '', play: null, gen: null, root: null };
+    sessions.set(d.id, s);
+    return s;
   }
-  const noAiHTML = () => `<div class="aq-empty"><b>Aucun serveur d’IA n’est configuré.</b><p>Le Quiz IA utilise le même modèle que la correction par IA : indiquez un serveur (OpenRouter, Ollama sur votre ordinateur, ou un autre serveur compatible) dans Paramètres › IA, puis revenez ici.</p>${settingsLink()}</div>`;
-  const seg = (name, list, val) => `<div class="aq-seg" role="radiogroup" data-seg="${name}">${list.map(([k, lab, hint]) => `<button type="button" class="${k === val ? 'on' : ''}" data-v="${k}" title="${esc(hint || '')}">${lab}</button>`).join('')}</div>`;
-  function formHTML() {
-    if (nWordsTooSmall()) return `<div class="aq-empty"><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient le document.</p></div>`;
+  function ensureView() {
+    if (view) return view;
+    view = document.getElementById('view-aiquiz');
+    if (!view) { view = document.createElement('section'); view.id = 'view-aiquiz'; view.hidden = true; document.body.appendChild(view); }
+    view.classList.add('aq-view');
+    view.addEventListener('click', onClick);
+    document.addEventListener('keydown', onKey, true);
+    AlixoApp.tabs.register(TAB_KIND, {
+      open(id, data) {
+        const d = data && typeof findDoc === 'function' ? findDoc(data.docId) : null;
+        if (!d) { toast('Le document de ce quiz n’existe plus'); AlixoApp.tabs.close(id); return; }
+        const s = session(d);
+        for (const o of sessions.values()) if (o.root) o.root.hidden = o !== s;
+        cur = s;
+        view.hidden = false;
+        if (!s.root) { s.root = document.createElement('div'); s.root.className = 'aq-shell'; view.appendChild(s.root); render(s); }
+        s.root.hidden = false;
+        refreshBadge(s);
+      },
+      leave() { if (view) view.hidden = true; cur = null; },
+      close(id, data) {
+        const s = data && sessions.get(data.docId); if (!s) return;
+        s.gen = null;   // une génération en cours est abandonnée
+        if (s.root) s.root.remove();
+        sessions.delete(data.docId);
+        if (cur === s) cur = null;
+        if (view && !sessions.size) view.hidden = true;
+      },
+      /* au redémarrage : l'onglet revient au paramétrage (le quiz joué n'est pas conservé) */
+      restore(id) {
+        const did = id.slice(TAB_KIND.length + 1);
+        const d = typeof findDoc === 'function' ? findDoc(did) : null;
+        if (!d || d.kind === 'quiz') return null;
+        return { title: 'Quiz IA — ' + (S(d.titre) || 'Sans titre'), icon: ICON, data: { docId: d.id, folderId: d.folderId || null } };
+      }
+    });
+    return view;
+  }
+  /* le titre de l'onglet suit la séance (renommée entre-temps) */
+  function refreshBadge(s) {
+    const t = 'Quiz IA — ' + (S(s.d.titre) || s.title);
+    const info = AlixoApp.tabs.info(s.tab);
+    if (info && info.title !== t) AlixoApp.tabs.update(s.tab, { title: t });
+  }
+
+  /* ---------------- rendu de la session ---------------- */
+  function render(s) {
+    const ready = typeof AlixoCorr !== 'undefined' && AlixoCorr.configured();
+    const inner = !ready ? noAiHTML() : s.nWords < 30 ? emptyHTML(s)
+      : s.step === 'gen' ? genHTML(s) : s.step === 'play' ? '' : s.step === 'result' ? resultHTML(s) : s.step === 'sheet' ? sheetHTML(s) : s.step === 'error' ? errorHTML(s) : formHTML(s);
+    s.root.innerHTML = `<header class="aq-head">
+        <button type="button" class="aq-back" data-aq="backdoc" title="Revenir à la ${kindWord(s.d)} (l’onglet du quiz reste ouvert)">${I.back}<span>${esc(S(s.d.titre) || s.title)}</span></button>
+        <div class="aq-htitle">${ICON}<b>Quiz IA</b><small>Alixo+ · intelligence artificielle</small></div>
+        <div class="aq-src" title="Document source">${docIco(s.d)}<span>${esc(S(s.d.titre) || s.title)}</span><em>${s.nWords.toLocaleString('fr-FR')} mot${s.nWords > 1 ? 's' : ''}${s.cut ? ' · extrait' : ''}</em></div>
+      </header>
+      <div class="aq-stage" data-step="${s.step}">${inner}</div>`;
+    if (s.step === 'play' && s.play) renderQuestion(s);
+    if (s.step === 'gen') animateGen(s);
+  }
+  const stage = s => s.root.querySelector('.aq-stage');
+  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>Aucun serveur d’IA n’est configuré.</b><p>Le Quiz IA utilise le même modèle que la correction par IA : indiquez un serveur (OpenRouter, Ollama sur votre ordinateur, ou un autre serveur compatible) dans Paramètres › IA, puis revenez ici.</p>${settingsLink()}</div>`;
+  const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
+  const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
+  const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;
+  function formHTML(s) {
     const quiz = opts.mode !== 'fiche';
     return `<div class="aq-form">
-      <div class="aq-modes">
-        <button type="button" class="aq-mode ${quiz ? 'on' : ''}" data-mode="quiz"><span class="aq-mico">☑</span><b>Quiz</b><small>QCM, vrai / faux, réponses courtes — corrigé sur place</small></button>
-        <button type="button" class="aq-mode ${!quiz ? 'on' : ''}" data-mode="fiche"><span class="aq-mico">▤</span><b>Fiche de révision</b><small>Résumé, points clés, définitions, à retenir, pièges</small></button>
+      <div class="aq-modes" role="radiogroup">
+        <button type="button" class="aq-mode ${quiz ? 'on' : ''}" data-mode="quiz" role="radio" aria-checked="${quiz}"><span class="aq-mico">${I.quiz}</span><b>Quiz</b><small>QCM, vrai / faux, réponses courtes — corrigé sur place, avec l’explication tirée du cours</small><i class="aq-mart aq-mart-quiz"><u></u><u></u><u></u><u></u></i></button>
+        <button type="button" class="aq-mode ${!quiz ? 'on' : ''}" data-mode="fiche" role="radio" aria-checked="${!quiz}"><span class="aq-mico">${I.sheet}</span><b>Fiche de révision</b><small>Résumé, parties avec points clés et définitions, « À retenir », pièges à éviter</small><i class="aq-mart aq-mart-sheet"><u></u><u></u><u></u><u></u><u></u></i></button>
       </div>
-      ${quiz ? `<div class="aq-row"><label>Questions</label>${seg('kind', KINDS, opts.kind)}</div>
-      <div class="aq-row"><label>Nombre</label>${seg('n', COUNTS.map(n => [String(n), String(n)]), String(opts.n))}</div>
-      <div class="aq-row"><label>Niveau</label>${seg('level', LEVELS, opts.level)}</div>` : `<div class="aq-row aq-hint"><label>Contenu</label><div class="po-hint" style="margin:0">La fiche reprend tout le document : un résumé, trois à sept parties avec leurs points clés et définitions, « à retenir », et les pièges à éviter. Vous pourrez l’insérer à la fin de la séance, en faire une nouvelle séance ou la copier.</div></div>`}
-      <div class="aq-actions"><button type="button" class="cta plus-cta" data-aq="go">${ICON} Générer ${quiz ? 'le quiz' : 'la fiche'}</button><span class="aq-note">Les notes partent au serveur d’IA configuré dans Paramètres › IA ; rien n’est conservé par Alixo.</span></div>
+      ${quiz ? `<div class="aq-rows">
+        <div class="aq-row"><label>Type de questions</label><div class="aq-pills" data-segname="kind">${KINDS.map(([k, lab, hint]) => pill('kind', k, lab, k === opts.kind, `<i class="aq-pico">${KIND_ICON[k] || ''}</i>`, hint)).join('')}</div></div>
+        <div class="aq-row"><label>Nombre</label><div class="aq-pills aq-pills-n" data-segname="n">${COUNTS.map(n => pill('n', String(n), String(n), n === +opts.n, '', `${n} questions`)).join('')}</div></div>
+        <div class="aq-row"><label>Niveau</label><div class="aq-pills" data-segname="level">${LEVELS.map(([k, lab, hint]) => pill('level', k, lab, k === opts.level, `<i class="aq-dot" style="--c:${LEVEL_DOT[k]}"></i>`, hint)).join('')}</div></div>
+      </div>` : `<div class="aq-rows"><div class="aq-row"><label>Contenu</label><p class="aq-hint">La fiche reprend tout le document : un résumé, trois à sept parties avec leurs points clés et définitions, « À retenir », et les pièges à éviter. Vous pourrez l’insérer à la fin de la séance, en faire une nouvelle séance, la copier ou l’imprimer.</p></div></div>`}
+      <div class="aq-foot">
+        <button type="button" class="aq-go" data-aq="go">${ICON}<span>Générer ${quiz ? `${opts.n} question${opts.n > 1 ? 's' : ''}` : 'la fiche'}</span>${I.arrow}</button>
+        <span class="aq-note">Les notes partent au serveur d’IA configuré dans Paramètres › IA ; rien n’est conservé par Alixo.${s.cut ? ' Document long : le modèle en lit un extrait de chaque partie.' : ''}</span>
+      </div>
     </div>`;
   }
-  const nWordsTooSmall = () => !cur || cur.nWords < 30;
-  const loadingHTML = what => `<div class="aq-loading"><div class="aq-spin"></div><b>Le modèle lit votre ${cur.d.kind === 'slides' ? 'présentation' : cur.d.kind === 'sheet' ? 'tableur' : 'cours'}…</b><p>${what} — comptez dix à quarante secondes selon le serveur.</p><button type="button" class="cta ghost small" data-aq="cancel">Annuler</button></div>`;
-  const errorHTML = msg => `<div class="aq-empty aq-err"><b>Ça n’a pas marché.</b><p>${esc(msg)}</p><div class="aq-actions"><button type="button" class="cta small" data-aq="back">Réessayer</button>${/configur|Paramètres/i.test(msg) ? settingsLink() : ''}</div></div>`;
 
-  function bind(card) {
-    const body = card.querySelector('#aq-body');
-    body.addEventListener('click', async e => {
-      const mode = e.target.closest('[data-mode]'); if (mode) { opts.mode = mode.dataset.mode; saveOpts(); body.innerHTML = formHTML(); return; }
-      const sv = e.target.closest('.aq-seg [data-v]');
-      if (sv) { const k = sv.closest('.aq-seg').dataset.seg; opts[k] = k === 'n' ? +sv.dataset.v : sv.dataset.v; saveOpts(); sv.parentElement.querySelectorAll('button').forEach(b => b.classList.toggle('on', b === sv)); return; }
-      const b = e.target.closest('[data-aq]'); if (!b || !cur) return;
-      const a = b.dataset.aq;
-      if (a === 'settings') { closeDialog(DLG); if (typeof openSettings === 'function') openSettings('ia'); return; }
-      if (a === 'back') { body.innerHTML = formHTML(); return; }
-      if (a === 'cancel') { cur.gen = null; body.innerHTML = formHTML(); return; }
-      if (a === 'go') { await generate(body); return; }
-      if (a === 'next') { nextQuestion(body); return; }
-      if (a === 'replay') { startPlay(body, true); return; }
-      if (a === 'savequiz') { saveAsQuizDoc(); return; }
-      if (a === 'insert') { insertSheet('append'); return; }
-      if (a === 'newdoc') { insertSheet('new'); return; }
-      if (a === 'copy') { copySheet(b); return; }
-      if (a === 'print') { printResult(); return; }
-    });
-  }
-  async function generate(body) {
+  /* ---------------- génération : l'animation ----------------
+     Un halo qui tourne, des cartes de questions qui se matérialisent une à une (squelettes qui se remplissent
+     au rythme des lots de 5), des étapes qui défilent et une barre de progression ; Annuler à tout moment. */
+  function genHTML(s) {
     const quiz = opts.mode !== 'fiche';
-    const gen = {}; cur.gen = gen;
-    body.innerHTML = loadingHTML(quiz ? `${opts.n} questions, niveau ${LEVELS.find(l => l[0] === opts.level)[1].toLowerCase()}` : 'rédaction de la fiche');
-    try {
-      const ctx = { title: cur.title, text: cur.text, kind: opts.kind, n: opts.n, level: opts.level };
-      const res = quiz ? await genQuiz(ctx, (k, n) => { const el = body.querySelector('.aq-loading p'); if (el && cur && cur.gen === gen) el.textContent = `${k} question${k > 1 ? 's' : ''} sur ${n} — la suite arrive…`; }) : await genSheet(ctx);
-      if (cur.gen !== gen) return;   // annulé entre-temps
-      cur.result = res; cur.resultMode = quiz ? 'quiz' : 'fiche';
-      if (quiz) { startPlay(body); if (res.partial) toast(`${res.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 }); }
-      else body.innerHTML = sheetHTML(res);
-    } catch (err) {
-      if (cur && cur.gen === gen) body.innerHTML = errorHTML(err && err.message || String(err));
+    const n = quiz ? +opts.n : 5;
+    const cards = Array.from({ length: Math.min(n, 10) }, (_, i) => `<div class="aq-gcard" style="--i:${i}"><i class="aq-gnum">${i + 1}</i><span class="aq-gl aq-gl1"></span><span class="aq-gl aq-gl2"></span><span class="aq-gl aq-gl3"></span><b class="aq-gok">✓</b></div>`).join('');
+    return `<div class="aq-gen">
+      <div class="aq-orb"><span></span><span></span><span></span><em>${ICON}</em></div>
+      <div class="aq-gtxt"><b class="aq-gstep">Lecture ${s.d.kind === 'slides' ? 'de la présentation' : s.d.kind === 'sheet' ? 'du tableur' : 'du cours'}…</b><p class="aq-gsub">${quiz ? `${n} question${n > 1 ? 's' : ''} · ${esc((KINDS.find(k => k[0] === opts.kind) || KINDS[0])[1])} · niveau ${esc((LEVELS.find(l => l[0] === opts.level) || LEVELS[1])[1].toLowerCase())}` : 'Fiche de révision : résumé, points clés, définitions, pièges'} — dix à quarante secondes selon le serveur.</p></div>
+      <div class="aq-gbar"><i style="width:0%"></i></div>
+      <div class="aq-gcards ${quiz ? '' : 'sheet'}">${cards}</div>
+      <button type="button" class="aq-btn ghost" data-aq="cancel">Annuler</button>
+    </div>`;
+  }
+  const GEN_STEPS = { quiz: ['Lecture du cours…', 'Repérage des notions clés…', 'Rédaction des questions…', 'Choix des distracteurs…', 'Relecture des explications…'], fiche: ['Lecture du cours…', 'Rédaction du résumé…', 'Points clés et définitions…', '« À retenir » et pièges…', 'Mise en forme de la fiche…'] };
+  function animateGen(s) {
+    const g = s.gen; if (!g) return;
+    const root = stage(s); const steps = GEN_STEPS[opts.mode !== 'fiche' ? 'quiz' : 'fiche'];
+    let k = 0;
+    g.stepTm = setInterval(() => {
+      if (s.gen !== g || !root.isConnected) { clearInterval(g.stepTm); return; }
+      k = Math.min(steps.length - 1, k + 1);
+      const el = root.querySelector('.aq-gstep'); if (el && !g.doneK) { el.classList.remove('swap'); void el.offsetWidth; el.textContent = steps[k]; el.classList.add('swap'); }
+      // sans nouvelles du serveur, les premières cartes « chauffent » quand même (jusqu'à 30 %)
+      const soft = Math.min(0.3, (k + 1) * 0.07); setGenProgress(s, Math.max(g.p || 0, soft), false);
+    }, 2600);
+  }
+  /* avancement réel : k questions reçues sur n (lots de 5) → cartes cochées et barre */
+  function setGenProgress(s, p, hard, k, n) {
+    const g = s.gen; if (!g) return;
+    g.p = Math.max(g.p || 0, p);
+    const root = stage(s); if (!root) return;
+    const bar = root.querySelector('.aq-gbar i'); if (bar) bar.style.width = Math.round(g.p * 100) + '%';
+    const cards = root.querySelectorAll('.aq-gcard');
+    if (hard && n) {
+      g.doneK = k;
+      const per = Math.ceil(n / cards.length);
+      cards.forEach((c, i) => c.classList.toggle('done', (i + 1) * per <= k));
+      const el = root.querySelector('.aq-gstep'); if (el) { el.textContent = k < n ? `${k} question${k > 1 ? 's' : ''} sur ${n} — la suite arrive…` : 'Dernière relecture…'; }
     }
+  }
+  async function generate(s) {
+    const quiz = opts.mode !== 'fiche';
+    const gen = {}; s.gen = gen; s.step = 'gen'; s.error = '';
+    render(s);
+    try {
+      const ctx = { title: s.title, text: s.text, kind: opts.kind, n: +opts.n, level: opts.level };
+      const res = quiz ? await genQuiz(ctx, (k, n) => { if (s.gen === gen) setGenProgress(s, 0.15 + 0.85 * k / n, true, k, n); }) : await genSheet(ctx);
+      if (s.gen !== gen) return;   // annulé entre-temps
+      clearInterval(gen.stepTm); s.gen = null;
+      s.result = res; s.resultMode = quiz ? 'quiz' : 'fiche';
+      if (quiz) { startPlay(s); if (res.partial) toast(`${res.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 }); }
+      else { s.step = 'sheet'; render(s); }
+    } catch (err) {
+      if (s.gen !== gen) return;
+      clearInterval(gen.stepTm); s.gen = null;
+      s.step = 'error'; s.error = err && err.message || String(err); render(s);
+    }
+  }
+  function cancelGen(s) { if (s.gen) { clearInterval(s.gen.stepTm); s.gen = null; } s.step = 'form'; render(s); }
+
+  /* ---------------- interactions ---------------- */
+  function onClick(e) {
+    const s = cur; if (!s) return;
+    const mode = e.target.closest('[data-mode]'); if (mode) { opts.mode = mode.dataset.mode; saveOpts(); render(s); return; }
+    const pv = e.target.closest('.aq-pill[data-seg]');
+    if (pv) { const k = pv.dataset.seg; opts[k] = k === 'n' ? +pv.dataset.v : pv.dataset.v; saveOpts(); pv.parentElement.querySelectorAll('.aq-pill').forEach(b => b.classList.toggle('on', b === pv)); const go = s.root.querySelector('.aq-go span'); if (go && k === 'n') go.textContent = `Générer ${opts.n} questions`; return; }
+    const b = e.target.closest('[data-aq]'); if (!b) return;
+    const a = b.dataset.aq;
+    if (a === 'backdoc') { if (typeof openDoc === 'function' && findDoc(s.d.id)) openDoc(s.d.id); else if (AlixoApp.showLibrary) AlixoApp.showLibrary(); return; }
+    if (a === 'settings') { if (typeof openSettings === 'function') openSettings('ia'); return; }
+    if (a === 'back') { s.step = 'form'; s.play = null; render(s); return; }
+    if (a === 'cancel') { cancelGen(s); return; }
+    if (a === 'go') { generate(s); return; }
+    if (a === 'next') { nextQuestion(s); return; }
+    if (a === 'replay') { startPlay(s, true); return; }
+    if (a === 'savequiz') { saveAsQuizDoc(s); return; }
+    if (a === 'insert') { insertSheet(s, 'append'); return; }
+    if (a === 'newdoc') { insertSheet(s, 'new'); return; }
+    if (a === 'copy') { copySheet(s, b); return; }
+    if (a === 'print') { printResult(s); return; }
+  }
+  /* Entrée : question suivante (après la réponse) ou Générer (au paramétrage) ; Échap : annuler la génération */
+  function onKey(e) {
+    const s = cur; if (!s || !view || view.hidden) return;
+    const t = e.target; if (t && (t.closest && t.closest('input, textarea, select, [contenteditable="true"]'))) return;
+    if (document.querySelector('.dlgov') || (document.getElementById('popover') && !document.getElementById('popover').hidden)) return;
+    if (e.key === 'Enter' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+      if (s.step === 'play' && s.play && s.play.answers.length > s.play.i) { e.preventDefault(); nextQuestion(s); return; }
+      if (s.step === 'form' && s.nWords >= 30) { e.preventDefault(); generate(s); }
+      return;
+    }
+    if (e.key === 'Escape' && s.step === 'gen') { e.preventDefault(); e.stopImmediatePropagation(); cancelGen(s); return; }
+    /* les raccourcis des onglets d'app.js ne s'appliquent qu'en mode éditeur : on les assure ici pour cette vue */
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') { e.preventDefault(); e.stopImmediatePropagation(); AlixoApp.tabs.close(s.tab); return; }
+    if (e.altKey && !mod && e.key === 'ArrowLeft') { e.preventDefault(); e.stopImmediatePropagation(); if (AlixoApp.showLibrary) AlixoApp.showLibrary(); }
   }
 
   /* ---------------- jeu ---------------- */
-  function startPlay(body, again) {
-    const r = cur.result;
-    cur.play = { i: 0, score: 0, answers: [], order: again ? C().shuffle(r.questions.map((_, i) => i)) : r.questions.map((_, i) => i) };
-    renderQuestion(body);
+  function startPlay(s, again) {
+    const r = s.result;
+    s.play = { i: 0, score: 0, answers: [], order: again ? C().shuffle(r.questions.map((_, i) => i)) : r.questions.map((_, i) => i) };
+    s.step = 'play';
+    render(s);
   }
-  function renderQuestion(body) {
-    const Q = C(); const p = cur.play, r = cur.result;
+  function renderQuestion(s) {
+    const Q = C(); const p = s.play, r = s.result;
     const idx = p.order[p.i]; const q = r.questions[idx];
     const n = r.questions.length;
-    body.innerHTML = `<div class="aq-play qz-play-scope">
-      <div class="aq-phead"><span class="aq-pnum">Question ${p.i + 1} / ${n}</span><span class="aq-ptype">${esc((Q.TYPES[q.t] || {}).name || '')}</span><span class="aq-pscore">${p.score} / ${p.i} ✓</span></div>
+    const st = stage(s);
+    st.innerHTML = `<div class="aq-play">
+      <div class="aq-phead"><span class="aq-pnum">Question ${p.i + 1} / ${n}</span><span class="aq-ptype">${esc((Q.TYPES[q.t] || {}).name || '')}</span><span class="aq-pscore" title="Bonnes réponses">${p.score} / ${p.i} ✓</span></div>
       <div class="aq-pbar"><i style="width:${Math.round(p.i / n * 100)}%"></i></div>
-      <div class="qp-q">${esc(q.text)}</div>
-      <div class="aq-widget">${Q.widgetHTML(q)}</div>
+      <div class="aq-qcard" style="--k:${p.i}">
+        <div class="aq-qtext">${esc(q.text)}</div>
+        <div class="aq-widget qz-play-scope">${Q.widgetHTML(q)}</div>
+      </div>
       <div class="aq-feedback" hidden></div>
     </div>`;
-    const root = body.querySelector('.aq-widget');
+    const root = st.querySelector('.aq-widget');
     let done = false;
     Q.bindWidget(q, root, v => {
-      if (done) return; done = true;
+      if (done || s.play !== p) return; done = true;
       let ok = Q.check(q, v);
       if (!ok && q.t === 'text' && typeof v === 'string' && typeof AlixoCorr !== 'undefined' && AlixoCorr.levenshtein) {
         const nv = Q.norm(v); ok = (q.ans || []).some(a => { const na = Q.norm(a); return na.length >= 4 && AlixoCorr.levenshtein(nv, na) <= Math.max(1, Math.floor(na.length / 6)); });   // faute de frappe tolérée
@@ -287,66 +453,68 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
       p.answers.push({ idx, v, ok });
       root.innerHTML = Q.widgetHTML(q, { reveal: true, v, done: true });
       root.querySelectorAll('input, button, select').forEach(x => { x.disabled = true; });
-      const fb = body.querySelector('.aq-feedback');
+      const sc = st.querySelector('.aq-pscore'); if (sc) sc.textContent = `${p.score} / ${p.i + 1} ✓`;
+      const fb = st.querySelector('.aq-feedback');
       fb.hidden = false;
       fb.className = 'aq-feedback ' + (ok ? 'ok' : 'ko');
-      fb.innerHTML = `<div class="aq-fbhead">${ok ? '✓ Bonne réponse' : '✗ ' + (v === null || v === undefined || v === '' ? 'Pas de réponse' : 'Mauvaise réponse')}</div>${!ok ? `<div class="aq-fbans">Réponse attendue : <b>${esc(Q.correctText(q))}</b></div>` : ''}${q.expl ? `<div class="aq-fbexpl">${esc(q.expl)}</div>` : ''}
-        <div class="aq-actions"><button type="button" class="cta small" data-aq="next" autofocus>${p.i + 1 < n ? 'Question suivante' : 'Voir le résultat'}</button></div>`;
-      const nb = fb.querySelector('[data-aq="next"]'); if (nb) nb.focus();
+      fb.innerHTML = `<div class="aq-fbrow"><span class="aq-fbico">${ok ? '✓' : '✕'}</span><div class="aq-fbtxt"><div class="aq-fbhead">${ok ? 'Bonne réponse' : (v === null || v === undefined || v === '' ? 'Pas de réponse' : 'Mauvaise réponse')}</div>${!ok ? `<div class="aq-fbans">Réponse attendue : <b>${esc(Q.correctText(q))}</b></div>` : ''}${q.expl ? `<div class="aq-fbexpl">${esc(q.expl)}</div>` : ''}</div></div>
+        <div class="aq-actions"><button type="button" class="aq-btn primary aq-next" data-aq="next">${p.i + 1 < n ? 'Question suivante' : 'Voir le résultat'}${I.arrow}<kbd>Entrée</kbd></button></div>`;
+      const nb = fb.querySelector('.aq-next'); if (nb) { nb.focus({ preventScroll: true }); nb.scrollIntoView({ block: 'nearest', behavior: 'smooth' }); }
     });
     const first = root.querySelector('input'); if (first) first.focus();
+    st.scrollTop = 0; view.scrollTop = 0;
   }
-  function nextQuestion(body) {
-    const p = cur.play; if (!p) return;
+  function nextQuestion(s) {
+    const p = s.play; if (!p) return;
     if (p.answers.length <= p.i) return;    // pas encore répondu
     p.i++;
-    if (p.i >= cur.result.questions.length) renderResult(body); else renderQuestion(body);
+    if (p.i >= s.result.questions.length) { s.step = 'result'; render(s); } else renderQuestion(s);
   }
-  function renderResult(body) {
-    const Q = C(); const p = cur.play, r = cur.result, n = r.questions.length;
+  function resultHTML(s) {
+    const Q = C(); const p = s.play, r = s.result, n = r.questions.length;
     const pct = Math.round(p.score / n * 100);
     const verdict = pct >= 90 ? 'Excellent : le cours est acquis.' : pct >= 70 ? 'Bien : encore quelques points à revoir.' : pct >= 50 ? 'Correct : relisez les passages signalés.' : 'À retravailler : refaites le quiz après une relecture.';
     const missed = p.answers.filter(a => !a.ok);
-    body.innerHTML = `<div class="aq-result">
-      <div class="aq-score"><div class="aq-ring" style="--p:${pct}"><b>${p.score}</b><small>/ ${n}</small></div><div><div class="aq-verdict">${verdict}</div><div class="po-hint" style="margin:4px 0 0">${esc(r.title)} · ${n} question${n > 1 ? 's' : ''} · ${pct} % de bonnes réponses.</div></div></div>
+    return `<div class="aq-result">
+      <div class="aq-score"><div class="aq-ring" style="--p:${pct}"><b>${p.score}</b><small>/ ${n}</small></div><div><div class="aq-verdict">${verdict}</div><div class="aq-hint">${esc(r.title)} · ${n} question${n > 1 ? 's' : ''} · ${pct} % de bonnes réponses.</div></div></div>
       ${missed.length ? `<div class="aq-missed"><div class="aq-mhead">À revoir (${missed.length})</div>${missed.map(a => { const q = r.questions[a.idx]; return `<div class="aq-mitem"><div class="aq-mq">${esc(q.text)}</div><div class="aq-mans">Réponse : <b>${esc(Q.correctText(q))}</b>${a.v !== null && a.v !== undefined && a.v !== '' ? ` — vous : <s>${esc(Q.answerText(q, a.v))}</s>` : ''}</div>${q.expl ? `<div class="aq-mexpl">${esc(q.expl)}</div>` : ''}</div>`; }).join('')}</div>` : '<div class="aq-missed aq-perfect">Sans faute !</div>'}
       <div class="aq-actions wrap">
-        <button type="button" class="cta small" data-aq="replay">Rejouer (ordre mélangé)</button>
-        <button type="button" class="cta ghost small" data-aq="back">Nouveau quiz ou fiche</button>
-        ${window.AlixoQuiz && !cur.d.shared ? `<button type="button" class="cta ghost small" data-aq="savequiz" title="Créer un document Quiz avec ces questions (pour le rejouer, le modifier, le présenter en direct)">Enregistrer comme document Quiz</button>` : ''}
-        <button type="button" class="cta ghost small" data-aq="print" title="Imprimer ou enregistrer en PDF : questions puis corrigé">Imprimer / PDF</button>
+        <button type="button" class="aq-btn primary" data-aq="replay">${I.replay}<span>Rejouer (ordre mélangé)</span></button>
+        <button type="button" class="aq-btn ghost" data-aq="back">${ICON}<span>Nouveau quiz ou fiche</span></button>
+        ${window.AlixoQuiz && !srcReadOnly(s.d) ? `<button type="button" class="aq-btn ghost" data-aq="savequiz" title="Créer un document Quiz avec ces questions (pour le rejouer, le modifier, le présenter en direct)">${I.save}<span>Enregistrer comme document Quiz</span></button>` : ''}
+        <button type="button" class="aq-btn ghost" data-aq="print" title="Imprimer ou enregistrer en PDF : questions puis corrigé">${I.print}<span>Imprimer / PDF</span></button>
       </div></div>`;
   }
   /* un document Quiz (type existant) construit avec les questions générées — facultatif, indépendant du Quiz IA */
-  function saveAsQuizDoc() {
-    const r = cur && cur.result; if (!r || !window.AlixoQuiz) return;
+  function saveAsQuizDoc(s) {
+    const r = s && s.result; if (!r || !window.AlixoQuiz) return;
     try {
-      const qd = AlixoQuiz.newDoc(cur.d.folderId || null, cur.d.prof || '');
+      const qd = AlixoQuiz.newDoc(s.d.folderId || null, s.d.prof || '');
       qd.titre = r.title; qd.questions = r.questions.map(q => { const c = JSON.parse(JSON.stringify(q)); c.time = q.t === 'text' ? 30 : 20; c.points = 1000; return c; });
-      qd.aiFrom = { docId: cur.d.id, title: cur.title, at: Date.now() };
+      qd.aiFrom = { docId: s.d.id, title: s.title, at: Date.now() };
       state.docs.push(qd); save();
       toast(`Document Quiz « ${r.title} » créé dans la bibliothèque`, { duration: 6000 });
-      closeDialog(DLG);
       openDoc(qd.id);
     } catch (e) { console.error(e); toast('Création du document Quiz impossible'); }
   }
 
   /* ---------------- fiche de révision ---------------- */
-  function sheetHTML(f) {
+  function sheetHTML(s) {
+    const f = s.result;
     const sec = f.parties.map(p => `<section class="aq-sec">${p.titre ? `<h3>${esc(p.titre)}</h3>` : ''}${p.points.length ? `<ul>${p.points.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}${p.definitions.length ? `<dl>${p.definitions.map(d => `<dt>${esc(d.terme)}</dt><dd>${esc(d.definition)}</dd>`).join('')}</dl>` : ''}</section>`).join('');
-    const isDoc = !cur.d.kind || cur.d.kind === 'doc';
-    const ro = typeof readOnly !== 'undefined' && readOnly;
+    const isDoc = !s.d.kind || s.d.kind === 'doc';
+    const ro = srcReadOnly(s.d);
     return `<div class="aq-sheet"><article class="aq-fiche">
         <h2>${esc(f.title)}</h2>${f.resume ? `<p class="aq-resume">${esc(f.resume)}</p>` : ''}${sec}
         ${f.retenir.length ? `<div class="aq-box retenir"><b>À retenir</b><ul>${f.retenir.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
         ${f.pieges.length ? `<div class="aq-box pieges"><b>Pièges à éviter</b><ul>${f.pieges.map(x => `<li>${esc(x)}</li>`).join('')}</ul></div>` : ''}
       </article>
       <div class="aq-actions wrap">
-        ${isDoc && !ro ? `<button type="button" class="cta small" data-aq="insert" title="Ajouter la fiche à la fin de cette séance (titres, puces, encadrés)">Insérer à la fin de la séance</button>` : ''}
-        <button type="button" class="cta ${isDoc && !ro ? 'ghost ' : ''}small" data-aq="newdoc" title="Créer une séance « Fiche de révision » dans le même dossier">Nouvelle séance</button>
-        <button type="button" class="cta ghost small" data-aq="copy">Copier le texte</button>
-        <button type="button" class="cta ghost small" data-aq="print" title="Imprimer ou enregistrer en PDF">Imprimer / PDF</button>
-        <button type="button" class="cta ghost small" data-aq="back">Nouveau quiz ou fiche</button>
+        ${isDoc && !ro ? `<button type="button" class="aq-btn primary" data-aq="insert" title="Ajouter la fiche à la fin de cette séance (titres, puces, encadrés)">${I.doc}<span>Insérer à la fin de la séance</span></button>` : ''}
+        <button type="button" class="aq-btn ${isDoc && !ro ? 'ghost' : 'primary'}" data-aq="newdoc" title="Créer une séance « Fiche de révision » dans le même dossier">${I.doc}<span>Nouvelle séance</span></button>
+        <button type="button" class="aq-btn ghost" data-aq="copy"><span>Copier le texte</span></button>
+        <button type="button" class="aq-btn ghost" data-aq="print" title="Imprimer ou enregistrer en PDF">${I.print}<span>Imprimer / PDF</span></button>
+        <button type="button" class="aq-btn ghost" data-aq="back">${ICON}<span>Nouveau quiz ou fiche</span></button>
       </div></div>`;
   }
   /* la fiche → blocs de séance (titres, puces, encadrés Définition / À retenir) */
@@ -363,24 +531,23 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     if (f.pieges.length) { out.push(mk({ type: 'h', level: 2, text: 'Pièges à éviter' })); f.pieges.forEach(x => out.push(mk({ type: 'li', lt: 'ul', text: esc(x) }))); }
     return out;
   }
-  function insertSheet(where) {
-    const f = cur && cur.result; if (!f) return;
+  function insertSheet(s, where) {
+    const f = s && s.result; if (!f) return;
     const blocks = sheetBlocks(f);
     if (where === 'append') {
-      const d = cur.d; if (!d || !Array.isArray(d.blocks)) return;
-      if (typeof readOnly !== 'undefined' && readOnly) { toast('Séance en lecture seule'); return; }
+      const d = findDoc(s.d.id); if (!d || !Array.isArray(d.blocks)) { toast('La séance n’existe plus'); return; }
+      if (srcReadOnly(d)) { toast('Séance en lecture seule'); return; }
       const last = d.blocks[d.blocks.length - 1];
       if (last && last.type === 'p' && !S(strip(last.text))) d.blocks.pop();
       d.blocks.push(mkPb(), ...blocks);
-      if (typeof touch === 'function') touch(); else { d.updatedAt = Date.now(); save(); }
-      closeDialog(DLG);
-      if (typeof renderBlocks === 'function') renderBlocks(blocks[0].id, 'start');
+      d.updatedAt = Date.now(); save();
+      openDoc(d.id);   // on revient sur la séance, le curseur au début de la fiche
+      if (typeof renderBlocks === 'function') setTimeout(() => renderBlocks(blocks[0].id, 'start'), 30);
       toast('Fiche de révision ajoutée à la fin de la séance (Ctrl+Z pour annuler)', { duration: 6000 });
       return;
     }
-    const nd = { id: uid(), folderId: cur.d.folderId || null, titre: f.title, createdAt: Date.now(), updatedAt: Date.now(), pinned: false, prof: cur.d.prof || '', blocks, aiFrom: { docId: cur.d.id, title: cur.title, at: Date.now() } };
+    const nd = { id: uid(), folderId: s.d.folderId || null, titre: f.title, createdAt: Date.now(), updatedAt: Date.now(), pinned: false, prof: s.d.prof || '', blocks, aiFrom: { docId: s.d.id, title: s.title, at: Date.now() } };
     state.docs.push(nd); save();
-    closeDialog(DLG);
     openDoc(nd.id);
     toast(`Séance « ${f.title} » créée`, { duration: 5000 });
   }
@@ -393,9 +560,9 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     if (f.pieges.length) { L.push('PIÈGES À ÉVITER'); f.pieges.forEach(x => L.push('• ' + x)); }
     return L.join('\n').trim();
   }
-  async function copySheet(btn) {
-    const f = cur && cur.result; if (!f) return;
-    try { await navigator.clipboard.writeText(cur.resultMode === 'fiche' ? sheetText(f) : quizText(f)); btn.textContent = 'Copié !'; setTimeout(() => { btn.textContent = 'Copier le texte'; }, 1500); }
+  async function copySheet(s, btn) {
+    const f = s && s.result; if (!f) return;
+    try { await navigator.clipboard.writeText(s.resultMode === 'fiche' ? sheetText(f) : quizText(f)); const sp = btn.querySelector('span') || btn; sp.textContent = 'Copié !'; setTimeout(() => { sp.textContent = 'Copier le texte'; }, 1500); }
     catch { toast('Copie impossible dans ce navigateur'); }
   }
   function quizText(r) {
@@ -405,14 +572,14 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     r.questions.forEach((q, i) => L.push(`${i + 1}. ${Q.correctText(q)}${q.expl ? ' — ' + q.expl : ''}`));
     return L.join('\n');
   }
-  /* impression : questions puis corrigé (quiz) ou la fiche */
-  function printResult() {
-    const r = cur && cur.result; if (!r) return;
+  /* impression : questions puis corrigé (quiz) ou la fiche — dans la page même (la version PC n'ouvre pas de fenêtre surgissante) */
+  function printResult(s) {
+    const r = s && s.result; if (!r) return;
     const Q = C();
-    const html = cur.resultMode === 'fiche'
-      ? document.querySelector('#aq-body .aq-fiche').outerHTML
+    const fiche = s.root.querySelector('.aq-fiche');
+    const html = s.resultMode === 'fiche' && fiche
+      ? fiche.outerHTML
       : `<article class="aq-fiche"><h2>${esc(r.title)}</h2><ol class="aq-pq">${r.questions.map(q => `<li><div>${esc(q.text)}</div>${q.t === 'mcq' ? `<ul>${q.opts.map((o, k) => `<li>${'ABCDEF'[k]}. ${esc(o.text)}</li>`).join('')}</ul>` : q.t === 'tf' ? '<div class="aq-pvf">☐ Vrai &nbsp; ☐ Faux</div>' : '<div class="aq-pline"></div>'}</li>`).join('')}</ol><h3 class="aq-pbreak">Corrigé</h3><ol class="aq-pq">${r.questions.map(q => `<li><b>${esc(Q.correctText(q))}</b>${q.expl ? ` — ${esc(q.expl)}` : ''}</li>`).join('')}</ol></article>`;
-    // 1.34.1 : impression dans la page même (la version PC n'ouvre pas de fenêtre surgissante)
     let box = document.getElementById('aq-print');
     if (!box) { box = document.createElement('div'); box.id = 'aq-print'; document.body.appendChild(box); }
     box.innerHTML = `<style>
@@ -426,14 +593,17 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
         #aq-print .aq-box { border: 1px solid #cfd3d8; border-radius: 8px; padding: 10px 14px; margin: 12px 0; } #aq-print .aq-box b { display: block; margin-bottom: 4px; }
         #aq-print .aq-pq > li { margin: 0 0 14px; } #aq-print .aq-pq ul { list-style: none; padding-left: 14px; } #aq-print .aq-pline { border-bottom: 1px solid #9aa0a6; height: 26px; width: 70%; }
         #aq-print .aq-pbreak { break-before: page; } #aq-print footer { margin-top: 30px; font-size: 11px; color: #5f6368; } }
-      </style>${html}<footer>Généré par Alixo (Quiz IA) à partir de « ${esc(cur.title)} » — alixoapp.com</footer>`;
+      </style>${html}<footer>Généré par Alixo (Quiz IA) à partir de « ${esc(s.title)} » — alixoapp.com</footer>`;
     document.body.classList.add('aq-printing');
     const done = () => { window.removeEventListener('afterprint', done); document.body.classList.remove('aq-printing'); };
     window.addEventListener('afterprint', done);
     setTimeout(() => { window.print(); setTimeout(() => { if (document.body.classList.contains('aq-printing')) done(); }, 500); }, 50);
   }
 
+  /* la vue s'enregistre dès le chargement : les onglets « Quiz IA » gardés d'une session à l'autre sont rétablis */
+  if (window.AlixoApp && AlixoApp.tabs) ensureView();
+
   const buttonHTML = (attr, cls = '') => `<button type="button" ${attr} class="${cls}" title="Quiz IA et fiche de révision : QCM, vrai / faux, réponses courtes ou fiche de révision générés par l’IA à partir de ce document (Alixo+)">${ICON}<span>Quiz IA</span></button>`;
 
-  return { open, docText, shorten, toQuestion, sheetBlocks, buttonHTML, ICON, parseJson, KINDS, LEVELS, COUNTS, get opts() { return opts; }, get current() { return cur; } };
+  return { open, docText, shorten, toQuestion, sheetBlocks, buttonHTML, ICON, parseJson, KINDS, LEVELS, COUNTS, get opts() { return opts; }, get current() { return cur; }, get sessions() { return sessions; } };
 })();

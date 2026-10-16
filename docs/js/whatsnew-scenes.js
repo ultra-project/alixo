@@ -11,9 +11,34 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.34.1 (ou nouveautes.html?v=1.34.1 en page seule).
+   Aperçu : index.html?nouveautes=1.35.0 (ou nouveautes.html?v=1.35.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.35.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une grande<br><em>mise à jour</em>', text: 'Word comme une séance, l’écran partagé, le Quiz IA en onglet, les polices libres, les fichiers .alx et la table des matières.' },
+    { title: 'Word, <em>comme une séance</em>', text: 'Un document Word ou OpenDocument s’ouvre dans un onglet, avec le plan et la barre d’outils d’Alixo — et garde son style.',
+      bullets: ['<b>Onglet</b>, fil d’Ariane et volet du plan, comme un cours', '<b>Barre d’outils</b> au même endroit : police, taille, gras, couleurs', '<b>Même fichier</b> réécrit à l’enregistrement, pages intactes'],
+      art: 'text', accent: '#3d6bb5', accent2: '#33658a', dur: 8000 },
+    { title: 'L’<em>écran partagé</em>', text: 'Glissez un onglet vers un bord : le document s’ouvre à côté. Jusqu’à quatre documents à la fois.',
+      bullets: ['<b>À droite ou à gauche</b> : deux séances côte à côte', '<b>En haut ou en bas</b> d’un volet : trois, puis quatre', '<b>On écrit partout</b>, tout reste synchronisé'],
+      art: 'cards', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 7500 },
+    { title: 'Le Quiz IA en <em>onglet</em>', text: 'Plus de fenêtre surgissante : le quiz a son onglet, ses questions se lisent enfin, et Entrée passe à la suivante.',
+      bullets: ['<b>Paramétrage</b> en cartes : type, nombre, niveau', '<b>Génération animée</b> : les questions arrivent une à une', '<b>Question visible</b>, « Suivante » réparé, score et révision'],
+      art: 'quiz', accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
+    { title: 'Toutes les <em>polices</em>, par document', text: 'Les polices ne sont plus réservées à Alixo+ : le bouton Police change celle de la séance, de la présentation, du tableur ou de la planche.',
+      bullets: ['<b>Police</b> dans la barre d’outils, comme dans Word', '<b>Du texte sélectionné</b> ? Seule la sélection change', '<b>Plan du cours</b> replié par défaut : le bouton latéral l’ouvre'],
+      art: 'palette', accent: '#8a4b9c', accent2: '#b3762a', dur: 7500 },
+    { title: 'Fichiers <em>.alx</em> et table des matières', text: 'Exportez un document en .alx pour le rouvrir avec Alixo ; insérez une table des matières qui suit vos titres.',
+      bullets: ['<b>.alx-docs, -slide, -sheet, -quiz, -planche</b> : tout le document', '<b>Importer</b> ou double-clic sur le fichier (version PC)', '<b>Table des matières</b> : « / », cliquable, mise à jour seule'],
+      art: 'list', accent: '#c04343', accent2: '#33658a', dur: 7500 },
+    { title: 'Alixo <em>Business</em>', text: 'Sans entreprise, le tableau de bord présente les offres : 60 € par mois ou 690 € par an pour dix employés.',
+      bullets: ['<b>Offre de base</b> : 10 employés dont 5 licences Alixo+', '<b>Pré-inscription</b> en attendant l’ouverture des paiements', '<b>Identité vérifiée</b> du dirigeant avant de créer l’entreprise'],
+      art: 'chart', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonnes révisions', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.34.1', {
   scenes: [
@@ -50,18 +75,5 @@ AlixoWhatsNew.register('1.34.0', {
       bullets: ['<b>Séances</b>, présentations et tableurs', '<b>Mémorisé</b> par type de document sur l’appareil', '<b>Version PC</b> : le menu Affichage agrandit le document ouvert'],
       art: 'palette', accent: '#8a4b9c', accent2: '#33658a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonnes révisions', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.33.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Votre entreprise,<br><em>toujours là</em>', text: 'Une correction pour Alixo Business : le tableau de bord retrouve l’entreprise de son dirigeant.', dur: 5000 },
-    { title: 'Fini, « <em>Aucune entreprise</em> »', text: 'Le dirigeant retrouve son entreprise sur le tableau de bord en ligne et dans Paramètres › Entreprise.',
-      bullets: ['<b>Lien réparé</b> tout seul entre le compte et l’entreprise', '<b>Erreur réseau</b> : le lien n’est plus effacé', '<b>Deux comptes</b> pour une adresse ? L’identifiant s’affiche'],
-      art: { image: 'logo-business.png', alt: 'Alixo Business' }, accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
-    { title: 'Rappel de la <em>1.33</em>', text: 'Si vous arrivez de la 1.32 : voici ce qui a changé la semaine dernière.',
-      bullets: ['<b>Fond d’écran</b> derrière vos documents (Alixo+)', '<b>Bibliothèque des blocs</b> avec aperçu animé', '<b>Messagerie d’équipe</b> pour Alixo Business'],
-      art: 'palette', accent: '#8a4b9c', accent2: '#b3762a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });

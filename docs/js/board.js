@@ -290,7 +290,9 @@ window.AlixoBoard = (() => {
   /* ============================================================
      Rendu
      ============================================================ */
-  function renderAll() { renderBar(); applyView(); renderItems(); renderArrows(); renderSelbar(); renderStatus(); }
+  /* 1.35 : police propre à la planche (d.font, clé des polices de l'application) */
+  function applyFont() { const dd = d(); const w = document.getElementById('bd-world'); if (!w) return; const css = dd && window.AlixoApp && AlixoApp.docFontCss ? AlixoApp.docFontCss(dd) : ''; if (css) w.style.setProperty('--bd-font', css); else w.style.removeProperty('--bd-font'); }
+  function renderAll() { applyFont(); renderBar(); applyView(); renderItems(); renderArrows(); renderSelbar(); renderStatus(); }
   function applyView() {
     const w = $('#bd-world'), st = stage(); const dd = d(); if (!w || !st) return;
     w.style.transform = `translate(${view.x}px, ${view.y}px) scale(${view.z})`;
@@ -326,8 +328,10 @@ window.AlixoBoard = (() => {
         <button data-bd="zin" title="Zoom avant (Ctrl + molette)">${I.zoomIn}</button>
         <button data-bd="fit" title="Tout voir : ajuste le zoom pour afficher tous les éléments (Ctrl+0)">${I.fit}<span class="bd-lbl">Tout voir</span></button>
         <span class="bd-sep"></span>
+        <button data-bd="font" class="bd-font" title="Police de la planche (post-it, textes, zones)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && dd.font && AlixoApp.fontByKey(dd.font) ? AlixoApp.fontByKey(dd.font).name : 'Police')}</span><span class="tcaret">▾</span></button>
         <button data-bd="present" title="Présenter la planche en plein écran, sans les barres (F11)">${I.present}<span class="bd-lbl">Présenter</span></button>
         <button data-bd="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button>
+        ${window.AlixoAlx ? '<button data-bd="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-planche) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
       </div>`;
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
@@ -1236,6 +1240,8 @@ window.AlixoBoard = (() => {
       const k = b.dataset.bd;
       if (k === 'undo') { undo(); return; } if (k === 'redo') { redo(); return; }
       if (k === 'pdf') { exportPDF(); return; }
+      if (k === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police de la planche', hint: 'Police des post-it, textes et zones de cette planche.', onPick: f => { if (readOnly) return; if (f === null) delete dd.font; else dd.font = f; commit(); renderAll(); } }); return; }
+      if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'present') { setPresent(true); return; }
       if (k === 'zin') { zoomCenter(1.25); return; } if (k === 'zout') { zoomCenter(0.8); return; }
       if (k === 'z100') { const s = stage(); zoomAt(1, s.clientWidth / 2, s.clientHeight / 2); return; }

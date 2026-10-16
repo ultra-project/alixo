@@ -1,0 +1,4 @@
+/* ============================================================
+   Alixo — fichiers .alx (js/alx.js, 1.35) : bouton « .alx » des barres de présentation, tableur, planche et quiz
+   ============================================================ */
+.alx-btn { font-family: var(--font-mono, monospace); font-size: 11.5px !important; font-weight: 700; letter-spacing: .02em; }

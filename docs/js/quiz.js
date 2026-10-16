@@ -167,6 +167,7 @@ window.AlixoQuiz = (() => {
       <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
       <span class="bd-sep"></span>
       <button data-qz="pdf" title="Exporter en PDF (Ctrl+P) : les questions, avec les réponses">PDF</button>
+      ${window.AlixoAlx ? '<button data-qz="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-quiz) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
     </div>`;
   }
   function renderPalette() {
@@ -397,6 +398,7 @@ window.AlixoQuiz = (() => {
       if (a === 'undo') undo(); else if (a === 'redo') redo();
       else if (a === 'test') startTest(); else if (a === 'live') startLive();
       else if (a === 'results') openResults(); else if (a === 'pdf') exportPDF(); else if (a === 'look') openAppearance();
+      else if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); }
     });
     /* palette : clic = ajouter après la question ouverte ; glisser = déposer dans la liste */
     $('#qz-palette').addEventListener('click', e => { const t = e.target.closest('[data-type]'); if (t) addQuestion(t.dataset.type); });

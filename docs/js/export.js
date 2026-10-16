@@ -461,6 +461,19 @@
           layoutRuns(pdf, [{ text: b.src || '', i: true }], { size: 12, x: pdf.M, width: pdf.cw, align: 'center' });
           pdf.y += 5; break;
         case 'pb': pdf.newPage(); break;   // 1.23 : saut de page
+        case 'toc': {   // 1.35 : table des matières → liste des titres (numéro + intitulé), retrait par niveau
+          const depth = Math.min(6, Math.max(1, +b.depth || 6));
+          const hs = d.blocks.filter(x => x.type === 'h' && (+x.level || 1) <= depth);
+          pdf.y += 4;
+          layoutRuns(pdf, [{ text: b.title || 'Table des matières', b: true }], { size: 13, x: pdf.M, width: pdf.cw });
+          pdf.y += 4;
+          for (const h of hs) {
+            const ind = ((+h.level || 1) - 1) * 14;
+            layoutRuns(pdf, [{ text: (numMap[h.id] || '') + '  ', b: true, color: ACCENT }, { text: stripTags(h.text || '') }], { size: 10.5, x: pdf.M + ind, width: pdf.cw - ind });
+            pdf.y += 1.5;
+          }
+          pdf.y += 8; break;
+        }
         case 'hr':
           pdf.y += 9; pdf.ensure(12);
           pdf.rect(pdf.M + pdf.cw * 0.1, pdf.y, pdf.cw * 0.8, 0.8, HAIR);
@@ -784,6 +797,13 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         case 'fiche': body += jurisTableXml(b); break;
         case 'table': body += tableXml(b); break;
         case 'hr': body += para('', '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="1" w:color="C9CCD1"/></w:pBdr><w:spacing w:before="120" w:after="200"/>'); break;
+        case 'toc': {   // 1.35 : table des matières → titre puis un paragraphe par titre, retrait par niveau
+          const depth = Math.min(6, Math.max(1, +b.depth || 6));
+          body += para(runXml({ text: b.title || 'Table des matières', b: true }), '<w:spacing w:before="120" w:after="80"/>');
+          for (const h of d.blocks.filter(x => x.type === 'h' && (+x.level || 1) <= depth)) body += para(runXml({ text: (numMap[h.id] || '') + '  ', b: true, color: ACCENT }) + runXml({ text: stripTags(h.text || '') }), `<w:ind w:left="${((+h.level || 1) - 1) * 360}"/><w:spacing w:after="40"/>`);
+          body += para('', '<w:spacing w:after="160"/>');
+          break;
+        }
         case 'pb': body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; break;   // 1.23 : saut de page
         case 'cards': body += cardsTableXml(b); break;
         case 'tree': {   // 1.20 : arbre → plan indenté

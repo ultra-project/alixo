@@ -230,7 +230,10 @@ window.AlixoSlides = (() => {
     const th = themeOf(dd);
     const list = slides(dd);
     renderCtx = { i: idx === undefined ? Math.max(0, list.indexOf(s)) : idx, n: list.length };
-    const vars = `--acc:${accent(dd)};--sl-paper:${th.paper};--sl-ink:${th.ink};--sl-ink2:${th.ink2};--font-head:${th.head};--font-body:${th.body}`;
+    /* 1.35 : police propre à la présentation (bouton Police) : elle remplace celles du thème, titres et texte */
+    const ff = window.AlixoApp && AlixoApp.docFontCss ? AlixoApp.docFontCss(dd) : '';
+    const q = f => String(f || '').replace(/"/g, "'");   // les guillemets doubles des piles de polices casseraient l'attribut style
+    const vars = `--acc:${accent(dd)};--sl-paper:${th.paper};--sl-ink:${th.ink};--sl-ink2:${th.ink2};--font-head:${q(ff || th.head)};--font-body:${q(ff || th.body)}`;
     return `<div class="sl-slide bg-${s.bg || 'paper'}${th.dark ? ' th-dark' : ''}" data-sid="${s.id}" style="${vars}">${(s.els || []).slice().sort((a, b) => (a.z || 0) - (b.z || 0)).map(e => elHTML(e, edit)).join('')}</div>`;
   }
 
@@ -378,6 +381,7 @@ window.AlixoSlides = (() => {
       tools = `<span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span>
         <select data-sl="bg" title="Fond de la diapositive">${BGS.map(([k, l]) => `<option value="${k}" ${(s.bg || 'paper') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button data-sl="theme" title="Thème : couleurs et polices de la présentation">${I.palette} ${esc(themeOf(dd).name)}</button>
+        <button data-sl="font" class="sl-font" title="Police de la présentation (titres et texte de toutes les diapositives)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && dd.font && AlixoApp.fontByKey(dd.font) ? AlixoApp.fontByKey(dd.font).name : 'Police du thème')}</span><span class="tcaret">▾</span></button>
         <button data-sl="accent" title="Couleur d’accent de la présentation"><span class="sl-swatch" style="background:${accent(dd)}"></span> Accent</button>
         <button data-sl="dup" title="Dupliquer la diapositive">${I.dup}</button><button data-sl="del" class="danger" title="Supprimer la diapositive" ${n <= 1 ? 'disabled' : ''}>${I.trash}</button>`;
     }
@@ -391,6 +395,7 @@ window.AlixoSlides = (() => {
         ${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}
         <button data-sl="undo" title="Annuler (Ctrl+Z)" ${hist.undo.length ? '' : 'disabled'}>${I.undo}</button>
         <button data-sl="redo" title="Rétablir (Ctrl+Y)" ${hist.redo.length ? '' : 'disabled'}>${I.redo}</button>
+        ${window.AlixoAlx ? '<button data-sl="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-slide) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
       </div>`;
   }
   function paletteHTML() {
@@ -661,6 +666,7 @@ window.AlixoSlides = (() => {
       if (a === 'info') { if (window.AlixoShare) AlixoShare.openInfo(currentDocId); return; }
       if (a === 'present') { startPresent(0); return; }
       if (a === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
+      if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (readOnly) return;
       if (a === 'add') { openLayoutMenu(b); return; }
       if (a === 'undo') { undo(); return; }
@@ -669,6 +675,7 @@ window.AlixoSlides = (() => {
       if (a === 'del') { deleteSlide(curSlide); return; }
       if (a === 'accent') { openColorPopover(null, b); return; }
       if (a === 'theme') { openThemeMenu(b); return; }
+      if (a === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police de la présentation', hint: 'Remplace les polices du thème sur toutes les diapositives ; « Police des Paramètres » rend la main au thème.', onPick: k => { pushHist(); if (k === null) delete dd.font; else dd.font = k; commit(); renderAll(); } }); return; }
       if (!selSet.size) return;
       if (a === 'fs-' || a === 'fs+') { forSel(ee => { ee.fs = round1(Math.max(0.4, Math.min(3, (ee.fs || 1) + (a === 'fs+' ? 0.1 : -0.1)))); }); return; }
       if (a === 'cmd') { const n = $(`#sl-canvas .sl-el[data-id="${id}"] .sl-text`); if (!n) return; if (!n.contains(document.activeElement)) { startEdit(id); const r = document.createRange(); r.selectNodeContents(n); const sg = getSelection(); sg.removeAllRanges(); sg.addRange(r); } document.execCommand(b.dataset.cmd); syncAllText(); return; }

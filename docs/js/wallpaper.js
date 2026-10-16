@@ -18,7 +18,7 @@ window.AlixoWall = (() => {
     { k: 'sable', name: 'Sable', css: 'linear-gradient(180deg, #f3e7d3 0%, #e2c9a0 55%, #b98f5c 100%)' },
     { k: 'aurore', name: 'Aurore', css: 'radial-gradient(80% 60% at 25% 20%, rgba(80, 220, 170, .75), transparent 70%), radial-gradient(70% 60% at 80% 35%, rgba(140, 90, 230, .7), transparent 70%), linear-gradient(180deg, #0d1b2a, #1b263b)' }
   ];
-  const VIEWS = ['#view-editor', '#view-slides', '#view-sheet', '#view-board'];
+  const VIEWS = ['#view-editor', '#view-slides', '#view-sheet', '#view-board', '#view-word'];   // 1.35 : + éditeur Word / OpenDocument
   const DEF = { dim: 30, blur: 0 };
   let el = null, url = '', urlFor = '';
 

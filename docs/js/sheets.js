@@ -885,7 +885,9 @@ window.AlixoSheets = (() => {
   function lastCol(s) { let m = 0; for (const k of Object.keys(cellsOf(s))) { const p = parseRef(k); if (p && p.c > m) m = p.c; } return m; }
 
   /* ---------------- rendu ---------------- */
-  function renderAll() { renderBar(); renderGrid(); renderTabsRow(); renderSide(); }
+  /* 1.35 : police propre au tableur (d.font, clé des polices de l'application) */
+  function applyFont() { const dd = d(); const v = document.getElementById('view-sheet'); if (!v) return; const css = dd && window.AlixoApp && AlixoApp.docFontCss ? AlixoApp.docFontCss(dd) : ''; if (css) v.style.setProperty('--sh-font', css); else v.style.removeProperty('--sh-font'); }
+  function renderAll() { applyFont(); renderBar(); renderGrid(); renderTabsRow(); renderSide(); }
 
   function renderBar() {
     const bar = $('#sh-bar'); const s = sheet(); if (!bar || !s) return;
@@ -932,8 +934,10 @@ window.AlixoSheets = (() => {
     </div>
     <div class="sh-barr">
       ${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}
+      <button data-sh="font" class="sh-font" title="Police du tableur (toutes les feuilles)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && d() && d().font && AlixoApp.fontByKey(d().font) ? AlixoApp.fontByKey(d().font).name : 'Police')}</span><span class="tcaret">▾</span></button>
       <button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button>
       <button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button>
+      ${window.AlixoAlx ? '<button data-sh="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-sheet) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
     </div>`;
   }
 
@@ -1328,8 +1332,11 @@ window.AlixoSheets = (() => {
     $('#sh-bar').addEventListener('click', e => {
       const b = e.target.closest('[data-sh]'); if (!b) return;
       const k = b.dataset.sh;
+      if (k === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police du tableur', hint: 'Police de toutes les cellules de ce tableur, à l’écran et dans le PDF.', onPick: f => { if (f === null) delete dd.font; else dd.font = f; commit(); applyFont(); renderAll(); } }); return; }
+
       if (k === 'undo') { undo(); return; } if (k === 'redo') { redo(); return; }
       if (k === 'pdf') { exportPDF(); return; } if (k === 'csv') { exportCSV(); return; }
+      if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'chart') { chartOn = !chartOn; renderSide(); renderBar(); return; }
       if (k === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (readOnly) return;

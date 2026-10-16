@@ -220,8 +220,10 @@ window.AlixoBusiness = (() => {
   function offerHTML() {
     const b = (typeof billingOffer !== 'undefined' && billingOffer && billingOffer.business) || null;
     const price = b ? `${fmtMoney(b.amount, b.currency)} par ${b.interval === 'year' ? 'an' : 'mois'}` : '';
-    return `<div class="biz-offer"><img src="logo-business.png" alt=""><div><b>Alixo Business</b><span>Pour une entreprise : jusqu’à <b>10 employés</b>, dont <b>5 licences Alixo+</b>, un espace d’équipe, le partage par simple recherche d’un collègue, et des modérateurs pour les partages vers l’extérieur.${price ? ` <b>${esc(price)}</b>, sans engagement.` : ''}</span></div>
-      ${b ? '<button class="cta biz-cta" type="button" id="biz-buy">Souscrire</button>' : `<a class="cta ghost" href="mailto:contact@alixoapp.com?subject=Alixo%20Business" target="_blank" rel="noopener">Nous contacter</a>`}</div>`;
+    /* 1.35 : l'abonnement se souscrit sur le tableau de bord (page des offres : 60 € / mois ou 690 € / an, puis vérification
+       d'identité du dirigeant et création de l'entreprise) ; l'ancien bouton « Souscrire » (tarif mensuel 1.32) reste si le serveur le publie */
+    return `<div class="biz-offer"><img src="logo-business.png" alt=""><div><b>Alixo Business</b><span>Pour une entreprise : jusqu’à <b>10 employés</b>, dont <b>5 licences Alixo+</b>, un tableau de bord d’équipe, le partage par simple recherche d’un collègue, et des modérateurs pour les partages vers l’extérieur.${price ? ` <b>${esc(price)}</b>, sans engagement.` : ' <b>60 € par mois</b> ou <b>690 € par an</b>.'}</span></div>
+      ${b ? '<button class="cta biz-cta" type="button" id="biz-buy">Souscrire</button>' : `<a class="cta biz-cta" href="${esc(dashUrl())}#offres" target="_blank" rel="noopener" title="Les offres Alixo Business sur le tableau de bord en ligne">Voir les offres</a>`}</div>`;
   }
   /* 1.33 : la gestion de l'entreprise (équipe, licences, rôles, invitations, demandes, vitrine) se fait sur le tableau de
      bord en ligne (BUSINESS_URL). Ici : la fiche de l'entreprise, le lien vers le tableau de bord, la messagerie, les dossiers

@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.34.1';
+const ALIXO_VERSION = '1.35.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -44,6 +44,10 @@ function toast(msg, opts) {
 /* ---------------- persistance ---------------- */
 /* clé de stockage : un espace de données par compte connecté (voir js/auth.js) */
 const LS_KEY = 'alixo.v1' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '');
+/* 1.35 : écran partagé (js/split.js) — cette fenêtre est un « volet » (iframe ?pane=<id>) : même stockage que la fenêtre
+   principale, mais pas de barre supérieure, d'onglets, de synchronisation en ligne ni de fenêtres de démarrage */
+const ALIXO_PANE = /[?&]pane=/.test(location.search);
+window.ALIXO_PANE = ALIXO_PANE;
 let state = null;
 let saveTm = null;
 /* horodatage des réglages (1.16) : la synchronisation garde les réglages les plus récents d'un appareil à
@@ -65,7 +69,7 @@ function save() {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
     if (window.AlixoSync) window.AlixoSync.onLocalSave();
     if (window.AlixoShare && window.AlixoShare.enabled) window.AlixoShare.onLocalSave();
-    if (window.AlixoWidgets) window.AlixoWidgets.onSave();
+    if (window.AlixoWidgets && !ALIXO_PANE) window.AlixoWidgets.onSave();
     setSaveStatus('saved');
   }, 350);
 }
@@ -126,7 +130,11 @@ let expandedFolders = null;    // Set — initialisé au démarrage
 let lastBlockId = null;
 let lastFormulaInput = null;
 let editingFormula = {};
-let planCollapsed = false;
+/* 1.35 : le plan du cours n'est plus affiché d'office — replié au départ, c'est le bouton latéral qui l'ouvre ; le choix
+   de l'utilisateur est gardé sur l'appareil (clé alixo.planOpen) */
+const PLAN_OPEN_LS = 'alixo.planOpen';
+let planCollapsed = (() => { try { return localStorage.getItem(PLAN_OPEN_LS) !== '1'; } catch { return true; } })();
+function rememberPlanOpen() { try { localStorage.setItem(PLAN_OPEN_LS, planCollapsed ? '0' : '1'); } catch { /* stockage indisponible */ } }
 
 /* séance par id : les miennes, puis celles partagées avec moi (Alixo Share) */
 function findDoc(id) { return state.docs.find(d => d.id === id) || (window.AlixoShare && AlixoShare.enabled ? AlixoShare.docById(id) : null) || null; }
@@ -202,12 +210,12 @@ const FOLDER_ICON_BIG = '<svg class="fbig" viewBox="0 0 24 24"><path d="M3 7a2 2
    ============================================================ */
 /* position de lecture de chaque séance ouverte en onglet : on la retrouve en revenant sur l'onglet ;
    un onglet fermé (ou une séance rouverte depuis la bibliothèque) repart du haut */
-const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '');
+const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : '');
 let tabScroll = {};
 function loadTabScroll() { try { const t = JSON.parse(localStorage.getItem(TABSCROLL_LS)); tabScroll = t && typeof t === 'object' ? t : {}; } catch { tabScroll = {}; } }
 function saveTabScroll() { try { localStorage.setItem(TABSCROLL_LS, JSON.stringify(tabScroll)); } catch { /* stockage indisponible */ } }
 function rememberScroll() {
-  if (!currentDocId) return;
+  if (!currentDocId || isVTabId(currentDocId)) return;
   const w = $('#docwrap'); if (!w) return;
   tabScroll[currentDocId] = Math.round(w.scrollTop);
   saveTabScroll();
@@ -215,12 +223,14 @@ function rememberScroll() {
 function forgetScroll(id) { if (id in tabScroll) { delete tabScroll[id]; saveTabScroll(); } }
 function showLibrary() {
   rememberScroll();
+  leaveVTab();
   if (window.AlixoSlides) AlixoSlides.leave();
   if (window.AlixoSheets) AlixoSheets.leave();
   if (window.AlixoBoard) AlixoBoard.leave();
   if (window.AlixoQuiz) AlixoQuiz.leave();
   if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPresence(null, null);
   currentDocId = null;
+  applyDocFont();
   applyPagesMode();
   renderAccess();
   readOnly = false; document.body.classList.remove('readonly'); blocksEl.contentEditable = 'true';
@@ -239,8 +249,10 @@ function showLibrary() {
 }
 
 function openDoc(id) {
+  if (isVTabId(id)) { openVTab(id); return; }
   const d = findDoc(id);
   if (!d) { toast('Cette séance n’existe plus'); showLibrary(); return; }
+  leaveVTab();
   if (isSlidesDoc(d)) { if (window.AlixoSlides) AlixoSlides.open(id); else toast('Module de présentation indisponible'); return; }
   if (isSheetDoc(d)) { if (window.AlixoSheets) AlixoSheets.open(id); else toast('Module de tableur indisponible'); return; }
   if (isBoardDoc(d)) { if (window.AlixoBoard) AlixoBoard.open(id); else toast('Module de planche indisponible'); return; }
@@ -276,10 +288,13 @@ function openDoc(id) {
   $('#toolbar').hidden = false;
   document.documentElement.style.setProperty('--tint', (shared && AlixoShare.tintFor(id)) || folderTint(d.folderId));
   $('#view-editor').classList.toggle('plan-open', !planCollapsed);
+  $('#planpanel').classList.toggle('collapsed', planCollapsed);
+  $('#pp-pill').hidden = !planCollapsed;
   syncRightPanelClass();
   syncViewerToDoc(d);
   $('#doc-prof').value = d.prof || '';
   $('#doc-prof').disabled = readOnly;
+  applyDocFont();
   renderProfsList();
   setSaveStatus('saved');
   if (!openTabs.includes(id)) openTabs.push(id);
@@ -421,12 +436,12 @@ $('#page-tabs').addEventListener('contextmenu', e => {
 const ppPage = $('#pp-page'); if (ppPage) ppPage.addEventListener('click', addPage);
 
 /* ---------------- onglets : plusieurs séances ouvertes en même temps ---------------- */
-const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '');
+const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : '');
 let openTabs = [];
 function loadTabs() { try { const t = JSON.parse(localStorage.getItem(TABS_LS)); openTabs = Array.isArray(t) ? t : []; } catch { openTabs = []; } }
 function renderTabs() {
   const bar = $('#tabbar'); if (!bar) return;
-  openTabs = openTabs.filter(id => !!findDoc(id));
+  openTabs = openTabs.filter(tabAlive);
   try { localStorage.setItem(TABS_LS, JSON.stringify(openTabs)); } catch { /* stockage indisponible */ }
   const show = openTabs.length > 0;
   document.body.classList.toggle('has-tabs', show);
@@ -435,6 +450,11 @@ function renderTabs() {
   bar.innerHTML = `<button class="tab lib ${!currentDocId ? 'active' : ''}" data-tab="" title="Bibliothèque (Alt+←)">
       <svg class="tab-ico home-ico" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v9h12v-9"/></svg><span class="tab-name">Bibliothèque</span></button>` +
     openTabs.map(id => {
+      if (isVTabId(id)) {
+        const vt = vtabs.get(id); if (!vt) return '';   // vue à rétablir plus tard (module pas encore chargé)
+        return `<button class="tab vtab ${id === currentDocId ? 'active' : ''}" data-tab="${esc(id)}" draggable="true" title="${esc(vt.title || '')} — glisser pour réordonner">
+        ${vt.icon ? `<span class="tab-vico">${vt.icon}</span>` : ''}<span class="tab-name">${esc(vt.title || 'Document')}</span><span class="tab-x" data-close="${esc(id)}" title="Fermer l’onglet (Ctrl+W)">✕</span></button>`;
+      }
       const d = findDoc(id);
       const name = d.titre || 'Sans titre';
       const sh = isSharedDoc(id) ? '<svg class="tab-sh" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>' : '';
@@ -447,7 +467,7 @@ function renderTabs() {
   bar.classList.toggle('crowded', openTabs.length > 6);
 }
 function openTabsMenu(btn) {
-  const rows = openTabs.map(id => { const d = findDoc(id); return d ? `<button data-tabgo="${id}" class="${id === currentDocId ? 'on' : ''}">${docIcon(d)}<span>${esc(d.titre || 'Sans titre')}</span><i class="po-tabx" data-tabx="${id}" title="Fermer">✕</i></button>` : ''; }).join('');
+  const rows = openTabs.map(id => { const vt = vtabs.get(id); if (vt) return `<button data-tabgo="${esc(id)}" class="${id === currentDocId ? 'on' : ''}">${vt.icon || ''}<span>${esc(vt.title || 'Document')}</span><i class="po-tabx" data-tabx="${esc(id)}" title="Fermer">✕</i></button>`; const d = findDoc(id); return d ? `<button data-tabgo="${id}" class="${id === currentDocId ? 'on' : ''}">${docIcon(d)}<span>${esc(d.titre || 'Sans titre')}</span><i class="po-tabx" data-tabx="${id}" title="Fermer">✕</i></button>` : ''; }).join('');
   showPopover(`<h4>Onglets ouverts (${openTabs.length})</h4><div class="po-list po-tabs">${rows}</div><div class="po-row" style="justify-content:flex-end; margin-top:8px"><button class="cta ghost small" id="po-tabs-closeall" type="button">Tout fermer</button></div>`, btn.getBoundingClientRect(), pop => {
     pop.addEventListener('click', e => {
       const x = e.target.closest('[data-tabx]'); if (x) { e.stopPropagation(); closeTab(x.dataset.tabx); if (openTabs.length) openTabsMenu(btn); else hidePopover(); return; }
@@ -462,6 +482,7 @@ function closeTab(id) {
   if (i < 0) return;
   openTabs.splice(i, 1);
   forgetScroll(id);
+  if (isVTabId(id)) closeVTabEntry(id);
   if (currentDocId === id) {
     const next = openTabs[i] || openTabs[i - 1];
     if (next) openDoc(next); else showLibrary();
@@ -535,6 +556,80 @@ $('#tabbar').addEventListener('drop', e => {
 });
 $('#tabbar').addEventListener('dragend', () => { tabDrag = null; clearTabDropMarks(); $$('#tabbar .tab.dragging').forEach(t => t.classList.remove('dragging')); });
 
+/* ---------------- onglets « vues » (1.35) : un onglet qui n'est pas une séance ----------------
+   Fichier Word / OpenDocument ouvert dans Alixo, Quiz IA… Un module enregistre un type d'onglet :
+     AlixoApp.tabs.register('file', { open(id, data), leave(id, data), close(id, data), restore(id) → { title, icon, data } | null })
+   puis l'ouvre : AlixoApp.tabs.open({ id: 'file:<id>', kind: 'file', title, icon, data }). L'identifiant porte le type devant « : ».
+   Ces onglets vivent dans openTabs avec les séances (même barre, même ordre, même persistance, Ctrl+W, Ctrl+Tab, glisser-déposer).
+   Au démarrage, un onglet « vue » est rétabli par restore(id) dès que son module s'enregistre (null : l'onglet est abandonné).
+   Pendant qu'une vue est affichée, currentDocId vaut son identifiant et doc() renvoie null ; le module gère sa propre section
+   (open l'affiche, leave la cache, close la détruit). */
+const vtabs = new Map();      // id → { kind, title, icon, data }
+const vtabKinds = {};         // kind → handler
+const isVTabId = id => typeof id === 'string' && id.indexOf(':') > 0;
+const vtabKind = id => (isVTabId(id) ? id.slice(0, id.indexOf(':')) : '');
+const vtabInfo = id => vtabs.get(id) || null;
+/* un identifiant d'onglet est vivant : séance existante, vue enregistrée, ou vue à rétablir dès que son module sera chargé */
+const tabAlive = id => !!findDoc(id) || vtabs.has(id) || (isVTabId(id) && !vtabKinds[vtabKind(id)]);
+function tryRestoreVTabs() {
+  for (const id of openTabs.slice()) {
+    if (!isVTabId(id) || vtabs.has(id)) continue;
+    const h = vtabKinds[vtabKind(id)]; if (!h) continue;
+    let e = null; try { e = h.restore ? h.restore(id) : null; } catch (err) { console.error(err); e = null; }
+    if (e) vtabs.set(id, { kind: vtabKind(id), title: e.title || 'Document', icon: e.icon || '', data: e.data });
+    else openTabs.splice(openTabs.indexOf(id), 1);
+  }
+}
+/* quitte la vue affichée (sans fermer son onglet) */
+function leaveVTab() {
+  if (!isVTabId(currentDocId)) return;
+  const id = currentDocId, vt = vtabs.get(id), h = vt && vtabKinds[vt.kind];
+  if (h && h.leave) { try { h.leave(id, vt.data); } catch (err) { console.error(err); } }
+  document.body.classList.remove('mode-vtab');
+  delete document.body.dataset.vtab;
+}
+function openVTab(id) {
+  const vt = vtabs.get(id), h = vt && vtabKinds[vt.kind];
+  if (!vt || !h) { closeTab(id); return; }
+  if (currentDocId !== id) { rememberScroll(); leaveVTab(); }
+  if (window.AlixoSlides) AlixoSlides.leave();
+  if (window.AlixoSheets) AlixoSheets.leave();
+  if (window.AlixoBoard) AlixoBoard.leave();
+  if (window.AlixoQuiz) AlixoQuiz.leave();
+  if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPresence(null, null);
+  currentDocId = id;
+  readOnly = false; document.body.classList.remove('readonly');
+  if (cropCtx) cancelCrop();
+  clearBlockSel(); hideCalcGhost(); hidePopover(); closeSlash(false); closeCtxMenu();
+  $('#imgbar').hidden = true;
+  document.body.classList.remove('mode-editor');
+  document.body.classList.add('mode-vtab');
+  document.body.dataset.vtab = vt.kind;
+  $('#view-editor').hidden = true;
+  $('#view-library').style.display = 'none';
+  $('#toolbar').hidden = true;
+  closeRightPanels();
+  document.documentElement.style.setProperty('--tint', vt.data && vt.data.folderId ? folderTint(vt.data.folderId) : DEFAULT_TINT);
+  setSaveStatus('saved');
+  if (!openTabs.includes(id)) openTabs.push(id);
+  renderTabs(); renderCrumbs(); renderAccess();
+  try { h.open(id, vt.data); } catch (err) { console.error(err); toast('Cette vue n’a pas pu s’ouvrir'); }
+}
+function closeVTabEntry(id) {
+  const vt = vtabs.get(id); if (!vt) return;
+  const h = vtabKinds[vt.kind];
+  if (currentDocId === id) leaveVTab();
+  if (h && h.close) { try { h.close(id, vt.data); } catch (err) { console.error(err); } }
+  vtabs.delete(id);
+}
+const vtabCrumbHTML = id => {
+  const vt = vtabs.get(id) || {};
+  const path = vt.data && vt.data.folderId ? folderPath(vt.data.folderId) : [];
+  return `<button class="crumb-root" data-nav="" title="Retour à Mes cours">Mes cours</button>` +
+    path.map(f => `<span class="sep">›</span><button class="chip" data-nav="${f.id}" title="Ouvrir le dossier">${f.icone ? AlixoIcons.svg(f.icone, 'chip-ico') : ''}${esc(f.nom)}</button>`).join('') +
+    `<span class="sep">›</span><span class="chip vt-crumb" title="${esc(vt.title || '')}">${vt.icon || ''}${esc(vt.title || 'Document')}</span>`;
+};
+
 /* professeur de la séance (en-tête de la feuille) */
 $('#doc-prof').addEventListener('input', e => {
   const d = doc(); if (!d) return;
@@ -571,6 +666,7 @@ function ensureFieldVisible(el) {
 function renderCrumbs() {
   const c = $('#breadcrumb');
   if (!currentDocId) { c.innerHTML = `<span>Mes cours</span>`; return; }
+  if (isVTabId(currentDocId)) { c.innerHTML = vtabCrumbHTML(currentDocId); return; }
   const d = doc();
   if (isSharedDoc(d.id)) {
     const info = AlixoShare.infoFor(d.id) || {};
@@ -1247,6 +1343,7 @@ function openDocCtxMenu(x, y, did) {
     <button data-cm="dpin">${CM_ICO.pin}${d.pinned ? 'Désépingler' : 'Épingler'}</button>
     <button data-cm="dmove">${CM_ICO.move}Déplacer vers…</button>
     <button data-cm="ddup">${CM_ICO.dup}Dupliquer</button>
+    <button data-cm="dalx" title="Fichier .alx : se rouvre dans Alixo (sur un autre ordinateur, par e-mail, en double-cliquant sur la version PC)">${CM_ICO.share}Exporter (.alx)</button>
     <button data-cm="dshare">${CM_ICO.share}Partager…</button>
     <button data-cm="ddelete" class="danger">${CM_ICO.trash}Supprimer</button>`;
   menu.dataset.fid = ''; menu.dataset.did = did; menu.dataset.tbl = ''; menu.dataset.img = '';
@@ -1649,6 +1746,7 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'dpin') togglePin(d.id);
     if (cm === 'dmove') openMovePopover('doc', d.id);
     if (cm === 'ddup') duplicateDoc(d.id);
+    if (cm === 'dalx' && window.AlixoAlx) AlixoAlx.exportDoc(d.id);
     if (cm === 'dshare') openShare('doc', d.id);
     if (cm === 'ddelete') deleteDoc(d.id);
     return;
@@ -1764,13 +1862,14 @@ body { overflow: auto; background: #fff; padding: 40px 16px; }
 <body><article id="doc"><h1 class="exp-title">${esc(d.titre || 'Sans titre')}</h1><div id="blocks">${body}</div></article>${exportWatermarked() ? `<div id="alixo-wm" class="wm-screen" aria-hidden="true"><span class="wm-big">${WM_TEXT}</span><span class="wm-foot">Fait avec Alixo · alixoapp.com</span></div>` : ''}</body></html>`;
 }
 
-const EXPORT_FORMATS = { pdf: { label: 'PDF', ext: '.pdf' }, docx: { label: 'Word (.docx)', ext: '.docx' }, html: { label: 'Page web (.html)', ext: '.html' } };
+const EXPORT_FORMATS = { pdf: { label: 'PDF', ext: '.pdf' }, docx: { label: 'Word (.docx)', ext: '.docx' }, html: { label: 'Page web (.html)', ext: '.html' }, alx: { label: 'Fichier Alixo (.alx)', ext: '.alx-docs' } };   // 1.35 : .alx (js/alx.js) — l'extension suit le type du document
 
 /* génère le fichier d'une séance dans le format choisi dans les paramètres */
 async function exportDocFile(d0, fmt, css) {
   const d = flatDoc(d0);
   await preloadImages(d);
   if (fmt === 'pdf') return new Uint8Array(await (await AlixoExport.exportDocPdf(d)).arrayBuffer());
+  if (fmt === 'alx') return new Uint8Array(await AlixoAlx.build(d0));   // le document entier (tous les onglets), pas la version aplatie
   if (fmt === 'docx') return new Uint8Array(await (await AlixoExport.exportDocDocx(d)).arrayBuffer());
   return new TextEncoder().encode(docExportHTML(d, css));
 }
@@ -1786,6 +1885,15 @@ async function downloadFolderZip(fid) {
   const walk = (f, path) => {
     for (const d of folderDocs(f.id)) {
       const base = safeFileName(d.titre);
+      /* 1.35 : en .alx, chaque document part tel quel, quel que soit son type (présentation, tableur, planche, quiz) */
+      if (fmt === 'alx' && window.AlixoAlx) {
+        const ax = AlixoAlx.extFor(d);
+        let name = `${path}${base}${ax}`;
+        for (let k = 2; used.has(name); k++) name = `${path}${base} (${k})${ax}`;
+        used.add(name);
+        jobs.push({ name, d });
+        continue;
+      }
       /* un tableur s'exporte en CSV (une feuille = un fichier), pas dans le format des séances */
       if (isSheetDoc(d) && window.AlixoSheets) {
         for (const sh of (d.sheets || [])) {
@@ -1962,8 +2070,8 @@ function snippetRowsHTML() {
 
 /* ============================================================
    Alixo+ (1.16) — formule gratuite / Alixo+
-   Gratuit : 3 Go de stockage, thèmes clair / sombre / automatique, 3 polices, sans IA ni tâches.
-   Alixo+ : au-delà de 3 Go, tous les thèmes, toutes les polices, IA, tâches.
+   Gratuit : 3 Go de stockage, thèmes clair / sombre / automatique, toutes les polices (1.35), sans IA ni tâches.
+   Alixo+ : au-delà de 3 Go, tous les thèmes, IA, tâches.
    L'abonnement est écrit par l'administrateur dans plans/{uid} (panneau admin › Utilisateurs › Alixo+…,
    lu par js/cloudconfig.js) ; l'offre (prix, lien de paiement, note) vient de config/public.
    Sans service en ligne configuré (mode 100 % local), tout est ouvert.
@@ -1971,7 +2079,7 @@ function snippetRowsHTML() {
 const PLUS_LS = 'alixo.plus' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '');
 const FREE_STORAGE = 3 * 1073741824;                 // 3 Go
 const FREE_THEMES = ['auto', 'light', 'dark'];
-const FREE_FONTS = ['', 'times', 'segoe'];           // Alixo, Times New Roman, Segoe UI
+/* 1.35 : toutes les polices sont libres (plus de verrou Alixo+) ; fontLocked reste pour les anciens appels */
 const PLUS_ICO = {
   quizia: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4Z"/><path d="M5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9Z"/><path d="M19 14l.6 1.4 1.4.6-1.4.6L19 18l-.6-1.4L17 16l1.4-.6Z"/></svg>',
   stockage: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
@@ -1986,7 +2094,6 @@ const PLUS_ICO = {
 const PLUS_FEATURES = [
   { k: 'stockage', name: 'Plus de 3 Go de stockage', free: '3 Go', plus: 'Au-delà de 3 Go', text: 'Fichiers, images et cours au-delà de la limite de 3 Go du compte gratuit.' },
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
-  { k: 'polices', name: 'Toutes les polices d’écriture', free: '3 polices', plus: 'Toutes les polices', text: 'Georgia, Garamond, Cambria, Calibri, Verdana, Trebuchet, Monospace, Comic Sans… en plus des trois polices gratuites.' },
   { k: 'ia', name: 'Intelligence artificielle', free: '—', plus: 'Incluse', text: 'Correction de l’orthographe et de la grammaire, mise en forme et reformulations par IA, pendant la frappe ou à la demande (F7).' },
   { k: 'quizia', name: 'Quiz IA et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : QCM, vrai / faux et réponses courtes corrigés sur place, ou une fiche de révision (résumé, points clés, définitions, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
@@ -2030,7 +2137,7 @@ function isPlus() {
   return planActive(planInfo);
 }
 const themeLocked = k => !isPlus() && !FREE_THEMES.includes(k);
-const fontLocked = k => !isPlus() && !FREE_FONTS.includes(k || '');
+const fontLocked = () => false;
 function planLabel() {
   if (editionActive()) return `Version personnalisée : ${editionInfo().name || editionInfo().code}`;
   if (!window.AlixoAuth || !window.AlixoAuth.isConfigured) return 'Version locale : toutes les fonctions';
@@ -2453,15 +2560,46 @@ const DOC_FONTS = [
   { k: 'verdana', name: 'Verdana', sub: 'Large et aérée', css: 'Verdana, Geneva, sans-serif' },
   { k: 'trebuchet', name: 'Trebuchet MS', sub: 'Sans-serif humaniste', css: '"Trebuchet MS", "Segoe UI", sans-serif' },
   { k: 'mono', name: 'Monospace', sub: 'Chasse fixe (Consolas)', css: '"Cascadia Code", Consolas, "Courier New", monospace' },
-  { k: 'dys', name: 'Comic Sans', sub: 'Souvent préférée en cas de dyslexie', css: '"Comic Sans MS", "Comic Neue", sans-serif' }
+  { k: 'dys', name: 'Comic Sans', sub: 'Souvent préférée en cas de dyslexie', css: '"Comic Sans MS", "Comic Neue", sans-serif' },
+  /* 1.35 : polices supplémentaires, toutes libres */
+  { k: 'arial', name: 'Arial', sub: 'Sans-serif universelle', css: 'Arial, "Liberation Sans", Helvetica, sans-serif' },
+  { k: 'tahoma', name: 'Tahoma', sub: 'Sans-serif compacte', css: 'Tahoma, Geneva, Verdana, sans-serif' },
+  { k: 'century', name: 'Century Gothic', sub: 'Géométrique, aérée', css: '"Century Gothic", "URW Gothic", "Avant Garde", sans-serif' },
+  { k: 'bookantiqua', name: 'Book Antiqua', sub: 'Serif façon Palatino', css: '"Book Antiqua", "Palatino Linotype", Palatino, serif' },
+  { k: 'baskerville', name: 'Baskerville', sub: 'Serif de transition, élégante', css: 'Baskerville, "Libre Baskerville", "Times New Roman", serif' },
+  { k: 'courier', name: 'Courier New', sub: 'Machine à écrire', css: '"Courier New", Courier, "Liberation Mono", monospace' }
 ];
+const fontByKey = k => DOC_FONTS.find(x => x.k === (k || '')) || null;
+/* 1.35 : police propre à un document (d.font = clé de DOC_FONTS ; absente = celle des Paramètres) */
+const docFontKey = d => (d && typeof d.font === 'string' && fontByKey(d.font) ? d.font : null);
+const docFontCss = d => { const k = docFontKey(d); const f = k !== null ? fontByKey(k) : null; return f ? f.css : ''; };
+/* menu de choix d'une police (barre d'outils des séances, présentations, tableurs, planches) */
+function openFontMenu(anchor, { current = null, title = 'Police du document', hint = '', onPick } = {}) {
+  const rows = [{ k: null, name: 'Police des Paramètres', sub: `Paramètres › Écriture (${(fontByKey(state.settings.docFont) || DOC_FONTS[0]).name})`, css: (fontByKey(state.settings.docFont) || DOC_FONTS[0]).css }].concat(DOC_FONTS);
+  showPopover(`<h4>${esc(title)}</h4><div class="po-list po-fonts">${rows.map(f => `<button type="button" data-fk="${f.k === null ? '__default' : esc(f.k)}" class="${(current === null && f.k === null) || (current !== null && f.k === current) ? 'on' : ''}"><span class="pf-prev" style="font-family:${esc(f.css || 'var(--font-serif-base)')}">Aa</span><span class="pf-txt"><b>${esc(f.name)}</b><small>${esc(f.sub)}</small></span></button>`).join('')}</div>${hint ? `<div class="po-hint">${hint}</div>` : ''}`,
+    anchor ? anchor.getBoundingClientRect() : centerRect(), pop => pop.querySelector('.po-fonts').addEventListener('click', e => {
+      const b = e.target.closest('[data-fk]'); if (!b) return;
+      hidePopover();
+      onPick(b.dataset.fk === '__default' ? null : b.dataset.fk);
+    }));
+}
+/* libellé du bouton « Police » de la barre d'outils des séances */
+function syncFontButton() {
+  const b = $('#toolbar [data-menu="font"] .tb-fontname'); if (!b) return;
+  const d = doc(); const k = docFontKey(d);
+  const f = k !== null ? fontByKey(k) : (fontByKey(state.settings.docFont) || DOC_FONTS[0]);
+  b.textContent = f.name; b.style.fontFamily = f.css || '';
+}
 const DOC_SIZES = [['s', 'Petit', .92], ['m', 'Normal', 1], ['l', 'Grand', 1.1], ['xl', 'Très grand', 1.22]];
 function applyDocFont() {
   const r = document.documentElement.style;
-  const f = (!fontLocked(state.settings.docFont) && DOC_FONTS.find(x => x.k === (state.settings.docFont || ''))) || DOC_FONTS[0];   // police Alixo+ sans abonnement : police Alixo (le choix est conservé)
-  const fh = (!fontLocked(state.settings.docFontHead) && DOC_FONTS.find(x => x.k === (state.settings.docFontHead || ''))) || null;
+  // 1.35 : la police du document ouvert (bouton Police de la barre d'outils) l'emporte sur celle des Paramètres
+  const dk = docFontKey(doc());
+  const f = (dk !== null ? fontByKey(dk) : fontByKey(state.settings.docFont)) || DOC_FONTS[0];
+  const fh = dk !== null ? null : fontByKey(state.settings.docFontHead);
   if (f.css) r.setProperty('--doc-font', f.css); else r.removeProperty('--doc-font');
   if (fh && fh.css) r.setProperty('--doc-font-head', fh.css); else r.removeProperty('--doc-font-head');
+  syncFontButton();
   const sz = DOC_SIZES.find(x => x[0] === (state.settings.docSize || 'm')) || DOC_SIZES[1];
   if (sz[2] !== 1) r.setProperty('--doc-scale', String(sz[2])); else r.removeProperty('--doc-scale');
   // 1.34.1 : zoom façon Word — toute la feuille s'agrandit (largeur, marges, texte), la page défile si besoin ;
@@ -2584,7 +2722,7 @@ function settingsSectionHTML(k) {
       <div class="po-hint" style="margin:0 0 10px">Police du texte des séances (paragraphes, listes, encadrés). Les titres suivent la même police, sauf choix contraire ci-dessous. L’export PDF l’utilise aussi.</div>
       <div class="set-tiles set-tiles4 set-fonts" id="set-font">
         ${DOC_FONTS.map(f => `<button type="button" class="set-tile ${(state.settings.docFont || '') === f.k ? 'on' : ''} ${fontLocked(f.k) ? 'locked' : ''}" data-font="${f.k}"><span class="set-fontprev" style="font-family:${esc(f.css || 'var(--font-serif-base)')}">Aa <small>Le juge tranche.</small></span><b>${f.name}${fontLocked(f.k) ? plusBadge() : ''}</b><span>${f.sub}</span></button>`).join('')}
-      </div>${isPlus() ? '' : `<div class="po-hint">Alixo, Times New Roman et Segoe UI sont gratuites ; les autres polices font partie d’<b>Alixo+</b> (Paramètres › Alixo+).</div>`}
+      </div><div class="po-hint">Toutes les polices sont disponibles. Chaque document peut aussi avoir la sienne : bouton <b>Police</b> de la barre d’outils (séance, présentation, tableur, planche) ; ce réglage-ci vaut pour les documents qui n’en ont pas choisi.</div>
       <div class="po-row" style="gap:16px; margin-top:12px; flex-wrap:wrap; align-items:center">
         <label class="set-inline">Titres <select id="set-fonthead">${[{ k: '', name: 'Comme le texte' }].concat(DOC_FONTS.slice(1)).map(f => `<option value="${f.k}" ${(state.settings.docFontHead || '') === f.k ? 'selected' : ''} ${f.k && fontLocked(f.k) ? 'disabled' : ''}>${esc(f.name)}${f.k && fontLocked(f.k) ? ' (Alixo+)' : ''}</option>`).join('')}</select></label>
         <label class="set-inline">Taille <select id="set-fontsize">${DOC_SIZES.map(([v, l]) => `<option value="${v}" ${(state.settings.docSize || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
@@ -2629,7 +2767,7 @@ function settingsSectionHTML(k) {
       <div class="po-radios" id="po-fmt">
         ${Object.entries(EXPORT_FORMATS).map(([k2, v]) => `<label><input type="radio" name="fmt" value="${k2}" ${k2 === fmt ? 'checked' : ''}> ${v.label}</label>`).join('')}
       </div>
-      <div class="po-hint">Utilisé par le bouton ⤓ de la barre du haut et par les archives .zip d’un dossier (clic droit → Télécharger en .zip). Ctrl+P exporte toujours en PDF. Les graphiques sont inclus sous forme d’images.</div></div>
+      <div class="po-hint">Utilisé par le bouton ⤓ de la barre du haut et par les archives .zip d’un dossier (clic droit → Télécharger en .zip). Ctrl+P exporte toujours en PDF. Les graphiques sont inclus sous forme d’images. <b>Fichier Alixo (.alx)</b> : le document complet (séance .alx-docs, présentation .alx-slide, tableur .alx-sheet, quiz .alx-quiz, planche .alx-planche), à rouvrir dans Alixo par Importer ou d’un double-clic sur la version PC — aussi dans le clic droit d’un document.</div></div>
     <div class="set-sect"><div class="po-label">PDF</div>
       <div class="po-hint" style="margin:0">Une séance s’exporte en A4 (bouton ⤓ ou Ctrl+P), avec sommaire au-delà de six titres ; une présentation s’exporte en pages 16:9, une diapositive par page.</div></div>`;
   if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">Alixo${hasPlusPlan() ? '+' : ''} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
@@ -2950,7 +3088,7 @@ function ficheDef(b) {
 const PH_P = 'Écrivez, ou tapez « / » pour insérer…';
 const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
-const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree'];
+const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc'];
 const BLOCK_PROPS = ['text', 'level', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans'];
 /* « atomes » non éditables dans le texte : références d'articles, items LiSA, résultats de calcul, liens, rangs */
 const ATOM_SEL = '.refart, .calc-res, .lnk, .rtag';
@@ -3138,6 +3276,16 @@ function blockHTML(b, numMap) {
     }
     case 'hr':
       return `<div class="block hr" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<hr></div>`;
+    case 'toc': {   // 1.35 : table des matières — les titres de la séance, numérotés, cliquables, mis à jour tout seuls
+      const depth = Math.min(PLAN_MAX, Math.max(1, +b.depth || PLAN_MAX));
+      return `<div class="block toc" data-id="${b.id}" contenteditable="false" data-depth="${depth}">${MV_HANDLE}
+        <div class="toc-card"><div class="toc-head">${esc(b.title || 'Table des matières')}</div><nav class="toc-list">${tocListHTML(numMap, depth)}</nav>
+        <div class="toc-tools">
+          <span class="toc-tl">Niveaux</span>${[1, 2, 3].map(n => `<button data-tocd="${n}" class="${depth === n ? 'on' : ''}" title="Jusqu’au niveau ${n}">${planSample(n)}</button>`).join('')}<button data-tocd="${PLAN_MAX}" class="${depth >= PLAN_MAX ? 'on' : ''}" title="Tous les niveaux">Tous</button>
+          <span class="tt-sep"></span><button data-tocd="rename" title="Changer l’intitulé">Intitulé…</button>
+          <button data-tocd="del" class="danger" title="Retirer la table des matières">Supprimer</button>
+        </div></div></div>`;
+    }
     case 'pb':   // 1.23 : saut de page (le texte qui suit commence sur une nouvelle page, à l'écran comme dans le PDF)
       return `<div class="block pb" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="pb-line">Saut de page</div></div>`;
     case 'tree':
@@ -3313,6 +3461,7 @@ function setBlockNumbers() {
     const n = numMap[el.dataset.id] || '';
     if (el.dataset.num !== n) el.dataset.num = n;
   }
+  refreshTocBlocks(numMap);
 }
 
 /* ---------------- champs et curseur ---------------- */
@@ -3462,7 +3611,7 @@ function markCurrent() {
 /* ---------------- lecture de l'écran → modèle ---------------- */
 function blockElType(el) {
   const c = el.classList;
-  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree']) if (c.contains(t)) return t;
+  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc']) if (c.contains(t)) return t;
   return 'p';
 }
 const levelOfEl = el => { const m = el.className.match(/\bl([1-6])\b/); return m ? +m[1] : 1; };
@@ -5605,6 +5754,30 @@ function updateToolbarState() {
 function openFmtMenu(btn) {
   const kind = btn.dataset.menu;
   const r = btn.getBoundingClientRect();
+  if (kind === 'font') {
+    /* 1.35 : comme dans Word — du texte sélectionné : la police s'applique à la sélection ; sinon à tout le document */
+    const sel = getSelection();
+    const f = activeField();
+    const inText = !!f && f.tagName !== 'INPUT' && sel && sel.rangeCount && !sel.isCollapsed && blocksEl.contains(sel.anchorNode);
+    const d = doc(); if (!d) return;
+    if (inText) {
+      const saved = sel.getRangeAt(0).cloneRange();
+      openFontMenu(btn, { current: null, title: 'Police de la sélection', hint: 'La police s’applique au texte sélectionné. Sans sélection, le bouton change la police de tout le document.', onPick: k => {
+        const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(saved);
+        const fo = k === null ? null : fontByKey(k);
+        if (!fo) { applyFmt('removeFormat'); return; }
+        applyFmt('fontName', fo.css || 'var(--font-serif-base)', true);
+      } });
+      return;
+    }
+    if (readOnly) return;
+    openFontMenu(btn, { current: docFontKey(d), title: 'Police du document', hint: 'Vaut pour toute la séance (texte et titres), à l’écran et dans le PDF. Sélectionnez du texte avant d’ouvrir ce menu pour ne changer que lui.', onPick: k => {
+      if (k === null) delete d.font; else d.font = k;
+      d.updatedAt = Date.now(); save(); applyDocFont();
+      toast(k === null ? 'Police des Paramètres rétablie' : `Police « ${fontByKey(k).name} » pour ce document`);
+    } });
+    return;
+  }
   if (kind === 'color') {
     openPalettePopover(r, { title: 'Couleur du texte', none: 'Automatique', quick: TEXT_COLORS, onPick: c => applyFmt('foreColor', c === 'none' ? 'inherit' : c, true) });
   } else if (kind === 'hilite') {
@@ -5984,11 +6157,23 @@ document.addEventListener('pointerup', () => { if (cropCtx && cropCtx.drag) crop
    ============================================================ */
 let planTm = null;
 function planRefreshSoon() { clearTimeout(planTm); planTm = setTimeout(renderPlan, 350); }
+/* 1.35 : contenu d'un bloc « table des matières » (titres de l'onglet affiché, jusqu'au niveau `depth`) */
+function tocListHTML(numMap, depth) {
+  const d = doc(); if (!d) return '';
+  const hs = d.blocks.filter(b => b.type === 'h' && (+b.level || 1) <= depth);
+  if (!hs.length) return `<div class="toc-empty">La table des matières se remplit toute seule avec les titres de la séance (« / » puis un niveau du plan, ou « I. », « A. », « 1. » en début de ligne).</div>`;
+  return hs.map(b => `<a class="toc-item pl${Math.min(6, +b.level || 1)}" data-toc="${b.id}" href="#"><span class="ptnum">${numMap[b.id] || ''}</span><span class="toc-txt">${esc(stripTags(b.text)) || '…'}</span></a>`).join('');
+}
+function refreshTocBlocks(numMap) {
+  const els = blocksEl.querySelectorAll(':scope > .block.toc'); if (!els.length) return;
+  els.forEach(el => { const nav = el.querySelector('.toc-list'); if (nav) nav.innerHTML = tocListHTML(numMap, +el.dataset.depth || PLAN_MAX); });
+}
 
 function renderPlan() {
   const d = doc(); if (!d) return;
   if (planTab === 'jours') renderDayList();
   const numMap = computeNumbers(d.blocks);
+  refreshTocBlocks(numMap);
   const hs = d.blocks.filter(b => b.type === 'h');
   const tree = $('#plan-tree');
   if (!hs.length) {
@@ -6027,13 +6212,13 @@ $('#pp-slash').addEventListener('click', () => {
   const el = $(`#blocks > .block[data-id="${b.id}"]`); if (el) openSlashMenu(el);
 });
 $('#pp-collapse').addEventListener('click', () => {
-  planCollapsed = true;
+  planCollapsed = true; rememberPlanOpen();
   $('#planpanel').classList.add('collapsed');
   $('#pp-pill').hidden = false;
   withScrollAnchor(() => $('#view-editor').classList.remove('plan-open'));
 });
 $('#pp-pill').addEventListener('click', () => {
-  planCollapsed = false;
+  planCollapsed = false; rememberPlanOpen();
   $('#planpanel').classList.remove('collapsed');
   $('#pp-pill').hidden = true;
   withScrollAnchor(() => $('#view-editor').classList.add('plan-open'));
@@ -6139,6 +6324,7 @@ const SLASH_ITEMS = [
   { id: 'cards', icon: 'layers', name: 'Cartes', sub: '3 cartes par ligne, chacune avec un titre et un texte (notions, acteurs, étapes…)', kw: 'cartes carte grille vignettes tuiles colonnes trois 3' },
   { id: 'hr', ico: '—', name: 'Séparateur', sub: 'Trait horizontal — ou tapez « -- » puis Entrée', kw: 'separateur ligne trait horizontal hr divider barre' },
   { id: 'pb', ico: '⤓', name: 'Saut de page', sub: 'Ce qui suit commence sur une nouvelle page (à l’écran et dans le PDF)', kw: 'saut page nouvelle page break pagebreak feuille suivante' },
+  { id: 'toc', icon: 'list', name: 'Table des matières', sub: 'Les titres de la séance, numérotés et cliquables — mise à jour toute seule, reprise dans le PDF et Word', kw: 'table des matieres sommaire toc plan index titres' },
   { sect: 'Symboles', spec: 'sym' },
   ...AlixoMed.SYMBOLS.map(([k, s]) => ({ id: 'sym-' + k, ico: s, name: s + '  ' + k, kw: k + ' symbole grec lettre', spec: 'sym', inline: true, sym: s }))
 ];
@@ -6321,6 +6507,14 @@ function applySlash(sid) {
   if (sid === 'table') { const nb = transform({ type: 'table', rows: [['', '', ''], ['', '', ''], ['', '', '']], head: true }); focusTableCell(nb.id, 0, 0); toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes'); return; }
   if (sid === 'tree') { const nb = transform({ type: 'tree', root: { t: '', k: [{ t: '', k: [] }, { t: '', k: [] }] } }); focusBlock(nb.id, 'start'); setTimeout(() => treeFocus(nb.id, ''), 30); toast('Arbre — Entrée : nouveau frère, Tab : nouvel enfant'); return; }
   if (sid === 'cards') { const nb = transform({ type: 'cards', cards: [{ t: '', x: '' }, { t: '', x: '' }, { t: '', x: '' }] }); focusBlock(nb.id, 'start', 'f:t0'); toast('Cartes — Entrée : du titre au texte, Tab : carte suivante, « ＋ carte » pour en ajouter'); return; }
+  if (sid === 'toc') {
+    const nb = transform({ type: 'toc' });
+    const d = doc(); const i = blockIndex(nb.id); const next = d.blocks[i + 1];
+    selectObj(nb.id);
+    if (!next) { const np = { id: uid(), type: 'p', text: '' }; d.blocks.splice(i + 1, 0, np); touch(); renderBlocks(nb.id); selectObj(nb.id); }
+    toast('Table des matières — elle suit les titres du cours ; « Niveaux » pour la limiter');
+    return;
+  }
   if (sid === 'hr' || sid === 'pb') {
     const nb = transform({ type: sid });
     const d = doc(); const i = blockIndex(nb.id); const next = d.blocks[i + 1];
@@ -6354,6 +6548,21 @@ blocksEl.addEventListener('click', e => {
   }
   const hr = e.target.closest('#blocks > .block.hr, #blocks > .block.pb');
   if (hr) { e.preventDefault(); selectObj(hr.dataset.id); }
+  const toc = e.target.closest('#blocks > .block.toc');
+  if (toc) {
+    e.preventDefault();
+    const it = e.target.closest('[data-toc]');
+    if (it) { const el = $(`#blocks > .block[data-id="${it.dataset.toc}"]`); if (el) { scrollToBlockEl(el, { margin: 12 }); el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); } return; }
+    const tb = e.target.closest('[data-tocd]');
+    if (tb) {
+      const b = getBlock(toc.dataset.id); if (!b || readOnly) return;
+      const k = tb.dataset.tocd;
+      if (k === 'del') { deleteObj(b.id); return; }
+      if (k === 'rename') { const t = prompt('Intitulé de la table des matières', b.title || 'Table des matières'); if (t === null) return; b.title = t.trim() || ''; touch(); renderBlocks(b.id); return; }
+      b.depth = +k; touch(); renderBlocks(b.id); return;
+    }
+    selectObj(toc.dataset.id);
+  }
 });
 
 document.addEventListener('keydown', e => {
@@ -8479,6 +8688,7 @@ function blockPlain(b) {
   if (b.type === 'mcalc') return (AlixoMed.CALCS[b.ck] || {}).name || 'Calculateur';
   if (b.type === 'timer') return b.label || 'Minuteur';
   if (b.type === 'hr' || b.type === 'pb') return '';
+  if (b.type === 'toc') return b.title || 'Table des matières';
   if (b.type === 'cards') return cardsOf(b).map(c => stripTags(c.t) + (c.x ? ' — ' + stripTags(c.x) : '')).join('\n');
   if (b.type === 'tree') return treePlain(b.root);
   if (b.type === 'table') return (b.rows || []).map(r => r.map(c => stripTags(c)).join(' | ')).join('\n');
@@ -8804,7 +9014,7 @@ async function exportPDF() {
   const numMap = computeNumbers(d.blocks);
   const hs = d.blocks.filter(b => b.type === 'h');
   // sommaire uniquement pour les cours longs (sinon il ajoutait une page inutile)
-  $('#print-summary').innerHTML = hs.length >= 6
+  $('#print-summary').innerHTML = hs.length >= 6 && !d.blocks.some(b => b.type === 'toc')
     ? `<h2>Sommaire</h2>` +
       hs.map(b => `<div class="ps-item pl${b.level}"><span class="ptnum">${numMap[b.id]}</span><span>${esc(stripTags(b.text))}</span></div>`).join('')
     : '';
@@ -8844,6 +9054,7 @@ async function exportPDF() {
 async function exportDoc() {
   const d = doc(); if (!d) return;
   const fmt = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
+  if (fmt === 'alx' && window.AlixoAlx) { AlixoAlx.exportDoc(d.id); return; }   // 1.35 : fichier Alixo, pour tout type de document
   if (fmt === 'pdf' || isSpecialDoc(d)) { exportPDF(); return; }
   toast(`Préparation du fichier ${EXPORT_FORMATS[fmt].label}…`, { duration: 3000 });
   let css = '';
@@ -8894,6 +9105,13 @@ document.addEventListener('keydown', e => {
   if (document.body.classList.contains('mode-sheet')) return;    // tableur : raccourcis dans js/sheets.js
   if (document.body.classList.contains('mode-board')) return;    // planche : raccourcis dans js/board.js
   if (document.body.classList.contains('mode-quiz')) return;     // quiz : raccourcis dans js/quiz.js
+  if (document.body.classList.contains('mode-vtab')) {           // 1.35 : onglet « vue » (Word, Quiz IA…) : onglets et retour, le reste au module
+    if (e.defaultPrevented) return;
+    if (mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
+    if (mod && e.key === 'Tab') { e.preventDefault(); cycleTab(e.shiftKey ? -1 : 1); return; }
+    if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
+    return;
+  }
   if (!document.body.classList.contains('mode-editor')) {
     if (mod && e.shiftKey && e.key.toLowerCase() === 'a' && $('#authov') && $('#authov').hidden !== false) { e.preventDefault(); if (libMode === 'agenda') { libMode = 'docs'; renderLibrary(); } else openAgendaHome(); }
     if (mod && e.shiftKey && e.code === 'KeyK' && $('#authov') && $('#authov').hidden !== false) { e.preventDefault(); if (libMode === 'todo') { libMode = 'docs'; renderLibrary(); } else openTodoHome(); }
@@ -9961,6 +10179,26 @@ window.addEventListener('mouseup', e => {
 window.AlixoApp = {
   get state() { return state; },
   maybeOnboard,
+  /* 1.35 : onglets « vues » (fichier Word / OpenDocument, Quiz IA…) — voir « onglets « vues » » plus haut */
+  tabs: {
+    register(kind, handler) { if (!kind || !handler) return; vtabKinds[kind] = handler; tryRestoreVTabs(); renderTabs(); },
+    open({ id, kind, title, icon, data } = {}) {
+      if (!isVTabId(id) || !vtabKinds[kind || vtabKind(id)]) return false;
+      const prev = vtabs.get(id);
+      vtabs.set(id, { kind: kind || vtabKind(id), title: title || (prev && prev.title) || 'Document', icon: icon || (prev && prev.icon) || '', data: data !== undefined ? data : (prev ? prev.data : undefined) });
+      if (!openTabs.includes(id)) openTabs.push(id);
+      openVTab(id);
+      return true;
+    },
+    update(id, patch) { const vt = vtabs.get(id); if (!vt) return; Object.assign(vt, patch || {}); renderTabs(); if (currentDocId === id) renderCrumbs(); },
+    close: id => closeTab(id),
+    isOpen: id => vtabs.has(id),
+    current: () => (isVTabId(currentDocId) ? currentDocId : null),
+    info: vtabInfo,
+    list: () => openTabs.slice(),
+    /* la vue affichée veut la barre d'outils des séances (#toolbar) ou le volet du plan : elle le dit ici */
+    showChrome({ toolbar = false } = {}) { $('#toolbar').hidden = !toolbar; }
+  },
   /* utilisés par le menu Édition / Fichier de la version PC (main.js) */
   undo: () => (currentDocId ? (isSlidesDoc(doc()) ? (window.AlixoSlides && AlixoSlides.undo()) : isSheetDoc(doc()) ? (window.AlixoSheets && AlixoSheets.undo()) : isBoardDoc(doc()) ? (window.AlixoBoard && AlixoBoard.undo()) : isQuizDoc(doc()) ? (window.AlixoQuiz && AlixoQuiz.undo()) : undoEdit()) : false),
   redo: () => (currentDocId ? (isSlidesDoc(doc()) ? (window.AlixoSlides && AlixoSlides.redo()) : isSheetDoc(doc()) ? (window.AlixoSheets && AlixoSheets.redo()) : isBoardDoc(doc()) ? (window.AlixoBoard && AlixoBoard.redo()) : isQuizDoc(doc()) ? (window.AlixoQuiz && AlixoQuiz.redo()) : redoEdit()) : false),
@@ -9976,6 +10214,8 @@ window.AlixoApp = {
   showLibrary: () => { showLibrary(); return true; },
   /* 1.29 : exposés pour les tests automatisés (scripts Playwright) — pas une API pour les modules */
   currentDoc: doc, createDoc: createDocIn, renderBlocks, focusBlock, specAllowed, applyPagesMode, openMathPanel,
+  /* 1.35 : polices — partagées avec les présentations, tableurs et planches */
+  DOC_FONTS, fontByKey, openFontMenu, docFontCss,
 
   /* séances reçues d'un autre appareil (ajouts/màj + suppressions) */
   applyRemoteDocs(upserts, removedIds) {
@@ -10063,7 +10303,7 @@ if (window.AlixoZoom) {
 }
 /* premier passage : si la synchro est inactive (hors ligne, mode local avec compte),
    c'est ici qu'on propose le questionnaire ; sinon js/sync.js le fait après la fusion */
-setTimeout(() => { if (!window.AlixoSync || !window.AlixoSync.enabled) maybeOnboard(); }, 800);
+setTimeout(() => { if (!ALIXO_PANE && (!window.AlixoSync || !window.AlixoSync.enabled)) maybeOnboard(); }, 800);
 /* 1.26 : présentation animée des nouveautés (js/whatsnew.js + js/whatsnew-scenes.js), jouée une fois au premier
    lancement après une mise à jour — jamais par-dessus la connexion, le questionnaire de bienvenue ou un compte suspendu.
    Aperçu à tout moment : index.html?nouveautes=1 (version courante) ou ?nouveautes=1.25.0. */
@@ -10078,6 +10318,7 @@ function showWhatsNew(version, tries) {
 }
 /* au démarrage : présentation animée + notification « nouvelle version installée », puis bilan de la semaine (à chaque ouverture) */
 setTimeout(() => {
+  if (ALIXO_PANE) return;   // un volet de l'écran partagé : la fenêtre principale s'en charge
   try {
     const wn = new URLSearchParams(location.search).get('nouveautes');
     if (wn) showWhatsNew(wn === '1' ? ALIXO_VERSION : wn);
@@ -10085,7 +10326,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les documents Word et OpenDocument s’ouvrent tels qu’ils ont été écrits (pages, polices, images) et se modifient comme dans Word ; l’enregistrement remplace le même fichier. Zoom façon Word : toute la page s’agrandit. Quiz IA réparé avec les clés au crédit limité.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les documents Word et OpenDocument s’ouvrent comme une séance (onglet, plan, barre d’outils). Écran partagé : glissez un onglet vers un bord pour afficher jusqu’à quatre documents. Quiz IA en onglet, réparé. Toutes les polices sont libres, une police par document. Fichiers .alx, bloc table des matières, offres Alixo Business.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

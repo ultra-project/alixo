@@ -6,7 +6,11 @@
    tout le reste (styles, sections, images, champs, propriétés) est conservé octet pour octet dans l'archive.
 
    Ce module est le cœur, commun aux deux formats :
-   - fenêtre plein écran (barre d'outils façon Word, barre d'état : page, mots, zoom) et aperçu en lecture seule ;
+   - 1.35 : le document s'ouvre COMME UNE SÉANCE — dans un onglet de la barre des onglets (AlixoApp.tabs, type « file »),
+     avec la barre supérieure d'Alixo, une barre d'outils au même emplacement et dans le même style que celle des séances
+     (commandes du traitement de texte), le volet « Plan du document » escamotable (titres du fichier), la zone de pages au
+     centre et une barre d'état (page, mots, zoom) ; plusieurs fichiers peuvent être ouverts dans plusieurs onglets ;
+     aperçu en lecture seule inchangé ;
    - mise en page : les paragraphes et lignes de tableau sont poussés d'une page à l'autre (marges des sections,
      en-têtes et pieds de page mesurés, sauts de page, sauts de section, notes de bas de page), tabulations ;
    - zoom façon Word : toute la page s'agrandit (Ctrl + molette, Ctrl + / − / 0, curseur de la barre d'état) ;
@@ -354,9 +358,19 @@ window.AlixoDocEdit = (() => {
   }
 
   /* ============================================================
-     Éditeur plein écran
+     Éditeurs en onglets (1.35) : un éditeur par fichier ouvert, dans #view-word ; `ed` est celui qui est affiché
      ============================================================ */
-  let ed = null;   // { v, name, ext, fileId, folderId, path, dirty, saving, history… }
+  const eds = new Map();   // id d'onglet ('file:…') → { id, ov, v, name, ext, fileId, folderId, path, dirty, saving, hist, redo… }
+  let ed = null;           // l'éditeur affiché (null : aucun onglet Word / OpenDocument à l'écran)
+  const PLAN_OPEN_LS = 'alixo.planOpen';   // même réglage que le plan des séances (app.js)
+  const planOpen = () => { try { return localStorage.getItem(PLAN_OPEN_LS) === '1'; } catch { return false; } };
+  const rememberPlan = on => { try { localStorage.setItem(PLAN_OPEN_LS, on ? '1' : '0'); } catch { /* stockage indisponible */ } };
+  const FICO = {
+    docx: '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4"/><path d="m8.5 11 1.3 6 1.7-4.5 1.7 4.5 1.3-6"/></svg>',
+    odt: '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4"/><circle cx="12" cy="14" r="2.6"/></svg>'
+  };
+  const tabIcon = ext => `<span class="wdx-tabico ${ext}">${FICO[ext] || FICO.docx}</span>`;
+  const viewHost = () => { let v = document.getElementById('view-word'); if (!v) { v = document.createElement('section'); v.id = 'view-word'; v.hidden = true; document.body.appendChild(v); } return v; };
   const I = {
     back: '<svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
     undo: '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg>',
@@ -381,91 +395,198 @@ window.AlixoDocEdit = (() => {
     return `<div class="wdx-grp">
         <button type="button" data-wd="undo" title="Annuler (Ctrl+Z)">${I.undo}</button>
         <button type="button" data-wd="redo" title="Rétablir (Ctrl+Y)">${I.redo}</button>
-      </div><span class="wdx-sep"></span>
+      </div><span class="tb-sep"></span>
       <div class="wdx-grp">
         <select data-wd="style" class="wdx-style" title="Style de paragraphe">${styles}</select>
         <select data-wd="font" class="wdx-font" title="Police">${fonts}</select>
         <select data-wd="size" class="wdx-size" title="Taille de police">${SIZES.map(s => `<option value="${s}">${String(s).replace('.', ',')}</option>`).join('')}</select>
-      </div><span class="wdx-sep"></span>
+      </div><span class="tb-sep"></span>
       <div class="wdx-grp">
-        <button type="button" data-wd="b" title="Gras (Ctrl+B)"><b>G</b></button>
-        <button type="button" data-wd="i" title="Italique (Ctrl+I)"><i>I</i></button>
-        <button type="button" data-wd="u" title="Souligné (Ctrl+U)"><u>S</u></button>
-        <button type="button" data-wd="s" title="Barré"><s>abc</s></button>
-        <button type="button" data-wd="sup" title="Exposant (Ctrl+Maj+=)">x<sup>2</sup></button>
-        <button type="button" data-wd="sub" title="Indice (Ctrl+=)">x<sub>2</sub></button>
+        <button type="button" data-wd="b" title="Gras (Ctrl+B)"><b class="tlabel">G</b></button>
+        <button type="button" data-wd="i" title="Italique (Ctrl+I)"><i class="tlabel">I</i></button>
+        <button type="button" data-wd="u" title="Souligné (Ctrl+U)"><u class="tlabel">S</u></button>
+        <button type="button" data-wd="s" title="Barré"><s class="tlabel">B</s></button>
+        <button type="button" data-wd="sup" title="Exposant (Ctrl+Maj+=)"><span class="tlabel">x<sup>2</sup></span></button>
+        <button type="button" data-wd="sub" title="Indice (Ctrl+=)"><span class="tlabel">x<sub>2</sub></span></button>
         <button type="button" data-wd="color" class="wdx-colbtn" title="Couleur de police"><span class="wdx-a">A</span><span class="wdx-bar-c" style="background:#c00000"></span></button>
         <button type="button" data-wd="hl" class="wdx-colbtn" title="Couleur de surbrillance du texte"><span class="wdx-a wdx-hla">ab</span><span class="wdx-bar-c" style="background:#ffff00"></span></button>
         <button type="button" data-wd="clear" title="Effacer la mise en forme des caractères">${I.clear}</button>
-      </div><span class="wdx-sep"></span>
+      </div><span class="tb-sep"></span>
       <div class="wdx-grp">
         <button type="button" data-wd="al" data-al="left" title="Aligner à gauche (Ctrl+L)">${I.left}</button>
         <button type="button" data-wd="al" data-al="center" title="Centrer (Ctrl+E)">${I.center}</button>
         <button type="button" data-wd="al" data-al="right" title="Aligner à droite (Ctrl+R)">${I.right}</button>
         <button type="button" data-wd="al" data-al="both" title="Justifier (Ctrl+J)">${I.justify}</button>
-      </div><span class="wdx-sep"></span>
+      </div><span class="tb-sep"></span>
       <div class="wdx-grp">
         <button type="button" data-wd="pbr" title="Saut de page (Ctrl+Entrée)">${I.pbr}</button>
+      </div>
+      <div class="wdx-acts">
+        <button type="button" class="cta small" data-wd="save" title="Enregistrer dans la bibliothèque (Ctrl+S)">${I.save}<span>Enregistrer</span></button>
+        <button type="button" data-wd="download" title="Télécharger le fichier ${m.mime && /opendocument/.test(m.mime) ? 'OpenDocument (.odt)' : 'Word (.docx)'}">${I.down}</button>
+        <button type="button" data-wd="print" title="Imprimer ou enregistrer en PDF (Ctrl+P)">${I.print}</button>
       </div>`;
   }
 
+  /* ouvre un document dans un onglet (ou revient sur son onglet s'il est déjà ouvert) */
   async function open({ name, buf, fileId = null, folderId = null, path = '', shared = false } = {}) {
     const ad = adapterFor(name);
     if (!ad) { toast('Seuls les documents Word (.docx) et OpenDocument (.odt) se modifient dans Alixo'); return false; }
+    const id = fileId && !shared ? 'file:' + fileId : 'file:tmp-' + (typeof uid === 'function' ? uid() : Math.random().toString(36).slice(2));
+    if (eds.has(id)) { showTab(id); return true; }
     const ab = buf instanceof ArrayBuffer ? buf : (buf && buf.buffer ? buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength) : null);
     if (!ab) { toast('Fichier illisible'); return false; }
-    if (ed) await close();
+    const ok = await build(id, { name, ab, fileId: shared ? null : fileId, folderId, path, shared });
+    if (!ok) return false;
+    showTab(id);
+    return true;
+  }
+  function showTab(id) {
+    const my = eds.get(id); if (!my) return;
+    if (window.AlixoApp && AlixoApp.tabs) AlixoApp.tabs.open({ id, kind: 'file', title: my.name, icon: tabIcon(my.ext), data: { fileId: my.fileId, folderId: my.folderId } });
+    else show(id);
+  }
+  /* construit l'éditeur (caché) d'un fichier ; renvoie false si rien ne peut être construit */
+  async function build(id, { name, ab, fileId, folderId, path, shared }) {
+    const ad = adapterFor(name); if (!ad) return false;
     const ov = document.createElement('div');
-    ov.id = 'wdov'; ov.className = 'wdx-ov';
-    ov.innerHTML = `<header class="wdx-top">
-        <button type="button" class="wdx-back" data-wd="close" title="Fermer et revenir à Alixo">${I.back}</button>
-        <span class="wdx-fico ${extOf(name)}">${extOf(name) === 'odt' ? 'ODT' : 'W'}</span>
-        <div class="wdx-title"><div class="wdx-name">${escH(name)}</div><div class="wdx-state">Ouverture…</div></div>
-        <div class="wdx-acts">
-          <button type="button" class="cta small" data-wd="save" title="Enregistrer dans la bibliothèque (Ctrl+S)">${I.save}<span>Enregistrer</span></button>
-          <button type="button" class="cta ghost small" data-wd="download" title="Télécharger le fichier ${extOf(name) === 'odt' ? 'OpenDocument (.odt)' : 'Word (.docx)'}">${I.down}<span>Télécharger</span></button>
-          <button type="button" class="cta ghost small" data-wd="print" title="Imprimer ou enregistrer en PDF (Ctrl+P)">${I.print}<span>Imprimer / PDF</span></button>
-        </div>
-      </header>
-      <div class="wdx-bar"></div>
+    ov.className = 'wdx-doc' + (planOpen() ? ' plan-open' : ''); ov.dataset.tab = id; ov.hidden = true;
+    ov.innerHTML = `<div class="wdx-bar"></div>
+      <aside class="wdx-plan glass">
+        <div class="pp-head"><div class="pp-tabs"><button type="button" class="pp-tab active">Plan du document</button></div><button type="button" class="wdx-ppcollapse" data-wd="plan-close" title="Replier le plan">‹</button></div>
+        <div class="wdx-progress"><div class="wdx-progress-bar"></div></div>
+        <nav class="wdx-plantree"></nav>
+      </aside>
+      <button type="button" class="wdx-pill" data-wd="plan-open" title="Afficher le plan"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h13M10 18h10"/></svg></button>
       <div class="wdx-body"></div>
-      <footer class="wdx-status"><span class="wdx-pg">Page 1 sur 1</span><span class="wdx-words"></span><span class="wdx-note"></span>
+      <footer class="wdx-status"><span class="wdx-fico ${extOf(name)}">${extOf(name) === 'odt' ? 'ODT' : 'W'}</span><span class="wdx-pg">Page 1 sur 1</span><span class="wdx-words"></span><span class="wdx-note"></span>
         <span class="wdx-zoom"><button type="button" data-wd="fit" title="Largeur de page">${I.fit}</button><button type="button" data-wd="z-" title="Zoom arrière (Ctrl −)">−</button><input type="range" class="wdx-zr" min="25" max="300" step="5" value="100" aria-label="Zoom"><button type="button" data-wd="z+" title="Zoom avant (Ctrl +)">+</button><button type="button" class="wdx-zp" data-wd="z0" title="Zoom à 100 % (Ctrl 0)">100 %</button></span>
       </footer>`;
-    document.body.appendChild(ov);
-    document.body.classList.add('wdx-open');
+    viewHost().appendChild(ov);
     const v = makeView(ov.querySelector('.wdx-body'), { editable: true });
-    ed = { ov, v, name, ext: extOf(name), fileId: shared ? null : fileId, folderId, path, shared, dirty: false, saving: null, hist: [], redo: [], lastSnap: 0, lastType: '', saveTm: 0 };
+    const my = { id, ov, v, name, ext: extOf(name), fileId: shared ? null : fileId, folderId, path, shared, dirty: false, saving: null, hist: [], redo: [], lastSnap: 0, lastType: '', saveTm: 0, stateTxt: 'Ouverture…' };
+    eds.set(id, my);
     let model;
     try { model = await ad.load(ab); }
     catch (err) {
       console.error(err);
-      ov.querySelector('.wdx-state').textContent = 'Lecture impossible';
+      my.stateTxt = 'Lecture impossible';
       ov.querySelector('.wdx-body').innerHTML = `<div class="wdx-err">Ce document n’a pas pu être lu${err && err.message ? ' : ' + escH(err.message) : ''}.</div>`;
-      return false;
+      my.broken = true;
+      bindEditor(my);
+      return true;   // l'onglet s'ouvre quand même, avec le message
     }
-    ed.model = model;
+    my.model = model;
     ov.querySelector('.wdx-bar').innerHTML = barHTML(model);
     mountModel(v, model);
-    try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch { /* */ }
     const z0 = window.AlixoZoom ? AlixoZoom.get(ZK) : 1;
     v.zoom = z0;
-    layout(v);
-    setZoom(v, z0);
-    paintZoom();
-    bindEditor();
-    setState(shared ? 'Fichier partagé : la première modification enregistre une copie dans Mes cours' : (fileId ? 'Enregistré' : 'Pas encore dans la bibliothèque — Enregistrer pour l’y ajouter'));
+    my.stateTxt = shared ? 'Fichier partagé : la première modification enregistre une copie dans Mes cours' : (fileId ? 'Enregistré' : 'Pas encore dans la bibliothèque — Enregistrer pour l’y ajouter');
     ov.querySelector('.wdx-note').textContent = model.note || '';
-    v.onLayout = () => { updateStatus(); };
-    updateStatus(); updateToolbar();
-    // les polices du document arrivent parfois après le premier rendu : on recalcule
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (ed && ed.v === v) layout(v); });
-    const first = v.flow.querySelector('div.wp');
-    if (first) { const r = document.createRange(); r.setStart(first, 0); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); v.flow.focus({ preventScroll: true }); }
-    v.scroll.scrollTop = 0;
+    v.onLayout = () => { if (ed === my) { updateStatus(); renderPlan(my); } };
+    bindEditor(my);
+    if (ed === my && !my.ov.hidden) show(id);   // l'onglet a été affiché pendant la lecture
     return true;
   }
-  function setState(t) { if (ed) ed.ov.querySelector('.wdx-state').textContent = t; }
+  /* affiche l'éditeur d'un onglet (appelé par AlixoApp.tabs → open) */
+  function show(id) {
+    const my = eds.get(id); if (!my) return;
+    if (ed && ed !== my) hide(ed);
+    ed = my;
+    viewHost().hidden = false;
+    my.ov.hidden = false;
+    document.body.classList.add('wdx-open');
+    if (!my.model && !my.broken) { setState('Ouverture…', my); return; }   // encore en lecture (double-clic rapide) : build() finira d'afficher
+    if (!my.broken) {
+      try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch { /* */ }
+      if (!my.laidOut) {
+        my.laidOut = true;
+        layout(my.v); setZoom(my.v, my.v.zoom);
+        if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { if (eds.get(id) === my) { layout(my.v); if (ed === my) renderPlan(my); } });
+        const first = my.v.flow.querySelector('div.wp');
+        if (first) { const r = document.createRange(); r.setStart(first, 0); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); my.v.flow.focus({ preventScroll: true }); }
+        my.v.scroll.scrollTop = 0;
+      } else { sizeScaler(my.v); layout(my.v); my.v.flow.focus({ preventScroll: true }); }
+      paintZoom(); updateStatus(); updateToolbar(); renderPlan(my);
+    }
+    setState(my.stateTxt);
+  }
+  /* cache l'éditeur d'un onglet sans perdre son état (appelé par AlixoApp.tabs → leave) */
+  function hide(my) {
+    if (!my) return;
+    closeMenu();
+    my.ov.hidden = true;
+    if (ed === my) { ed = null; document.body.classList.remove('wdx-open'); }
+    if (![...eds.values()].some(e => !e.ov.hidden)) viewHost().hidden = true;
+  }
+  /* le réglage « plan ouvert / replié » est commun aux séances et aux documents Word */
+  function togglePlan(my, on) {
+    rememberPlan(on);
+    for (const e of eds.values()) e.ov.classList.toggle('plan-open', on);
+    if (!my.ov.hidden && !my.broken) { sizeScaler(my.v); updateStatus(); }
+  }
+  /* ---------------- plan du document : les titres du fichier ---------------- */
+  const HEAD_RE = /^(heading|titre|title|überschrift|encabezado|titolo)\s*(\d)?/i;
+  function headingLevel(p, m) {
+    const sid = jparse(p.dataset.ppr, {}).style || p.dataset.style || '';
+    const st = sid && m.styles ? m.styles.find(x => x.id === sid) : null;
+    const names = [sid, st && st.name].filter(Boolean);
+    for (const n of names) { const r = HEAD_RE.exec(String(n).trim()); if (r) return Math.min(6, Math.max(1, +(r[2] || 1))); }
+    if (/^(sous-?titre|subtitle)/i.test(names.join(' '))) return 2;
+    return 0;
+  }
+  function outline(my) {
+    const m = my.model, out = [];
+    for (const p of my.v.flow.querySelectorAll(':scope > div.wp')) {
+      const text = (p.innerText || '').replace(/\s+/g, ' ').trim();
+      if (!text || text.length > 160) continue;
+      let lv = headingLevel(p, m);
+      if (!lv) {
+        // paragraphe court, tout en gras et plus gros que le texte courant : c'est un titre
+        const runs = [...p.querySelectorAll('.wr')]; if (!runs.length || text.length > 90) continue;
+        const bold = runs.every(r => { const w = getComputedStyle(r).fontWeight; return +w >= 600 || w === 'bold'; });
+        const size = Math.max(...runs.map(r => parseFloat(getComputedStyle(r).fontSize) || 0));
+        if (bold && size >= 17) lv = size >= 21 ? 1 : 2; else continue;
+      }
+      out.push({ el: p, lv, text });
+    }
+    return out;
+  }
+  function renderPlan(my) {
+    const tree = my.ov.querySelector('.wdx-plantree'); if (!tree || my.broken) return;
+    const items = outline(my);
+    my.plan = items;
+    if (!items.length) { tree.innerHTML = '<div class="pt-empty">Aucun titre dans ce document : les paragraphes de style « Titre 1 », « Titre 2 »… apparaissent ici.</div>'; return; }
+    const minLv = Math.min(...items.map(i => i.lv));
+    tree.innerHTML = items.map((it, i) => `<button type="button" class="pt-item pl${Math.min(6, it.lv - minLv + 1)}" data-wdh="${i}" title="${escH(it.text)}"><span>${escH(it.text)}</span></button>`).join('');
+    markCurrentHeading(my);
+  }
+  function markCurrentHeading(my) {
+    const items = my.plan; if (!items || !items.length) return;
+    const top = my.v.scroll.getBoundingClientRect().top + 40;
+    let cur = 0;
+    items.forEach((it, i) => { if (it.el.getBoundingClientRect().top <= top) cur = i; });
+    my.ov.querySelectorAll('.pt-item').forEach(b => b.classList.toggle('current', +b.dataset.wdh === cur));
+    const sc = my.v.scroll;
+    const pr = sc.scrollHeight > sc.clientHeight ? sc.scrollTop / (sc.scrollHeight - sc.clientHeight) : 0;
+    const bar = my.ov.querySelector('.wdx-progress-bar'); if (bar) bar.style.width = (pr * 100).toFixed(1) + '%';
+  }
+  function scrollToHeading(my, i) {
+    const it = my.plan && my.plan[i]; if (!it) return;
+    const sc = my.v.scroll;
+    const y = sc.scrollTop + it.el.getBoundingClientRect().top - sc.getBoundingClientRect().top - 24;
+    sc.scrollTo({ top: Math.max(0, y), behavior: 'smooth' });
+    it.el.classList.add('wdx-flash'); setTimeout(() => it.el.classList.remove('wdx-flash'), 900);
+  }
+  /* état de l'enregistrement : dans la barre supérieure d'Alixo (#save-status), comme pour une séance */
+  function setState(t, my) {
+    const e = my || ed; if (!e) return;
+    e.stateTxt = t;
+    if (e !== ed) return;
+    const el = document.getElementById('save-status'); if (!el) return;
+    el.dataset.st = /non enregistr|Enregistrement…|Échec/.test(t) ? 'saving' : 'saved';
+    el.textContent = t;
+  }
   function updateStatus() {
     if (!ed) return;
     const v = ed.v; const n = v.pageList.length || 1;
@@ -536,8 +657,9 @@ window.AlixoDocEdit = (() => {
     ed.saveTm = setTimeout(() => { if (ed && ed.dirty && (ed.fileId || ed.autoImport)) saveNow(true); }, 2500);
   }
   /* le contenu reste fait de paragraphes : du texte tapé hors paragraphe y est replacé */
-  function normalize() {
-    const flow = ed.v.flow;
+  const normalize = () => normalizeOf(ed);
+  function normalizeOf(my) {
+    const flow = my.v.flow;
     const fix = container => {
       let prevP = null;
       for (const n of [...container.childNodes]) {
@@ -801,14 +923,16 @@ window.AlixoDocEdit = (() => {
   function closeMenu() { const m = document.getElementById('wdx-menu'); if (m) m.remove(); document.removeEventListener('mousedown', closeMenuOutside, true); }
 
   /* ---------------- évènements ---------------- */
-  function bindEditor() {
-    const { ov, v } = ed;
+  function bindEditor(my) {
+    const { ov, v } = my;
     const flow = v.flow;
     ov.addEventListener('mousedown', e => { if (e.target.closest('.wdx-bar button, .wdx-status button')) e.preventDefault(); });   // le curseur reste dans le texte
     ov.addEventListener('click', e => {
       const b = e.target.closest('[data-wd]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
       const k = b.dataset.wd;
-      if (k === 'close') { close(); return; }
+      if (k === 'plan-close') { togglePlan(my, false); return; }
+      if (k === 'plan-open') { togglePlan(my, true); return; }
+      if (my.broken) return;
       if (k === 'save') { saveNow(false); return; }
       if (k === 'download') { download(); return; }
       if (k === 'print') { print(); return; }
@@ -826,17 +950,27 @@ window.AlixoDocEdit = (() => {
       }
       if (['b', 'i', 'u', 's', 'sup', 'sub', 'clear'].includes(k)) { formatChars(k); return; }
     });
+    ov.querySelector('.wdx-plantree').addEventListener('click', e => { const b = e.target.closest('[data-wdh]'); if (b) scrollToHeading(my, +b.dataset.wdh); });
+    // les raccourcis des séances (menu « / », F7, F8…) ne réagissent pas dans le document ; ceux de l'application
+    // qui doivent passer (Ctrl+W, Ctrl+Tab, Alt+←) sont laissés remonter
+    ov.addEventListener('keydown', e => {
+      const mod = e.ctrlKey || e.metaKey;
+      if ((mod && (e.key === 'Tab' || e.key.toLowerCase() === 'w')) || (e.altKey && e.key === 'ArrowLeft')) return;
+      e.stopPropagation();
+    });
+    ov.addEventListener('keyup', e => e.stopPropagation());
+    if (my.broken) return;
     ov.querySelector('.wdx-bar').addEventListener('contextmenu', e => { const b = e.target.closest('[data-wd="color"], [data-wd="hl"]'); if (b) { e.preventDefault(); colorMenu(b, b.dataset.wd); } });
     ov.querySelector('.wdx-bar').addEventListener('change', e => {
       const s = e.target; const k = s.dataset.wd;
       // la sélection du texte est perdue au profit de la liste : on la rétablit
-      restoreSel(ed.lastSel);
+      restoreSel(my.lastSel);
       if (k === 'font') formatChars('font', s.value);
       if (k === 'size') formatChars('size', +s.value);
       if (k === 'style') formatParas('style', s.value);
-      flow.focus({ preventScroll: true }); restoreSel(ed.lastSel);
+      flow.focus({ preventScroll: true }); restoreSel(my.lastSel);
     });
-    ov.querySelector('.wdx-bar').addEventListener('mousedown', e => { if (e.target.closest('select')) ed.lastSel = selPath(); }, true);
+    ov.querySelector('.wdx-bar').addEventListener('mousedown', e => { if (e.target.closest('select')) my.lastSel = selPath(); }, true);
     const zr = ov.querySelector('.wdx-zr');
     zr.addEventListener('input', () => zoomTo(+zr.value / 100));
     v.scroll.addEventListener('wheel', e => {
@@ -846,7 +980,7 @@ window.AlixoDocEdit = (() => {
       const f = Math.exp(-e.deltaY * 0.0022);
       zoomTo(v.zoom * f, { x: e.clientX - r.left, y: e.clientY - r.top });
     }, { passive: false });
-    v.scroll.addEventListener('scroll', () => updateStatus(), { passive: true });
+    v.scroll.addEventListener('scroll', () => { if (ed === my) { updateStatus(); markCurrentHeading(my); } }, { passive: true });
     // zone de texte (dans un objet non modifiable) : le clic y place le curseur
     flow.addEventListener('mousedown', e => {
       if (e.button !== 0) return;
@@ -893,47 +1027,60 @@ window.AlixoDocEdit = (() => {
       if (e.key === '=' && e.shiftKey || e.key === '+' && e.shiftKey) { e.preventDefault(); formatChars('sup'); return; }
       if (e.key === '=' && !e.shiftKey) { e.preventDefault(); formatChars('sub'); return; }
     });
-    ed.onKey = e => {
-      if (!ed || !document.body.contains(ed.ov)) return;
-      const mod = e.ctrlKey || e.metaKey;
-      if (mod && !e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); e.stopImmediatePropagation(); saveNow(false); return; }
-      if (mod && !e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); e.stopImmediatePropagation(); print(); return; }
-      if (mod && !e.altKey && !e.shiftKey && (e.key === '+' || (e.key === '=' && !flow.contains(e.target)))) { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(1); return; }
-      if (mod && !e.altKey && (e.key === '-' || e.key === '_')) { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(-1); return; }
-      if (mod && !e.altKey && (e.key === '0' || e.key === 'à')) { e.preventDefault(); e.stopImmediatePropagation(); zoomTo(1); return; }
-    };
-    document.addEventListener('keydown', ed.onKey, true);
-    ov.addEventListener('keydown', e => e.stopPropagation());   // l'application derrière ne réagit pas (raccourcis des séances)
-    ov.addEventListener('keyup', e => e.stopPropagation());
-    ed.onSel = () => { if (ed && curRange()) { ed.lastSel = selPath(); updateToolbar(); } };
-    document.addEventListener('selectionchange', ed.onSel);
-    ed.onResize = () => { if (ed) { sizeScaler(ed.v); } };
-    window.addEventListener('resize', ed.onResize);
-    ed.onBeforeUnload = e => { if (ed && ed.dirty) { saveNow(true); e.preventDefault(); e.returnValue = ''; } };
-    window.addEventListener('beforeunload', ed.onBeforeUnload);
-    if (window.alixoDesktop && alixoDesktop.onZoom) { ed.zoomHook = true; }
   }
+  /* raccourcis de l'application pendant qu'un document est affiché (un seul écouteur pour tous les onglets) */
+  document.addEventListener('keydown', e => {
+    if (!ed || ed.ov.hidden || ed.broken) return;
+    const mod = e.ctrlKey || e.metaKey;
+    if (mod && !e.altKey && e.key.toLowerCase() === 's') { e.preventDefault(); e.stopImmediatePropagation(); saveNow(false); return; }
+    if (mod && !e.altKey && e.key.toLowerCase() === 'p') { e.preventDefault(); e.stopImmediatePropagation(); print(); return; }
+    // les raccourcis d'onglets des séances (app.js ne les traite que dans l'éditeur de séance)
+    if (window.AlixoApp && AlixoApp.tabs) {
+      if (mod && !e.altKey && e.key.toLowerCase() === 'w') { e.preventDefault(); e.stopImmediatePropagation(); AlixoApp.tabs.close(ed.id); return; }
+      if (mod && e.key === 'Tab') {
+        e.preventDefault(); e.stopImmediatePropagation();
+        const l = AlixoApp.tabs.list(); const i = l.indexOf(ed.id); const n = i + (e.shiftKey ? -1 : 1);
+        if (n < 0 || n >= l.length) AlixoApp.showLibrary(); else AlixoApp.openDoc(l[n]);
+        return;
+      }
+      if (e.altKey && !mod && e.key === 'ArrowLeft') { e.preventDefault(); e.stopImmediatePropagation(); AlixoApp.showLibrary(); return; }
+    }
+    if (mod && !e.altKey && !e.shiftKey && (e.key === '+' || (e.key === '=' && !ed.v.flow.contains(e.target)))) { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(1); return; }
+    if (mod && !e.altKey && (e.key === '-' || e.key === '_')) { e.preventDefault(); e.stopImmediatePropagation(); zoomStep(-1); return; }
+    if (mod && !e.altKey && (e.key === '0' || e.key === 'à')) { e.preventDefault(); e.stopImmediatePropagation(); zoomTo(1); return; }
+  }, true);
+  document.addEventListener('selectionchange', () => { if (ed && !ed.ov.hidden && !ed.broken && curRange()) { ed.lastSel = selPath(); updateToolbar(); } });
+  window.addEventListener('resize', () => { if (ed && !ed.ov.hidden && !ed.broken) { sizeScaler(ed.v); } });
+  window.addEventListener('beforeunload', e => {
+    const dirty = [...eds.values()].filter(x => x.dirty && !x.broken);
+    if (!dirty.length) return;
+    dirty.forEach(x => saveNow(true, x));
+    e.preventDefault(); e.returnValue = '';
+  });
+  /* le bouton Exporter de la barre supérieure imprime le document affiché (PDF) */
+  { const b = document.getElementById('btn-export'); if (b) b.addEventListener('click', e => { if (ed && !ed.ov.hidden) { e.stopImmediatePropagation(); if (!ed.broken) print(); } }, true); }
 
   /* ---------------- enregistrement ---------------- */
   /* réécrit le document à partir de l'écran (synchrone), puis l'archive (asynchrone) */
-  function patch(markClean) {
-    normalize();
-    ed.model.patch(ed.v.flow, { sigOf, orig: ed.v.orig, segments });
+  function patchOf(my, markClean) {
+    normalizeOf(my);
+    my.model.patch(my.v.flow, { sigOf, orig: my.v.orig, segments });
     if (markClean) {
-      ed.dirty = false;
-      ed.v.orig = new Map(); ed.v.flow.querySelectorAll('[data-pi]').forEach(p => { if (!ed.v.orig.has(p.dataset.pi)) ed.v.orig.set(p.dataset.pi, sigOf(p)); });
+      my.dirty = false;
+      my.v.orig = new Map(); my.v.flow.querySelectorAll('[data-pi]').forEach(p => { if (!my.v.orig.has(p.dataset.pi)) my.v.orig.set(p.dataset.pi, sigOf(p)); });
     }
   }
-  async function build() { patch(false); return ed.model.pack(); }
-  async function saveNow(auto) {
-    if (!ed) return;
-    if (ed.saving) { ed.again = true; return ed.saving; }
-    if (!ed.dirty && ed.fileId && auto) return;
-    const my = ed;
+  const patch = markClean => patchOf(ed, markClean);
+  async function packCurrent() { patch(false); return ed.model.pack(); }
+  async function saveNow(auto, which) {
+    const my = which || ed;
+    if (!my || my.broken) return;
+    if (my.saving) { my.again = true; return my.saving; }
+    if (!my.dirty && my.fileId && auto) return;
     my.saving = (async () => {
-      setState('Enregistrement…');
+      setState('Enregistrement…', my);
       try {
-        patch(true);
+        patchOf(my, true);
         const out = await my.model.pack();
         if (my.fileId && window.AlixoFiles && AlixoFiles.replaceData && AlixoFiles.byId(my.fileId)) {
           await AlixoFiles.replaceData(my.fileId, out);
@@ -941,21 +1088,24 @@ window.AlixoDocEdit = (() => {
           const blob = new Blob([out], { type: my.model.mime });
           const file = new File([blob], my.name, { type: my.model.mime });
           const added = await AlixoFiles.addFiles([file], my.folderId || null);
-          if (added && added[0]) { my.fileId = added[0].id; my.name = added[0].name; my.ov.querySelector('.wdx-name').textContent = my.name; my.autoImport = true; }
+          if (added && added[0]) {
+            my.fileId = added[0].id; my.name = added[0].name; my.autoImport = true;
+            if (window.AlixoApp && AlixoApp.tabs) AlixoApp.tabs.update(my.id, { title: my.name, data: { fileId: my.fileId, folderId: added[0].folderId || my.folderId || null } });
+          }
           else throw new Error('ajout à la bibliothèque refusé');
         }
         const t = new Date();
-        if (!my.dirty) setState(`Enregistré à ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`);
+        if (!my.dirty) setState(`Enregistré à ${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`, my);
         if (!auto) toast(my.autoImport && !my.toldImport ? `« ${my.name} » est enregistré dans votre bibliothèque` : 'Document enregistré');
         if (my.autoImport) my.toldImport = true;
       } catch (err) {
         console.error(err);
         my.dirty = true;
-        setState('Échec de l’enregistrement');
+        setState('Échec de l’enregistrement', my);
         toast('Enregistrement impossible' + (err && err.message ? ' : ' + err.message : ''), { duration: 6000 });
       } finally {
         my.saving = null;
-        if (my.again) { my.again = false; if (my.dirty) saveNow(true); }
+        if (my.again) { my.again = false; if (my.dirty) saveNow(true, my); }
       }
     })();
     return my.saving;
@@ -963,7 +1113,7 @@ window.AlixoDocEdit = (() => {
   async function download() {
     if (!ed) return;
     try {
-      const out = await build();
+      const out = await packCurrent();
       const name = ed.name;
       if (window.alixoDesktop && alixoDesktop.saveFile) {
         const r = await alixoDesktop.saveFile({ name, data: new Uint8Array(out), filters: [{ name: ed.ext === 'odt' ? 'Document OpenDocument' : 'Document Word', extensions: [ed.ext] }] });
@@ -1003,21 +1153,45 @@ window.AlixoDocEdit = (() => {
     window.addEventListener('afterprint', done);
     setTimeout(() => { window.print(); setTimeout(() => { if (document.body.classList.contains('wdx-printing')) done(); }, 400); }, 60);
   }
-  async function close() {
-    if (!ed) return;
-    const my = ed;
-    if (my.dirty) { await saveNow(true); }
+  /* ferme l'onglet d'un document (enregistre d'abord s'il a été modifié) ; sans identifiant : celui qui est affiché */
+  async function close(id) {
+    const my = id ? eds.get(id) : ed;
+    if (!my) return;
+    if (my.dirty && !my.broken) { await saveNow(true, my); }
     if (my.saving) await my.saving;
-    closeMenu();
-    document.removeEventListener('keydown', my.onKey, true);
-    document.removeEventListener('selectionchange', my.onSel);
-    window.removeEventListener('resize', my.onResize);
-    window.removeEventListener('beforeunload', my.onBeforeUnload);
+    hide(my);
     if (my.model && my.model.dispose) my.model.dispose();
     my.ov.remove();
-    document.body.classList.remove('wdx-open');
-    if (ed === my) ed = null;
+    eds.delete(my.id);
+    if (id === undefined && window.AlixoApp && AlixoApp.tabs && AlixoApp.tabs.isOpen(my.id)) AlixoApp.tabs.close(my.id);
   }
+
+  /* ---------------- l'onglet « fichier » de la barre des onglets ---------------- */
+  const tabHandler = {
+    open(id, data) {
+      if (eds.has(id)) { show(id); return; }
+      // onglet rétabli au démarrage : le contenu est relu depuis la bibliothèque
+      const f = data && data.fileId && window.AlixoFiles ? AlixoFiles.byId(data.fileId) : null;
+      if (!f) { if (window.AlixoApp && AlixoApp.tabs) AlixoApp.tabs.close(id); return; }
+      const host = viewHost(); host.hidden = false;
+      const wait = document.createElement('div'); wait.className = 'wdx-doc wdx-wait'; wait.innerHTML = `<div class="wdx-err">Ouverture de « ${escH(f.name)} »…</div>`; host.appendChild(wait);
+      AlixoFiles.getData(f.id).then(async buf => {
+        wait.remove();
+        if (!buf) { toast('Le contenu de ce fichier n’est pas sur cet appareil'); if (window.AlixoApp) AlixoApp.tabs.close(id); return; }
+        const ab = buf instanceof ArrayBuffer ? buf : buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+        await build(id, { name: f.name, ab, fileId: f.id, folderId: f.folderId || null, path: '', shared: false });
+        if (window.AlixoApp && AlixoApp.tabs.current() === id) show(id);
+      }).catch(err => { console.error(err); wait.remove(); toast('Ce document n’a pas pu être ouvert'); if (window.AlixoApp) AlixoApp.tabs.close(id); });
+    },
+    leave(id) { hide(eds.get(id)); },
+    close(id) { close(id); },
+    restore(id) {
+      const fid = id.slice(5); if (fid.startsWith('tmp-')) return null;
+      const f = window.AlixoFiles ? AlixoFiles.byId(fid) : null; if (!f || !FICO[extOf(f.name)]) return null;   // (les lecteurs docx.js / odt.js se chargent après ce fichier : on juge sur l'extension)
+      return { title: f.name, icon: tabIcon(extOf(f.name)), data: { fileId: f.id, folderId: f.folderId || null } };
+    }
+  };
+  if (window.AlixoApp && AlixoApp.tabs) AlixoApp.tabs.register('file', tabHandler);
 
   /* ============================================================
      Aperçu en lecture seule (fenêtre d'un fichier, panneau « à côté du cours »)
@@ -1055,5 +1229,5 @@ window.AlixoDocEdit = (() => {
     return out.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 }, mimeType: mime });
   }
 
-  return { open, close, preview, canOpen, repack, segments, sigOf, fontStack, layout, desktopZoom, get current() { return ed; }, isOpen: () => !!ed };
+  return { open, close, preview, canOpen, repack, segments, sigOf, fontStack, layout, desktopZoom, get current() { return ed; }, isOpen: () => !!ed && !ed.ov.hidden, openTabs: () => [...eds.keys()] };
 })();

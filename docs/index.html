@@ -8,6 +8,7 @@
 <link rel="stylesheet" href="quiz.css">
 <link rel="stylesheet" href="whatsnew.css">
 <link rel="stylesheet" href="docedit.css">
+<link rel="stylesheet" href="alx.css">
 <link id="app-favicon" rel="icon" type="image/png" href="logo.png">
 <link id="app-touchicon" rel="apple-touch-icon" href="logo.png">
 <meta name="theme-color" content="#33658a">
@@ -246,6 +247,9 @@
 </section>
 <div id="bd-print"></div>
 
+<!-- ===== Vue document Word / OpenDocument (js/docedit.js, 1.35) : un .wdx-doc par onglet ouvert ===== -->
+<section id="view-word" hidden></section>
+
 <!-- ===== Vue Quiz (js/quiz.js) : éditeur ; #qz-play = écran de jeu (test local, présentation en direct) ===== -->
 <section id="view-quiz" hidden>
   <div id="qz-bar" class="bd-bar qz-bar"></div>
@@ -258,8 +262,12 @@
 <div id="qz-play" class="qz-play" hidden></div>
 <div id="qz-print"></div>
 
+<!-- ===== Vue Quiz IA (1.35, js/aiquiz.js) : un onglet par document, paramétrage, génération animée, jeu, fiche ===== -->
+<section id="view-aiquiz" class="aq-view" hidden></section>
+
 <!-- ===== Barre d'outils de l'éditeur ===== -->
 <div id="toolbar" class="only-editor" hidden>
+  <button data-menu="font" class="tb-font" title="Police d’écriture : de tout le document, ou du texte sélectionné"><span class="tb-fontname">Alixo</span><span class="tcaret">▾</span></button>
   <div class="fsize" title="Taille du texte">
     <button data-fs="-" title="Réduire la taille (Ctrl+Maj+<)">−</button>
     <input id="fs-input" value="16" inputmode="numeric" maxlength="3" aria-label="Taille du texte">
@@ -381,6 +389,7 @@
 <script src="js/aiquiz.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/export.js"></script>
+<script src="js/alx.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/share.js"></script>
 <script src="js/notify.js"></script>
@@ -395,5 +404,6 @@
 <script src="js/bizchat.js"></script>
 <script src="js/wallpaper.js"></script>
 <script src="js/blockpicker.js"></script>
+<script src="js/split.js"></script>
 </body>
 </html>

@@ -11,6 +11,7 @@
    - Ouverture dans l'application : PDF, images, Word (.docx), OpenDocument (.odt), PowerPoint (.pptx), Excel (.xlsx), texte, audio, vidéo ;
      1.34.1 : un .docx ou un .odt s'affiche tel qu'il a été écrit (pages, polices, images : js/docedit.js) et se modifie
      dans l'éditeur « Modifier dans Alixo » ; l'enregistrement remplace le contenu du même fichier (replaceData) ;
+     1.35 : un .docx / .odt de la bibliothèque s'ouvre directement comme une séance (onglet, plan, barre d'outils : openInEditor) ;
      les autres formats s'ouvrent avec l'application associée (version PC) ou s'enregistrent.
    - Partage (1.17, js/share.js) : un fichier seul ou les fichiers d'un dossier partagé sont recopiés dans
      shares/{sid}/files/{id}. Les fiches reçues ({ sid, id, name, … }) s'ouvrent dans la même visionneuse,
@@ -100,7 +101,12 @@ window.AlixoFiles = (() => {
 
   /* ---------------- import ---------------- */
   async function addFiles(list, folderId) {
-    const arr = [...(list || [])].filter(f => f && f.name);
+    let arr = [...(list || [])].filter(f => f && f.name);
+    /* 1.35 : un fichier Alixo (.alx-docs, .alx-slide…) n'est pas rangé comme un fichier : il redevient un document (js/alx.js) */
+    if (window.AlixoAlx) {
+      const alx = arr.filter(f => AlixoAlx.isAlx(f.name));
+      if (alx.length) { arr = arr.filter(f => !AlixoAlx.isAlx(f.name)); AlixoAlx.importFiles(alx, folderId); }
+    }
     if (!arr.length) return [];
     // compte gratuit (1.16) : 3 Go au total ; au-delà, la fenêtre Alixo+ s'ouvre et rien n'est importé
     if (typeof storageAllows === 'function' && !await storageAllows(arr.reduce((n, f) => n + (f.size || 0), 0))) return [];
@@ -287,6 +293,8 @@ window.AlixoFiles = (() => {
   async function open(x) {
     const h = handleOf(x); if (!h) { toast('Ce fichier n’existe plus'); return; }
     const f = h.f, key = h.shared ? sharedKey(f) : f.id;
+    // 1.35 : un document Word / OpenDocument de la bibliothèque s'ouvre directement comme une séance (onglet, plan, barre d'outils)
+    if (!h.shared && window.AlixoDocEdit && AlixoDocEdit.canOpen(f.name)) { await openInEditor(h); return; }
     const ov = ensureOverlay();
     if (viewing) closeViewer();
     viewing = { id: key, h, cleanup: null };
@@ -316,6 +324,15 @@ window.AlixoFiles = (() => {
     viewing.cleanup = await render(body, f.name, buf);
   }
   const openShared = f => open(f);
+  /* ouvre un .docx / .odt dans l'éditeur en onglet (js/docedit.js) ; le contenu est téléchargé au besoin */
+  async function openInEditor(h) {
+    const f = h.f;
+    if (AlixoDocEdit.openTabs && AlixoDocEdit.openTabs().includes('file:' + f.id)) { AlixoDocEdit.open({ name: f.name, buf: new ArrayBuffer(0), fileId: f.id, folderId: f.folderId || null }); return; }
+    toast(`Ouverture de « ${f.name} »…`, { duration: 1500 });
+    const buf = await h.data(() => {});
+    if (!buf) { toast(`Le contenu de « ${f.name} » n’est pas sur cet appareil${f.cloud ? ' : vérifiez la connexion internet' : ''}`); return; }
+    await AlixoDocEdit.open({ name: f.name, buf, fileId: f.id, folderId: f.folderId || null, shared: false });
+  }
   /* affiche un fichier dans un conteneur ; renvoie une fonction de nettoyage (URL temporaires) */
   async function render(body, name, buf) {
     const ext = extOf(name);

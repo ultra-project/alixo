@@ -6,7 +6,7 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Alixo Business — Tableau de bord</title>
 <link rel="icon" type="image/png" href="../logo-business.png">
-<link rel="stylesheet" href="business.css?v=1.33.0">
+<link rel="stylesheet" href="business.css?v=1.35.0">
 <script>/* thème choisi (clair / sombre / auto) appliqué avant le premier rendu */ try { const t = localStorage.getItem('alixo.business.theme'); if (t) document.documentElement.dataset.theme = t; } catch { /* stockage indisponible */ }</script>
 </head>
 <body>
@@ -27,16 +27,19 @@
   </div>
 </section>
 
-<section id="noorg" class="bz-auth" hidden>
-  <div class="bz-authcard">
-    <img src="../logo-business.png" alt="" class="bz-authlogo">
-    <h1>Aucune entreprise</h1>
-    <p>Le compte <b id="noorg-mail"></b> ne fait partie d’aucune entreprise Alixo Business.</p>
-    <p class="bz-muted">Pour souscrire : application Alixo › Paramètres › Alixo+ › <i>Pour une entreprise</i>. Pour rejoindre une entreprise : créez un nouveau compte avec le code remis par votre employeur.</p>
-    <p class="bz-muted">Vous devriez y avoir accès ? Une même adresse peut correspondre à <b>deux comptes</b> (Google et mot de passe, par exemple). Identifiant de ce compte : <code id="noorg-uid" class="bz-uid"></code> — il doit être celui du dirigeant (panneau admin › Entreprises › Fiche › Identifiant), sinon « Changer » le dirigeant pour ce compte.</p>
-    <button class="bz-btn" type="button" data-logout>Changer de compte</button>
-  </div>
+<!-- 1.35 : compte sans entreprise → page des offres (60 € / mois, 690 € / an), pré-inscription tant que le paiement n'est pas
+     ouvert, puis assistant « Configurer votre entreprise » (vérification d'identité Stripe Identity, informations, création).
+     Le contenu est rendu par dashboard.js (offersHTML / setupHTML). -->
+<section id="noorg" class="bz-offers" hidden>
+  <header class="bz-ohead">
+    <div class="bz-brand"><img src="../logo-business.png" alt=""><div><b>Alixo Business</b><small>pour votre équipe</small></div></div>
+    <nav class="bz-otabs" id="bz-otabs"><button type="button" data-ov="offres" class="on">Offres</button><button type="button" data-ov="configurer">Configurer mon entreprise</button></nav>
+    <div class="bz-oacts"><span class="bz-ome" title="Compte connecté"><span id="noorg-mail"></span></span><button type="button" class="bz-icon" id="theme2" title="Clair / sombre"><svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button><button type="button" class="bz-btn ghost small" data-logout>Changer de compte</button></div>
+  </header>
+  <main id="offers-view" class="bz-omain"></main>
+  <footer class="bz-ofoot bz-muted">Vous devriez déjà avoir accès à une entreprise ? Une même adresse peut correspondre à <b>deux comptes</b> (Google et mot de passe, par exemple). Identifiant de ce compte : <code id="noorg-uid" class="bz-uid"></code> — il doit être celui du dirigeant (panneau admin › Entreprises › Fiche › Identifiant). Pour <b>rejoindre</b> une entreprise : créez un nouveau compte Alixo avec le code remis par votre employeur. · <a class="bz-link" href="../">Ouvrir l’application Alixo</a></footer>
 </section>
+<div id="bz-modal" class="bz-modalov" hidden></div>
 
 <div id="shell" hidden>
   <aside class="bz-side">
@@ -66,6 +69,6 @@
 <script src="../js/vendor/firebase-app-compat.js"></script>
 <script src="../js/vendor/firebase-auth-compat.js"></script>
 <script src="../js/vendor/firebase-firestore-compat.js"></script>
-<script src="dashboard.js?v=1.33.0"></script>
+<script src="dashboard.js?v=1.35.0"></script>
 </body>
 </html>
