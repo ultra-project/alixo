@@ -4169,3 +4169,102 @@ body.wall-on .bd-stage { background-color: transparent; }
 .bzc-form .cta svg { width: 17px; height: 17px; }
 .ln-chat svg { width: 19px; height: 19px; flex: none; color: var(--ink-2); }
 .ln-chat .ln-next { margin-left: auto; }
+
+/* ============================================================
+   1.34 — zoom des documents (js/zoom.js) : contrôle « − 100 % + » des barres d'outils
+   ============================================================ */
+.zoomctl { display: inline-flex; align-items: center; height: 30px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; flex: none; font-family: var(--font-ui); }
+.zoomctl button { min-width: 0 !important; width: 26px !important; height: 28px !important; border-radius: 0 !important; padding: 0 !important; font-size: 15px !important; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; }
+.zoomctl button:hover { background: var(--hover); color: var(--ink); }
+.zoomctl .zpct { width: auto !important; min-width: 50px !important; padding: 0 6px !important; font-size: 12px !important; font-weight: 600; border-left: 1px solid var(--border); border-right: 1px solid var(--border); font-variant-numeric: tabular-nums; color: var(--ink-2); }
+.zoomctl.off .zpct { color: var(--tint); background: var(--tint-soft); }
+#toolbar .zoomctl { margin-left: 6px; }
+.sl-barr .zoomctl, .sh-barr .zoomctl { margin-right: 6px; }
+.sl-stage.zoomed { overflow: auto; }
+/* bouton Quiz IA (Alixo+) dans les barres */
+#toolbar .tb-plus svg { color: #b3762a; }
+#toolbar .tb-plus:hover svg { color: #8d5a1c; }
+.sl-bar .sl-aiquiz, .sh-bar .sh-aiquiz { color: #b3762a !important; font-weight: 600; font-size: 12.5px !important; gap: 5px; }
+.sl-bar .sl-aiquiz svg, .sh-bar .sh-aiquiz svg { width: 15px; height: 15px; }
+html[data-theme="dark"] #toolbar .tb-plus svg, html[data-theme="dark"] .sl-bar .sl-aiquiz, html[data-theme="dark"] .sh-bar .sh-aiquiz { color: #d9a441 !important; }
+/* visionneuse latérale : « Modifier dans Alixo » */
+.vw-head #vw-edit { white-space: nowrap; }
+
+/* ============================================================
+   1.34 — Quiz IA et fiche de révision (js/aiquiz.js) : fenêtre centrale
+   ============================================================ */
+.aq-dlg .set-htitle svg { width: 22px; height: 22px; vertical-align: -4px; margin-right: 6px; color: #b3762a; }
+.aq-form { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
+.aq-modes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.aq-mode { display: grid; grid-template-columns: 38px 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; text-align: left; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink); cursor: pointer; transition: border-color .12s, background .12s; }
+.aq-mode:hover { background: var(--hover); }
+.aq-mode.on { border-color: #b3762a; background: color-mix(in srgb, #b3762a 9%, var(--surface)); }
+.aq-mode .aq-mico { grid-row: 1 / 3; width: 38px; height: 38px; border-radius: 10px; display: grid; place-items: center; font-size: 19px; background: var(--tint-soft); color: var(--tint); }
+.aq-mode.on .aq-mico { background: #b3762a; color: #fff; }
+.aq-mode b { font-size: 14px; }
+.aq-mode small { font-size: 12px; color: var(--ink-2); line-height: 1.3; }
+.aq-row { display: grid; grid-template-columns: 90px 1fr; align-items: center; gap: 12px; }
+.aq-row > label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.aq-seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.aq-seg button { height: 30px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.aq-seg button:hover { background: var(--hover); color: var(--ink); }
+.aq-seg button.on { border-color: var(--tint); background: var(--tint-soft); color: var(--tint); }
+.aq-actions { display: flex; align-items: center; gap: 12px; margin-top: 6px; }
+.aq-actions.wrap { flex-wrap: wrap; }
+.aq-note { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+.aq-empty { padding: 18px 0 6px; color: var(--ink); font-size: 14px; }
+.aq-empty p { color: var(--ink-2); font-size: 13px; margin: 6px 0 12px; line-height: 1.45; max-width: 620px; }
+.aq-err b { color: var(--danger, #c04343); }
+.aq-loading { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 40px 0 26px; gap: 10px; }
+.aq-loading p { color: var(--ink-2); font-size: 13px; margin: 0 0 8px; }
+.aq-spin { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--border); border-top-color: #b3762a; animation: aq-spin .9s linear infinite; }
+@keyframes aq-spin { to { transform: rotate(360deg); } }
+/* jeu */
+.aq-play { padding: 4px 0 0; background: transparent !important; }
+.aq-play .qp-q { font-size: clamp(17px, 2vw, 22px) !important; margin: 10px auto 16px !important; text-align: left !important; }
+.aq-play .qp-opt { min-height: 50px !important; font-size: 14.5px !important; }
+.aq-play .qp-shape { width: 32px; height: 32px; font-size: 14px; }
+.aq-phead { display: flex; align-items: center; gap: 12px; font-size: 12.5px; color: var(--ink-2); font-family: var(--font-ui); }
+.aq-pnum { font-weight: 700; color: var(--ink); }
+.aq-ptype { padding: 1px 8px; border-radius: 999px; background: var(--tint-soft); color: var(--tint); font-weight: 600; font-size: 11.5px; }
+.aq-pscore { margin-left: auto; font-variant-numeric: tabular-nums; }
+.aq-pbar { height: 4px; border-radius: 2px; background: var(--border); margin: 8px 0 4px; overflow: hidden; }
+.aq-pbar i { display: block; height: 100%; background: #b3762a; transition: width .3s; }
+.aq-feedback { margin-top: 14px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-family: var(--font-ui); }
+.aq-feedback.ok { border-color: color-mix(in srgb, #2e8b6a 45%, var(--border)); background: color-mix(in srgb, #2e8b6a 8%, var(--surface)); }
+.aq-feedback.ko { border-color: color-mix(in srgb, #c04343 45%, var(--border)); background: color-mix(in srgb, #c04343 7%, var(--surface)); }
+.aq-fbhead { font-weight: 700; font-size: 14px; }
+.aq-feedback.ok .aq-fbhead { color: #2e8b6a; } .aq-feedback.ko .aq-fbhead { color: #c04343; }
+.aq-fbans { margin-top: 4px; font-size: 13px; }
+.aq-fbexpl { margin-top: 6px; font-size: 13px; color: var(--ink-2); line-height: 1.45; }
+.aq-feedback .aq-actions { margin-top: 10px; }
+/* résultat */
+.aq-result { padding-top: 6px; font-family: var(--font-ui); }
+.aq-score { display: flex; align-items: center; gap: 18px; }
+.aq-ring { --p: 0; width: 86px; height: 86px; border-radius: 50%; flex: none; display: grid; place-content: center; text-align: center; background: conic-gradient(#b3762a calc(var(--p) * 1%), var(--border) 0); position: relative; }
+.aq-ring::before { content: ''; position: absolute; inset: 7px; border-radius: 50%; background: var(--surface); }
+.aq-ring b, .aq-ring small { position: relative; display: block; line-height: 1; }
+.aq-ring b { font-size: 24px; } .aq-ring small { font-size: 11px; color: var(--ink-2); margin-top: 2px; }
+.aq-verdict { font-size: 16px; font-weight: 700; }
+.aq-missed { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; padding: 10px 14px; max-height: 320px; overflow: auto; background: var(--surface); }
+.aq-missed.aq-perfect { color: #2e8b6a; font-weight: 700; text-align: center; }
+.aq-mhead { font-weight: 700; font-size: 13px; margin-bottom: 6px; color: var(--ink-2); }
+.aq-mitem { padding: 8px 0; border-top: 1px solid var(--border); font-size: 13px; }
+.aq-mitem:first-of-type { border-top: none; }
+.aq-mq { font-weight: 600; } .aq-mans { margin-top: 2px; } .aq-mexpl { margin-top: 3px; color: var(--ink-2); line-height: 1.4; }
+/* fiche */
+.aq-sheet { padding-top: 4px; }
+.aq-fiche { border: 1px solid var(--border); border-radius: 10px; padding: 18px 22px; background: var(--paper); font-family: var(--font-serif); color: var(--ink); max-height: min(480px, 54vh); overflow: auto; line-height: 1.5; }
+.aq-fiche h2 { font-size: 21px; margin: 0 0 8px; }
+.aq-fiche h3 { font-size: 15.5px; margin: 16px 0 6px; color: var(--tint); }
+.aq-fiche .aq-resume { font-style: italic; color: var(--ink-2); margin: 0 0 6px; }
+.aq-fiche ul { margin: 4px 0 8px; padding-left: 20px; } .aq-fiche li { margin: 2px 0; }
+.aq-fiche dl { margin: 6px 0 8px; } .aq-fiche dt { font-weight: 700; margin-top: 5px; } .aq-fiche dd { margin: 0 0 3px 16px; color: var(--ink-2); }
+.aq-box { margin: 14px 0 0; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border); border-left: 4px solid #2e8b6a; background: var(--surface); }
+.aq-box.pieges { border-left-color: #c04343; }
+.aq-box b { display: block; margin-bottom: 4px; font-family: var(--font-ui); font-size: 13px; }
+.aq-box ul { margin: 0; }
+@media (max-width: 640px) {
+  .aq-modes { grid-template-columns: 1fr; }
+  .aq-row { grid-template-columns: 1fr; gap: 4px; }
+}

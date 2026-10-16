@@ -316,7 +316,9 @@ window.AlixoSlides = (() => {
   function fit() {
     const st = $('#sl-stage'), c = $('#sl-canvas'); if (!st || !c) return;
     const r = st.getBoundingClientRect();
-    scale = Math.max(0.1, Math.min((r.width - 56) / SW, (r.height - 56) / SH));
+    const z = window.AlixoZoom ? AlixoZoom.get('slides') : 1;   // 1.34 : zoom de la diapositive (Ctrl + molette, barre d'outils)
+    scale = Math.max(0.1, Math.min((r.width - 56) / SW, (r.height - 56) / SH)) * z;
+    st.classList.toggle('zoomed', z > 1);
     c.style.transform = `scale(${scale})`;
     c.style.marginLeft = Math.max(28, (r.width - SW * scale) / 2) + 'px';
     c.style.marginTop = Math.max(28, (r.height - SH * scale) / 2) + 'px';
@@ -339,7 +341,7 @@ window.AlixoSlides = (() => {
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
       const n = slides(dd).length, idx = slides(dd).findIndex(x => x.id === curSlide) + 1;
-      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span></div><div class="sl-barr"><button data-sl="info" class="cta ghost small">Détails</button></div>`;
+      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button></div>`;
       return;
     }
     const els = selEls(); const e = els.length === 1 ? els[0] : null;
@@ -382,9 +384,11 @@ window.AlixoSlides = (() => {
     bar.innerHTML = `<div class="sl-barl">
         <button data-sl="add" class="cta small" title="Nouvelle diapositive (Ctrl+M)">${I.plus} Diapositive</button>
         <button data-sl="present" class="cta ghost small" title="Présenter depuis le début (F5)">${I.play} Présenter</button>
+        ${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}
         ${tools}
       </div>
       <div class="sl-barr">
+        ${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}
         <button data-sl="undo" title="Annuler (Ctrl+Z)" ${hist.undo.length ? '' : 'disabled'}>${I.undo}</button>
         <button data-sl="redo" title="Rétablir (Ctrl+Y)" ${hist.redo.length ? '' : 'disabled'}>${I.redo}</button>
       </div>`;
@@ -648,6 +652,7 @@ window.AlixoSlides = (() => {
     if (bound) return; bound = true;
     const canvas = $('#sl-canvas'), stage = $('#sl-stage'), strip = $('#sl-strip'), side = $('#sl-side'), bar = $('#sl-bar');
     ro = new ResizeObserver(() => { fit(); fitThumbs(); }); ro.observe(stage); ro.observe(strip);
+    if (window.AlixoZoom) { AlixoZoom.onChange('slides', () => fit()); AlixoZoom.bindWheel(stage, 'slides'); }   // 1.34 : zoom
 
     /* --- barre d'outils --- */
     bar.addEventListener('click', e => {
@@ -655,6 +660,7 @@ window.AlixoSlides = (() => {
       const a = b.dataset.sl; const id = sel();
       if (a === 'info') { if (window.AlixoShare) AlixoShare.openInfo(currentDocId); return; }
       if (a === 'present') { startPresent(0); return; }
+      if (a === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (readOnly) return;
       if (a === 'add') { openLayoutMenu(b); return; }
       if (a === 'undo') { undo(); return; }
@@ -856,7 +862,9 @@ window.AlixoSlides = (() => {
       const inText = e.target.closest && e.target.closest('.sl-text, input, textarea, select, [contenteditable="true"]');
       const popOpen = ($('#popover') && !$('#popover').hidden) || ($('#searchov') && !$('#searchov').hidden) || ($('#setov') && !$('#setov').hidden);
       if (popOpen) return;
+      if (window.AlixoZoom && !inText && !$('.dlgov') && AlixoZoom.handleKey(e, 'slides')) return;   // 1.34 : Ctrl + / − / 0
       if (e.key === 'F5') { e.preventDefault(); startPresent(e.shiftKey ? 'cur' : 0); return; }
+      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
       if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
       if (mod && e.key === 'Tab') { e.preventDefault(); cycleTab(e.shiftKey ? -1 : 1); return; }

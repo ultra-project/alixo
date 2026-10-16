@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.33.1';
+const ALIXO_VERSION = '1.34.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1973,6 +1973,7 @@ const FREE_STORAGE = 3 * 1073741824;                 // 3 Go
 const FREE_THEMES = ['auto', 'light', 'dark'];
 const FREE_FONTS = ['', 'times', 'segoe'];           // Alixo, Times New Roman, Segoe UI
 const PLUS_ICO = {
+  quizia: '<svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4Z"/><path d="M5 17l.9 2.1L8 20l-2.1.9L5 23l-.9-2.1L2 20l2.1-.9Z"/><path d="M19 14l.6 1.4 1.4.6-1.4.6L19 18l-.6-1.4L17 16l1.4-.6Z"/></svg>',
   stockage: '<svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3"/><path d="M4 6v12c0 1.7 3.6 3 8 3s8-1.3 8-3V6"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg>',
   themes: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 0 18c1.5 0 2-1 2-2s-1-2 0-3 3 0 4-1 1-2 1-3a9 9 0 0 0-7-9Z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15.5" cy="7.5" r="1.2" fill="currentColor"/></svg>',
   polices: '<svg viewBox="0 0 24 24"><path d="M5 19 11 5h2l6 14M7.5 14h9"/></svg>',
@@ -1987,6 +1988,7 @@ const PLUS_FEATURES = [
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
   { k: 'polices', name: 'Toutes les polices d’écriture', free: '3 polices', plus: 'Toutes les polices', text: 'Georgia, Garamond, Cambria, Calibri, Verdana, Trebuchet, Monospace, Comic Sans… en plus des trois polices gratuites.' },
   { k: 'ia', name: 'Intelligence artificielle', free: '—', plus: 'Incluse', text: 'Correction de l’orthographe et de la grammaire, mise en forme et reformulations par IA, pendant la frappe ou à la demande (F7).' },
+  { k: 'quizia', name: 'Quiz IA et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : QCM, vrai / faux et réponses courtes corrigés sur place, ou une fiche de révision (résumé, points clés, définitions, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' }
@@ -2461,7 +2463,8 @@ function applyDocFont() {
   if (f.css) r.setProperty('--doc-font', f.css); else r.removeProperty('--doc-font');
   if (fh && fh.css) r.setProperty('--doc-font-head', fh.css); else r.removeProperty('--doc-font-head');
   const sz = DOC_SIZES.find(x => x[0] === (state.settings.docSize || 'm')) || DOC_SIZES[1];
-  if (sz[2] !== 1) r.setProperty('--doc-scale', String(sz[2])); else r.removeProperty('--doc-scale');
+  const k = Math.round(sz[2] * (window.AlixoZoom ? AlixoZoom.get('doc') : 1) * 1000) / 1000;   // 1.34 : × zoom du document (Ctrl + molette)
+  if (k !== 1) r.setProperty('--doc-scale', String(k)); else r.removeProperty('--doc-scale');
   if (pagesActive()) schedulePaginate(true);
 }
 const SET_CATS = [
@@ -2479,7 +2482,7 @@ let settingsCat = 'compte';
 const SHORTCUTS = [
   ['Ctrl + K', 'Recherche universelle'], ['Ctrl + P', 'Exporter en PDF'], ['Ctrl + W', 'Fermer l’onglet'], ['Ctrl + Tab', 'Onglet suivant'],
   ['Alt + ←', 'Retour à la bibliothèque'], ['Ctrl + Maj + A', 'Agenda'], ['Ctrl + Maj + K', 'Tâches'], ['Ctrl + Maj + D', 'Dictionnaire'],
-  ['Ctrl + Maj + T', 'Chronomètre'], ['/', 'Insérer un bloc (ligne vide)'], ['F7', 'Correction par IA'], ['Ctrl + Alt + 1…6', 'Niveau de titre (selon le plan)'],
+  ['Ctrl + Maj + T', 'Chronomètre'], ['/', 'Insérer un bloc (ligne vide)'], ['F7', 'Correction par IA'], ['F8', 'Quiz IA / fiche de révision'], ['Ctrl + molette, Ctrl + / −, Ctrl 0', 'Zoom du document (séance, présentation, tableur)'], ['Ctrl + Alt + 1…6', 'Niveau de titre (selon le plan)'],
   ['F5', 'Présenter (présentation)'], ['Suppr', 'Supprimer le bloc sélectionné (présentation)'],
   ['F2', 'Modifier la cellule (tableur)'], ['Ctrl + flèches', 'Bord de la zone remplie (tableur)'],
   ['F5', 'Tester le quiz'], ['Ctrl + molette', 'Zoom (planche)'], ['Espace + glisser', 'Déplacer la vue (planche)'], ['Ctrl + D', 'Dupliquer la sélection (planche)'], ['N / T / F', 'Post-it, texte, flèche (planche)']
@@ -2595,7 +2598,7 @@ function settingsSectionHTML(k) {
       <button id="po-snipadd" class="cta ghost small">＋ Ajouter un raccourci</button></div>
     <div class="set-sect"><div class="po-label">Remplacements automatiques</div>
       <div class="po-hint" style="margin:0">Les symboles « >= », « +/- », « -> » sont mis en forme pour tout le monde. Avec une spécialité Santé dans le profil, la notation médicale (Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L), les abréviations et les blocs Santé du menu « / » sont activés automatiquement${healthMode() ? ' <b>(actif)</b>' : ''}. Les blocs proposés dépendent des spécialités choisies : Compte › Modifier mon profil.</div></div>`;
-  if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction et la mise en forme par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7), avec le modèle ouvert Qwen3.8-27B : sur votre ordinateur (Ollama), chez un hébergeur de votre choix ou avec la clé fournie par l’administrateur.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
+  if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction, la mise en forme, les quiz et les fiches de révision par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7) ; quiz (QCM, vrai / faux, réponses courtes) et fiches de révision générés depuis vos séances, présentations et tableurs (F8), avec le modèle ouvert Qwen3.8-27B : sur votre ordinateur (Ollama), chez un hébergeur de votre choix ou avec la clé fournie par l’administrateur.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
   if (k === 'plus') return `<div class="set-sect">${plusCtaHTML()}</div>
     ${subscriptionHTML()}
     ${activationHTML()}
@@ -7351,6 +7354,7 @@ function openEventPopover(ev, preset) {
    ============================================================ */
 let vwUrl = null;   // object URL en cours (à révoquer)
 let vwCurrent = null;   // { name, path, docId } : document affiché
+let vwBuf = null;       // 1.34 : son contenu (pour « Modifier dans Alixo »)
 function openViewer() {
   openRightPanel('#viewpanel');
   const root = document.documentElement;
@@ -7444,6 +7448,11 @@ $('#vw-body').addEventListener('click', e => {
   const rc = e.target.closest('[data-recent]');
   if (rc) { const d = doc(); const f = d && d.files && d.files[+rc.dataset.recent]; if (f && f.path && window.alixoDesktop) window.alixoDesktop.readFile(f.path).then(r => { if (r && r.data) showViewerFile(r.name, r.data, f.path); else toast('Fichier introuvable — il a peut-être été déplacé'); }); }
 });
+$('#vw-edit').addEventListener('click', () => {
+  if (!vwCurrent || !vwBuf || !window.AlixoOffice) return;
+  const d = doc();
+  AlixoOffice.importAsDoc({ name: vwCurrent.name, buf: vwBuf, folderId: d ? d.folderId : null, path: vwCurrent.path });
+});
 $('#vw-file').addEventListener('change', async e => {
   const f = e.target.files && e.target.files[0]; if (!f) return;
   const p = window.alixoDesktop && window.alixoDesktop.pathOf ? window.alixoDesktop.pathOf(f) : '';
@@ -7476,6 +7485,8 @@ async function showViewerFile(name, data, path) {
   $('#vw-title').textContent = name;
   body.dataset.loaded = '1';
   vwCurrent = { name, path: path || '', docId: currentDocId };
+  vwBuf = buf;
+  { const eb = $('#vw-edit'); if (eb) eb.hidden = !(window.AlixoOffice && AlixoOffice.canEdit(name)); }
   rememberViewerFile(name, path);
   openRightPanel('#viewpanel');
   try {
@@ -7490,6 +7501,11 @@ async function showViewerFile(name, data, path) {
       if (typeof mammoth === 'undefined') throw new Error('Convertisseur Word indisponible');
       const r = await mammoth.convertToHtml({ arrayBuffer: buf });
       body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+    } else if (ext === 'odt') {   // 1.34 : OpenDocument (LibreOffice, OpenOffice)
+      body.innerHTML = `<div class="vw-empty">Lecture du document OpenDocument…</div>`;
+      if (!window.AlixoOffice) throw new Error('Lecteur OpenDocument indisponible');
+      const h = await AlixoOffice.odtToHtml(buf);
+      body.innerHTML = `<div class="vw-doc">${h || '<i>Document vide</i>'}</div>`;
     } else if (ext === 'pptx') {
       body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
       body.innerHTML = await pptxToHtml(buf);
@@ -7498,7 +7514,7 @@ async function showViewerFile(name, data, path) {
     } else if (ext === 'doc' || ext === 'ppt') {
       body.innerHTML = `<div class="vw-empty">Les anciens formats .doc / .ppt ne sont pas lisibles ici. Enregistrez le fichier en <b>.docx</b>, <b>.pptx</b> ou <b>PDF</b> depuis Word / PowerPoint, puis rouvrez-le.</div>`;
     } else {
-      body.innerHTML = `<div class="vw-empty">Format « .${esc(ext)} » non pris en charge. Formats lisibles : PDF, PowerPoint (.pptx), Word (.docx), images, texte.</div>`;
+      body.innerHTML = `<div class="vw-empty">Format « .${esc(ext)} » non pris en charge. Formats lisibles : PDF, PowerPoint (.pptx), Word (.docx), OpenDocument (.odt), images, texte.</div>`;
     }
   } catch (err) {
     console.error(err);
@@ -7739,6 +7755,7 @@ $('#toolbar').addEventListener('click', e => {
   if (act === 'image') pickImages();
   if (act === 'draw') insertDrawing();
   if (act === 'ai') runAiCorrection();
+  if (act === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(); return; }
   if (act === 'ti') toggleCalcPanel();
   if (act === 'link') openLinkPopover({});
   if (act === 'refart') { if (!specAllowed('droit')) { toast('Les références d’articles ne sont pas disponibles avec vos spécialités (Paramètres › Modifier mon profil)'); return; } openArticlePopover(bid); }
@@ -8890,7 +8907,9 @@ document.addEventListener('keydown', e => {
     return;
   }
   if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); exportPDF(); return; }
+  if (window.AlixoZoom && !$('.dlgov') && AlixoZoom.handleKey(e, 'doc')) return;   // 1.34 : Ctrl + / − / 0 (aussi depuis le champ du titre)
   if (e.key === 'F7') { e.preventDefault(); runAiCorrection(); return; }
+  if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(); return; }
   if (mod && e.key.toLowerCase() === 'e') {
     e.preventDefault();
     const nb = insertSpecial({ type: 'formula', src: '' });
@@ -10020,6 +10039,17 @@ window.AlixoApp = {
 
 /* Alixo+ (1.16) : état des boutons verrouillés dès le démarrage (l'abonnement connu est relu du stockage local) */
 refreshPlusUi();
+/* 1.34 : zoom du document — Ctrl + molette sur la page, Ctrl + / − / 0, contrôle de la barre d'outils ; le menu Affichage
+   de la version PC agrandit le document ouvert (séance, présentation, tableur), ou toute la fenêtre depuis la bibliothèque */
+if (window.AlixoZoom) {
+  AlixoZoom.onChange('doc', () => applyDocFont());
+  AlixoZoom.bindWheel($('#docwrap'), 'doc');
+  if (window.alixoDesktop && alixoDesktop.onZoom) alixoDesktop.onZoom(dir => {
+    const kind = document.body.classList.contains('mode-slides') ? 'slides' : document.body.classList.contains('mode-sheet') ? 'sheet' : (document.body.classList.contains('mode-editor') && currentDocId) ? 'doc' : '';
+    if (!kind) { if (alixoDesktop.zoomPage) alixoDesktop.zoomPage(dir); return; }
+    if (dir === 0) AlixoZoom.reset(kind); else AlixoZoom.step(kind, dir);
+  });
+}
 /* premier passage : si la synchro est inactive (hors ligne, mode local avec compte),
    c'est ici qu'on propose le questionnaire ; sinon js/sync.js le fait après la fusion */
 setTimeout(() => { if (!window.AlixoSync || !window.AlixoSync.enabled) maybeOnboard(); }, 800);
@@ -10044,7 +10074,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo Business : le dirigeant retrouve son entreprise sur le tableau de bord en ligne et dans Paramètres › Entreprise, même si le lien de son compte avait été perdu. Rappel de la 1.33 : fond d’écran des documents, bibliothèque des blocs animée, messagerie d’équipe.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Quiz IA et fiches de révision (Alixo+) : depuis une séance, une présentation ou un tableur, l’IA génère un QCM, un vrai / faux, des réponses courtes ou une fiche de révision (bouton ✨ Quiz IA, F8). Les documents Word et OpenDocument s’ouvrent et se modifient dans Alixo. Zoom des documents : Ctrl + molette, Ctrl + / −.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

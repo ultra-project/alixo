@@ -892,8 +892,8 @@ window.AlixoSheets = (() => {
     const cell = cellAt(s, sel.ar, sel.ac) || {};
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor((d() || {}).id) : null;
-      bar.innerHTML = `<div class="sh-barl"><span class="sh-barlabel">${esc(s.name)}</span><span class="sh-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span></div>
-        <div class="sh-barr"><button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button><button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button></div>`;
+      bar.innerHTML = `<div class="sh-barl"><span class="sh-barlabel">${esc(s.name)}</span><span class="sh-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}</div>
+        <div class="sh-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}<button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button><button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button></div>`;
       return;
     }
     const on = (p, v) => (v === undefined ? (cell[p] ? 'on' : '') : (cell[p] || '') === v ? 'on' : '');
@@ -927,8 +927,11 @@ window.AlixoSheets = (() => {
       <button data-sh="freeze" class="${s.frozen && (s.frozen.r || s.frozen.c) ? 'on' : ''}" title="Figer les lignes et colonnes jusqu’à la cellule active">${I.freeze}</button>
       <button data-sh="chart" class="${chartOn ? 'on' : ''}" title="Graphique de la sélection">${I.chart}</button>
       <button data-sh="import" title="Importer un fichier CSV dans cette feuille">${I.imp}</button>
+      <span class="sh-sep"></span>
+      ${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}
     </div>
     <div class="sh-barr">
+      ${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}
       <button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button>
       <button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button>
     </div>`;
@@ -960,11 +963,15 @@ window.AlixoSheets = (() => {
       body += '</tr>';
     }
     host.innerHTML = `<table class="sh-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+    applyZoom();
     tds.clear();
     host.querySelectorAll('tbody td').forEach(td => tds.set(td.dataset.r + ',' + td.dataset.c, td));
     paint();
   }
 
+  /* 1.34 : zoom de la grille (Ctrl + molette, barre d'outils) — propriété CSS zoom sur le tableau */
+  const zoom = () => (window.AlixoZoom ? AlixoZoom.get('sheet') : 1);
+  function applyZoom() { const t = $('#sh-grid .sh-table'); if (t) t.style.zoom = zoom() === 1 ? '' : String(zoom()); }
   /* recalcule toutes les valeurs (cache vidé) */
   function recalc() { calcCache = new Map(); }
 
@@ -1324,6 +1331,7 @@ window.AlixoSheets = (() => {
       if (k === 'undo') { undo(); return; } if (k === 'redo') { redo(); return; }
       if (k === 'pdf') { exportPDF(); return; } if (k === 'csv') { exportCSV(); return; }
       if (k === 'chart') { chartOn = !chartOn; renderSide(); renderBar(); return; }
+      if (k === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (readOnly) return;
       if (k === 'b' || k === 'i' || k === 'u' || k === 'wrap') { toggleStyle(k === 'wrap' ? 'w' : k); focusGrid(); return; }
       if (k === 'al') { styleSel({ a: b.dataset.al }); focusGrid(); return; }
@@ -1369,6 +1377,7 @@ window.AlixoSheets = (() => {
 
     /* grille : sélection à la souris, redimensionnement, menu contextuel */
     const grid = $('#sh-grid');
+    if (window.AlixoZoom) { AlixoZoom.onChange('sheet', () => { applyZoom(); renderBar(); }); AlixoZoom.bindWheel(grid, 'sheet'); }   // 1.34 : zoom
     grid.addEventListener('pointerdown', e => {
       const res = e.target.closest('[data-resc], [data-resr]');
       if (res) { startResize(e, res); return; }
@@ -1455,6 +1464,8 @@ window.AlixoSheets = (() => {
       const mod = e.ctrlKey || e.metaKey;
       const popOpen = ($('#popover') && !$('#popover').hidden) || ($('#searchov') && !$('#searchov').hidden) || ($('#setov') && !$('#setov').hidden) || !!$('.dlgov');
       if (popOpen) return;
+      if (window.AlixoZoom && AlixoZoom.handleKey(e, 'sheet')) return;   // 1.34 : Ctrl + / − / 0
+      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
       if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
       if (mod && e.key === 'Tab') { e.preventDefault(); cycleTab(e.shiftKey ? -1 : 1); return; }
@@ -1562,7 +1573,7 @@ window.AlixoSheets = (() => {
   }
   function moveResize(e) {
     const s = sheet(); if (!s || !dragSize) return;
-    const delta = dragSize.isCol ? e.clientX - dragSize.x : e.clientY - dragSize.y;
+    const delta = (dragSize.isCol ? e.clientX - dragSize.x : e.clientY - dragSize.y) / zoom();
     const v = Math.max(dragSize.isCol ? 30 : 18, Math.round(dragSize.start + delta));
     if (dragSize.isCol) {
       (s.cols || (s.cols = {}))[dragSize.i] = v;

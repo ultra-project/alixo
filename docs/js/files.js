@@ -8,7 +8,8 @@
    - Avec un compte : users/{uid}/files/{id} (fiche + nombre de morceaux) et
      users/{uid}/files/{id}/chunks/{n} (contenu, par morceaux de 700 Ko — un document Firestore est limité à 1 Mio).
      Le contenu n'est téléchargé sur un autre appareil qu'à la première ouverture.
-   - Ouverture dans l'application : PDF, images, Word (.docx), PowerPoint (.pptx), Excel (.xlsx), texte, audio, vidéo ;
+   - Ouverture dans l'application : PDF, images, Word (.docx), OpenDocument (.odt), PowerPoint (.pptx), Excel (.xlsx), texte, audio, vidéo ;
+     1.34 : un .docx ou .odt s'ouvre aussi « dans Alixo » (js/office.js) : il devient une séance modifiable ;
      les autres formats s'ouvrent avec l'application associée (version PC) ou s'enregistrent.
    - Partage (1.17, js/share.js) : un fichier seul ou les fichiers d'un dossier partagé sont recopiés dans
      shares/{sid}/files/{id}. Les fiches reçues ({ sid, id, name, … }) s'ouvrent dans la même visionneuse,
@@ -245,6 +246,7 @@ window.AlixoFiles = (() => {
     ov = document.createElement('div'); ov.id = 'fileov'; ov.hidden = true;
     ov.innerHTML = `<div class="fv-win" role="dialog" aria-modal="true">
         <div class="fv-head"><span class="fv-icon"></span><div class="fv-tt"><div class="fv-name"></div><div class="fv-meta"></div></div>
+          <button class="cta small" data-fv="edit" type="button" hidden title="Ouvrir ce document comme une séance Alixo : titres, paragraphes, listes, tableaux et images deviennent modifiables (retour en Word par Exporter › Word)">Modifier dans Alixo</button>
           <button class="cta ghost small" data-fv="side" type="button" title="Afficher ce fichier à côté de la séance ouverte, pour prendre des notes">À côté du cours</button>
           <button class="cta ghost small" data-fv="ext" type="button" title="Ouvrir avec l’application associée (Word, lecteur PDF…)">Ouvrir avec…</button>
           <button class="cta ghost small" data-fv="save" type="button" title="Enregistrer une copie sur l’ordinateur">Enregistrer une copie</button>
@@ -259,6 +261,7 @@ window.AlixoFiles = (() => {
       if (k === 'save') saveCopy(src);
       if (k === 'ext') openExternal(src);
       if (k === 'side') { closeViewer(); showBeside(src); }
+      if (k === 'edit') { const v = viewing; if (!v || !v.buf || !window.AlixoOffice) return; const f = v.h.f; closeViewer(); AlixoOffice.importAsDoc({ name: f.name, buf: v.buf, folderId: v.h.shared ? null : (f.folderId || null), fileId: v.h.shared ? null : f.id }); }
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && !ov.hidden) { e.preventDefault(); e.stopPropagation(); closeViewer(); } }, true);
     return ov;
@@ -284,6 +287,7 @@ window.AlixoFiles = (() => {
       : `${kindOf(f.name).label} · ${fmtSize(f.size)} · ajouté le ${fmtDate(f.createdAt || Date.now())}${folder(f.folderId) ? ' · ' + folderPath(f.folderId).map(x => x.nom).join(' › ') : ''}`;
     ov.querySelector('[data-fv="ext"]').hidden = !(window.alixoDesktop && window.alixoDesktop.openData);
     ov.querySelector('[data-fv="side"]').hidden = !currentDocId;
+    ov.querySelector('[data-fv="edit"]').hidden = true;
     const body = ov.querySelector('.fv-body');
     body.innerHTML = `<div class="vw-empty">Ouverture de « ${esc(f.name)} »…<div class="fv-prog" hidden><span></span></div></div>`;
     ov.hidden = false;
@@ -296,6 +300,8 @@ window.AlixoFiles = (() => {
         : `Le contenu de ce fichier n’est pas sur cet appareil et n’a pas pu être téléchargé.<br>${f.cloud ? 'Vérifiez la connexion internet, puis réessayez.' : 'Il a été ajouté sur un autre appareil et n’a pas encore été synchronisé (ou il dépasse 20 Mo).'}`}</div>`;
       return;
     }
+    viewing.buf = buf;
+    ov.querySelector('[data-fv="edit"]').hidden = !(window.AlixoOffice && AlixoOffice.canEdit(f.name));
     viewing.cleanup = await render(body, f.name, buf);
   }
   const openShared = f => open(f);
@@ -312,6 +318,11 @@ window.AlixoFiles = (() => {
         if (typeof mammoth === 'undefined') throw new Error('Convertisseur Word indisponible');
         const r = await mammoth.convertToHtml({ arrayBuffer: buf });
         body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+      } else if (ext === 'odt') {   // 1.34 : OpenDocument
+        body.innerHTML = `<div class="vw-empty">Lecture du document OpenDocument…</div>`;
+        if (!window.AlixoOffice) throw new Error('Lecteur OpenDocument indisponible');
+        const h = await AlixoOffice.odtToHtml(buf);
+        body.innerHTML = `<div class="vw-doc">${h || '<i>Document vide</i>'}</div>`;
       } else if (ext === 'pptx') {
         body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
         body.innerHTML = `<div class="fv-slides">${await pptxToHtml(buf)}</div>`;
