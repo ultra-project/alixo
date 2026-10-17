@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-17T17:06:32.891Z",
+ "generatedAt": "2026-10-17T20:05:11.350Z",
  "version": "1.37.1",
  "date": "2026-10-17T17:06:17Z",
  "notes": "Nouveautés 1.37.1 — Correction : « WebGPU n’a pas pu démarrer sur cet appareil »\n\n\n- **AlixoAI démarre sur davantage d’ordinateurs.** Sur bien des portables (puce graphique Intel ou AMD intégrée, pilote\n  ancien), la version PC refusait l’accélération graphique et AlixoAI répondait « WebGPU n’a pas pu démarrer sur cet\n  appareil ». La version PC force désormais l’accélération graphique et ignore la liste noire de Chromium ; AlixoAI\n  demande ensuite la carte graphique de trois façons (performante, par défaut, économe) avant de renoncer.\n- **« Réessayer » réessaie vraiment.** Un premier échec au lancement (processus graphique encore en train de démarrer)\n  n’est plus mémorisé pour toute la session : la demande suivante refait l’essai.\n- **Un message qui dit pourquoi.** En cas d’échec, le message indique la cause exacte (adaptateur absent, accélération\n  matérielle désactivée, erreur du pilote) plutôt qu’une phrase générique.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.1",

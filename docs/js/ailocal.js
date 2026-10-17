@@ -35,7 +35,8 @@ window.AlixoLocalAI = (() => {
   const BASE = (() => { try { return new URL('.', document.currentScript.src); } catch { return new URL('js/', location.href); } })();
   const LIB_URL = new URL('vendor/web-llm.js', BASE).href;
   const WORKER_URL = new URL('ailocal-worker.js', BASE).href;
-  const FIRST_TOKEN_MS = 90000;  // 1.36.4 : au-delà sans le moindre jeton (lecture de la consigne), le moteur est considéré bloqué
+  const FIRST_TOKEN_MS = 150000; // 1.36.4 : au-delà sans le moindre jeton (lecture de la consigne), le moteur est considéré bloqué (1.37.2 : 150 s)
+  const FIRST_TOKEN_COLD_MS = 240000; // 1.37.2 : première réponse après un chargement (programmes graphiques encore à préparer) : 240 s
   const STALL_MS = 30000;        // entre deux jetons
   const LIVE_LS = 'alixo.ai.live';   // clé du modèle chargé ; effacée à la fermeture normale de la page → encore là = fermeture brutale
 
@@ -63,6 +64,7 @@ window.AlixoLocalAI = (() => {
   let worker = null;             // Web Worker qui héberge le moteur
   let workerOk = null;           // null = pas encore essayé, false = indisponible (pas de WebGPU dans le worker) → fil principal
   let loading = null;            // Promise en cours de load()
+  let cold = false;              // 1.37.2 : aucune réponse encore produite depuis le dernier chargement (délai plus long)
   const jobs = [];               // 1.36.4 : file des requêtes ; celles de l'utilisateur passent devant celles d'arrière-plan
   let current = null;            // requête en cours
   const st = { state: 'idle', key: '', progress: 0, text: '', phase: '', error: '', busy: false, gen: 0 };
@@ -115,6 +117,7 @@ window.AlixoLocalAI = (() => {
       if (!adapter) return { ok: false, reason: 'Aucune carte graphique utilisable n’a été trouvée par le navigateur (WebGPU présent, adaptateur absent : pilotes graphiques à mettre à jour, ou accélération matérielle désactivée).', recommended: 'leger' };
       const info = adapter.info || {};
       const vendor = String(info.vendor || info.description || '').toLowerCase();
+      const desc = [info.vendor, info.architecture, info.description, info.device].filter(Boolean).join(' · ');
       const bind = Number(adapter.limits && adapter.limits.maxStorageBufferBindingSize) || 0;   // ≥ 1 Gio chez les cartes capables
       const memory = Number(navigator.deviceMemory) || 0;                                      // Go de RAM (plafonné à 8 par le navigateur)
       const mobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent || '');
@@ -125,7 +128,7 @@ window.AlixoLocalAI = (() => {
          système : le modèle y tenait, mais au prix de gels, de réponses de plusieurs minutes et de fermetures brutales. */
       if (mobile || (memory && memory <= 4) || (bind && bind < 1024 * 1024 * 1024)) recommended = 'leger';
       else if (/nvidia|geforce|rtx|quadro|apple/.test(vendor) && (!memory || memory >= 8)) recommended = 'complet';
-      probed = { ok: true, reason: '', vendor, memory, bind, mobile, f16, recommended };
+      probed = { ok: true, reason: '', vendor, desc, memory, bind, mobile, f16, recommended };
       return probed;
     } catch (e) {
       return { ok: false, reason: 'La carte graphique n’a pas répondu (' + (e && e.message || e) + ').', recommended: 'leger' };
@@ -232,7 +235,7 @@ window.AlixoLocalAI = (() => {
             eng = await create();
           } else throw e;
         }
-        engine = eng;
+        engine = eng; cold = true;
         set({ state: 'ready', progress: 1, text: 'Modèle prêt', phase: 'ready' });
         return eng;
       } catch (e) {
@@ -243,6 +246,8 @@ window.AlixoLocalAI = (() => {
     })();
     return loading;
   }
+  /* 1.37.2 : message d'un moteur muet, avec le détail technique utile au diagnostic */
+  const mute = (changed, waited) => `AlixoAI n’a pas répondu (aucun mot produit en ${Math.round((waited || FIRST_TOKEN_MS) / 1000)} s)${changed ? ', même après passage en ' + changed : ''}. Détail : ${probed && probed.desc ? probed.desc : 'carte inconnue'} · ${(MODELS[st.key || recommend()] || {}).label || ''} · ${useF32() ? 'f32' : 'f16'} · ${workerOk ? 'fil dédié' : 'fil principal'}. Réessayez ; si cela persiste, signalez ce détail.`;
   const isShaderError = e => /ShaderModule|shader|compute stage|entryPoint|f16|Tint|WGSL/i.test(String(e && e.message || e || ''));
   function friendly(e) {
     const m = String(e && e.message || e || '');
@@ -280,8 +285,10 @@ window.AlixoLocalAI = (() => {
      fil de l'eau (lecture progressive : le quiz commence dès la première question). `token` permet d'annuler (cancel). */
   async function chat({ system, user, messages, maxTokens = 1024, temperature = 0, timeoutMs = 180000, key, background = false, onToken, token, stop, quiet = false } = {}) {
     const job = { background, quiet, eng: null, interrupted: false, tokens: 0, token: token || null };   // quiet : l'appelant affiche lui-même l'avancement (pas de barre discrète)
-    const once = async () => {
-      const eng = await load(key || st.key || recommend());
+    const once = async forceKey => {
+      // 1.37.2 : jamais au-dessus de la taille conseillée (plafond mémorisé après un moteur muet ou une fermeture brutale)
+      const want = forceKey || key || st.key || recommend();
+      const eng = await load(ORDER.indexOf(want) > ORDER.indexOf(recommend()) ? recommend() : want);
       job.eng = eng; job.tokens = 0;
       if (job.interrupted) throw Object.assign(new Error('interrupted'), { interrupted: true });
       const msgs = Array.isArray(messages) && messages.length ? messages.map(m => ({ role: m.role, content: String(m.content || '') }))
@@ -305,7 +312,7 @@ window.AlixoLocalAI = (() => {
           const ch = chunk && chunk.choices && chunk.choices[0];
           if (ch) {
             if (ch.delta && ch.delta.content) {
-              text += ch.delta.content; job.tokens++;
+              text += ch.delta.content; job.tokens++; cold = false;
               if (job.tokens % 8 === 0) set({ gen: job.tokens }, 'gen');
               if (onToken) { try { onToken(text, ch.delta.content); } catch { /* lecteur */ } }
             }
@@ -316,7 +323,7 @@ window.AlixoLocalAI = (() => {
         }
       };
       try {
-        arm(FIRST_TOKEN_MS);
+        job.waited = cold ? FIRST_TOKEN_COLD_MS : FIRST_TOKEN_MS; arm(job.waited);
         hardTm = setTimeout(stopGen, timeoutMs);
         await Promise.race([consume(), guard]);
       } finally { clearTimeout(stallTm); clearTimeout(hardTm); }
@@ -332,16 +339,33 @@ window.AlixoLocalAI = (() => {
           const m = String(e && e.message || e || '');
           if (e && e.interrupted) return { ok: false, status: 499, error: job.token && job.cancelled ? 'Demande annulée.' : 'Requête mise de côté : une demande plus urgente est passée devant.' };
           if (m === 'timeout') {
-            // aucun jeton reçu : le moteur est bloqué (carte graphique muette) → on le libère, il sera rechargé à la prochaine demande
-            if (!job.tokens) await dispose();
-            return { ok: false, status: 0, error: job.tokens ? 'AlixoAI met trop de temps à répondre : réessayez avec un passage plus court.' : 'AlixoAI n’a pas répondu : le moteur a été relancé, réessayez.' };
+            if (job.tokens) return { ok: false, status: 0, error: 'AlixoAI met trop de temps à répondre : réessayez avec un passage plus court.' };
+            // aucun jeton reçu : le moteur est bloqué (carte graphique muette) → on le libère. 1.37.2 : au lieu de rendre la main,
+            // on allège (taille en dessous, puis variante f32 — certains pilotes se figent sur les programmes f16) et on rejoue
+            // la requête une fois dans la foulée ; l'allègement est mémorisé pour les fois suivantes.
+            await dispose();
+            const k = st.key || recommend();
+            let changed = '', next = k;
+            if (ORDER.indexOf(k) > 0) { const lighter = downgrade(k); if (lighter) { changed = 'taille « ' + MODELS[lighter].label + ' »'; next = lighter; } }
+            else if (!useF32()) { forceF32 = true; try { localStorage.setItem(F32_LS, '1'); } catch { /* */ } changed = 'variante compatible (f32)'; }
+            if (changed && !job.retried) {
+              job.retried = true; set({ state: 'idle', key: '', progress: 0, text: '', phase: '' });
+              try { res = await once(next); }
+              catch (e3) {
+                if (e3 && e3.interrupted) return { ok: false, status: 499, error: 'Requête mise de côté : une demande plus urgente est passée devant.' };
+                if (String(e3 && e3.message || e3) === 'timeout' && !job.tokens) await dispose();
+                return { ok: false, status: 0, error: String(e3 && e3.message || e3) === 'timeout' ? mute(changed, job.waited) : friendly(e3) };
+              }
+            } else return { ok: false, status: 0, error: mute('', job.waited) };
           }
+          else {
           if (/ContextWindowSizeExceeded|context window/i.test(m)) return { ok: false, status: 0, error: friendly(e) };
           // moteur abîmé (objet libéré, périphérique perdu…) : on le recharge une fois et on rejoue la requête
           try { await dispose(); res = await once(); }
           catch (e2) {
             if (e2 && e2.interrupted) return { ok: false, status: 499, error: 'Requête mise de côté : une demande plus urgente est passée devant.' };
             return { ok: false, status: 0, error: String(e2 && e2.message || e2) === 'timeout' ? 'AlixoAI met trop de temps à répondre — réessayez.' : friendly(e2) };
+          }
           }
         }
         const text = toJSON(res.text);

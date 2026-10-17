@@ -11,9 +11,19 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.37.1 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.37.2 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.37.2', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'AlixoAI <em>s’adapte</em>', text: 'Correction pour les ordinateurs où AlixoAI répondait « le moteur a été relancé, réessayez ».' },
+    { title: 'Muette ? Elle <em>s’allège</em>', text: 'Si la carte graphique ne produit aucun mot, AlixoAI passe en version plus légère, recharge et rejoue votre demande, sans rien demander.',
+      bullets: ['<b>Taille en dessous</b>, puis variante compatible', '<b>Délais</b> adaptés aux petites puces graphiques', '<b>Message précis</b> si rien ne marche malgré tout'],
+      art: { icon: '✨' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.37.1', {
   scenes: [
@@ -43,25 +53,6 @@ AlixoWhatsNew.register('1.37.0', {
     { title: 'Discrète, <em>vraiment</em>', text: 'Rien ne s’affiche tant que vous ne demandez rien ; la barre en bas à droite ne paraît que si une demande attend.',
       bullets: ['<b>« AlixoAI rédige · n mots »</b> pendant une réponse', '<b>Fermeture brutale</b> : AlixoAI repart plus légère'],
       art: 'list', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 6500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.36.4', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'L’IA, <em>sans gel</em>', text: 'Le modèle sur votre appareil ne fige plus Alixo, et vos demandes passent devant tout le reste.' },
-    { title: 'Alixo reste <em>fluide</em>', text: 'Le moteur tourne désormais à part : vous continuez d’écrire et de naviguer pendant qu’il charge ou qu’il rédige.',
-      bullets: ['<b>Chargement</b> du modèle sans écran figé', '<b>Correction et quiz</b> rédigés pendant que vous travaillez', '<b>Rien à régler</b> : la mise à jour s’applique toute seule'],
-      art: 'text', accent: '#33658a', accent2: '#2e8b6a', dur: 7000 },
-    { title: 'La réponse <em>avance</em> sous vos yeux', text: 'La barre en bas à droite compte les mots rédigés ; un moteur bloqué est détecté en moins d’une minute et relancé.',
-      bullets: ['<b>« Réponse en cours · n mots »</b> pendant la rédaction', '<b>Plus d’attente</b> de plusieurs minutes pour rien', '<b>Délais</b> plus courts, moteur relancé seulement s’il est muet'],
-      art: { icon: '✨' }, accent: '#b3762a', accent2: '#33658a', dur: 7000 },
-    { title: 'Vos demandes <em>passent devant</em>', text: 'F7, le Quiz IA et la fiche n’attendent plus derrière la correction de la frappe : ils l’interrompent et passent en premier.',
-      bullets: ['<b>F7 et F8</b> prioritaires, tout de suite', '<b>La frappe</b> ne charge plus le modèle ni ne s’empile'],
-      art: 'quiz', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 6500 },
-    { title: 'Un modèle <em>adapté</em> à votre machine', text: '« Complet » n’est conseillé que sur carte NVIDIA ou Mac Apple Silicon ; ailleurs, « Équilibré ». Au choix dans Paramètres › IA.',
-      bullets: ['<b>Fermeture brutale</b> pendant l’IA : modèle allégé au prochain démarrage', '<b>Version PC</b> : la fenêtre se recharge au lieu de rester blanche'],
-      art: 'list', accent: '#2e8b6a', accent2: '#b3762a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
