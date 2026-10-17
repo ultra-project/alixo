@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-17T10:45:19.919Z",
- "version": "1.36.1",
- "date": "2026-10-17T10:21:26Z",
- "notes": "Nouveautés 1.36.1 — L’IA s’installe toute seule, et tourne sur toutes les cartes graphiques\n\n\n- **Plus rien à configurer : l’IA s’installe d’elle-même.** Avec Alixo+, dès que l’appareil sait faire tourner le modèle\n  (WebGPU), Alixo télécharge tout seul le modèle conseillé quelques secondes après l’ouverture, sans rien demander — une\n  petite barre en bas à droite montre l’avancement, puis « IA prête ». Aux lancements suivants, le modèle se charge au\n  démarrage : la correction (F7), l’analyse pendant la frappe et le Quiz IA (F8) répondent tout de suite. Si le\n  téléchargement n’a pas encore eu lieu, la première demande le lance. Paramètres › IA se résume à l’essentiel : l’état,\n  la taille du modèle (Léger / Équilibré / Complet, la taille conseillée est marquée), « Installer maintenant »,\n  « Désactiver » (qui arrête tout, « Réactiver » pour revenir) et « Effacer de l’appareil ».\n- **Correction : l’erreur « Invalid ShaderModule … index_kernel » au chargement du modèle.** Sur les cartes graphiques\n  (ou pilotes) qui n’acceptent pas les calculs en demi-précision (extension WebGPU « shader-f16 »), le programme du modèle\n  ne compilait pas. Alixo détecte maintenant cette extension et sert la variante compatible du même modèle (f32, un peu\n  plus de mémoire graphique) ; si la compilation échoue malgré tout, il bascule de lui-même sur cette variante et s’en\n  souvient. Le message d’erreur, le cas échéant, dit quoi faire.\n- Le Quiz IA et le panneau de correction n’affichent plus d’écran d’activation : ils travaillent directement ; seul un\n  appareil sans WebGPU, ou une IA désactivée, mène aux Paramètres.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.1",
+ "generatedAt": "2026-10-17T10:50:35.678Z",
+ "version": "1.36.2",
+ "date": "2026-10-17T10:50:17Z",
+ "notes": "Nouveautés 1.36.2 — Correction : l’IA sur l’appareil répondait par une erreur « grammar matcher »\n\n\n- **Corrigé : « Failed to initialize the grammar matcher for response format `json_object`: Cannot pass non-string to\n  std::string ».** Le modèle se chargeait bien, mais la première demande (correction F7, Quiz IA F8, mise en forme) échouait :\n  le moteur WebLLM exige un schéma pour garantir une réponse JSON et Alixo ne lui en donnait pas. Alixo fournit désormais ce\n  schéma (les réponses restent du JSON garanti) et, si la grammaire échouait malgré tout sur un appareil, recommence sans\n  contrainte : les consignes demandent déjà du JSON et Alixo sait l’extraire de la réponse.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.2",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Setup.exe",
-   "size": 78629190
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.2/Alixo-Setup.exe",
+   "size": 78630710
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Portable.exe",
-   "size": 78392125
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.2/Alixo-Portable.exe",
+   "size": 78393644
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Mac.dmg",
-   "size": 186626967
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.2/Alixo-Mac.dmg",
+   "size": 186608423
   },
   "macZip": {
-   "name": "Alixo-1.36.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-1.36.1-mac.zip",
-   "size": 179912419
+   "name": "Alixo-1.36.2-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.2/Alixo-1.36.2-mac.zip",
+   "size": 179912294
   }
  },
  "history": [
+  {
+   "version": "1.36.2",
+   "date": "2026-10-17T10:50:17Z",
+   "notes": "Nouveautés 1.36.2 — Correction : l’IA sur l’appareil répondait par une erreur « grammar matcher »\n\n\n- **Corrigé : « Failed to initialize the grammar matcher for response format `json_object`: Cannot pass non-string to\n  std::string ».** Le modèle se chargeait bien, mais la première demande (correction F7, Quiz IA F8, mise en forme) échouait :\n  le moteur WebLLM exige un schéma pour garantir une réponse JSON et Alixo ne lui en donnait pas. Alixo fournit désormais ce\n  schéma (les réponses restent du JSON garanti) et, si la grammaire échouait malgré tout sur un appareil, recommence sans\n  contrainte : les consignes demandent déjà du JSON et Alixo sait l’extraire de la réponse.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.2"
+  },
   {
    "version": "1.36.1",
    "date": "2026-10-17T10:21:26Z",
@@ -220,11 +225,6 @@
    "version": "1.9.1",
    "date": "2026-09-10T15:15:36Z",
    "notes": "## Alixo 1.9.1\n\n- **Curseur** : sur un paragraphe vide, le curseur reste au début au lieu de se placer derrière « Écrivez, ou tapez / » (idem pour les titres, légendes et champs de fiche d'arrêt).\n- **Barre d'outils épurée** : les blocs (encadrés, fiche d'arrêt, formule, graphique, tableau, image, dessin) s'insèrent uniquement par le menu **« / »** ou le bouton « / Insérer un bloc » du volet plan. La barre garde la mise en forme du texte et les outils (IA, calculatrice, TI-83, dictionnaire, agenda, document à côté).\n- **Référence d'article** : bouton **§** (barre et volet plan), insérée à l'endroit du curseur.\n- **Menu « / »** : plus d'outils dedans (dictionnaire, agenda, document, TI-83, calculatrice restent dans la barre).\n- **Dessin** : rectangle arrondi, triangle, losange, hexagone, étoile, double flèche ; tirets / pointillés, épaisseur jusqu'à 8 px ; nuanciers rapides de trait et de fond ; texte gras, centré ou à droite, cadre ; dupliquer, tout effacer.\n- **Document à côté** mémorisé **par séance** : le dernier document revient automatiquement en rouvrant la séance ; en changeant de séance le panneau se vide ; bouton « récents » avec l'historique.\n- **Agenda** : cartes d'événements redessinées (plage horaire, durée, « En cours », lieu, hebdomadaire, cours lié, ＋ séance).\n\nMise à jour automatique pour la version installée ; version portable disponible sur alixoapp.com."
-  },
-  {
-   "version": "1.9.0",
-   "date": "2026-09-10T14:40:37Z",
-   "notes": "## Alixo 1.9.0\n\n### Éditeur continu (façon Google Docs)\n- Une seule zone d'écriture : sélection, suppression, flèches, copier-coller et mise en forme traversent tout le cours. Titres, encadrés, fiches restent des blocs (plan, journal, export, synchronisation inchangés).\n- **Images** dans le cours (fichier, collage, glisser-déposer) : taille par poignées ou clic droit (25 / 50 / 75 / 100 % ou personnalisée en % / px), alignement, recadrage non destructif, légende, remplacement. Les encadrés et tableaux se placent à côté d'une image flottante.\n- Taille de police libre, exposant / indice, listes à puces / numérotées / cases à cocher sur quatre niveaux, correcteur natif.\n\n### Nouveautés de cette version\n- **Dessin** (bouton ✎, `/dessin`) : rectangle, ellipse, trait, flèche, zone de texte, main levée, couleurs, épaisseur, devant / derrière, poignées, Suppr, Ctrl+D. Exporté en PDF et Word.\n- **Encadré Bilan** (`/bilan` ou « Bilan : » en début de ligne) ; « - » en début de ligne dans un encadré donne une puce •.\n- **Alignement** gauche / centré / droite / justifié (Ctrl+Maj+L / E / R / J) pour paragraphes, titres, listes, encadrés, cases de tableau et images.\n- **Couleurs** : palette de 80 teintes + couleur personnalisée pour le texte, le surlignage, les cases de tableau et le dessin ; encre blanche automatique sur fond foncé.\n- **Flèches automatiques** : `->` → →, `-->` → ⟶, `=>` → ⇒, `<-` → ←, `<->` → ↔, `<=>` → ⇔, `>` → →.\n- **IA** : corrections (Tab) et mise en forme (Maj+Tab) proposées séparément, Tab ne change jamais le style ; les règles de français s'effacent après quelques secondes ou dès que l'on reprend la frappe.\n- **Export PDF (Ctrl+P)** : rendu propre sur fond blanc, sans bordures parasites, pied de page « titre · n / N », enregistrement au **nom de la séance**.\n- **Agenda** : heures saisies librement (« 8h30 », « 14 »), ↑ ↓ par quart d'heure, la fin suit le début.\n- **Onglets** réordonnables par glisser-déposer ou Ctrl+Maj+PageUp / PageDown.\n- **Listes** dans les cases de tableau depuis la barre ; puces exportées en points.\n\nMise à jour automatique pour la version installée (Alixo-Setup.exe) ; la version portable se télécharge ici."
   }
  ]
 }
