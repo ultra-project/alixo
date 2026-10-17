@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-17T15:17:38.978Z",
- "version": "1.36.4",
- "date": "2026-10-17T11:44:57Z",
- "notes": "Nouveautés 1.36.4 — L’IA sur l’appareil ne fige plus Alixo : moteur à part, réponses en continu, priorité à vos demandes\n\n\n- **Alixo ne gèle plus pendant que l’IA travaille.** Le modèle tournait jusqu’ici dans la page elle-même : au chargement,\n  pendant la préparation de la carte graphique et à chaque réponse, l’application se figeait. Le moteur tourne désormais\n  dans un fil d’exécution à part : vous continuez à écrire, à naviguer et à ouvrir vos cours pendant qu’il charge ou\n  qu’il rédige. (Si le navigateur ne donne pas WebGPU à ce fil, Alixo revient à l’ancien fonctionnement.)\n- **Vous voyez la réponse avancer.** La barre discrète en bas à droite affiche « IA : réponse en cours · n mots » pendant\n  la rédaction. Un moteur réellement bloqué est détecté en 30 à 90 secondes sans réponse, puis libéré et rechargé à la\n  demande suivante, au lieu d’attendre plusieurs minutes. Les délais d’attente sont ramenés au double de ceux d’un\n  serveur (une minute au moins), et un simple dépassement ne recharge plus tout le modèle.\n- **Vos demandes passent devant.** F7, le Quiz IA et la fiche de révision n’attendent plus derrière la correction\n  pendant la frappe : ils l’interrompent et passent en premier. La frappe, elle, ne déclenche plus le chargement du\n  modèle et ne s’empile plus derrière une réponse en cours.\n- **Un modèle adapté à la machine.** « Complet » (4 milliards de paramètres, 3,5 Go de mémoire graphique) n’est plus\n  conseillé que sur une carte NVIDIA ou un Mac Apple Silicon ; sur les puces intégrées AMD ou Intel de la plupart des\n  portables, c’est « Équilibré ». Vous pouvez toujours choisir dans Paramètres › IA.\n- **Si Alixo s’est fermé brutalement pendant que l’IA tournait** (mémoire graphique épuisée, pilote planté), le modèle\n  descend d’un cran au démarrage suivant et la cloche vous l’explique ; déjà au plus léger, l’IA est désactivée sur cet\n  appareil jusqu’à ce que vous la réactiviez. Dans la version PC, la fenêtre se recharge au lieu de rester blanche.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.4",
+ "generatedAt": "2026-10-17T15:23:09.213Z",
+ "version": "1.37.0",
+ "date": "2026-10-17T15:22:52Z",
+ "notes": "Nouveautés 1.37.0 — AlixoAI : l’intelligence artificielle d’Alixo, prête dès l’ouverture et bien plus rapide\n\n\n- **AlixoAI remplace tout.** Plus de serveur à choisir, plus de clé, plus de taille de modèle à régler : l’intelligence\n  artificielle d’Alixo s’appelle AlixoAI, elle est intégrée à l’application et se prépare toute seule, en silence, au\n  premier démarrage qui suit l’installation ou une mise à jour (version PC comme version web). Elle choisit d’elle-même la\n  configuration adaptée à l’appareil ; sur le web, chaque demande est ajustée à ce que l’appareil sait faire. Paramètres › IA\n  se résume à l’état d’AlixoAI, « Désactiver » / « Réactiver », et aux réglages de ce qu’elle propose. Les anciens réglages\n  de serveur (OpenRouter, Ollama, serveur d’établissement) et les accès attribués par l’administration ne sont plus lus.\n- **Le Quiz IA commence dès la première question.** AlixoAI découpe le cours en passages, écrit une question par passage\n  et la livre dès qu’elle est terminée : vous répondez à la première pendant qu’elle rédige les suivantes. Si vous la\n  rattrapez, une carte « AlixoAI écrit la question suivante… » patiente à votre place. Un quiz de dix questions se joue\n  ainsi sans attente, là où il fallait plusieurs minutes avant d’en voir une seule.\n- **Des réponses deux à trois fois plus courtes à produire.** Consignes réécrites pour un petit modèle (courtes, avec un\n  exemple), réponses en lignes plutôt qu’en JSON bavard, budgets de texte adaptés à la taille d’AlixoAI, lots courts :\n  la correction (F7, frappe), la mise en forme, le quiz et la fiche de révision répondent nettement plus vite. Les lots\n  d’un même quiz s’enchaînent dans une seule conversation : AlixoAI ne relit pas sa consigne à chaque fois.\n- **La fiche de révision s’écrit sous vos yeux.** Chaque partie apparaît à l’écran d’attente dès qu’elle est rédigée, puis la\n  fiche complète s’affiche (résumé, parties, définitions, « À retenir », pièges).\n- **Rien ne s’affiche tant que vous ne demandez rien.** La préparation d’AlixoAI est invisible ; la petite barre en bas à\n  droite ne paraît que si une de vos demandes attend (« AlixoAI se prépare… », « AlixoAI rédige · n mots »). Si Alixo\n  s’est fermé brutalement pendant qu’AlixoAI travaillait, elle repart en version plus légère au démarrage suivant.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.0",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.4/Alixo-Setup.exe",
-   "size": 78632883
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Setup.exe",
+   "size": 78629214
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.4/Alixo-Portable.exe",
-   "size": 78395818
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Portable.exe",
+   "size": 78392136
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.4/Alixo-Mac.dmg",
-   "size": 186615569
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Mac.dmg",
+   "size": 186628485
   },
   "macZip": {
-   "name": "Alixo-1.36.4-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.4/Alixo-1.36.4-mac.zip",
-   "size": 179914641
+   "name": "Alixo-1.37.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-1.37.0-mac.zip",
+   "size": 179908675
   }
  },
  "history": [
+  {
+   "version": "1.37.0",
+   "date": "2026-10-17T15:22:52Z",
+   "notes": "Nouveautés 1.37.0 — AlixoAI : l’intelligence artificielle d’Alixo, prête dès l’ouverture et bien plus rapide\n\n\n- **AlixoAI remplace tout.** Plus de serveur à choisir, plus de clé, plus de taille de modèle à régler : l’intelligence\n  artificielle d’Alixo s’appelle AlixoAI, elle est intégrée à l’application et se prépare toute seule, en silence, au\n  premier démarrage qui suit l’installation ou une mise à jour (version PC comme version web). Elle choisit d’elle-même la\n  configuration adaptée à l’appareil ; sur le web, chaque demande est ajustée à ce que l’appareil sait faire. Paramètres › IA\n  se résume à l’état d’AlixoAI, « Désactiver » / « Réactiver », et aux réglages de ce qu’elle propose. Les anciens réglages\n  de serveur (OpenRouter, Ollama, serveur d’établissement) et les accès attribués par l’administration ne sont plus lus.\n- **Le Quiz IA commence dès la première question.** AlixoAI découpe le cours en passages, écrit une question par passage\n  et la livre dès qu’elle est terminée : vous répondez à la première pendant qu’elle rédige les suivantes. Si vous la\n  rattrapez, une carte « AlixoAI écrit la question suivante… » patiente à votre place. Un quiz de dix questions se joue\n  ainsi sans attente, là où il fallait plusieurs minutes avant d’en voir une seule.\n- **Des réponses deux à trois fois plus courtes à produire.** Consignes réécrites pour un petit modèle (courtes, avec un\n  exemple), réponses en lignes plutôt qu’en JSON bavard, budgets de texte adaptés à la taille d’AlixoAI, lots courts :\n  la correction (F7, frappe), la mise en forme, le quiz et la fiche de révision répondent nettement plus vite. Les lots\n  d’un même quiz s’enchaînent dans une seule conversation : AlixoAI ne relit pas sa consigne à chaque fois.\n- **La fiche de révision s’écrit sous vos yeux.** Chaque partie apparaît à l’écran d’attente dès qu’elle est rédigée, puis la\n  fiche complète s’affiche (résumé, parties, définitions, « À retenir », pièges).\n- **Rien ne s’affiche tant que vous ne demandez rien.** La préparation d’AlixoAI est invisible ; la petite barre en bas à\n  droite ne paraît que si une de vos demandes attend (« AlixoAI se prépare… », « AlixoAI rédige · n mots »). Si Alixo\n  s’est fermé brutalement pendant qu’AlixoAI travaillait, elle repart en version plus légère au démarrage suivant.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.0"
+  },
   {
    "version": "1.36.4",
    "date": "2026-10-17T11:44:57Z",
@@ -220,11 +225,6 @@
    "version": "1.11.0",
    "date": "2026-09-19T18:02:08Z",
    "notes": "Alixo 1.11.0 — onglets de séance, tâches, notifications, cartes, panneau d'administration"
-  },
-  {
-   "version": "1.10.0",
-   "date": "2026-09-17T20:01:41Z",
-   "notes": "## Alixo 1.10.0 — fichiers dans les dossiers, blocs dans des blocs, copie de tableaux, calculatrice collège\n\n**Nouveautés**\n- **Vrais fichiers dans les dossiers** : PDF, Word, PowerPoint, Excel, images, audio, vidéo… — bouton **＋ Fichier**, clic droit › *Importer des fichiers*, ou glisser-déposer depuis l'ordinateur. Ils **s'ouvrent dans Alixo** (PDF, .docx, .pptx, .xlsx / .csv, images, texte, audio, vidéo), sinon *Ouvrir avec…* ou *Enregistrer une copie*. Renommer, déplacer, supprimer (annulable), recherche Ctrl+K, export .zip, affichage **à côté du cours**. Synchronisés avec le compte (≤ 20 Mo par fichier).\n- **Blocs dans des blocs** : dans un encadré, une citation ou une case de tableau, « / » › *Dans ce bloc* → tableau, citation ou encadré imbriqué (jusqu'à 3 niveaux). Tab = case suivante, Ctrl+Entrée = sortir, clic droit = lignes / colonnes.\n- **Copier des tableaux** : boutons **Copier** / **Dupliquer** ; collage dans le cours, dans une case ou un encadré, ou vers Word / Excel. Un tableau copié depuis Excel, Word ou le web crée un vrai tableau ou remplit les cases.\n- **Calculatrice collège** : onglets **TI-83 Premium CE** et **Casio fx-92 Collège** dans le panneau des calculatrices.\n\n**Corrections**\n- Correction IA : le soulignement vert ne reste plus après la correction et ne « déteint » plus sur le texte tapé à côté (surlignage temporaire, anciens cours nettoyés).\n- Alixo Share : une séance ou un dossier reçu ne reste plus bloqué sur « Chargement… » (nouvel essai automatique, bouton Réessayer) ; envois plus fiables ; images des séances partagées transmises ; e-mail d'invitation en un clic (Gmail / messagerie) ou envoi automatique facultatif.\n- Agenda : le choix du dossier lié s'ouvre toujours (liste intégrée avec recherche)."
   }
  ]
 }
