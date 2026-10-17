@@ -1,7 +1,6 @@
 /* ============================================================
    Alixo — Quiz IA et fiches de révision (1.34, Alixo+ ; 1.35 : vue en onglet)
-   Depuis une séance, une présentation ou un tableur, l'IA (le serveur configuré dans Paramètres › IA,
-   moteur js/corr.js) lit le document et propose :
+   Depuis une séance, une présentation ou un tableur, AlixoAI (js/alixoai.js, 1.37) lit le document et propose :
    - un quiz à jouer sur place : QCM, vrai / faux, réponses courtes ou mélange, 5 à 20 questions, trois
      niveaux ; correction immédiate avec explication, score final, et au besoin enregistrement dans un
      document Quiz (le type de document, lui, reste indépendant : cette fonction ne le requiert pas) ;
@@ -11,15 +10,15 @@
    1.35 : plus de fenêtre surgissante — le Quiz IA est un onglet « Quiz IA — <document> » de la barre des onglets
    (AlixoApp.tabs, section #view-aiquiz, styles dans quiz.css § Quiz IA) : paramétrage en grandes cartes, animation
    de génération, question lisible en clair comme en sombre, « Question suivante » aussi par Entrée.
+   1.37 : génération progressive — AlixoAI livre chaque question dès qu'elle est écrite ; le quiz commence après la
+   première, les suivantes s'écrivent pendant que l'étudiant répond (écran d'attente seulement s'il les rattrape).
    Chargé APRÈS app.js et quizcore.js : utilise leurs globales (doc, findDoc, state, save, openDoc, requirePlus,
-   openSettings, toast, esc, uid, blockPlain, renderBlocks, AlixoCorr, QuizCore…).
+   openSettings, toast, esc, uid, blockPlain, renderBlocks, AlixoCorr, AlixoAI, QuizCore…).
    ============================================================ */
 'use strict';
 
 window.AlixoAIQuiz = (() => {
-  const MAX_CHARS = 16000;        // texte envoyé au modèle (au-delà : raccourci, en gardant le début de chaque partie)
-  const MAX_CHARS_LOCAL = 6000;   // 1.36 : modèle sur l'appareil (fenêtre de 8 000 jetons) — le document est résumé partie par partie
-  const maxChars = () => (typeof AlixoCorr !== 'undefined' && AlixoCorr.isLocal && AlixoCorr.isLocal() ? MAX_CHARS_LOCAL : MAX_CHARS);
+  const MAX_CHARS = 60000;        // texte confié à AlixoAI (elle le découpe elle-même en passages ; au-delà, le document est tronqué)
   const COUNTS = [5, 10, 15, 20];
   const KINDS = [['mix', 'Mélange', 'QCM, vrai / faux et réponses courtes'], ['qcm', 'QCM', 'Une bonne réponse parmi quatre'], ['vf', 'Vrai / Faux', 'Une affirmation, deux boutons'], ['courte', 'Réponse courte', 'Un mot ou une expression à taper']];
   const LEVELS = [['facile', 'Facile', 'Les notions principales, telles qu’elles sont écrites'], ['moyen', 'Moyen', 'Comprendre et distinguer'], ['difficile', 'Difficile', 'Détails, cas limites, raisonnement']];
@@ -81,7 +80,7 @@ window.AlixoAIQuiz = (() => {
     return parts.join('\n').trim();
   }
   /* raccourcit un long texte en gardant le début de chaque partie (titres) */
-  function shorten(text, max = maxChars()) {
+  function shorten(text, max = MAX_CHARS) {
     if (text.length <= max) return { text, cut: false };
     const secs = text.split(/\n(?=#{1,4} )/);
     if (secs.length < 3) return { text: text.slice(0, max) + '\n[…]', cut: true };
@@ -89,63 +88,12 @@ window.AlixoAIQuiz = (() => {
     return { text: secs.map(s => (s.length > share ? s.slice(0, share) + ' […]' : s)).join('\n'), cut: true };
   }
 
-  /* ---------------- appels au modèle ---------------- */
-  const parseJson = text => {
-    const t = String(text || '').replace(/^```(?:json)?\s*|\s*```$/g, '');
-    const m = t.match(/[\[{][\s\S]*[\]}]/); if (!m) return null;
-    try { return JSON.parse(m[0]); } catch { /* json cassé : tentative sur la dernière accolade fermante */ }
-    const i = m[0].lastIndexOf('}'); if (i > 0) { try { return JSON.parse(m[0].slice(0, i + 1).replace(/,\s*$/, '') + (m[0][0] === '[' ? ']' : '}')); } catch { /* */ } }
-    return null;
-  };
-  const kindLine = k => k === 'qcm' ? 'Toutes les questions sont des QCM (type "qcm").' : k === 'vf' ? 'Toutes les questions sont des affirmations vrai / faux (type "vf").' : k === 'courte' ? 'Toutes les questions sont à réponse courte (type "courte") : un mot, un nom, une date, un chiffre ou une expression de trois mots au plus.' : 'Mélange les types : environ la moitié de "qcm", un quart de "vf", un quart de "courte" (réponse d’un à trois mots).';
-  const levelLine = l => l === 'facile' ? 'Niveau facile : les notions principales, formulées comme dans le document.' : l === 'difficile' ? 'Niveau difficile : détails, exceptions, cas limites, raisonnement ; distracteurs plausibles.' : 'Niveau moyen : comprendre et distinguer les notions, pas seulement les reconnaître.';
-  /* 1.34.1 : génération par lots de 5 questions (réponses courtes : la clé n'a pas à couvrir 8 000 jetons d'un coup),
-     chaque lot évite les questions déjà posées ; onProgress(k, n) fait avancer l'écran d'attente */
-  const BATCH = 5;
-  async function genQuiz(ctx, onProgress) {
-    const all = []; let title = '', tokIn = 0, tokOut = 0, model = '', lastErr = '';
-    for (let b = 0; b < Math.ceil(ctx.n / BATCH) && all.length < ctx.n; b++) {
-      const k = Math.min(BATCH, ctx.n - all.length);
-      const avoid = all.length ? `\n\nQuestions déjà posées (n'en reprends aucune, interroge sur d'autres passages du document) :\n${all.map(q => '- ' + q.text).join('\n')}` : '';
-      const r = await genQuizBatch(Object.assign({}, ctx, { n: k }), avoid);
-      if (!r.ok) { lastErr = r.error; if (all.length) break; throw new Error(r.error); }
-      tokIn += r.tokIn || 0; tokOut += r.tokOut || 0; model = r.model || model;
-      if (!title && r.title) title = r.title;
-      const seen = new Set(all.map(q => C().norm(q.text)));
-      for (const q of r.questions) { if (all.length >= ctx.n) break; if (seen.has(C().norm(q.text))) continue; seen.add(C().norm(q.text)); all.push(q); }
-      if (onProgress) onProgress(all.length, ctx.n);
-      if (!r.questions.length) break;
-    }
-    if (!all.length) throw new Error(lastErr || 'Aucune question exploitable dans la réponse du modèle — réessayez.');
-    return { title: title || ('Quiz — ' + (ctx.title || 'révision')), questions: all, tokIn, tokOut, model, partial: all.length < ctx.n ? lastErr : '' };
-  }
-  async function genQuizBatch(ctx, avoid) {
-    const system = `Tu es un enseignant qui prépare un quiz de révision pour un étudiant (droit, économie, commerce, médecine et santé, STAPS…), à partir de SES notes de cours.
-Règles :
-- chaque question porte sur un élément précis du document fourni, jamais sur des connaissances extérieures ;
-- varie les parties du document : pas deux questions sur le même passage ;
-- QCM : quatre propositions courtes, de même nature, une seule juste, des distracteurs plausibles ;
-- vrai / faux : une affirmation nette, tranchée par le cours ;
-- réponse courte : un mot, un nom, une date, un chiffre ou une expression de trois mots au plus ;
-- "explication" : une ou deux phrases qui citent l’élément du cours ;
-- français soigné (typographie : « », apostrophe ’).
-${kindLine(ctx.kind)} ${levelLine(ctx.level)} Exactement ${ctx.n} questions.
-Réponds uniquement avec ce JSON :
-{"titre":"<titre court du quiz>","questions":[
- {"type":"qcm","question":"…","choix":["…","…","…","…"],"reponse":<indice 0 à 3 de la bonne proposition>,"explication":"…"},
- {"type":"vf","question":"<affirmation>","reponse":true,"explication":"…"},
- {"type":"courte","question":"…","reponses":["<réponse attendue>","<variante acceptée>"],"explication":"…"}
-]}
-Exemple (extrait de cours : « La prescription extinctive de droit commun est de cinq ans depuis la loi du 17 juin 2008. ») :
-{"titre":"La prescription","questions":[{"type":"qcm","question":"Quelle est la durée de la prescription extinctive de droit commun ?","choix":["Deux ans","Cinq ans","Dix ans","Trente ans"],"reponse":1,"explication":"Le cours précise que, depuis la loi du 17 juin 2008, le délai de droit commun est de cinq ans."}]}`;
-    const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}${avoid || ''}`;
-    const r = await AlixoCorr.call(null, { system, user, maxTokens: 350 + ctx.n * 240, minTokens: 120 + ctx.n * 110, timeoutMs: 120000, temperature: 0.35 });
-    if (!r.ok) return { ok: false, error: r.error || 'Le modèle n’a pas répondu' };
-    const j = parseJson(r.text);
-    const arr = j && (Array.isArray(j) ? j : j.questions);
-    if (!Array.isArray(arr) || !arr.length) return { ok: false, error: 'Le modèle n’a pas renvoyé de questions lisibles — réessayez.' };
-    const qs = arr.map(toQuestion).filter(Boolean).slice(0, ctx.n);
-    return { ok: true, title: S(j && j.titre), questions: qs, tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+  /* ---------------- appels à AlixoAI ----------------
+     1.37 : consignes, formats et lots vivent dans js/alixoai.js. Ici : conversion des questions au format QuizCore et
+     livraison progressive (onItem). */
+  async function genQuiz(ctx, onItem, gen) {
+    const r = await AlixoAI.run('quiz', { title: ctx.title, text: ctx.text, n: ctx.n, kind: ctx.kind, level: ctx.level }, { token: gen.token, cancelled: () => gen.cancelled, onItem: (x, i) => { const q = toQuestion(x); if (q && onItem) onItem(q, i); } });
+    return { title: r.title || ('Quiz — ' + (ctx.title || 'révision')), questions: r.questions.map(toQuestion).filter(Boolean), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model, partial: r.partial };
   }
   /* une question de l'IA → une question QuizCore */
   function toQuestion(x) {
@@ -173,24 +121,11 @@ Exemple (extrait de cours : « La prescription extinctive de droit commun est de
     q.ans = [q.opts[idx].id]; q.multi = false; q.expl = expl;
     return q;
   }
-  async function genSheet(ctx) {
-    const system = `Tu es un enseignant qui rédige une fiche de révision à partir des notes de cours d’un étudiant (droit, économie, commerce, médecine et santé, STAPS…).
-Règles :
-- tout vient du document : n’invente aucune notion, aucun chiffre, aucune date ;
-- phrases courtes et complètes, lisibles sans le cours (jamais « voir plus haut ») ;
-- "parties" : 3 à 7 parties qui suivent le plan du document, chacune avec 2 à 6 points clés et les définitions exactes qu’elle contient ;
-- "retenir" : l’essentiel en 3 à 6 phrases ; "pieges" : 0 à 4 confusions ou erreurs fréquentes ;
-- français soigné (typographie : « », apostrophe ’).
-Réponds uniquement avec ce JSON :
-{"titre":"…","resume":"<deux ou trois phrases qui situent le sujet>","parties":[{"titre":"…","points":["…","…"],"definitions":[{"terme":"…","definition":"…"}]}],"retenir":["…"],"pieges":["…"]}`;
-    const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}`;
-    const r = await AlixoCorr.call(null, { system, user, maxTokens: 3200, minTokens: 900, timeoutMs: 150000, temperature: 0.25 });
-    if (!r.ok) throw new Error(r.error || 'Le modèle n’a pas répondu');
-    const j = parseJson(r.text);
-    if (!j || typeof j !== 'object' || !Array.isArray(j.parties)) throw new Error('Le modèle n’a pas renvoyé de fiche lisible — réessayez.');
-    const parties = j.parties.map(p => p && typeof p === 'object' ? { titre: S(p.titre), points: (Array.isArray(p.points) ? p.points : []).map(S).filter(Boolean), definitions: (Array.isArray(p.definitions) ? p.definitions : []).map(d => d && typeof d === 'object' ? { terme: S(d.terme), definition: S(d.definition) } : null).filter(d => d && d.terme && d.definition) } : null).filter(p => p && (p.titre || p.points.length || p.definitions.length));
-    if (!parties.length) throw new Error('Fiche vide — réessayez.');
-    return { title: S(j.titre) || ('Fiche de révision — ' + (ctx.title || '')), resume: S(j.resume), parties, retenir: (Array.isArray(j.retenir) ? j.retenir : []).map(S).filter(Boolean), pieges: (Array.isArray(j.pieges) ? j.pieges : []).map(S).filter(Boolean), tokIn: r.tokIn, tokOut: r.tokOut };
+  async function genSheet(ctx, onItem, gen) {
+    const f = await AlixoAI.run('sheet', { title: ctx.title, text: ctx.text }, { token: gen.token, onItem });
+    const parties = (f.parties || []).map(p => ({ titre: S(p.titre), points: (p.points || []).map(S).filter(Boolean), definitions: (p.definitions || []).map(d => ({ terme: S(d.terme), definition: S(d.definition) })).filter(d => d.terme && d.definition) })).filter(p => p.titre || p.points.length || p.definitions.length);
+    if (!parties.length && !(f.retenir || []).length) throw new Error('Fiche vide — réessayez.');
+    return { title: S(f.title) || ('Fiche de révision — ' + (ctx.title || '')), resume: S(f.resume), parties, retenir: (f.retenir || []).map(S).filter(Boolean), pieges: (f.pieges || []).map(S).filter(Boolean), tokIn: f.tokIn, tokOut: f.tokOut };
   }
 
   /* ============================================================
@@ -312,7 +247,7 @@ Réponds uniquement avec ce JSON :
     if (s.step === 'gen') animateGen(s);
   }
   const stage = s => s.root.querySelector('.aq-stage');
-  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>L’IA n’est pas disponible sur cet appareil.</b><p>${esc((typeof AlixoCorr !== 'undefined' && AlixoCorr.getConfig().off) ? 'Elle a été désactivée dans les Paramètres.' : (window.AlixoLocalAI ? AlixoLocalAI.support().reason : ''))} Réglez cela dans Paramètres › IA (réactiver, ou choisir un serveur).</p>${settingsLink()}</div>`;
+  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>AlixoAI n’est pas disponible.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Réactiver).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settingsLink()}</div>`;
   const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
   const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
   const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;
@@ -330,7 +265,7 @@ Réponds uniquement avec ce JSON :
       </div>` : `<div class="aq-rows"><div class="aq-row"><label>Contenu</label><p class="aq-hint">La fiche reprend tout le document : un résumé, trois à sept parties avec leurs points clés et définitions, « À retenir », et les pièges à éviter. Vous pourrez l’insérer à la fin de la séance, en faire une nouvelle séance, la copier ou l’imprimer.</p></div></div>`}
       <div class="aq-foot">
         <button type="button" class="aq-go" data-aq="go">${ICON}<span>Générer ${quiz ? `${opts.n} question${opts.n > 1 ? 's' : ''}` : 'la fiche'}</span>${I.arrow}</button>
-        <span class="aq-note">Les notes partent au serveur d’IA configuré dans Paramètres › IA ; rien n’est conservé par Alixo.${s.cut ? ' Document long : le modèle en lit un extrait de chaque partie.' : ''}</span>
+        <span class="aq-note">AlixoAI construit le quiz uniquement à partir de ce document ; rien n’est conservé.${s.cut ? ' Document très long : seul le début est lu.' : ''}</span>
       </div>
     </div>`;
   }
@@ -344,13 +279,13 @@ Réponds uniquement avec ce JSON :
     const cards = Array.from({ length: Math.min(n, 10) }, (_, i) => `<div class="aq-gcard" style="--i:${i}"><i class="aq-gnum">${i + 1}</i><span class="aq-gl aq-gl1"></span><span class="aq-gl aq-gl2"></span><span class="aq-gl aq-gl3"></span><b class="aq-gok">✓</b></div>`).join('');
     return `<div class="aq-gen">
       <div class="aq-orb"><span></span><span></span><span></span><em>${ICON}</em></div>
-      <div class="aq-gtxt"><b class="aq-gstep">Lecture ${s.d.kind === 'slides' ? 'de la présentation' : s.d.kind === 'sheet' ? 'du tableur' : 'du cours'}…</b><p class="aq-gsub">${quiz ? `${n} question${n > 1 ? 's' : ''} · ${esc((KINDS.find(k => k[0] === opts.kind) || KINDS[0])[1])} · niveau ${esc((LEVELS.find(l => l[0] === opts.level) || LEVELS[1])[1].toLowerCase())}` : 'Fiche de révision : résumé, points clés, définitions, pièges'} — dix à quarante secondes selon le serveur.</p></div>
+      <div class="aq-gtxt"><b class="aq-gstep">Lecture ${s.d.kind === 'slides' ? 'de la présentation' : s.d.kind === 'sheet' ? 'du tableur' : 'du cours'}…</b><p class="aq-gsub">${quiz ? `${n} question${n > 1 ? 's' : ''} · ${esc((KINDS.find(k => k[0] === opts.kind) || KINDS[0])[1])} · niveau ${esc((LEVELS.find(l => l[0] === opts.level) || LEVELS[1])[1].toLowerCase())}` : 'Fiche de révision : résumé, points clés, définitions, pièges'} — ${quiz ? 'la première question arrive dans quelques secondes, la suite s’écrit pendant que vous répondez.' : 'les parties apparaissent au fur et à mesure.'}</p></div>
       <div class="aq-gbar"><i style="width:0%"></i></div>
       <div class="aq-gcards ${quiz ? '' : 'sheet'}">${cards}</div>
       <button type="button" class="aq-btn ghost" data-aq="cancel">Annuler</button>
     </div>`;
   }
-  const GEN_STEPS = { quiz: ['Lecture du cours…', 'Repérage des notions clés…', 'Rédaction des questions…', 'Choix des distracteurs…', 'Relecture des explications…'], fiche: ['Lecture du cours…', 'Rédaction du résumé…', 'Points clés et définitions…', '« À retenir » et pièges…', 'Mise en forme de la fiche…'] };
+  const GEN_STEPS = { quiz: ['Lecture du cours…', 'Repérage des notions clés…', 'Rédaction de la première question…', 'Choix des distracteurs…', 'Relecture…'], fiche: ['Lecture du cours…', 'Rédaction du résumé…', 'Points clés et définitions…', '« À retenir » et pièges…', 'Mise en forme de la fiche…'] };
   function animateGen(s) {
     const g = s.gen; if (!g) return;
     const root = stage(s); const steps = GEN_STEPS[opts.mode !== 'fiche' ? 'quiz' : 'fiche'];
@@ -359,7 +294,7 @@ Réponds uniquement avec ce JSON :
       if (s.gen !== g || !root.isConnected) { clearInterval(g.stepTm); return; }
       k = Math.min(steps.length - 1, k + 1);
       const el = root.querySelector('.aq-gstep'); if (el && !g.doneK) { el.classList.remove('swap'); void el.offsetWidth; el.textContent = steps[k]; el.classList.add('swap'); }
-      // sans nouvelles du serveur, les premières cartes « chauffent » quand même (jusqu'à 30 %)
+      // sans nouvelles d'AlixoAI, les premières cartes « chauffent » quand même (jusqu'à 30 %)
       const soft = Math.min(0.3, (k + 1) * 0.07); setGenProgress(s, Math.max(g.p || 0, soft), false);
     }, 2600);
   }
@@ -379,23 +314,52 @@ Réponds uniquement avec ce JSON :
   }
   async function generate(s) {
     const quiz = opts.mode !== 'fiche';
-    const gen = {}; s.gen = gen; s.step = 'gen'; s.error = '';
+    const gen = { token: AlixoAI.newToken(), target: quiz ? +opts.n : 0, parts: [] }; s.gen = gen; s.step = 'gen'; s.error = '';
     render(s);
     try {
       const ctx = { title: s.title, text: s.text, kind: opts.kind, n: +opts.n, level: opts.level };
-      const res = quiz ? await genQuiz(ctx, (k, n) => { if (s.gen === gen) setGenProgress(s, 0.15 + 0.85 * k / n, true, k, n); }) : await genSheet(ctx);
-      if (s.gen !== gen) return;   // annulé entre-temps
-      clearInterval(gen.stepTm); s.gen = null;
-      s.result = res; s.resultMode = quiz ? 'quiz' : 'fiche';
-      if (quiz) { startPlay(s); if (res.partial) toast(`${res.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 }); }
-      else { s.step = 'sheet'; render(s); }
+      if (quiz) {
+        // 1.37 : chaque question est livrée dès qu'elle est écrite ; le quiz commence après la première
+        s.result = { title: 'Quiz — ' + (s.title || 'révision'), questions: [] }; s.resultMode = 'quiz';
+        const res = await genQuiz(ctx, q => {
+          if (s.gen !== gen) return;
+          s.result.questions.push(q);
+          const k = s.result.questions.length;
+          if (s.step === 'gen') { clearInterval(gen.stepTm); startPlay(s); }
+          else if (s.step === 'play' && s.play) { s.play.order.push(k - 1); if (s.play.waiting) renderQuestion(s); else refreshCount(s); }
+        }, gen);
+        if (s.gen !== gen) return;   // annulé entre-temps
+        clearInterval(gen.stepTm); s.gen = null;
+        s.result.title = res.title || s.result.title; s.result.tokIn = res.tokIn; s.result.tokOut = res.tokOut; s.result.model = res.model;
+        if (res.partial) toast(`${s.result.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 });
+        if (s.step === 'gen') startPlay(s);
+        else if (s.step === 'play' && s.play) { if (s.play.waiting) { s.play.waiting = false; if (s.play.i >= s.result.questions.length) { s.step = 'result'; render(s); } else renderQuestion(s); } else refreshCount(s); }
+      } else {
+        const res = await genSheet(ctx, (part, i) => { if (s.gen !== gen) return; gen.parts[i] = part; setGenProgress(s, Math.min(0.9, 0.2 + 0.15 * (i + 1)), true, i + 1, 5); const el = stage(s) && stage(s).querySelector('.aq-gstep'); if (el) el.textContent = `${part.titre ? `« ${part.titre} »` : `Partie ${i + 1}`} rédigée — la suite arrive…`; }, gen);
+        if (s.gen !== gen) return;
+        clearInterval(gen.stepTm); s.gen = null;
+        s.result = res; s.resultMode = 'fiche';
+        s.step = 'sheet'; render(s);
+      }
     } catch (err) {
       if (s.gen !== gen) return;
       clearInterval(gen.stepTm); s.gen = null;
+      if (quiz && s.step === 'play' && s.result && s.result.questions.length) {   // des questions ont déjà été jouées : on termine avec celles-là
+        toast(`AlixoAI s’est arrêtée après ${s.result.questions.length} question${s.result.questions.length > 1 ? 's' : ''} : ${err && err.message || err}`, { duration: 8000 });
+        if (s.play && s.play.waiting) { s.play.waiting = false; s.step = 'result'; render(s); }
+        return;
+      }
       s.step = 'error'; s.error = err && err.message || String(err); render(s);
     }
   }
-  function cancelGen(s) { if (s.gen) { clearInterval(s.gen.stepTm); s.gen = null; } s.step = 'form'; render(s); }
+  function cancelGen(s) { if (s.gen) { clearInterval(s.gen.stepTm); s.gen.cancelled = true; AlixoAI.cancel(s.gen.token); s.gen = null; } s.step = 'form'; s.play = null; render(s); }
+  /* nombre total de questions affiché pendant que la suite s'écrit */
+  const totalN = s => (s.gen && s.gen.target ? Math.max(s.gen.target, s.result.questions.length) : s.result.questions.length);
+  function refreshCount(s) {
+    const st = stage(s); if (!st || !s.play) return;
+    const n = totalN(s); const el = st.querySelector('.aq-pnum'); if (el) el.textContent = `Question ${s.play.i + 1} / ${n}`;
+    const nb = st.querySelector('.aq-next'); if (nb) nb.firstChild.textContent = s.play.i + 1 < n ? 'Question suivante' : 'Voir le résultat';
+  }
 
   /* ---------------- interactions ---------------- */
   function onClick(e) {
@@ -438,15 +402,23 @@ Réponds uniquement avec ce JSON :
   /* ---------------- jeu ---------------- */
   function startPlay(s, again) {
     const r = s.result;
-    s.play = { i: 0, score: 0, answers: [], order: again ? C().shuffle(r.questions.map((_, i) => i)) : r.questions.map((_, i) => i) };
+    s.play = { i: 0, score: 0, answers: [], waiting: false, order: again ? C().shuffle(r.questions.map((_, i) => i)) : r.questions.map((_, i) => i) };
     s.step = 'play';
     render(s);
   }
   function renderQuestion(s) {
     const Q = C(); const p = s.play, r = s.result;
-    const idx = p.order[p.i]; const q = r.questions[idx];
-    const n = r.questions.length;
+    const n = totalN(s);
     const st = stage(s);
+    if (p.i >= p.order.length) {   // 1.37 : l'étudiant a rattrapé AlixoAI — la question suivante s'écrit
+      p.waiting = true;
+      st.innerHTML = `<div class="aq-play"><div class="aq-phead"><span class="aq-pnum">Question ${p.i + 1} / ${n}</span><span class="aq-ptype"></span><span class="aq-pscore" title="Bonnes réponses">${p.score} / ${p.i} ✓</span></div>
+        <div class="aq-pbar"><i style="width:${Math.round(p.i / n * 100)}%"></i></div>
+        <div class="aq-qcard aq-qwait" style="--k:${p.i}"><div class="aq-orb small"><span></span><span></span><span></span><em>${ICON}</em></div><div class="aq-qtext">AlixoAI écrit la question suivante…</div></div></div>`;
+      return;
+    }
+    p.waiting = false;
+    const idx = p.order[p.i]; const q = r.questions[idx];
     st.innerHTML = `<div class="aq-play">
       <div class="aq-phead"><span class="aq-pnum">Question ${p.i + 1} / ${n}</span><span class="aq-ptype">${esc((Q.TYPES[q.t] || {}).name || '')}</span><span class="aq-pscore" title="Bonnes réponses">${p.score} / ${p.i} ✓</span></div>
       <div class="aq-pbar"><i style="width:${Math.round(p.i / n * 100)}%"></i></div>
@@ -483,7 +455,7 @@ Réponds uniquement avec ce JSON :
     const p = s.play; if (!p) return;
     if (p.answers.length <= p.i) return;    // pas encore répondu
     p.i++;
-    if (p.i >= s.result.questions.length) { s.step = 'result'; render(s); } else renderQuestion(s);
+    if (p.i >= p.order.length && !s.gen) { s.step = 'result'; render(s); } else renderQuestion(s);
   }
   function resultHTML(s) {
     const Q = C(); const p = s.play, r = s.result, n = r.questions.length;
@@ -620,5 +592,5 @@ Réponds uniquement avec ce JSON :
 
   const buttonHTML = (attr, cls = '') => `<button type="button" ${attr} class="${cls}" title="Quiz IA et fiche de révision : QCM, vrai / faux, réponses courtes ou fiche de révision générés par l’IA à partir de ce document (Alixo+)">${ICON}<span>Quiz IA</span></button>`;
 
-  return { open, docText, shorten, toQuestion, sheetBlocks, buttonHTML, ICON, parseJson, KINDS, LEVELS, COUNTS, get opts() { return opts; }, get current() { return cur; }, get sessions() { return sessions; } };
+  return { open, docText, shorten, toQuestion, sheetBlocks, buttonHTML, ICON, KINDS, LEVELS, COUNTS, get opts() { return opts; }, get current() { return cur; }, get sessions() { return sessions; } };
 })();

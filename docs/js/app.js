@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.36.4';
+const ALIXO_VERSION = '1.37.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -2740,14 +2740,14 @@ function settingsSectionHTML(k) {
       <button id="po-snipadd" class="cta ghost small">＋ Ajouter un raccourci</button></div>
     <div class="set-sect"><div class="po-label">Remplacements automatiques</div>
       <div class="po-hint" style="margin:0">Les symboles « >= », « +/- », « -> » sont mis en forme pour tout le monde. Avec une spécialité Santé dans le profil, la notation médicale (Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L), les abréviations et les blocs Santé du menu « / » sont activés automatiquement${healthMode() ? ' <b>(actif)</b>' : ''}. Les blocs proposés dépendent des spécialités choisies : Compte › Modifier mon profil.</div></div>`;
-  if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction, la mise en forme, les quiz et les fiches de révision par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7) ; quiz (QCM, vrai / faux, réponses courtes) et fiches de révision générés depuis vos séances, présentations et tableurs (F8), avec un modèle qui tourne directement sur votre appareil : rien ne quitte l’ordinateur.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
+  if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction, la mise en forme, les quiz et les fiches de révision par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7) ; quiz (QCM, vrai / faux, réponses courtes) et fiches de révision générés depuis vos séances, présentations et tableurs (F8), par AlixoAI, l’intelligence artificielle intégrée à Alixo : rien à installer, rien à configurer.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
   if (k === 'plus') return `<div class="set-sect">${plusCtaHTML()}</div>
     ${subscriptionHTML()}
     ${activationHTML()}
     <div class="set-sect"><div class="po-label">Ce que change Alixo+</div>${plusTableHTML('')}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>
     ${window.AlixoBusiness && !(AlixoBusiness.enabled && AlixoBusiness.active()) ? `<div class="set-sect"><div class="po-label">Pour une entreprise</div>${AlixoBusiness.offerHTML()}<div class="po-hint">Le détail (équipe, licences, modérateurs) est dans Paramètres › Entreprise.</div></div>` : ''}`;
-  if (k === 'ia') { const o = aiOpt(); return `<div class="set-sect"><div class="po-label">Intelligence artificielle sur cet appareil</div><div id="po-aisetup">${aiSetupHTML('settings')}</div></div>
+  if (k === 'ia') { const o = aiOpt(); return `<div class="set-sect"><div class="po-label">AlixoAI — l’intelligence artificielle d’Alixo</div><div id="po-aisetup">${aiSetupHTML('settings')}</div></div>
     <div class="set-sect"><div class="po-label">Ce que l’IA propose</div>
       <div class="set-checks" id="set-ai">
         <label><input type="checkbox" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Analyse automatique pendant la frappe</b><small>À chaque fin de phrase (point, Entrée), après une pause de frappe ou en quittant le paragraphe, les phrases nouvelles partent en une seule requête ; les propositions apparaissent sous le paragraphe, Tab pour accepter, Échap pour ignorer. Sinon, seulement à la demande (✨ ou F7).</small></span></label>
@@ -7990,283 +7990,115 @@ function insertDrawing() {
 }
 
 /* ============================================================
-   Correction orthographe / grammaire par IA — modèle ouvert Qwen3.8-27B (1.28)
-   1.28 : Qwen3.8-27B (Alibaba, poids ouverts, licence Apache 2.0) remplace Grok (xAI). Le modèle n'appartient à
-   aucun fournisseur : l'utilisateur choisit où il tourne (OpenRouter, Alibaba Cloud Model Studio, Ollama sur son
-   propre ordinateur, ou tout serveur compatible OpenAI). La configuration { provider, endpoint, model, key } est
-   gérée par js/corr.js (AlixoCorr.getConfig / setConfig, localStorage alixo.ai.config), reste sur l'appareil et
-   n'est jamais synchronisée. Les anciennes clés xAI (alixo.grokKey) et Google (alixo.geminiKey) ne sont plus lues.
+   Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37)
+   1.37 : plus de serveur, de clé ni de choix de modèle. L'IA d'Alixo est AlixoAI (js/alixoai.js, moteur js/ailocal.js) :
+   elle se prépare toute seule au premier démarrage qui suit l'installation ou une mise à jour, choisit d'elle-même la
+   taille adaptée à l'appareil, et optimise chaque demande (consignes courtes, réponses en lignes, lecture progressive,
+   conversation suivie). Paramètres › IA ne garde qu'un interrupteur (Désactiver / Réactiver) et les réglages de ce que
+   l'IA propose. L'ancienne configuration (alixo.ai.config : serveur, modèle, clé) n'est plus lue.
    ============================================================ */
-const AI_CFG_SOURCE_LS = 'alixo.ai.source';   // 'admin' si la configuration vient du panneau d'administration
 function aiCfg() { return AlixoCorr.getConfig(); }
-/* un serveur utilisable est configuré (clé présente, ou serveur local qui n'en demande pas) */
+/* AlixoAI est active et l'appareil sait la faire tourner */
 function aiReady() { return AlixoCorr.configured(); }
-/* 1.22 : les appels à l'IA passent par le moteur js/corr.js (AlixoCorr.call) — une seule implémentation,
-   réponse JSON, « réflexion » du modèle désactivée (moins de jetons, plus rapide) */
 let aiState = null;   // { items: [{ n, id, avant, apres, regle, done }], label }
 
 function aiCorrectable(b) { return TEXT_TYPES.includes(b.type) || isFiche(b) || b.type === 'table' || b.type === 'cards'; }
 
-/* ---------------- configuration guidée du serveur et de la clé ---------------- */
-const maskKey = k => k ? `${k.slice(0, 4)}…${k.slice(-4)}` : '';
-const aiProviderLabel = p => (AlixoCorr.PROVIDERS[p] || AlixoCorr.PROVIDERS.custom).label.replace(/ [—(].*$/, '');
-/* mode 'panel' (panneau IA, parcours complet) ou 'settings' (bloc compact dans les Paramètres) */
-function aiSetupHTML(mode, draft) {
-  const saved = aiCfg(); const ready = aiReady();
-  const c = draft || saved;
-  const P = AlixoCorr.PROVIDERS; const prov = P[c.provider] || P.custom;
-  const L = window.AlixoLocalAI;
-  const adv = !prov.local && (c.provider === 'custom' || c.endpoint !== prov.endpoint || c.model !== prov.model);
-  const savedLocal = P[saved.provider] && P[saved.provider].local;
-  const provRow = `<div class="po-row ai-provrow"><label class="set-inline" style="flex:1">Où tourne le modèle <select class="ai-provider" aria-label="Où tourne le modèle">${Object.keys(P).map(k => `<option value="${k}" ${c.provider === k ? 'selected' : ''}>${esc(P[k].label)}</option>`).join('')}</select></label></div>`;
-  if (prov.local) {
-    /* 1.36.1 : l'IA de l'application est là d'office — elle s'installe toute seule (Alixo+) ; ce bloc reste sobre :
-       un état, la taille du modèle, trois boutons. */
-    const sup = L ? L.support() : { ok: false, reason: 'Le moteur d’IA de l’application n’est pas chargé.' };
-    const st = L ? L.status() : { state: 'idle' };
-    const m = L && L.MODELS[c.model] || { label: c.model };
-    const off = !!saved.off && savedLocal;
-    const status = off ? `<div class="ai-keystate"><span class="ai-dot"></span>IA désactivée sur cet appareil.</div>`
-      : !sup.ok ? `<div class="ai-keystate"><span class="ai-dot"></span>IA indisponible sur cet appareil.</div>`
-        : st.state === 'ready' && st.key === c.model ? `<div class="ai-keystate ok"><span class="ai-dot"></span>IA prête · modèle ${esc(m.label)} · sur cet appareil</div>`
-          : st.state === 'loading' ? `<div class="ai-keystate ok"><span class="ai-dot"></span>IA en cours d’installation · modèle ${esc(m.label)}</div>`
-            : `<div class="ai-keystate ok"><span class="ai-dot"></span>IA active · modèle ${esc(m.label)} · ${saved.on ? 'installée sur cet appareil' : 's’installe toute seule au premier usage'}</div>`;
-    const rec = L ? L.recommend() : 'equilibre';
-    const cards = mode === 'settings' && L ? `<div class="ai-mcards" role="radiogroup" aria-label="Taille du modèle">${L.ORDER.map(k => { const x = L.MODELS[k]; return `<button type="button" class="ai-mcard ${c.model === k ? 'on' : ''}" data-key="${k}" ${sup.ok && !off ? '' : 'disabled'} aria-pressed="${c.model === k}">
-        <span class="ai-mhead"><b>${esc(x.label)}</b>${k === rec ? '<span class="ai-mtag rec">conseillé</span>' : ''}<span class="ai-mtag ai-mcached" data-key="${k}" hidden>installé</span></span>
-        <span class="ai-mdesc">${esc(x.desc)}</span>
-        <span class="ai-mmeta">${esc(x.dl)}</span>
-      </button>`; }).join('')}</div>` : '';
-    return `${status}${provRow}
-      ${sup.ok ? '' : `<div class="ai-nogpu">${esc(sup.reason)} Vous pouvez choisir un serveur dans la liste ci-dessus.</div>`}
-      ${cards}
-      <div class="ai-progress" ${st.state === 'loading' ? '' : 'hidden'}><div class="ai-pbar"><i style="width:${Math.round((st.progress || 0) * 100)}%"></i></div><div class="ai-ptext">${esc(st.text || '')}</div></div>
-      <div class="po-row ai-keybtns">
-        ${off ? `<button class="pobtn ai-keyon" type="button" ${sup.ok ? '' : 'disabled'}>Réactiver</button>` : `<button class="pobtn ai-keytest" type="button" ${sup.ok ? '' : 'disabled'}>${st.state === 'ready' && st.key === c.model ? 'Vérifier' : 'Installer maintenant'}</button><button class="cta ghost small ai-keyremove" type="button">Désactiver</button>`}
-        <button class="cta ghost small ai-forget" type="button" hidden>Effacer de l’appareil</button>
-      </div>
-      <div class="ai-keymsg" aria-live="polite"></div>
-      ${ready && mode === 'panel' ? `<label class="ai-toggle"><input type="checkbox" class="ai-styletoggle" ${aiStyleOn() ? 'checked' : ''}> Analyse automatique pendant la frappe : les fautes d’orthographe / grammaire et la mise en forme (définitions, titres, encadrés…) sont proposées sous le paragraphe, sans rien demander — <b>Tab</b> pour accepter</label>` : ''}
-      <div class="po-hint">Le modèle tourne sur cet appareil : rien ne quitte l’ordinateur, et l’IA marche hors ligne une fois installée.</div>`;
-  }
-  const steps = (mode === 'panel' || !ready || c.provider !== saved.provider) ? (prov.needsKey ? `
-    <ol class="ai-steps">
-      <li>Ouvrir <a href="${esc(prov.keysUrl)}" target="_blank" rel="noopener">${esc(prov.keysUrl.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a> et créer un compte (facturation à l’usage : quelques centimes pour un cours entier).</li>
-      <li>Créer une clé API et la copier en entier${prov.keyPrefix ? ` (elle commence par <code>${esc(prov.keyPrefix)}</code>)` : ''}.</li>
-      <li>La coller ci-dessous et cliquer <b>Tester et enregistrer</b>.</li>
-    </ol>` : c.provider === 'ollama' ? `
-    <ol class="ai-steps">
-      <li>Installer <a href="${esc(prov.keysUrl)}" target="_blank" rel="noopener">Ollama</a> (gratuit, Windows / macOS / Linux).</li>
-      <li>Dans un terminal : <code>ollama pull ${esc(prov.model)}</code> (≈ 17 Go, une seule fois ; carte graphique ou Mac avec 24 Go de mémoire conseillés).</li>
-      <li>Ollama lancé, cliquer <b>Tester et enregistrer</b>. Aucune clé, aucun compte : le texte ne quitte pas l’ordinateur.</li>
-    </ol>` : `
-    <ol class="ai-steps">
-      <li>Indiquer la base de l’API du serveur (se termine en général par <code>/v1</code>) et l’identifiant du modèle Qwen tel que ce serveur le nomme.</li>
-      <li>Coller la clé si le serveur en demande une, puis <b>Tester et enregistrer</b>.</li>
-    </ol>`) : '';
-  return `${status}${provRow}
-    ${steps}
-    <div class="ai-adv" ${adv ? '' : 'hidden'}>
-      <div class="po-row ai-keyrow"><input class="ai-keyinput ai-endpoint" type="url" placeholder="Base de l’API, ex. http://localhost:11434/v1" value="${esc(c.endpoint)}" autocomplete="off" spellcheck="false" aria-label="Adresse du serveur"></div>
-      <div class="po-row ai-keyrow"><input class="ai-keyinput ai-model" type="text" placeholder="Identifiant du modèle, ex. ${esc(prov.model)}" value="${esc(c.model)}" autocomplete="off" spellcheck="false" aria-label="Identifiant du modèle"></div>
-    </div>
-    <div class="po-row ai-keyrow">
-      <input class="ai-keyinput" type="password" placeholder="${prov.needsKey ? 'Collez votre clé API…' : 'Clé API (facultative pour un serveur local)'}" value="${esc(c.key)}" autocomplete="off" spellcheck="false" aria-label="Clé API">
-      <button class="ai-keyeye" type="button" title="Afficher / masquer">👁</button>
-    </div>
+/* ---------------- Paramètres › IA et panneau : l'état d'AlixoAI, un interrupteur ---------------- */
+/* mode 'panel' (panneau IA) ou 'settings' (bloc compact dans les Paramètres) */
+function aiSetupHTML(mode) {
+  const A = window.AlixoAI;
+  const st = A ? A.state() : 'unavailable';
+  const reason = A ? A.available().reason : 'Le moteur d’AlixoAI n’est pas chargé.';
+  const ready = aiReady();
+  const status = st === 'off' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI est désactivée sur cet appareil.</div>`
+    : st === 'unavailable' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI n’est pas disponible ici.</div>`
+      : st === 'error' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI n’a pas pu démarrer.</div>`
+        : st === 'preparing' ? `<div class="ai-keystate ok"><span class="ai-dot"></span>AlixoAI se prépare…</div>`
+          : `<div class="ai-keystate ok"><span class="ai-dot"></span>AlixoAI est ${st === 'ready' ? 'prête' : 'active'} · correction, mise en forme, quiz et fiches</div>`;
+  return `${status}
+    ${st === 'unavailable' ? `<div class="ai-nogpu">${esc(reason)}</div>` : ''}
+    ${st === 'error' ? `<div class="ai-nogpu">${esc((window.AlixoLocalAI && AlixoLocalAI.status().error) || '')}</div>` : ''}
     <div class="po-row ai-keybtns">
-      <button class="pobtn ai-keytest" type="button">Tester et enregistrer</button>
-      <button class="cta ghost small ai-advtoggle" type="button">${adv ? 'Masquer' : 'Adresse et modèle…'}</button>
-      ${ready ? `<button class="cta ghost small ai-keyremove" type="button">Retirer</button>` : ''}
+      ${st === 'off' ? `<button class="pobtn ai-keyon" type="button" ${A && A.available().ok ? '' : 'disabled'}>Réactiver</button>` : `${st === 'error' ? '<button class="pobtn ai-keytest" type="button">Réessayer</button>' : ''}<button class="cta ghost small ai-keyremove" type="button" ${st === 'unavailable' ? 'disabled' : ''}>Désactiver</button>`}
     </div>
     <div class="ai-keymsg" aria-live="polite"></div>
     ${ready && mode === 'panel' ? `<label class="ai-toggle"><input type="checkbox" class="ai-styletoggle" ${aiStyleOn() ? 'checked' : ''}> Analyse automatique pendant la frappe : les fautes d’orthographe / grammaire et la mise en forme (définitions, titres, encadrés…) sont proposées sous le paragraphe, sans rien demander — <b>Tab</b> pour accepter</label>` : ''}
-    <div class="po-hint">${esc(prov.hint)}</div>
-    <div class="po-hint">Un serveur est l’alternative quand l’appareil ne peut pas faire tourner le modèle lui-même (pas de WebGPU, très peu de mémoire). Qwen est un modèle ouvert (Alibaba, licence Apache 2.0, très bon en français) : Alixo ne dépend d’aucun fournisseur, vous choisissez où il tourne et pouvez en changer à tout moment. Alixo limite les appels : les fautes de frappe courantes sont corrigées sur l’appareil, chaque phrase n’est envoyée qu’une fois (les phrases déjà relues restent en mémoire) et les phrases nouvelles sont groupées en une seule requête. Serveur, modèle et clé restent sur cet ordinateur (jamais synchronisés avec vos cours) ; seul le texte analysé est envoyé au serveur choisi.</div>`;
-}
-/* progression affichée dans le bloc de configuration (téléchargement, chargement sur la carte graphique) */
-function aiSetupProgress(root, s) {
-  const box = root.querySelector('.ai-progress'); if (!box) return;
-  box.hidden = false;
-  const pct = Math.round((s.progress || 0) * 100);
-  box.querySelector('.ai-pbar i').style.width = pct + '%';
-  box.querySelector('.ai-pbar').classList.toggle('indet', !s.progress && s.phase !== 'ready');
-  box.querySelector('.ai-ptext').textContent = `${s.text || 'Préparation…'}${s.progress ? ` · ${pct} %` : ''}`;
+    <div class="po-hint">AlixoAI est intégrée à Alixo : rien à installer, rien à configurer, aucun compte chez un tiers. Vos notes ne sont envoyées à aucun service d’IA extérieur.</div>`;
 }
 function bindAiSetup(root, mode) {
   if (!root) return;
-  const provSel = root.querySelector('.ai-provider');
+  const A = window.AlixoAI; if (!A) return;
   const msg = root.querySelector('.ai-keymsg');
-  const setMsg = (t, cls) => { msg.textContent = t; msg.className = 'ai-keymsg ' + (cls || ''); };
-  const rerender = d => { root.innerHTML = aiSetupHTML(mode, d); bindAiSetup(root, mode); };
-  const P = AlixoCorr.PROVIDERS; const L = window.AlixoLocalAI;
-  provSel.addEventListener('change', () => {
-    const p = P[provSel.value] || P.custom;
-    const saved = aiCfg();
-    if (p.local) { rerender({ provider: 'navigateur', model: saved.provider === 'navigateur' ? saved.model : (L ? L.recommend() : 'equilibre') }); return; }
-    rerender({ provider: provSel.value, endpoint: p.endpoint, model: p.model, key: saved.provider === provSel.value ? saved.key : '' });
-    const i = root.querySelector(provSel.value === 'custom' ? '.ai-endpoint' : '.ai-keyinput:not(.ai-endpoint):not(.ai-model)'); if (i) i.focus();
-  });
+  const setMsg = (t, cls) => { if (msg) { msg.textContent = t; msg.className = 'ai-keymsg ' + (cls || ''); } };
+  const rerender = () => { if (!root.isConnected) return; root.innerHTML = aiSetupHTML(mode); bindAiSetup(root, mode); };
   const st = root.querySelector('.ai-styletoggle');
   if (st) st.addEventListener('change', e => { aiOpt(); state.settings.ai.auto = e.target.checked; save(); if (!e.target.checked) dismissSug(); toast(e.target.checked ? 'Analyse automatique activée' : 'Analyse automatique désactivée'); });
-
-  /* ---- IA sur l'appareil ---- */
-  if ((P[provSel.value] || P.custom).local) {
-    if (!L) return;
-    const cards = [...root.querySelectorAll('.ai-mcard')];
-    const key = () => (cards.find(b => b.classList.contains('on')) || {}).dataset?.key || aiCfg().model;
-    const btn = root.querySelector('.ai-keytest'); const forget = root.querySelector('.ai-forget'); const onBtn = root.querySelector('.ai-keyon');
-    const cachedKeys = new Set();
-    const refreshBtn = () => {
-      const k = key(); const st = L.status();
-      if (btn) btn.textContent = st.state === 'ready' && st.key === k ? 'Vérifier' : cachedKeys.has(k) ? 'Charger' : 'Installer maintenant';
-      forget.hidden = !cachedKeys.has(k);
-    };
-    // choix de la taille : enregistré tout de suite ; le modèle se charge au prochain usage (ou avec « Installer maintenant »)
-    cards.forEach(b => b.addEventListener('click', async () => {
-      cards.forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); });
-      const saved = aiCfg(); AlixoCorr.setConfig(Object.assign({}, saved, { provider: 'navigateur', model: b.dataset.key, on: cachedKeys.has(b.dataset.key) }));
-      if (L.status().state === 'ready' && L.status().key !== b.dataset.key) await L.unload();
-      refreshBtn(); setMsg('', '');
-    }));
-    L.probe().then(() => { if (!root.isConnected) return; const rec = L.recommend(); root.querySelectorAll('.ai-mtag.rec').forEach(t => t.remove()); const h = root.querySelector(`.ai-mcard[data-key="${rec}"] .ai-mhead b`); if (h) h.insertAdjacentHTML('afterend', '<span class="ai-mtag rec">conseillé</span>'); });
-    for (const k of L.ORDER) L.cached(k).then(ok => { if (!ok || !root.isConnected) return; cachedKeys.add(k); const t = root.querySelector(`.ai-mcached[data-key="${k}"]`); if (t) t.hidden = false; refreshBtn(); });
-    // progression (installation lancée ici ou automatiquement au démarrage)
-    const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai-local', onEv); return; } const d = e.detail; if (d.why === 'gen') return; if (d.state === 'loading') aiSetupProgress(root, d); else if (d.state === 'ready') { aiSetupProgress(root, d); setTimeout(() => { if (root.isConnected) rerender(); }, 900); } };
-    document.addEventListener('alixo-ai-local', onEv);
-    const install = async () => {
-      const k = key();
-      btn.disabled = true; cards.forEach(b => b.disabled = true); setMsg('', '');
-      try {
-        await L.load(k);
-        const r = await aiTestConfig({ provider: 'navigateur', model: k, force: true });
-        if (!r.ok) throw new Error(r.error);
-        AlixoCorr.setConfig({ provider: 'navigateur', model: k, on: true });
-        setMsg('IA prête ✓', 'ok');
-      } catch (e) {
-        root.querySelector('.ai-progress').hidden = true;
-        setMsg(e && e.message || String(e), 'err');
-        btn.disabled = false; cards.forEach(b => b.disabled = false);
-      }
-    };
-    if (btn) btn.addEventListener('click', install);
-    if (onBtn) onBtn.addEventListener('click', () => { const saved = aiCfg(); AlixoCorr.setConfig(Object.assign({}, saved, { provider: 'navigateur', off: false })); toast('IA réactivée'); aiAutoInstall(300); rerender(); });
-    const rm = root.querySelector('.ai-keyremove');
-    if (rm) rm.addEventListener('click', async () => { const saved = aiCfg(); AlixoCorr.setConfig(Object.assign({}, saved, { provider: 'navigateur', off: true })); await L.unload(); toast('IA désactivée sur cet appareil'); rerender(); });
-    forget.addEventListener('click', async () => {
-      const k = key(); const m = L.MODELS[k];
-      if (!confirm(`Effacer le modèle ${m.label} (${m.dl}) de cet appareil ?`)) return;
-      forget.disabled = true;
-      const saved = aiCfg(); if (saved.model === k) AlixoCorr.setConfig(Object.assign({}, saved, { on: false }));
-      await L.remove(k); toast(`Modèle ${m.label} effacé`); rerender();
-    });
-    refreshBtn();
-    return;
-  }
-
-  /* ---- serveur ---- */
-  const input = root.querySelector('.ai-keyinput:not(.ai-endpoint):not(.ai-model)');
-  const endpointIn = root.querySelector('.ai-endpoint'), modelIn = root.querySelector('.ai-model');
-  const draft = () => ({ provider: provSel.value, endpoint: endpointIn.value.trim(), model: modelIn.value.trim(), key: input.value.trim() });
-  root.querySelector('.ai-keyeye').addEventListener('click', () => { input.type = input.type === 'password' ? 'text' : 'password'; input.focus(); });
-  root.querySelector('.ai-advtoggle').addEventListener('click', e => { const a = root.querySelector('.ai-adv'); a.hidden = !a.hidden; e.target.textContent = a.hidden ? 'Adresse et modèle…' : 'Masquer'; });
-  const test = async () => {
-    const d = draft(); const p = P[d.provider] || P.custom;
-    if (!d.endpoint || !/^https?:\/\//i.test(d.endpoint)) { setMsg('Indiquez l’adresse du serveur (elle commence par http:// ou https://).', 'err'); root.querySelector('.ai-adv').hidden = false; endpointIn.focus(); return; }
-    if (!d.model) { setMsg('Indiquez l’identifiant du modèle.', 'err'); root.querySelector('.ai-adv').hidden = false; modelIn.focus(); return; }
-    if (p.needsKey && !d.key) { setMsg('Collez d’abord votre clé.', 'err'); input.focus(); return; }
-    if (d.key && (/\s/.test(d.key) || d.key.length < 12)) { setMsg('La clé semble incomplète (sans espace, au moins 12 caractères). Vérifiez que vous avez copié la clé entière.', 'err'); return; }
-    if (!IS_DESKTOP && AlixoCorr.isLocalUrl(d.endpoint) && location.protocol === 'https:') setMsg('Version web : le serveur local doit accepter l’origine du site (Ollama : variable OLLAMA_ORIGINS=' + location.origin + ').', '');
-    else setMsg('Vérification auprès du serveur…', '');
-    root.querySelector('.ai-keytest').disabled = true;
-    const r = await aiTestConfig(d);
-    root.querySelector('.ai-keytest').disabled = false;
-    if (r.ok) {
-      AlixoCorr.setConfig(d);
-      try { localStorage.setItem(AI_CFG_SOURCE_LS, 'user'); } catch { /* stockage indisponible */ }
-      setMsg('Serveur joignable, configuration enregistrée ✓ Vous pouvez utiliser « Corriger » (✨ ou F7).', 'ok');
-      toast('IA configurée — correction par IA activée');
-      setTimeout(() => rerender(), 900);
-    } else setMsg(r.error, 'err');
-  };
-  root.querySelector('.ai-keytest').addEventListener('click', test);
-  for (const el of [input, endpointIn, modelIn]) el.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); test(); } });
+  const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai', onEv); return; } const d = e.detail || {}; const shown = root.dataset.aiState || ''; if (d.state !== shown) { root.dataset.aiState = d.state; rerender(); } };
+  root.dataset.aiState = A.state();
+  document.addEventListener('alixo-ai', onEv);
+  const onBtn = root.querySelector('.ai-keyon');
+  if (onBtn) onBtn.addEventListener('click', () => { A.setEnabled(true); toast('AlixoAI réactivée'); aiAutoInstall(300); rerender(); });
+  const retry = root.querySelector('.ai-keytest');
+  if (retry) retry.addEventListener('click', async () => { retry.disabled = true; setMsg('AlixoAI se prépare…', ''); const r = await aiTestConfig(); if (r.ok) { setMsg('AlixoAI prête ✓', 'ok'); setTimeout(rerender, 600); } else { setMsg(r.error, 'err'); retry.disabled = false; } });
   const rm = root.querySelector('.ai-keyremove');
-  if (rm) rm.addEventListener('click', () => { AlixoCorr.setConfig(null); try { localStorage.removeItem(AI_CFG_SOURCE_LS); } catch { } toast('Configuration IA retirée'); rerender(); });
+  if (rm) rm.addEventListener('click', async () => { A.setEnabled(false); if (window.AlixoLocalAI) await AlixoLocalAI.unload(); toast('AlixoAI désactivée sur cet appareil'); rerender(); });
 }
-/* appel minimal pour vérifier qu'une configuration fonctionne (quelques jetons) ; si le modèle est introuvable,
-   on consulte la liste du serveur pour aider (modèle installé sous un autre nom, par exemple) */
-async function aiTestConfig(cfg) {
-  const r = await AlixoCorr.call(cfg, { system: 'Réponds uniquement avec le JSON {"ok":true}.', user: 'Test', maxTokens: 64, timeoutMs: 30000 });
-  if (r.ok) return { ok: true };
-  if (r.status === 404) {
-    const l = await AlixoCorr.listModels(cfg);
-    if (l.ok && l.models.length) { const q = l.models.filter(m => /qwen/i.test(m)); return { ok: false, error: r.error + (q.length ? ` Modèles Qwen disponibles sur ce serveur : ${q.slice(0, 6).join(', ')}.` : ` Le serveur propose : ${l.models.slice(0, 6).join(', ')}${l.models.length > 6 ? '…' : ''}.`) }; }
-  }
-  return { ok: false, error: r.error };
+/* appel minimal pour vérifier qu'AlixoAI répond (quelques jetons) */
+async function aiTestConfig() {
+  try { return await window.AlixoAI.run('ping'); } catch (e) { return { ok: false, error: e && e.message || String(e) }; }
 }
 function showAiSetup() {
   const body = $('#ai-body');
-  const c = aiCfg(); const local = AlixoCorr.isLocal(c);
-  const title = local && c.off ? 'L’IA est désactivée sur cet appareil' : local ? 'L’IA n’est pas disponible sur cet appareil' : 'Activer l’IA';
+  const A = window.AlixoAI; const st = A ? A.state() : 'unavailable';
+  const title = st === 'off' ? 'AlixoAI est désactivée sur cet appareil' : st === 'unavailable' ? 'AlixoAI n’est pas disponible ici' : 'AlixoAI';
   body.innerHTML = `<div class="ai-setup"><div class="ai-setuptitle">${title}</div>${aiSetupHTML('panel')}</div>`;
   bindAiSetup(body.querySelector('.ai-setup'), 'panel');
 }
-/* 1.36.1 : installation automatique — dès qu'Alixo+ est actif et que l'appareil sait faire tourner le modèle
-   (WebGPU), le modèle conseillé se télécharge tout seul, sans rien demander (barre discrète en bas à droite) ;
-   ensuite il se charge au démarrage pour répondre sans attendre. « Désactiver » (Paramètres › IA) l'arrête. */
+/* 1.37 : AlixoAI se prépare toute seule, en silence, au premier démarrage qui suit l'installation ou une mise à jour
+   (téléchargement une seule fois, puis chargement à chaque ouverture, puis une micro-requête d'échauffement) : la
+   première demande de l'étudiant part sans attendre. « Désactiver » (Paramètres › IA) l'arrête. Les fonctions qui
+   l'utilisent (F7, F8, frappe) restent réservées à Alixo+ ; la préparation, elle, n'attend pas l'abonnement. */
 let aiAutoTm = 0;
 /* 1.36.4 : la page précédente s'est terminée brutalement pendant que l'IA tournait (mémoire graphique épuisée, pilote
-   planté) : on passe au modèle plus léger avant de recharger quoi que ce soit ; déjà au plus léger → l'IA est désactivée
+   planté) : AlixoAI passe à une taille plus légère avant de recharger quoi que ce soit ; déjà au plus léger → désactivée
    sur cet appareil, la cloche l'explique, Paramètres › IA la réactive. */
 function aiAfterCrash(L) {
   const bad = L.crashed && L.crashed(); if (!bad || !L.MODELS[bad]) return;
-  const c = aiCfg(); if (!AlixoCorr.isLocal(c) || c.off) return;
-  const i = L.ORDER.indexOf(bad);
-  const label = k => (L.MODELS[k] || {}).label || k;
-  if (i > 0) {
-    const lighter = L.ORDER[i - 1];
-    AlixoCorr.setConfig(Object.assign({}, c, { model: lighter, on: false }));
-    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'IA : modèle allégé', text: `Alixo s’est fermé brutalement pendant que l’IA tournait avec le modèle « ${label(bad)} », sans doute faute de mémoire graphique. Le modèle « ${label(lighter)} » est désormais utilisé ; vous pouvez changer dans Paramètres › IA.` });
+  const A = window.AlixoAI; if (!A || !A.enabled()) return;
+  const lighter = L.downgrade ? L.downgrade(bad) : '';
+  if (lighter) {
+    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'AlixoAI allégée', text: 'Alixo s’est fermé brutalement pendant qu’AlixoAI travaillait, sans doute faute de mémoire. AlixoAI tourne désormais en version plus légère sur cet appareil.' });
   } else {
-    AlixoCorr.setConfig(Object.assign({}, c, { off: true }));
-    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'IA désactivée sur cet appareil', text: 'Alixo s’est fermé brutalement pendant que l’IA tournait, même avec le modèle le plus léger. Elle est désactivée sur cet appareil : Paramètres › IA pour la réactiver ou choisir un serveur.' });
+    A.setEnabled(false);
+    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'AlixoAI désactivée sur cet appareil', text: 'Alixo s’est fermé brutalement pendant qu’AlixoAI travaillait, même en version la plus légère. Elle est désactivée sur cet appareil : Paramètres › IA pour la réactiver.' });
   }
 }
 function aiAutoInstall(delay) {
   if (aiAutoTm) return;
   aiAutoTm = setTimeout(async () => {
     aiAutoTm = 0;
-    const L = window.AlixoLocalAI; if (!L) return;
+    const L = window.AlixoLocalAI; const A = window.AlixoAI; if (!L || !A) return;
     aiAfterCrash(L);
-    if (!isPlus()) return;
-    const c0 = aiCfg(); if (!AlixoCorr.isLocal(c0) || c0.off || !L.support().ok) return;
+    if (!A.enabled() || !L.support().ok) return;
     if (L.status().state !== 'idle') return;
     try { if (navigator.connection && navigator.connection.saveData) return; } catch { /* API absente */ }
-    const p = await L.probe(); if (!p.ok) return;
-    const c = aiCfg();   // après la détection de la carte graphique : taille conseillée si rien n'est choisi
-    try { await L.load(c.model); AlixoCorr.setConfig(Object.assign({}, c, { on: true })); }
-    catch (e) { console.warn('IA (installation automatique) :', e && e.message || e); }
+    await A.warm();
   }, delay || 0);
 }
-/* 1.36 : barre de progression discrète quand le modèle se charge en dehors du bloc de configuration
-   (première demande de la session : chargement depuis l'appareil ; mise à jour du modèle…) */
+/* 1.37 : AlixoAI se prépare en silence. La petite barre en bas à droite n'apparaît que lorsqu'une demande de l'étudiant
+   (F7, F8, fiche) attend : « AlixoAI se prépare… » si le moteur charge encore, « AlixoAI rédige… » pendant la réponse. */
 (() => {
-  let bar = null, hideTm = null, wasBusy = false;
+  let bar = null, hideTm = null;
   document.addEventListener('alixo-ai-local', e => {
     const s = e.detail || {};
-    if (document.querySelector('.ai-progress:not([hidden])')) { if (bar) bar.hidden = true; return; }   // déjà affiché dans le bloc de configuration
     if (!bar) { bar = document.createElement('div'); bar.id = 'ai-loadbar'; bar.setAttribute('role', 'status'); bar.innerHTML = '<span class="ai-lbico">✨</span><span class="ai-lbtext"></span><i class="ai-lbbar"><b></b></i>'; document.body.appendChild(bar); }
     clearTimeout(hideTm);
-    // 1.36.4 : réponse en cours de rédaction (le moteur tourne dans un worker : l'interface reste libre pendant ce temps)
-    if (s.why === 'gen') {
-      if (s.busy) { wasBusy = true; bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = `IA : réponse en cours${s.gen ? ` · ${Math.round(s.gen * 0.7)} mots` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = s.gen ? Math.min(95, 10 + s.gen / 12) + '%' : '5%'; }
-      else if (wasBusy) { wasBusy = false; bar.hidden = true; }
-      return;
-    }
-    if (s.state === 'loading') { bar.hidden = false; const pct = Math.round((s.progress || 0) * 100); bar.querySelector('.ai-lbtext').textContent = `IA : ${(s.text || 'préparation').replace(/\s*\(une seule fois\)/, '').replace(/^Téléchargement du modèle — /, 'téléchargement, ')}${s.progress ? ` · ${pct} %` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = pct + '%'; }
-    else if (s.state === 'ready') { bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = 'IA : modèle prêt ✓'; bar.querySelector('.ai-lbbar b').style.width = '100%'; hideTm = setTimeout(() => { bar.hidden = true; }, 1800); }
-    else bar.hidden = true;
+    const waiting = s.waiting || 0;
+    if (!waiting) { bar.hidden = true; return; }
+    if (s.state === 'loading') { bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = 'AlixoAI se prépare…'; bar.querySelector('.ai-lbbar b').style.width = Math.round((s.progress || 0) * 100) + '%'; bar.querySelector('.ai-lbbar').classList.toggle('indet', !s.progress); return; }
+    if (s.busy) { bar.hidden = false; bar.querySelector('.ai-lbbar').classList.remove('indet'); bar.querySelector('.ai-lbtext').textContent = `AlixoAI rédige${s.gen ? ` · ${Math.round(s.gen * 0.7)} mots` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = s.gen ? Math.min(95, 10 + s.gen / 12) + '%' : '5%'; return; }
+    bar.hidden = true;
   });
 })();
 
@@ -8339,7 +8171,7 @@ function renderAiPanel() {
         ? `<div class="ai-status">${it.done === 'skip' ? 'Ignoré' : (it.done === 'fail' ? (it.kind === 'style' ? 'Bloc introuvable ou déjà transformé' : 'Passage introuvable (texte déjà modifié ?)') : 'Appliqué ✓')}</div>`
         : `<div class="ai-actions"><button class="pobtn" data-ai="apply" type="button">Appliquer</button><button class="cta ghost small" data-ai="skip" type="button">Ignorer</button><button class="cta ghost small" data-ai="go" type="button" title="Aller au bloc">Voir</button></div>`}
     </div>`).join('') +
-    `<div class="ai-foot"><button class="cta ghost small" id="ai-run" type="button">${st.kind === 'style' ? 'Corriger l’orthographe' : 'Relancer la correction'}</button> ${st.kind === 'style' || !st.payload ? '' : '<button class="cta ghost small" id="ai-second" type="button" title="Relire tout le texte une seconde fois, sans la mémoire des phrases déjà relues (une requête de plus)">Seconde lecture</button> '}<button class="cta ghost small" id="ai-style" type="button">${st.kind === 'style' ? 'Relancer la mise en forme' : 'Mise en forme'}</button> <button class="cta ghost small" id="ai-key" type="button" title="Changer ou retirer la clé API">Clé API…</button></div>`;
+    `<div class="ai-foot"><button class="cta ghost small" id="ai-run" type="button">${st.kind === 'style' ? 'Corriger l’orthographe' : 'Relancer la correction'}</button> ${st.kind === 'style' || !st.payload ? '' : '<button class="cta ghost small" id="ai-second" type="button" title="Relire tout le texte une seconde fois, sans la mémoire des phrases déjà relues (une requête de plus)">Seconde lecture</button> '}<button class="cta ghost small" id="ai-style" type="button">${st.kind === 'style' ? 'Relancer la mise en forme' : 'Mise en forme'}</button> <button class="cta ghost small" id="ai-key" type="button" title="État d’AlixoAI, désactiver ou réactiver">AlixoAI…</button></div>`;
   body.querySelector('#ai-run').addEventListener('click', () => runAiCorrection());
   const sec = body.querySelector('#ai-second'); if (sec) sec.addEventListener('click', () => runAiCorrection({ second: true }));
   body.querySelector('#ai-style').addEventListener('click', runAiStyle);
@@ -8642,41 +8474,9 @@ function corrSentenceDone(field) {
   const bl = field && field.closest('#blocks > .block'); const b = bl && getBlock(bl.dataset.id);
   if (aiAutoType(b) && aiLiveOn() && aiOpt().fix) setTimeout(() => AlixoCorr.sentenceDone(b.id), 0);
 }
-/* mise en forme de plusieurs paragraphes (panneau IA, tout le cours) */
-const STYLE_RULES = `- "definition" : une notion suivie de sa définition (donne le terme défini dans "terme", tel qu'il apparaît au début du paragraphe)
-- "arret" : présentation d'un arrêt ou d'une décision de jurisprudence (juridiction, date, solution)
-- "exemple" : un exemple, un cas pratique, une illustration
-- "retenir" : une règle essentielle, un point clé à retenir
-- "controverse" : un débat doctrinal, des positions opposées
-- "bilan" : une synthèse, un récapitulatif de fin de partie (« en résumé », « pour conclure », « ce qu'il faut retenir de cette section »)
-- "drapeau" (santé) : des signes de gravité, des critères d'hospitalisation ou d'urgence
-- "reflexe" (santé) : un réflexe clinique ou un piège d'examen (« … jusqu'à preuve du contraire », « ne jamais… »)
-- "mnemo" (santé) : un moyen mnémotechnique
-- "h1", "h2", "h3", "h4" : un titre de plan (court, sans verbe conjugué), du niveau le plus général (h1 = partie) au plus fin (h4)
-- "li" : un élément d'énumération
-- "quote" : une citation textuelle
-Ne propose rien pour les paragraphes ordinaires : mieux vaut aucune proposition qu'une proposition douteuse. Une proposition n'est justifiée que si le paragraphe ENTIER relève clairement de ce type.`;
-const parseJsonAnswer = text => { const m = (text || '').match(/[\[{][\s\S]*[\]}]/); if (!m) return null; try { return JSON.parse(m[0]); } catch { return null; } };
+/* mise en forme de plusieurs paragraphes (panneau IA, tout le cours) — consignes et format dans js/alixoai.js */
 async function aiStyleAnalyze(blocks) {
-  const system = `Tu aides un étudiant (droit, économie, médecine et santé, sciences humaines) à structurer ses notes de cours, prises dans un éditeur par blocs.
-Entrée : des paragraphes de texte brut, chacun précédé de son identifiant entre crochets, dans l’ordre du cours.
-Tâche : pour chaque paragraphe qui relève CLAIREMENT, en entier, de l’un des types ci-dessous, indique ce type. Un paragraphe ordinaire n’apparaît pas dans la réponse : mieux vaut aucune proposition qu’une proposition douteuse.
-Types :
-${STYLE_RULES}
-Réponds uniquement avec ce JSON : {"propositions":[{"id":"<identifiant>","type":"<type>","terme":"<notion définie, pour definition seulement, sinon vide>","raison":"<trois à six mots>"}]} — rien à proposer : {"propositions":[]}.
-Exemple d’entrée :
-[b12]
-La prescription extinctive est l’extinction d’un droit par l’écoulement d’un délai pendant lequel son titulaire ne l’a pas exercé.
-[b13]
-On verra ensuite quelques illustrations tirées de la jurisprudence récente.
-Exemple de réponse :
-{"propositions":[{"id":"b12","type":"definition","terme":"La prescription extinctive","raison":"notion suivie de sa définition"}]}`;
-  const user = blocks.map(b => `[${b.id}]\n${b.text}`).join('\n\n');
-  const r = await AlixoCorr.call(null, { system, user, maxTokens: 4000, timeoutMs: 40000 });
-  if (!r.ok) throw new Error(r.error);
-  const j = parseJsonAnswer(r.text);
-  const arr = Array.isArray(j) ? j : j && Array.isArray(j.propositions) ? j.propositions : null;
-  if (!Array.isArray(arr)) return [];
+  const arr = await window.AlixoAI.run('style', { blocks: blocks.map(b => ({ id: String(b.id), text: b.text })) });
   return arr.filter(x => x && x.id && STYLE_LABELS[x.type]).map(x => ({ id: String(x.id), type: x.type, terme: String(x.terme || '').trim(), raison: String(x.raison || '').trim() }));
 }
 /* Paramètres › IA : ce que le moteur a économisé */
@@ -10488,9 +10288,9 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'L’IA sur l’appareil ne fige plus Alixo : le moteur tourne à part, la réponse s’affiche au fur et à mesure, F7 et le Quiz IA passent devant la correction pendant la frappe, et le modèle conseillé s’adapte à votre carte graphique.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Voici AlixoAI, l’intelligence artificielle d’Alixo : prête dès l’ouverture, sans rien installer ni configurer. Le Quiz IA commence dès la première question, la correction et les fiches répondent bien plus vite.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
-  aiAutoInstall(6000);   // 1.36.1 : le modèle d'IA s'installe / se charge tout seul (Alixo+, appareil compatible)
+  aiAutoInstall(4000);   // 1.37 : AlixoAI se prépare toute seule, en silence
 }, 1400);

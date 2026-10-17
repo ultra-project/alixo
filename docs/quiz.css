@@ -488,3 +488,9 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
   .aq-view .aq-fiche { padding: 18px 16px; }
   .aq-view .aq-feedback .aq-actions { justify-content: stretch; } .aq-view .aq-feedback .aq-next { width: 100%; justify-content: center; }
 }
+
+/* 1.37 : l'étudiant a rattrapé AlixoAI — carte d'attente de la question suivante */
+.aq-view .aq-orb.small { width: 72px; height: 72px; margin: 0 auto 14px; }
+.aq-view .aq-orb.small em svg { width: 26px; height: 26px; }
+.aq-view .aq-qwait { text-align: center; padding: 36px 24px; }
+.aq-view .aq-qwait .aq-qtext { opacity: .75; font-size: 1.05em; }

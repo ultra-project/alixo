@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.36.4 (ou nouveautes.html?v=1.36.4 en page seule).
+   Aperçu : index.html?nouveautes=1.37.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.37.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Voici <em>AlixoAI</em>', text: 'L’intelligence artificielle d’Alixo : prête dès l’ouverture, sans rien installer ni configurer.' },
+    { title: 'Prête dès l’<em>ouverture</em>', text: 'AlixoAI se prépare toute seule, en silence. Plus de serveur, de clé ni de réglage de modèle.',
+      bullets: ['<b>Rien à installer</b>, rien à configurer', '<b>Paramètres › IA</b> : un simple interrupteur', '<b>Version PC et web</b> : la même AlixoAI'],
+      art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 7000 },
+    { title: 'Le quiz commence <em>tout de suite</em>', text: 'La première question arrive en quelques secondes ; les suivantes s’écrivent pendant que vous répondez.',
+      bullets: ['<b>Une question</b> par passage du cours', '<b>Vous rattrapez l’IA ?</b> Une carte patiente pour vous', '<b>Fini</b> les minutes d’attente avant la première question'],
+      art: 'quiz', accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
+    { title: 'Des réponses bien plus <em>rapides</em>', text: 'Consignes plus courtes, réponses deux à trois fois moins longues à produire, lots courts enchaînés.',
+      bullets: ['<b>Correction</b> (F7 et frappe) et mise en forme accélérées', '<b>Fiche de révision</b> rédigée partie par partie, sous vos yeux', '<b>Conversation suivie</b> : AlixoAI ne relit pas sa consigne'],
+      art: 'text', accent: '#b3762a', accent2: '#33658a', dur: 7500 },
+    { title: 'Discrète, <em>vraiment</em>', text: 'Rien ne s’affiche tant que vous ne demandez rien ; la barre en bas à droite ne paraît que si une demande attend.',
+      bullets: ['<b>« AlixoAI rédige · n mots »</b> pendant une réponse', '<b>Fermeture brutale</b> : AlixoAI repart plus légère'],
+      art: 'list', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 6500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.36.4', {
   scenes: [
@@ -42,19 +61,6 @@ AlixoWhatsNew.register('1.36.3', {
       art: 'quiz', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
     { title: 'Le moteur se <em>relance</em> tout seul', text: 'En cas de pépin, Alixo recharge le modèle depuis l’appareil et rejoue la demande, sans rien vous demander.',
       bullets: ['<b>Une seconde tentative</b> automatique et silencieuse', '<b>Message d’erreur</b> seulement si elle échoue aussi'],
-      art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 6500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.36.2', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'L’IA <em>répond</em>', text: 'Une correction : l’IA sur l’appareil se chargeait mais refusait la première demande. C’est réparé.' },
-    { title: 'Correction, quiz : <em>ça repart</em>', text: 'L’erreur « grammar matcher » au moment de corriger ou de générer un quiz ne se produit plus.',
-      bullets: ['<b>F7</b> corrige, <b>F8</b> génère quiz et fiches, comme prévu', '<b>Réponses JSON</b> toujours garanties par le moteur', '<b>Rien à faire</b> : la mise à jour s’applique toute seule'],
-      art: 'list', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
-    { title: 'Pour mémoire : <em>rien à régler</em>', text: 'Avec Alixo+, le modèle s’installe tout seul sur votre appareil et travaille hors ligne : vos notes ne quittent pas l’ordinateur.',
-      bullets: ['<b>Paramètres › IA</b> : la taille du modèle, Désactiver, Effacer', '<b>Sans WebGPU</b> : un serveur reste possible'],
       art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 6500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]

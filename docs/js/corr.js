@@ -1,51 +1,30 @@
 /* ============================================================
-   Alixo — moteur de correction (1.22)
+   Alixo — moteur de correction (1.22 ; 1.37 : AlixoAI)
    Trois étages, du moins cher au plus cher :
-   1. local, instantané, sans Internet : fautes de frappe reconnues à l'espace (liste fermée, mots appris,
-      lexique de 24 000 mots : lettres inversées, lettre doublée, accent oublié) ;
-   2. mémoire : chaque phrase déjà analysée (même texte, même niveau) ne repart jamais vers l'API ;
-   3. modèle de langue : seulement les phrases nouvelles ou modifiées, groupées en une requête compacte
-      (consigne courte, réponse JSON minimale, jetons de sortie bornés), au plus une requête toutes les 3 s.
-   1.28 : modèle ouvert Qwen3.8-27B (Alibaba, licence Apache 2.0) à la place de Grok (xAI). Le modèle n'est lié à
-   aucun fournisseur : Alixo parle à n'importe quel serveur « compatible OpenAI » (POST <endpoint>/chat/completions).
-   Préréglages : OpenRouter (hébergé, clé « sk-or-… »), Alibaba Cloud Model Studio (l'éditeur du modèle), Ollama sur
-   l'ordinateur de l'utilisateur (sans clé, sans Internet) ou tout autre serveur (vLLM, LM Studio, llama.cpp…).
-   Chargé avant app.js (ne dépend que de window.ALIXO_LEXIQUE, js/lexique.js). app.js fournit l'accès aux
+   1. local, instantané : fautes de frappe reconnues à l'espace (liste fermée, mots appris, lexique de 24 000 mots :
+      lettres inversées, lettre doublée, accent oublié) ;
+   2. mémoire : chaque phrase déjà analysée (même texte, même niveau) n'est jamais réanalysée ;
+   3. AlixoAI (js/alixoai.js) : seulement les phrases nouvelles ou modifiées, groupées en une requête compacte, au plus
+      une requête toutes les 3 s pendant la frappe.
+   1.37 : plus aucun serveur ni fournisseur extérieur. L'IA d'Alixo est AlixoAI, intégrée à l'application : les consignes,
+   les formats de réponse et les budgets vivent dans js/alixoai.js ; ce fichier garde la découpe en phrases, la mémoire,
+   la file de frappe et la mise en place des corrections. La « configuration » se réduit à un interrupteur (AlixoAI.setEnabled).
+   Chargé avant app.js (dépend de window.ALIXO_LEXIQUE, js/lexique.js, et de window.AlixoAI). app.js fournit l'accès aux
    blocs et à l'écran via AlixoCorr.init({...}) et branche les événements de frappe.
    ============================================================ */
 'use strict';
 
 window.AlixoCorr = (() => {
   /* ---------------- réglages ---------------- */
-  const DEFAULT_MODEL = 'Qwen3';            // famille affichée ; l'identifiant exact dépend de l'endroit où il tourne (voir PROVIDERS, AlixoLocalAI.MODELS)
-  /* préréglages de serveurs compatibles OpenAI servant Qwen3.8-27B. `endpoint` : base de l'API (sans /chat/completions).
-     `needsKey` : faux pour un serveur local. `keysUrl` / `keyPrefix` : parcours guidé. `remote` : vrai si le texte quitte
-     l'ordinateur (information de confidentialité). */
-  const PROVIDERS = {
-    navigateur: { label: 'Dans Alixo — sur cet appareil (gratuit, sans compte, hors ligne)', endpoint: 'local', model: 'equilibre', keysUrl: '', keyPrefix: '', needsKey: false, remote: false, local: true,
-      hint: 'Le modèle est téléchargé une fois (0,4 à 2,4 Go selon la taille choisie) puis tourne dans Alixo, sur la carte graphique de l’appareil : aucun serveur, aucune clé, aucune limite, rien ne quitte l’ordinateur. Il faut un navigateur récent (Chrome, Edge, Safari 26) ou la version PC.' },
-    openrouter: { label: 'OpenRouter (hébergé, recommandé)', endpoint: 'https://openrouter.ai/api/v1', model: 'qwen/qwen3.8-27b', keysUrl: 'https://openrouter.ai/keys', keyPrefix: 'sk-or-', needsKey: true, remote: true,
-      hint: 'Compte sur openrouter.ai, quelques centimes pour un cours entier ; l’hébergeur du modèle est choisi par OpenRouter (politique de données réglable dans son compte).' },
-    alibaba: { label: 'Alibaba Cloud Model Studio (éditeur de Qwen)', endpoint: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', model: 'qwen3.8-27b', keysUrl: 'https://modelstudio.console.alibabacloud.com/', keyPrefix: 'sk-', needsKey: true, remote: true,
-      hint: 'Clé API créée dans la console Model Studio (région Singapour, point d’accès « compatible-mode »).' },
-    ollama: { label: 'Ollama — sur cet ordinateur (gratuit, hors ligne)', endpoint: 'http://localhost:11434/v1', model: 'qwen3.8:27b', keysUrl: 'https://ollama.com/download', keyPrefix: '', needsKey: false, remote: false,
-      hint: 'Installer Ollama puis, dans un terminal : ollama pull qwen3.8:27b (≈ 17 Go, carte graphique ou Mac avec 24 Go de mémoire conseillés). Rien ne quitte l’ordinateur.' },
-    custom: { label: 'Autre serveur compatible OpenAI', endpoint: '', model: 'qwen3.8-27b', keysUrl: '', keyPrefix: '', needsKey: false, remote: true,
-      hint: 'vLLM, SGLang, LM Studio, llama.cpp, un serveur de votre établissement… Indiquez la base de l’API (…/v1) et l’identifiant du modèle tel que le serveur le connaît.' }
-  };
-  const DEFAULT_PROVIDER = 'navigateur';   // 1.36 : le modèle tourne dans l'application
-  const CONFIG_LS = 'alixo.ai.config';     // { provider, endpoint, model, key } — reste sur l'appareil
-  const LOCAL_LAST_LS = 'alixo.ai.localmodel';   // 1.36 : dernière taille de modèle activée sur l'appareil (leger / equilibre / complet)
+  const AI = () => window.AlixoAI || null;
+  const LOCAL = () => window.AlixoLocalAI || null;
   const MIN_GAP = 3000;            // ms entre deux requêtes « en direct » (facturation à l'usage : on limite le nombre d'appels)
   const PAUSE_MS = 2500;           // pause de frappe avant d'envoyer les phrases en cours
   const SENTENCE_MS = 700;         // délai après une fin de phrase (. ! ? Entrée)
   const LEAVE_MS = 250;            // délai après la sortie d'un bloc
-  const MAX_BATCH_LIVE = 2400;     // caractères par requête (frappe) — serveur
-  const MAX_BATCH_FULL = 7000;     // caractères par requête (F7) — serveur
-  const MAX_LOCAL_LIVE = 1200;     // 1.36 : modèle sur l'appareil (fenêtre de 8 000 jetons, génération plus lente) : lots courts
-  const MAX_LOCAL_FULL = 3000;
-  const maxBatchLive = () => (isLocal() ? MAX_LOCAL_LIVE : MAX_BATCH_LIVE);
-  const maxBatchFull = () => (isLocal() ? MAX_LOCAL_FULL : MAX_BATCH_FULL);
+  /* 1.37 : taille des lots (caractères par requête) donnée par AlixoAI selon la taille du modèle choisie pour l'appareil */
+  const maxBatchLive = () => (AI() ? AI().budget().live : 1000);
+  const maxBatchFull = () => (AI() ? AI().budget().full : 2600);
   const MIN_WORDS = 3;             // une phrase plus courte n'est pas envoyée
   const CACHE_MAX = 4000;          // phrases mémorisées
   const LS = { learned: 'alixo.corr.learned', ignored: 'alixo.corr.ignored', cache: 'alixo.corr.cache', stats: 'alixo.corr.stats' };
@@ -198,223 +177,24 @@ window.AlixoCorr = (() => {
   }
   function clearCache() { cache = {}; persist(); }
 
-  /* ---------------- consignes ---------------- */
-  const CHECK_SHORT = `Fautes à relever : orthographe et accents ; homophones (a/à, et/est, on/ont, ce/se, ces/ses/c'est/s'est, leur/leurs, sa/ça, peu/peut, tout/tous, quand/quant) ; terminaisons -é/-er/-ez/-ai/-ais et accord du participe passé ; accord sujet-verbe, adjectif, déterminant, pluriels ; conjugaison et modes (subjonctif après « il faut que », « bien que ») ; négation incomplète, mot doublé, mot manquant ou en trop.`;
-  const CHECK_FULL = `Relis mot par mot, catégorie par catégorie, et relève TOUTES les fautes (plusieurs dans la même phrase comprises) :
-1. accents et orthographe lexicale (é/è/ê, ç, a/à, ou/où, la/là, du/dû, sur/sûr, lettres doublées ou manquantes) ;
-2. homophones grammaticaux (a/à, et/est, on/ont, son/sont, ce/se, ces/ses/c'est/s'est, leur/leurs, quel(le)(s)/qu'elle(s), sa/ça, ni/n'y, si/s'y, peu/peut, tout/tous/toute(s), quelque/quel que, quand/quant/qu'en, davantage/d'avantage, près/prêt, voir/voire) ;
-3. terminaisons -é / -er / -ez / -ai / -ais / -ait et accord du participe passé (avec être ; avec avoir si le COD précède) ;
-4. accord sujet-verbe (sujet inversé, éloigné, collectif, pronom « qui »), accord de l'adjectif, du déterminant et du nom, pluriels irréguliers, noms composés ;
-5. conjugaison : temps et modes (subjonctif après « il faut que », « bien que », « avant que »), concordance des temps ;
-6. syntaxe : négation complète, pronoms relatifs, prépositions, mot doublé, mot manquant ou en trop, anglicismes flagrants ;
-7. majuscules, apostrophes, traits d'union, ponctuation et typographie française (selon le niveau).`;
-  const NEVER = `Ne touche jamais : abréviations juridiques ou médicales usuelles (art., C. civ., Cass., al., n°, CE, CC, BPCO, SCA, IV, mg/kg…), sigles, noms propres, noms de molécules, mots latins, mots ou citations dans une autre langue (jamais traduits ni « corrigés »), formules, nombres, notes télégraphiques volontaires (absence d'article, majuscule manquante, phrase inachevée sans ponctuation).`;
-  const LANG_NAMES = { fr: 'français', en: 'anglais', es: 'espagnol', de: 'allemand', it: 'italien', pt: 'portugais' };
-  function levelLines(ctx) {
-    let t = '';
-    if (ctx.level === 'leger') t += '\nNiveau léger : seulement les fautes indiscutables (orthographe, accords, conjugaison) ; ignore ponctuation, typographie et majuscules.';
-    else if (ctx.level === 'strict') t += '\nNiveau strict : relève aussi la ponctuation, la typographie française (espaces insécables avant ; : ? !, guillemets « »), les majuscules, les répétitions maladroites, les anglicismes et les tournures lourdes, toujours avec une correction minimale.';
-    else t += '\nNiveau standard : fautes, grammaire, ponctuation et typographie française courantes.';
-    if (ctx.rephrase) t += '\nReformulations : avec parcimonie (au plus une par paragraphe), propose une reformulation plus claire d\'une phrase lourde, sens inchangé, type "r", règle commençant par « Reformulation : ».';
-    return t;
-  }
-  function langLine(lang) {
-    if (lang && lang !== 'fr' && LANG_NAMES[lang]) return `\nLangue : ${LANG_NAMES[lang]}. Corrige dans cette langue uniquement, ne traduis rien, ne francise rien.`;
-    return '';
-  }
-  const STYLE_TYPES = `"definition" (notion suivie de sa définition ; "terme" = la notion, telle qu'écrite au début), "arret" (arrêt ou décision de jurisprudence), "exemple" (exemple, cas pratique), "retenir" (règle essentielle, point clé), "controverse" (débat doctrinal), "bilan" (synthèse, récapitulatif), "drapeau" (santé : signes de gravité), "reflexe" (santé : réflexe clinique, piège), "mnemo" (moyen mnémotechnique), "h1"/"h2"/"h3"/"h4" (titre de plan, du plus général au plus fin), "li" (élément d'énumération), "quote" (citation textuelle)`;
-  /* 1.36 : consignes pour le modèle qui tourne dans l'application (0,6 à 4 milliards de paramètres) : plus courtes,
-     une tâche nette, un exemple complet — un petit modèle suit mieux un exemple qu'une longue liste de catégories. */
-  function systemPromptLocal(mode, ctx, withStyle) {
-    const live = mode === 'live';
-    const level = ctx.level === 'leger' ? 'Relève seulement les fautes indiscutables (orthographe, accords, conjugaison) ; ignore la ponctuation et les majuscules.'
-      : ctx.level === 'strict' ? 'Relève aussi la ponctuation, la typographie française (espace avant ; : ? !, guillemets « »), les majuscules et les anglicismes.'
-        : 'Relève les fautes d’orthographe, d’accord, de conjugaison, d’homophone et la ponctuation courante.';
-    let p = `Tu es le correcteur d’Alixo. Tu relis des notes de cours prises vite par un étudiant (droit, économie, commerce, médecine, STAPS), en français.
-Entrée : des phrases numérotées « n| texte ».${live ? ' Certaines sont encore en cours de frappe : une phrase inachevée ou sans point final n’est pas une faute.' : ''}
-${level}${ctx.rephrase ? ' Au plus une fois par paragraphe, tu peux proposer une phrase plus claire (type "r", règle commençant par « Reformulation : »).' : ''}
-Règles :
-- corrige uniquement le mot ou le groupe fautif ; jamais le style, le sens ni le vocabulaire ;
-- laisse tels quels : abréviations (art., Cass., C. civ., al., n°), sigles, noms propres, mots latins ou étrangers, nombres, notes télégraphiques volontaires ;
-- "avant" est copié EXACTEMENT du texte (accents, majuscules, apostrophes), le plus court possible ; "apres" est le même extrait corrigé ;
-- "type" : "f" faute de frappe d’un seul mot, "o" orthographe, "g" grammaire ou accord, "t" ponctuation${ctx.rephrase ? ', "r" reformulation' : ''} ;
-- "regle" : la règle en dix mots au plus, pour que l’étudiant comprenne.${langLine(ctx.lang)}
-Réponds uniquement avec ce JSON : {"c":{"<numéro>":[["avant","apres","type","regle"]]}} — seulement les phrases fautives ; aucune faute : {"c":{}}.
-Exemple d’entrée :
-1| Le contrat et formé quand les partie sont d’accord.
-2| L’arrêt Cass. civ. 1re du 3 mai 2000 est célèbre.
-Exemple de réponse :
-{"c":{"1":[["et formé","est formé","g","Verbe être : on peut dire « était formé »"],["les partie","les parties","g","Pluriel après « les »"]]}}`;
-    if (withStyle) p += `
-Les lignes « § A : 1, 2 » désignent des paragraphes entiers (les phrases 1 et 2). Si un paragraphe est CLAIREMENT une définition, un arrêt, un exemple, un point à retenir, une controverse, un bilan ou un titre de plan (h1 à h4), ajoute "m":{"A":{"t":"<type>","terme":"<notion définie, pour definition seulement>","raison":"<trois mots>"}} avec un type parmi ${STYLE_TYPES}. Dans le doute, n’ajoute rien.`;
-    return p;
-  }
-  function systemPrompt(mode, ctx, withStyle) {
-    if (isLocal()) return systemPromptLocal(mode, ctx, withStyle);
-    const live = mode === 'live';
-    let p = `Tu corriges des notes de cours en français (droit, économie, commerce, médecine et santé, STAPS, sciences humaines). Entrée : des phrases numérotées${live ? ', parfois encore en cours de rédaction (ponctuation finale absente, phrase inachevée : ce n\'est pas une faute)' : ''}.
-${live ? CHECK_SHORT : CHECK_FULL}
-Correction minimale : le mot ou le groupe fautif, rien de plus ; jamais de reformulation, de changement de sens, de style ou de vocabulaire. ${NEVER}${levelLines(ctx)}${langLine(ctx.lang)}
-Réponse : uniquement du JSON, sans commentaire : {"c":{"<numéro>":[["avant","apres","type","règle"],…]}} pour les phrases fautives seulement.
-- "avant" : extrait EXACT copié tel quel (majuscules, apostrophes, accents), le plus court possible mais unique dans sa phrase ; "apres" : le même extrait corrigé.
-- "type" : "f" = faute de frappe évidente d'UN seul mot (lettres inversées, lettre manquante ou doublée, accent oublié) dont la correction ne fait aucun doute ; "o" = orthographe ; "g" = grammaire ou accord ; "t" = typographie / ponctuation${ctx.rephrase ? ' ; "r" = reformulation' : ''}.
-- "règle" : une courte phrase pédagogique (12 mots au plus).
-Aucune faute : {"c":{}}.`;
-    if (withStyle) p += `
-Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragraphes entiers. Si l'un d'eux relève CLAIREMENT d'un type, ajoute "m":{"<lettre>":{"t":"<type>","terme":"<notion définie, pour definition seulement>","raison":"<quelques mots>"}}, avec type parmi ${STYLE_TYPES}. Rien pour un paragraphe ordinaire : mieux vaut aucune proposition qu'une proposition douteuse.`;
-    return p;
-  }
-
-  /* ---------------- configuration du serveur (1.28) ----------------
-     { provider, endpoint, model, key } : lu dans localStorage (alixo.ai.config), jamais synchronisé.
-     `provider` est un préréglage de PROVIDERS ; endpoint et model peuvent être modifiés par l'utilisateur. */
-  const normEndpoint = u => String(u || '').trim().replace(/\/+$/, '').replace(/\/chat\/completions$/i, '');
-  const LOCAL = () => window.AlixoLocalAI || null;
-  const localKeys = () => { const L = LOCAL(); return L ? Object.keys(L.MODELS) : ['leger', 'equilibre', 'complet']; };
-  function normConfig(c) {
-    const o = c && typeof c === 'object' ? c : {};
-    const provider = PROVIDERS[o.provider] ? o.provider : DEFAULT_PROVIDER;
-    const P = PROVIDERS[provider];
-    if (P.local) {
-      // modèle = taille choisie (leger / equilibre / complet) ; `on` = l'utilisateur a activé l'IA sur cet appareil
-      const L = LOCAL(); const last = loadJSON(LOCAL_LAST_LS, '');
-      const model = localKeys().includes(o.model) ? o.model : localKeys().includes(last) ? last : (L ? L.recommend() : P.model);
-      if (o.on === true && model !== last) saveJSON(LOCAL_LAST_LS, model);   // dernière taille activée (reprise après « Désactiver »)
-      // on = déjà installée une première fois (affichage) ; off = l'utilisateur a désactivé l'IA sur cet appareil
-      return { provider, endpoint: 'local', model, key: '', on: o.on === true, off: o.off === true };
-    }
-    return { provider, endpoint: normEndpoint(o.endpoint) || P.endpoint, model: String(o.model || '').trim() || P.model, key: String(o.key || '').trim() };
-  }
-  function getConfig() { return normConfig(loadJSON(CONFIG_LS, null)); }
-  function setConfig(c) { if (!c) { try { localStorage.removeItem(CONFIG_LS); } catch { } return; } saveJSON(CONFIG_LS, normConfig(c)); }
-  /* prêt = l'IA sur l'appareil a été activée (modèle téléchargé une première fois), ou un serveur joignable est
-     configuré : clé présente, ou serveur qui n'en demande pas (local) */
-  function configured(c) {
-    c = c || getConfig();
-    // 1.36.1 : l'IA de l'application est disponible d'office dès que l'appareil sait la faire tourner (WebGPU) —
-    // le modèle se télécharge tout seul au démarrage (Alixo+) ou à la première demande ; seul « Désactiver » l'éteint
-    if (PROVIDERS[c.provider].local) { const L = LOCAL(); return !!L && !c.off && L.support().ok; }
-    return !!(c.endpoint && c.model && (c.key || !PROVIDERS[c.provider].needsKey));
-  }
-  /* l'IA tourne dans l'application (modèle petit : lots plus courts, consignes plus compactes) */
-  const isLocal = c => !!PROVIDERS[(c || getConfig()).provider].local;
+  /* ---------------- AlixoAI : disponibilité et interrupteur (1.37) ----------------
+     Plus de serveur, de clé ni de choix de modèle : getConfig() / setConfig() ne servent plus qu'à l'interrupteur
+     { off } (« Désactiver » dans Paramètres › IA), gardé pour les appelants historiques (cloudconfig.js, tests). */
+  function getConfig() { const A = AI(); return { provider: 'alixoai', endpoint: 'local', model: A ? A.tier() : 'equilibre', key: '', on: !!(A && A.ready()), off: !!(A && !A.enabled()) }; }
+  function setConfig(c) { const A = AI(); if (!A) return; if (c && typeof c === 'object' && 'off' in c) A.setEnabled(!c.off); }
+  /* prêt = AlixoAI est active et l'appareil sait la faire tourner (elle se prépare toute seule, à la demande si besoin) */
+  function configured() { const A = AI(); return !!A && A.enabled() && A.available().ok; }
+  const isLocal = () => true;
   const isLocalUrl = u => { try { const h = new URL(u).hostname; return /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.local$/.test(h); } catch { return false; } };
-
-  /* ---------------- appel du modèle ----------------
-     API compatible OpenAI : POST <endpoint>/chat/completions, en-tête Authorization: Bearer <clé> (si clé), réponse
-     JSON forcée (response_format json_object). Qwen3.8 « réfléchit » par défaut : on le désactive sous les trois formes
-     connues (chat_template_kwargs.enable_thinking pour vLLM / SGLang / llama.cpp, enable_thinking pour Model Studio et
-     Ollama, reasoning.enabled pour OpenRouter) ; si un serveur strict refuse un paramètre inconnu, on le retire et on
-     recommence (mémorisé par serveur). Un éventuel bloc <think>…</think> resté dans la réponse est ignoré.
-     Version PC : un serveur local (Ollama…) est joint par le processus principal (alixoDesktop.aiFetch), ce qui évite
-     la politique CORS du navigateur ; version web : fetch direct (Ollama : OLLAMA_ORIGINS=https://alixoapp.com). */
-  const quirks = {};   // endpoint → { noThink: bool (ne plus envoyer les paramètres anti-réflexion), noFormat: bool }
-  const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const errText = j => {
-    if (!j) return '';
-    if (typeof j.error === 'string') return j.error;
-    if (j.error && typeof j.error.message === 'string') return j.error.message;
-    if (typeof j.message === 'string') return j.message;
-    if (typeof j.detail === 'string') return j.detail;
-    return '';
-  };
-  const stripThink = t => String(t || '').replace(/<think>[\s\S]*?<\/think>/gi, '').replace(/^\s*<think>[\s\S]*$/i, '').trim();
-  async function post(url, body, key, timeoutMs) {
-    const headers = { 'Content-Type': 'application/json' };
-    if (key) headers.Authorization = 'Bearer ' + key;
-    if (/openrouter\.ai/i.test(url)) { headers['HTTP-Referer'] = 'https://alixoapp.com'; headers['X-Title'] = 'Alixo'; }
-    const desk = window.alixoDesktop;
-    if (desk && desk.aiFetch && isLocalUrl(url)) {
-      const r = await desk.aiFetch({ url, method: 'POST', headers, body: JSON.stringify(body), timeoutMs });
-      if (!r || r.error) { const e = new Error(r && r.error || 'fetch'); e.name = r && r.timeout ? 'AbortError' : 'TypeError'; throw e; }
-      return { ok: r.status >= 200 && r.status < 300, status: r.status, json: async () => JSON.parse(r.body) };
-    }
-    const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), timeoutMs);
-    try { return await fetch(url, { method: 'POST', signal: ctl.signal, headers, body: JSON.stringify(body) }); }
-    finally { clearTimeout(tm); }
+  /* appel brut (vérification, tests) : AlixoAI répond à une consigne libre */
+  async function call(cfg, { system, user, maxTokens = 256, timeoutMs = 60000, temperature = 0, background = false } = {}) {
+    const L = LOCAL(); const A = AI();
+    if (!L || !A) return { ok: false, status: 0, error: 'Le moteur d’AlixoAI n’est pas chargé.' };
+    if (!configured() && !(cfg && cfg.force)) return { ok: false, status: 0, error: A.enabled() ? A.available().reason : 'AlixoAI est désactivée (Paramètres › IA › Réactiver).' };
+    try { await L.load(L.recommend()); } catch (e) { return { ok: false, status: 0, error: e.message }; }
+    return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 60000), key: L.recommend(), background });
   }
-  /* cfg : { endpoint, model, key } (ou null → configuration enregistrée). `models` (ancien paramètre) est ignoré. */
-  async function call(cfg, { system, user, maxTokens, minTokens = 0, timeoutMs = 25000, temperature = 0, background = false }) {
-    const c = cfg && typeof cfg === 'object' ? normConfig(cfg) : getConfig();
-    if (PROVIDERS[c.provider].local) {
-      const L = LOCAL();
-      if (!L) return { ok: false, status: 0, error: 'Le moteur d’IA de l’application n’est pas chargé.' };
-      if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: c.off ? 'L’IA est désactivée sur cet appareil (Paramètres › IA › Réactiver).' : L.support().reason };
-      // le chargement du modèle (téléchargement la première fois, 10 à 60 s depuis l'appareil ensuite) n'entame pas le délai
-      try { await L.load(c.model); } catch (e) { return { ok: false, status: 0, error: e.message }; }
-      // 1.36.4 : délai doublé par rapport à un serveur (génération plus lente sur l'appareil), 60 s au moins ; le moteur
-      // détecte lui-même un blocage (aucun jeton pendant 30 à 90 s), inutile d'attendre des minutes
-      return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs * 2, 60000), key: c.model, background });
-    }
-    if (!configured(c)) return { ok: false, status: 0, error: 'Aucun serveur d’IA configuré (Paramètres › Correction par IA).' };
-    const url = c.endpoint + '/chat/completions';
-    const q = quirks[c.endpoint] || (quirks[c.endpoint] = {});
-    const where = PROVIDERS[c.provider].needsKey ? PROVIDERS[c.provider].label.replace(/ \(.*$/, '') : (isLocalUrl(c.endpoint) ? 'le serveur local' : 'le serveur');
-    let last = null;
-    let maxT = maxTokens, shrunk = 0;   // 1.34.1 : longueur de réponse réduite si le crédit de la clé ne couvre pas la demande
-    for (let attempt = 0; attempt < 3; attempt++) {
-      if (attempt) await sleep(1500 * attempt);
-      const body = { model: c.model, temperature, max_tokens: maxT, stream: false, messages: [{ role: 'system', content: system }, { role: 'user', content: user }] };
-      if (!q.noFormat) body.response_format = { type: 'json_object' };
-      if (!q.noThink) { body.chat_template_kwargs = { enable_thinking: false }; body.enable_thinking = false; body.reasoning = { enabled: false }; }
-      let res;
-      try { res = await post(url, body, c.key, timeoutMs); }
-      catch (err) {
-        if (err && err.name === 'AbortError') { last = { ok: false, status: 0, error: 'Le modèle ne répond pas (délai dépassé) — réessayez dans un instant.' }; continue; }
-        return { ok: false, status: 0, error: isLocalUrl(c.endpoint) ? `Impossible de joindre ${c.endpoint} — le serveur local (Ollama…) est-il lancé ?` : `Impossible de joindre ${where} — vérifiez la connexion internet et l’adresse du serveur.` };
-      }
-      let j = null; try { j = await res.json(); } catch { j = null; }
-      if (res.ok) {
-        const choice = j && Array.isArray(j.choices) && j.choices[0];
-        const msg = choice && choice.message;
-        const raw = msg ? (typeof msg.content === 'string' ? msg.content : Array.isArray(msg.content) ? msg.content.map(p => (p && p.text) || '').join('') : '') : '';
-        const content = stripThink(raw);
-        if (!msg || (!content && choice.finish_reason !== 'stop')) {
-          const why = (choice && choice.finish_reason) || '';
-          return { ok: false, status: res.status, error: 'Le modèle n’a pas renvoyé de réponse' + (why === 'length' ? ' (réponse tronquée : la « réflexion » du modèle a consommé les jetons ; vérifiez que la réflexion est désactivée sur le serveur)' : why ? ` (${why})` : '') + '.' };
-        }
-        const usage = j.usage || {};
-        return { ok: true, text: content, model: c.model, tokIn: usage.prompt_tokens || 0, tokOut: usage.completion_tokens || 0 };
-      }
-      const detail = errText(j);
-      if (res.status === 400 && !q.noThink && /enable_thinking|chat_template_kwargs|reasoning|unknown|unrecognized|unexpected|extra|not permitted|additional propert/i.test(detail)) { q.noThink = true; continue; }
-      if (res.status === 400 && !q.noFormat && /response_format|json_object|json mode|structured/i.test(detail)) { q.noFormat = true; continue; }
-      if (res.status === 404 || /not found|does not exist|not supported|unknown model|no such model|try pulling/i.test(detail)) return { ok: false, status: 404, error: `Modèle « ${c.model} » introuvable sur ${where}${c.provider === 'ollama' ? ' — dans un terminal : ollama pull ' + c.model : ''}.` };
-      if (res.status === 401 || (res.status === 400 && /api key|authentication/i.test(detail))) return { ok: false, status: 401, error: `Clé refusée par ${where} : elle est incomplète, révoquée ou mal copiée.` };
-      if (res.status === 402) {
-        // OpenRouter réserve le prix de la réponse la plus longue demandée (max_tokens) : « can only afford N » → on redemande avec N
-        const m = /afford\s+(\d+)/i.exec(detail || ''); const afford = m ? +m[1] : 0;
-        if (afford && afford < maxT && afford >= Math.max(200, minTokens) && shrunk < 2) { maxT = Math.floor(afford * 0.92); shrunk++; attempt--; continue; }
-        return { ok: false, status: 402, afford, error: afford
-          ? `Crédit insuffisant sur ${where} pour cette demande : la clé permet encore environ ${afford} jetons de réponse, il en faut au moins ${Math.max(minTokens, 200)}. Rechargez le compte qui a créé la clé (ou demandez une génération plus courte).`
-          : `Crédit épuisé sur ${where} — rechargez le compte qui a créé la clé.` };
-      }
-      if (res.status === 403) return { ok: false, status: 403, error: 'Clé reconnue mais sans accès (' + (detail || 'HTTP 403') + '). Vérifiez les droits de la clé et le crédit du compte.' };
-      if (res.status === 503 || res.status === 502 || res.status === 500 || res.status === 429 || /overloaded|capacity|rate limit|too many/i.test(detail)) {
-        last = { ok: false, status: res.status, error: res.status === 429 ? 'Limite de requêtes atteinte pour l’instant (ou crédit épuisé) — réessayez dans une minute.' : `Le serveur est saturé pour l’instant (${res.status}) — réessayez dans un instant.` };
-        continue;
-      }
-      return { ok: false, status: res.status, error: `Erreur ${res.status} de ${where}${detail ? ' : ' + detail : ''}.` };
-    }
-    return last || { ok: false, status: 0, error: 'Le modèle est indisponible pour l’instant.' };
-  }
-  /* liste des modèles du serveur (GET <endpoint>/models) — pour tester une clé ou vérifier qu'un modèle est installé */
-  async function listModels(cfg, timeoutMs = 12000) {
-    const c = normConfig(cfg || getConfig());
-    if (PROVIDERS[c.provider].local) { const L = LOCAL(); return { ok: true, models: L ? Object.values(L.MODELS).map(m => m.id) : [] }; }
-    const url = c.endpoint + '/models';
-    const headers = {}; if (c.key) headers.Authorization = 'Bearer ' + c.key;
-    const desk = window.alixoDesktop;
-    let status, j;
-    try {
-      if (desk && desk.aiFetch && isLocalUrl(url)) { const r = await desk.aiFetch({ url, method: 'GET', headers, timeoutMs }); if (!r || r.error) return { ok: false, error: r && r.error || 'fetch' }; status = r.status; try { j = JSON.parse(r.body); } catch { j = null; } }
-      else { const ctl = new AbortController(); const tm = setTimeout(() => ctl.abort(), timeoutMs); const res = await fetch(url, { headers, signal: ctl.signal }).finally(() => clearTimeout(tm)); status = res.status; try { j = await res.json(); } catch { j = null; } }
-    } catch (e) { return { ok: false, error: e && e.name === 'AbortError' ? 'délai dépassé' : 'serveur injoignable' }; }
-    if (status < 200 || status >= 300) return { ok: false, status, error: errText(j) || ('HTTP ' + status) };
-    const arr = j && (Array.isArray(j.data) ? j.data : Array.isArray(j.models) ? j.models : []);
-    return { ok: true, models: arr.map(m => (m && (m.id || m.name || m.model)) || '').filter(Boolean) };
-  }
-  const parseJson = text => { const m = (text || '').match(/\{[\s\S]*\}/); if (!m) return null; try { return JSON.parse(m[0]); } catch { return null; } };
+  const LANG_NAMES = { fr: 'français', en: 'anglais', es: 'espagnol', de: 'allemand', it: 'italien', pt: 'portugais' };
   const KINDS = { f: 'frappe', o: 'orthographe', g: 'grammaire', t: 'typographie', r: 'reformulation' };
 
   /* retrouve un extrait dans un texte (apostrophes droites / typographiques, espaces insécables) ; null sinon */
@@ -485,23 +265,18 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
   /* ---------------- une requête : phrases (+ paragraphes à classer) ---------------- */
   /* items : [{ key, text, lang, block, styleTag }] ; styleBlocks : { tag → [indices] } */
   async function request(mode, items, ctx, styleBlocks) {
-    if (!configured()) throw new Error('Aucun serveur d’IA configuré.');
-    const lines = items.map((it, i) => `${i + 1}| ${it.text}`);
+    if (!configured()) throw new Error('AlixoAI n’est pas disponible.');
     const withStyle = styleBlocks && Object.keys(styleBlocks).length > 0;
-    if (withStyle) for (const [tag, idx] of Object.entries(styleBlocks)) lines.push(`§ ${tag} : ${idx.map(i => i + 1).join(', ')}`);
-    let user = lines.join('\n');
-    if (ctx.already && ctx.already.length) user = `Déjà relevé lors d'une première lecture (ne le répète pas) :\n${ctx.already.map(a => `« ${a.avant} » → « ${a.apres} »`).join('\n')}\n\nRelis maintenant chaque phrase une seconde fois, plus attentivement (homophones, terminaisons, accords, mots oubliés). Réponds {"c":{}} seulement si tu es certain qu'il ne reste rien.\n\n${user}`;
-    const chars = user.length;
-    const maxTokens = Math.max(512, Math.min(mode === 'live' ? 2048 : 6144, 300 + Math.round(chars / 2)));
-    const r = await call(null, { system: systemPrompt(mode, ctx, withStyle), user, maxTokens, timeoutMs: mode === 'live' ? 20000 : 40000, background: mode === 'live' });
+    const chars = items.reduce((n, it) => n + it.text.length + 4, 0);
+    let r;
+    try { r = await AI().run('correct', { mode, items: items.map(it => ({ text: it.text })), ctx, styleBlocks: withStyle ? styleBlocks : null }, { background: mode === 'live' }); }
+    catch (e) { stats.req++; stats.chars += chars; stats.sent += items.length; persist(); throw e; }
     stats.req++; stats.chars += chars; stats.sent += items.length;
-    if (!r.ok) { persist(); const e = new Error(r.error); e.status = r.status; throw e; }
-    stats.tokIn = (stats.tokIn || 0) + r.tokIn; stats.tokOut = (stats.tokOut || 0) + r.tokOut; persist();
-    const j = parseJson(r.text) || {};
-    const c = j.c && typeof j.c === 'object' ? j.c : {};
+    stats.tokIn = (stats.tokIn || 0) + (r.tokIn || 0); stats.tokOut = (stats.tokOut || 0) + (r.tokOut || 0); persist();
+    const c = r.c || {};
     const results = items.map((it, i) => ({ item: it, fixes: fixesFor(it.text, c[String(i + 1)]) }));
     const styles = {};
-    if (withStyle && j.m && typeof j.m === 'object') for (const [tag, v] of Object.entries(j.m)) if (v && typeof v === 'object' && v.t) styles[tag] = { type: String(v.t), terme: String(v.terme || '').trim(), raison: String(v.raison || '').trim() };
+    if (withStyle && r.m) for (const [tag, v] of Object.entries(r.m)) if (v && v.t) styles[tag] = { type: String(v.t), terme: String(v.terme || '').trim(), raison: String(v.raison || '').trim() };
     return { results, styles };
   }
 
@@ -562,7 +337,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     if (!enabled() || !configured()) { pending.clear(); return; }
     // 1.36.4 : sur l'appareil, la frappe n'attend ni ne déclenche un chargement du modèle (installation automatique à part),
     // et ne s'empile pas derrière une réponse en cours : on repasse un peu plus tard
-    if (isLocal()) { const L = LOCAL(); const s = L && L.status(); if (!s || s.state !== 'ready' || s.busy) { backoffUntil = Date.now() + 5000; schedule(); return; } }
+    { const L = LOCAL(); const s = L && L.status(); if (!s || s.state !== 'ready' || s.busy) { backoffUntil = Date.now() + 5000; schedule(); return; } }
     // lot : phrases de tous les blocs en attente, dans la limite de taille ; paragraphes à classer en plus
     const items = []; const styleBlocks = {}; const styleTags = {}; let chars = 0; let tag = 65;
     for (const [blockId, entry] of pending) {
@@ -620,7 +395,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     // lots par taille (une langue par lot)
     const batches = []; let cur = [], n = 0;
     for (const it of todo) {
-      if (cur.length && (n + it.text.length > maxBatchFull() || cur[0].lang !== it.lang || cur.length >= (isLocal() ? 40 : 120))) { batches.push(cur); cur = []; n = 0; }
+      if (cur.length && (n + it.text.length > maxBatchFull() || cur[0].lang !== it.lang || cur.length >= 40)) { batches.push(cur); cur = []; n = 0; }
       cur.push(it); n += it.text.length + 4;
     }
     if (cur.length) batches.push(cur);
@@ -650,10 +425,10 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     init, typed, sentenceDone, left, drop, pending: () => pending.size + inflight.size,
     localFix, learn, ignore, isIgnored, forget, known,
     sentences, worth, sureTypo, levenshtein, locate, align,
-    analyzeBlocks, request, call, listModels,
+    analyzeBlocks, request, call,
     getConfig, setConfig, configured, isLocalUrl, isLocal,
     cacheGet, cacheSet, clearCache, keyOf,
     stats: getStats, resetStats, note,
-    TYPO_FIXES, LANG_NAMES, PROVIDERS, DEFAULT_PROVIDER, DEFAULT_MODEL
+    TYPO_FIXES, LANG_NAMES
   };
 })();

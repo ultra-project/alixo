@@ -8,7 +8,7 @@
    - les poids viennent de huggingface.co (dépôts mlc-ai/*), gardés ensuite dans le cache du navigateur
      (Cache API, ou IndexedDB quand la Cache API n'est pas disponible) ;
    - il faut WebGPU : Chrome / Edge / Opera récents, Safari 26, Firefox 141+ (Windows), la version PC
-     d'Alixo ; sans WebGPU, l'application le dit et propose les serveurs (Paramètres › IA) ;
+     d'Alixo ; sans WebGPU, AlixoAI n'est pas disponible sur l'appareil (1.37 : plus aucun serveur de repli) ;
    - 1.36.4 : le moteur tourne dans un Web Worker (js/ailocal-worker.js) : chargement du modèle, compilation des
      programmes graphiques et génération n'occupent plus le fil de l'interface, qui ne gèle plus. Si le worker n'a pas
      WebGPU (navigateur ancien), le moteur tourne comme avant sur le fil principal.
@@ -69,7 +69,7 @@ window.AlixoLocalAI = (() => {
   let probed = null;             // résultat de probe()
 
   const emit = why => { try { document.dispatchEvent(new CustomEvent('alixo-ai-local', { detail: Object.assign(status(), { why: why || 'state' }) })); } catch { /* hors document */ } };
-  function status() { return { state: st.state, key: st.key, model: st.key && MODELS[st.key] ? idFor(st.key) : '', progress: st.progress, text: st.text, phase: st.phase, error: st.error, busy: st.busy, gen: st.gen }; }
+  function status() { return { state: st.state, key: st.key, model: st.key && MODELS[st.key] ? idFor(st.key) : '', progress: st.progress, text: st.text, phase: st.phase, error: st.error, busy: st.busy, gen: st.gen, waiting: jobs.filter(j => !j.job.background && !j.job.quiet).length + (current && !current.background && !current.quiet ? 1 : 0) }; }
   function set(patch, why) { Object.assign(st, patch); emit(why); }
 
   /* ---------------- fermeture brutale ----------------
@@ -119,7 +119,21 @@ window.AlixoLocalAI = (() => {
     }
     return probed;
   }
-  function recommend() { return (probed && probed.recommended) || DEFAULT_KEY; }
+  /* 1.37 : plafond mémorisé après une fermeture brutale (alixo.ai.cap) : la taille conseillée ne le dépasse plus */
+  const CAP_LS = 'alixo.ai.cap';
+  let cap = ''; try { cap = localStorage.getItem(CAP_LS) || ''; } catch { /* */ }
+  function recommend() {
+    const r = (probed && probed.recommended) || DEFAULT_KEY;
+    if (cap && ORDER.includes(cap) && ORDER.indexOf(cap) < ORDER.indexOf(r)) return cap;
+    return r;
+  }
+  /* passe à la taille en dessous de `bad` (ou de la taille conseillée) ; renvoie la nouvelle clé, '' si déjà au plus léger */
+  function downgrade(bad) {
+    const i = ORDER.indexOf(ORDER.includes(bad) ? bad : recommend());
+    if (i <= 0) return '';
+    cap = ORDER[i - 1]; try { localStorage.setItem(CAP_LS, cap); } catch { /* */ }
+    return cap;
+  }
 
   /* ---------------- chargement du module et du modèle ---------------- */
   async function getLib() {
@@ -221,12 +235,12 @@ window.AlixoLocalAI = (() => {
   function friendly(e) {
     const m = String(e && e.message || e || '');
     if (/Failed to fetch|NetworkError|network|ERR_|fetch/i.test(m) && !/context/i.test(m)) return 'Le téléchargement du modèle a été interrompu (connexion internet ou huggingface.co inaccessible depuis ce réseau). Réessayez : il reprend là où il s’était arrêté.';
-    if (/QuotaExceeded|quota|storage/i.test(m)) return 'Pas assez d’espace libre dans le navigateur pour garder le modèle sur l’appareil : libérez de la place (ou choisissez un modèle plus léger).';
-    if (/maxStorageBufferBindingSize|maxBufferSize|out of memory|OutOfMemory|device lost|DeviceLost/i.test(m)) return 'La carte graphique n’a pas assez de mémoire pour ce modèle : choisissez un modèle plus léger dans Paramètres › IA.';
-    if (/ShaderModule|compute stage|entryPoint|WGSL|Tint/i.test(m)) return 'La carte graphique n’a pas accepté le programme du modèle (pilotes graphiques à mettre à jour ?). Alixo a basculé sur la variante compatible : réessayez ; si l’erreur persiste, choisissez « Léger » ou un serveur dans Paramètres › IA.';
+    if (/QuotaExceeded|quota|storage/i.test(m)) return 'Pas assez d’espace libre dans le navigateur pour garder le modèle sur l’appareil : libérez de la place.';
+    if (/maxStorageBufferBindingSize|maxBufferSize|out of memory|OutOfMemory|device lost|DeviceLost/i.test(m)) return 'La mémoire graphique de l’appareil ne suffit pas pour AlixoAI dans cette taille : elle sera allégée au prochain démarrage.';
+    if (/ShaderModule|compute stage|entryPoint|WGSL|Tint/i.test(m)) return 'La carte graphique n’a pas accepté le programme du modèle (pilotes graphiques à mettre à jour ?). AlixoAI a basculé sur la variante compatible : réessayez.';
     if (/Cannot find adapter|requestAdapter|WebGPU/i.test(m)) return 'WebGPU n’a pas pu démarrer sur cet appareil (navigateur ou pilotes graphiques trop anciens).';
-    if (/ContextWindowSizeExceeded|context window/i.test(m)) return 'Le texte envoyé est trop long pour le modèle sur l’appareil : sélectionnez une partie plus courte.';
-    return m || 'Le modèle n’a pas pu être chargé.';
+    if (/ContextWindowSizeExceeded|context window/i.test(m)) return 'Le texte envoyé est trop long pour AlixoAI : sélectionnez une partie plus courte.';
+    return m || 'AlixoAI n’a pas pu démarrer.';
   }
 
   /* ---------------- une requête ----------------
@@ -247,30 +261,41 @@ window.AlixoLocalAI = (() => {
      d'app.js), et un moteur réellement bloqué se détecte en 30 à 90 s sans jeton, au lieu d'attendre un délai global de
      plusieurs minutes. Les requêtes passent par une file : une seule à la fois sur la carte graphique, celles de
      l'utilisateur (F7, quiz, fiche) avant celles d'arrière-plan (frappe), qu'elles interrompent si l'une d'elles est en cours. */
-  async function chat({ system, user, maxTokens = 1024, temperature = 0, timeoutMs = 180000, key, background = false } = {}) {
-    const job = { background, eng: null, interrupted: false, tokens: 0 };
+  /* 1.37 : chat() accepte aussi `messages` (conversation complète, dernier message = utilisateur) : AlixoAI enchaîne ainsi
+     plusieurs tours sur le même document — WebLLM reconnaît la conversation déjà lue et ne relit que le nouveau message
+     (cache des clés-valeurs réutilisé), au lieu de relire tout le document à chaque lot. `onToken(text)` reçoit le texte au
+     fil de l'eau (lecture progressive : le quiz commence dès la première question). `token` permet d'annuler (cancel). */
+  async function chat({ system, user, messages, maxTokens = 1024, temperature = 0, timeoutMs = 180000, key, background = false, onToken, token, stop, quiet = false } = {}) {
+    const job = { background, quiet, eng: null, interrupted: false, tokens: 0, token: token || null };   // quiet : l'appelant affiche lui-même l'avancement (pas de barre discrète)
     const once = async () => {
       const eng = await load(key || st.key || recommend());
       job.eng = eng; job.tokens = 0;
       if (job.interrupted) throw Object.assign(new Error('interrupted'), { interrupted: true });
+      const msgs = Array.isArray(messages) && messages.length ? messages.map(m => ({ role: m.role, content: String(m.content || '') }))
+        : [{ role: 'system', content: String(system || '') }, { role: 'user', content: String(user || '') }];
       const req = {
-        messages: [{ role: 'system', content: String(system || '') }, { role: 'user', content: String(user || '') }],
+        messages: msgs,
         max_tokens: Math.max(16, Math.min(4096, Math.round(maxTokens))),
         temperature, top_p: 0.9,
         extra_body: { enable_thinking: false },
         stream: true, stream_options: { include_usage: true }
       };
+      if (Array.isArray(stop) && stop.length) req.stop = stop.slice(0, 4);
       let text = '', finish = '', usage = null;
       let stallTm = 0, hardTm = 0, rejectGuard = null;
       const guard = new Promise((_, rej) => { rejectGuard = rej; });
-      const stop = () => { try { eng.interruptGenerate(); } catch { /* */ } rejectGuard(new Error('timeout')); };
-      const arm = ms => { clearTimeout(stallTm); stallTm = setTimeout(stop, ms); };
+      const stopGen = () => { try { eng.interruptGenerate(); } catch { /* */ } rejectGuard(new Error('timeout')); };
+      const arm = ms => { clearTimeout(stallTm); stallTm = setTimeout(stopGen, ms); };
       const consume = async () => {
         const stream = await eng.chat.completions.create(req);
         for await (const chunk of stream) {
           const ch = chunk && chunk.choices && chunk.choices[0];
           if (ch) {
-            if (ch.delta && ch.delta.content) { text += ch.delta.content; job.tokens++; if (job.tokens % 8 === 0) set({ gen: job.tokens }, 'gen'); }
+            if (ch.delta && ch.delta.content) {
+              text += ch.delta.content; job.tokens++;
+              if (job.tokens % 8 === 0) set({ gen: job.tokens }, 'gen');
+              if (onToken) { try { onToken(text, ch.delta.content); } catch { /* lecteur */ } }
+            }
             if (ch.finish_reason) finish = ch.finish_reason;
           }
           if (chunk && chunk.usage) usage = chunk.usage;
@@ -279,7 +304,7 @@ window.AlixoLocalAI = (() => {
       };
       try {
         arm(FIRST_TOKEN_MS);
-        hardTm = setTimeout(stop, timeoutMs);
+        hardTm = setTimeout(stopGen, timeoutMs);
         await Promise.race([consume(), guard]);
       } finally { clearTimeout(stallTm); clearTimeout(hardTm); }
       if (job.interrupted || finish === 'abort') throw Object.assign(new Error('interrupted'), { interrupted: true });
@@ -292,24 +317,24 @@ window.AlixoLocalAI = (() => {
         try { res = await once(); }
         catch (e) {
           const m = String(e && e.message || e || '');
-          if (e && e.interrupted) return { ok: false, status: 499, error: 'Requête mise de côté : une demande plus urgente est passée devant.' };
+          if (e && e.interrupted) return { ok: false, status: 499, error: job.token && job.cancelled ? 'Demande annulée.' : 'Requête mise de côté : une demande plus urgente est passée devant.' };
           if (m === 'timeout') {
             // aucun jeton reçu : le moteur est bloqué (carte graphique muette) → on le libère, il sera rechargé à la prochaine demande
             if (!job.tokens) await dispose();
-            return { ok: false, status: 0, error: job.tokens ? 'Le modèle met trop de temps à répondre sur cet appareil : réessayez avec un passage plus court, ou choisissez un modèle plus léger (Paramètres › IA).' : 'La carte graphique n’a pas répondu : le moteur a été relancé, réessayez. Si cela se reproduit, choisissez un modèle plus léger (Paramètres › IA).' };
+            return { ok: false, status: 0, error: job.tokens ? 'AlixoAI met trop de temps à répondre : réessayez avec un passage plus court.' : 'AlixoAI n’a pas répondu : le moteur a été relancé, réessayez.' };
           }
           if (/ContextWindowSizeExceeded|context window/i.test(m)) return { ok: false, status: 0, error: friendly(e) };
           // moteur abîmé (objet libéré, périphérique perdu…) : on le recharge une fois et on rejoue la requête
           try { await dispose(); res = await once(); }
           catch (e2) {
             if (e2 && e2.interrupted) return { ok: false, status: 499, error: 'Requête mise de côté : une demande plus urgente est passée devant.' };
-            return { ok: false, status: 0, error: String(e2 && e2.message || e2) === 'timeout' ? 'Le modèle met trop de temps à répondre sur cet appareil — réessayez.' : friendly(e2) };
+            return { ok: false, status: 0, error: String(e2 && e2.message || e2) === 'timeout' ? 'AlixoAI met trop de temps à répondre — réessayez.' : friendly(e2) };
           }
         }
         const text = toJSON(res.text);
-        if (!text) return { ok: false, status: 0, error: 'Le modèle n’a pas renvoyé de réponse' + (res.finish === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
+        if (!String(res.text || '').trim()) return { ok: false, status: 0, error: 'AlixoAI n’a pas renvoyé de réponse' + (res.finish === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
         const u = res.usage || {};
-        return { ok: true, text, model: idFor(st.key), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || job.tokens, local: true };
+        return { ok: true, text, raw: res.text, finish: res.finish, model: idFor(st.key), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || job.tokens, local: true };
       } finally { current = null; set({ busy: false, gen: 0 }, 'gen'); }
     };
     // une demande de l'utilisateur interrompt la correction d'arrière-plan en cours : elle n'attend pas derrière
@@ -317,7 +342,14 @@ window.AlixoLocalAI = (() => {
       current.interrupted = true;
       try { if (current.eng) current.eng.interruptGenerate(); } catch { /* */ }
     }
-    return new Promise(resolve => { jobs.push({ job, run, resolve }); pump(); });
+    return new Promise(resolve => { jobs.push({ job, run, resolve }); emit('gen'); pump(); });
+  }
+  /* 1.37 : annule les requêtes portant ce jeton (en file : retirées ; en cours : interrompue) */
+  function cancel(token) {
+    if (!token) return;
+    for (let i = jobs.length - 1; i >= 0; i--) if (jobs[i].job.token === token) { const j = jobs.splice(i, 1)[0]; j.resolve({ ok: false, status: 499, error: 'Demande annulée.' }); }
+    if (current && current.token === token && !current.interrupted) { current.interrupted = true; current.cancelled = true; try { if (current.eng) current.eng.interruptGenerate(); } catch { /* */ } }
+    emit('gen');
   }
   let pumping = false;
   function pump() {
@@ -335,6 +367,6 @@ window.AlixoLocalAI = (() => {
     try { const L = await getLib(); for (const id of [m.id, m.id32]) { try { await L.deleteModelAllInfoInCache(id, appConfig(L)); } catch { /* variante absente */ } } return true; } catch { return false; }
   }
 
-  const api = { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, cached, load, chat, status, crashed, unload, remove, translate, friendly, toJSON, idFor, vramFor, useF32, createEngine, usesWorker: () => workerOk === true, LIB_URL, WORKER_URL };
+  const api = { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, downgrade, cached, load, chat, cancel, status, crashed, unload, remove, translate, friendly, toJSON, idFor, vramFor, useF32, createEngine, usesWorker: () => workerOk === true, LIB_URL, WORKER_URL };
   return api;
 })();
