@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-17T20:05:11.350Z",
- "version": "1.37.1",
- "date": "2026-10-17T17:06:17Z",
- "notes": "Nouveautés 1.37.1 — Correction : « WebGPU n’a pas pu démarrer sur cet appareil »\n\n\n- **AlixoAI démarre sur davantage d’ordinateurs.** Sur bien des portables (puce graphique Intel ou AMD intégrée, pilote\n  ancien), la version PC refusait l’accélération graphique et AlixoAI répondait « WebGPU n’a pas pu démarrer sur cet\n  appareil ». La version PC force désormais l’accélération graphique et ignore la liste noire de Chromium ; AlixoAI\n  demande ensuite la carte graphique de trois façons (performante, par défaut, économe) avant de renoncer.\n- **« Réessayer » réessaie vraiment.** Un premier échec au lancement (processus graphique encore en train de démarrer)\n  n’est plus mémorisé pour toute la session : la demande suivante refait l’essai.\n- **Un message qui dit pourquoi.** En cas d’échec, le message indique la cause exacte (adaptateur absent, accélération\n  matérielle désactivée, erreur du pilote) plutôt qu’une phrase générique.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.1",
+ "generatedAt": "2026-10-17T20:10:50.494Z",
+ "version": "1.37.2",
+ "date": "2026-10-17T20:10:36Z",
+ "notes": "Nouveautés 1.37.2 — Correction : « AlixoAI n’a pas répondu : le moteur a été relancé »\n\n\n- **AlixoAI s’allège toute seule quand la carte graphique reste muette.** Si aucun mot n’est produit dans le délai, AlixoAI\n  ne rend plus la main avec une erreur : elle passe à la taille en dessous (puis, au plus léger, à la variante compatible\n  f32, car certains pilotes se figent sur les programmes f16), recharge et rejoue la demande dans la foulée. L’allègement\n  est mémorisé pour les fois suivantes.\n- **Des délais adaptés aux petites puces graphiques.** La première réponse après un chargement (programmes graphiques\n  encore à préparer) dispose de 240 s, les suivantes de 150 s, au lieu de 90 s.\n- **Un message qui aide à comprendre.** Si rien ne marche malgré tout, le message indique la carte graphique détectée, la\n  taille et la variante utilisées : de quoi signaler précisément ce qui bloque.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.2",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Setup.exe",
-   "size": 78629073
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.2/Alixo-Setup.exe",
+   "size": 78629713
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Portable.exe",
-   "size": 78392001
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.2/Alixo-Portable.exe",
+   "size": 78392648
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Mac.dmg",
-   "size": 186610235
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.2/Alixo-Mac.dmg",
+   "size": 186636248
   },
   "macZip": {
-   "name": "Alixo-1.37.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-1.37.1-mac.zip",
-   "size": 179910370
+   "name": "Alixo-1.37.2-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.2/Alixo-1.37.2-mac.zip",
+   "size": 179911453
   }
  },
  "history": [
+  {
+   "version": "1.37.2",
+   "date": "2026-10-17T20:10:36Z",
+   "notes": "Nouveautés 1.37.2 — Correction : « AlixoAI n’a pas répondu : le moteur a été relancé »\n\n\n- **AlixoAI s’allège toute seule quand la carte graphique reste muette.** Si aucun mot n’est produit dans le délai, AlixoAI\n  ne rend plus la main avec une erreur : elle passe à la taille en dessous (puis, au plus léger, à la variante compatible\n  f32, car certains pilotes se figent sur les programmes f16), recharge et rejoue la demande dans la foulée. L’allègement\n  est mémorisé pour les fois suivantes.\n- **Des délais adaptés aux petites puces graphiques.** La première réponse après un chargement (programmes graphiques\n  encore à préparer) dispose de 240 s, les suivantes de 150 s, au lieu de 90 s.\n- **Un message qui aide à comprendre.** Si rien ne marche malgré tout, le message indique la carte graphique détectée, la\n  taille et la variante utilisées : de quoi signaler précisément ce qui bloque.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.2"
+  },
   {
    "version": "1.37.1",
    "date": "2026-10-17T17:06:17Z",
@@ -220,11 +225,6 @@
    "version": "1.13.0",
    "date": "2026-09-22T12:04:13Z",
    "notes": "Nouveautés 1.13.0 — vue Galaxie, présentations, Paramètres en fenêtre\n\n\n- **Vue Galaxie** (troisième bouton d'affichage de la bibliothèque, à côté de la grille et de l'arbre, `js/galaxy.js`) : le dossier affiché est un **soleil**, ses sous-dossiers des **planètes** (couleur du dossier, taille selon le nombre de séances, anneau s'il a lui-même des sous-dossiers), les séances, présentations et fichiers de petites **étoiles** en orbite. Tout **flotte** doucement et des **particules circulent le long des liens** parent → enfant ; survol = mise en avant de l'astre et de ses liens ; clic sur une séance = ouvrir ; clic sur une planète = la centrer, double-clic = entrer dans le dossier ; clic droit = menus habituels (séance, dossier, fichier, « créer ici ») ; glisser un astre = le déplacer ; glisser le fond = déplacer la vue ; molette = zoom ; boutons **Dossier parent**, **Recentrer**, **Recomposer**. Thème clair et sombre.\n- **Présentations** (`js/slides.js`, bouton **＋ Présentation** à côté de « Nouvelle séance », aussi dans les menus « créer ici » et clic droit d'un dossier) : des diapositives 16:9 dans le style Alixo (titres en serif, couleur d'accent = teinte du dossier, encadrés Définition / À retenir / Exemple / Arrêt…, liseré en bas). Les **blocs se posent par glisser-déposer** depuis la palette de droite (ou d'un clic) : Titre, Texte, Liste, Encadré, Citation, Image (fichier, glisser-déposer, collage), Formule (même notation que `/formule`), Tableau (Tab de case en case), Chiffre clé, Forme, Séparateur. Chaque bloc se **déplace** et se **redimensionne** à la souris (8 poignées), un clic sur un bloc sélectionné entre en édition (gras / italique / souligné, taille A− A+, alignement, couleur, devant / derrière, dupliquer, retirer). Diapositives : gabarits (titre, titre + texte, titre + liste, deux colonnes, section teintée, chiffres clés, vide), fond papier / teinte douce / teinte pleine / sombre, vignettes réordonnables par glisser-déposer, notes pour l'orateur. **Présenter** (F5, Maj+F5 depuis la diapositive affichée ; flèches, Espace, Échap, **N** pour les notes) en plein écran ; **export PDF** une page 16:9 par diapositive (Ctrl+P ou bouton ⤓). Onglets, fil d'Ariane, corbeille avec annulation, duplication, déplacement, épinglage et synchronisation fonctionnent comme pour une séance (`kind: 'slides'`, `slides: [...]`, `blocks` vide). Raccourcis : Ctrl+M nouvelle diapositive, Ctrl+D dupliquer, Suppr retirer le bloc, flèches déplacer le bloc (Maj : plus vite) ou changer de diapositive, Ctrl+Z / Ctrl+Y.\n- **Paramètres** : fini le petit menu déroulant — une **fenêtre centrale** à catégories : **Compte** (connexion, profil, stockage, pseudo Alixo Share, bilan de la semaine), **Apparence** (thème automatique / clair / sombre, affichage de la bibliothèque grille / arbre / galaxie), **Écriture** (raccourcis de frappe, remplacements automatiques), **Intelligence artificielle** (clé Gemini), **Export** (format des archives .zip), **À propos** (version, nouveautés, mises à jour, raccourcis clavier). Échap ou clic à côté pour fermer.\n- **Réglages retirés** : le **bilan de la semaine** s'affiche à chaque ouverture (plus d'option « Ne plus afficher », l'ancien réglage est ignoré) ; le choix **Spécialités Santé** (selon le profil / toujours / désactivé) disparaît : seules les spécialités choisies dans le profil sont affichées (Compte › Modifier mon profil).\n- **Icône d'accueil** (« Mes cours » dans l'explorateur, l'arbre, l'onglet Bibliothèque et le choix de dossier) : **toujours bleue**, elle prenait la couleur du dossier affiché avant."
-  },
-  {
-   "version": "1.12.0",
-   "date": "2026-09-21T21:57:19Z",
-   "notes": "Alixo 1.12.0 — formules enrichies, messages directs, présence, explorateur de base\n\n**Nouveautés**\n\n- **Formules** : mots avec espaces et accents (`Coût total = Prix xx Quantité`), exposant et indice empilés (`x_i^2`), accents `vec(u)` `bar(x)` `hat(β)`, `abs(x)`, `norm(v)`, racine n-ième `root(3)(x)`, `binom(n)(k)`, matrices `mat(a, b; c, d)`, systèmes `cases(…)`, `lim_(x->oo)`, ensembles `RR NN ZZ QQ CC`, décimales à la française, plusieurs lignes (Maj+Entrée). Palette Symboles enrichie.\n- - **Notifications** : la clé IA attribuée est notifiée à chaque attribution ; si une clé personnelle est conservée, « Une clé IA vous a été proposée ».\n- - **Messages directs de l'administrateur** : arrivent en direct dans la cloche (toast + notification), option fenêtre, suivi reçu / lu.\n- - **Bilan de la semaine** affiché à chaque ouverture (désactivable).\n- - **Sélection à la souris** : relâcher une sélection dans la marge ne déplace plus le curseur."
   }
  ]
 }
