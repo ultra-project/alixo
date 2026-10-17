@@ -334,7 +334,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     finally { clearTimeout(tm); }
   }
   /* cfg : { endpoint, model, key } (ou null → configuration enregistrée). `models` (ancien paramètre) est ignoré. */
-  async function call(cfg, { system, user, maxTokens, minTokens = 0, timeoutMs = 25000, temperature = 0 }) {
+  async function call(cfg, { system, user, maxTokens, minTokens = 0, timeoutMs = 25000, temperature = 0, background = false }) {
     const c = cfg && typeof cfg === 'object' ? normConfig(cfg) : getConfig();
     if (PROVIDERS[c.provider].local) {
       const L = LOCAL();
@@ -342,7 +342,9 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
       if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: c.off ? 'L’IA est désactivée sur cet appareil (Paramètres › IA › Réactiver).' : L.support().reason };
       // le chargement du modèle (téléchargement la première fois, 10 à 60 s depuis l'appareil ensuite) n'entame pas le délai
       try { await L.load(c.model); } catch (e) { return { ok: false, status: 0, error: e.message }; }
-      return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 90000) * 3, key: c.model });
+      // 1.36.4 : délai doublé par rapport à un serveur (génération plus lente sur l'appareil), 60 s au moins ; le moteur
+      // détecte lui-même un blocage (aucun jeton pendant 30 à 90 s), inutile d'attendre des minutes
+      return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs * 2, 60000), key: c.model, background });
     }
     if (!configured(c)) return { ok: false, status: 0, error: 'Aucun serveur d’IA configuré (Paramètres › Correction par IA).' };
     const url = c.endpoint + '/chat/completions';
@@ -491,7 +493,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     if (ctx.already && ctx.already.length) user = `Déjà relevé lors d'une première lecture (ne le répète pas) :\n${ctx.already.map(a => `« ${a.avant} » → « ${a.apres} »`).join('\n')}\n\nRelis maintenant chaque phrase une seconde fois, plus attentivement (homophones, terminaisons, accords, mots oubliés). Réponds {"c":{}} seulement si tu es certain qu'il ne reste rien.\n\n${user}`;
     const chars = user.length;
     const maxTokens = Math.max(512, Math.min(mode === 'live' ? 2048 : 6144, 300 + Math.round(chars / 2)));
-    const r = await call(null, { system: systemPrompt(mode, ctx, withStyle), user, maxTokens, timeoutMs: mode === 'live' ? 20000 : 40000 });
+    const r = await call(null, { system: systemPrompt(mode, ctx, withStyle), user, maxTokens, timeoutMs: mode === 'live' ? 20000 : 40000, background: mode === 'live' });
     stats.req++; stats.chars += chars; stats.sent += items.length;
     if (!r.ok) { persist(); const e = new Error(r.error); e.status = r.status; throw e; }
     stats.tokIn = (stats.tokIn || 0) + r.tokIn; stats.tokOut = (stats.tokOut || 0) + r.tokOut; persist();
@@ -558,6 +560,9 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     runTm = null;
     if (busy || !pending.size) return;
     if (!enabled() || !configured()) { pending.clear(); return; }
+    // 1.36.4 : sur l'appareil, la frappe n'attend ni ne déclenche un chargement du modèle (installation automatique à part),
+    // et ne s'empile pas derrière une réponse en cours : on repasse un peu plus tard
+    if (isLocal()) { const L = LOCAL(); const s = L && L.status(); if (!s || s.state !== 'ready' || s.busy) { backoffUntil = Date.now() + 5000; schedule(); return; } }
     // lot : phrases de tous les blocs en attente, dans la limite de taille ; paragraphes à classer en plus
     const items = []; const styleBlocks = {}; const styleTags = {}; let chars = 0; let tag = 65;
     for (const [blockId, entry] of pending) {
@@ -590,6 +595,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
       for (const it of items) inflight.delete(it.key);
       if (err && err.status === 429) backoffUntil = Date.now() + 60000;
       else if (err && err.status === 0) backoffUntil = Date.now() + 20000;
+      // 499 (1.36.4) : requête d'arrière-plan interrompue par une demande de l'utilisateur — pas une panne, pas de pause
       if (opts.onError) opts.onError(err);
     }
     busy = false;

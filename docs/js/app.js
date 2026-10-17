@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.36.3';
+const ALIXO_VERSION = '1.36.4';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -8132,7 +8132,7 @@ function bindAiSetup(root, mode) {
     L.probe().then(() => { if (!root.isConnected) return; const rec = L.recommend(); root.querySelectorAll('.ai-mtag.rec').forEach(t => t.remove()); const h = root.querySelector(`.ai-mcard[data-key="${rec}"] .ai-mhead b`); if (h) h.insertAdjacentHTML('afterend', '<span class="ai-mtag rec">conseillé</span>'); });
     for (const k of L.ORDER) L.cached(k).then(ok => { if (!ok || !root.isConnected) return; cachedKeys.add(k); const t = root.querySelector(`.ai-mcached[data-key="${k}"]`); if (t) t.hidden = false; refreshBtn(); });
     // progression (installation lancée ici ou automatiquement au démarrage)
-    const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai-local', onEv); return; } const d = e.detail; if (d.state === 'loading') aiSetupProgress(root, d); else if (d.state === 'ready') { aiSetupProgress(root, d); setTimeout(() => { if (root.isConnected) rerender(); }, 900); } };
+    const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai-local', onEv); return; } const d = e.detail; if (d.why === 'gen') return; if (d.state === 'loading') aiSetupProgress(root, d); else if (d.state === 'ready') { aiSetupProgress(root, d); setTimeout(() => { if (root.isConnected) rerender(); }, 900); } };
     document.addEventListener('alixo-ai-local', onEv);
     const install = async () => {
       const k = key();
@@ -8216,11 +8216,29 @@ function showAiSetup() {
    (WebGPU), le modèle conseillé se télécharge tout seul, sans rien demander (barre discrète en bas à droite) ;
    ensuite il se charge au démarrage pour répondre sans attendre. « Désactiver » (Paramètres › IA) l'arrête. */
 let aiAutoTm = 0;
+/* 1.36.4 : la page précédente s'est terminée brutalement pendant que l'IA tournait (mémoire graphique épuisée, pilote
+   planté) : on passe au modèle plus léger avant de recharger quoi que ce soit ; déjà au plus léger → l'IA est désactivée
+   sur cet appareil, la cloche l'explique, Paramètres › IA la réactive. */
+function aiAfterCrash(L) {
+  const bad = L.crashed && L.crashed(); if (!bad || !L.MODELS[bad]) return;
+  const c = aiCfg(); if (!AlixoCorr.isLocal(c) || c.off) return;
+  const i = L.ORDER.indexOf(bad);
+  const label = k => (L.MODELS[k] || {}).label || k;
+  if (i > 0) {
+    const lighter = L.ORDER[i - 1];
+    AlixoCorr.setConfig(Object.assign({}, c, { model: lighter, on: false }));
+    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'IA : modèle allégé', text: `Alixo s’est fermé brutalement pendant que l’IA tournait avec le modèle « ${label(bad)} », sans doute faute de mémoire graphique. Le modèle « ${label(lighter)} » est désormais utilisé ; vous pouvez changer dans Paramètres › IA.` });
+  } else {
+    AlixoCorr.setConfig(Object.assign({}, c, { off: true }));
+    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'IA désactivée sur cet appareil', text: 'Alixo s’est fermé brutalement pendant que l’IA tournait, même avec le modèle le plus léger. Elle est désactivée sur cet appareil : Paramètres › IA pour la réactiver ou choisir un serveur.' });
+  }
+}
 function aiAutoInstall(delay) {
   if (aiAutoTm) return;
   aiAutoTm = setTimeout(async () => {
     aiAutoTm = 0;
     const L = window.AlixoLocalAI; if (!L) return;
+    aiAfterCrash(L);
     if (!isPlus()) return;
     const c0 = aiCfg(); if (!AlixoCorr.isLocal(c0) || c0.off || !L.support().ok) return;
     if (L.status().state !== 'idle') return;
@@ -8234,12 +8252,18 @@ function aiAutoInstall(delay) {
 /* 1.36 : barre de progression discrète quand le modèle se charge en dehors du bloc de configuration
    (première demande de la session : chargement depuis l'appareil ; mise à jour du modèle…) */
 (() => {
-  let bar = null, hideTm = null;
+  let bar = null, hideTm = null, wasBusy = false;
   document.addEventListener('alixo-ai-local', e => {
     const s = e.detail || {};
     if (document.querySelector('.ai-progress:not([hidden])')) { if (bar) bar.hidden = true; return; }   // déjà affiché dans le bloc de configuration
     if (!bar) { bar = document.createElement('div'); bar.id = 'ai-loadbar'; bar.setAttribute('role', 'status'); bar.innerHTML = '<span class="ai-lbico">✨</span><span class="ai-lbtext"></span><i class="ai-lbbar"><b></b></i>'; document.body.appendChild(bar); }
     clearTimeout(hideTm);
+    // 1.36.4 : réponse en cours de rédaction (le moteur tourne dans un worker : l'interface reste libre pendant ce temps)
+    if (s.why === 'gen') {
+      if (s.busy) { wasBusy = true; bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = `IA : réponse en cours${s.gen ? ` · ${Math.round(s.gen * 0.7)} mots` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = s.gen ? Math.min(95, 10 + s.gen / 12) + '%' : '5%'; }
+      else if (wasBusy) { wasBusy = false; bar.hidden = true; }
+      return;
+    }
     if (s.state === 'loading') { bar.hidden = false; const pct = Math.round((s.progress || 0) * 100); bar.querySelector('.ai-lbtext').textContent = `IA : ${(s.text || 'préparation').replace(/\s*\(une seule fois\)/, '').replace(/^Téléchargement du modèle — /, 'téléchargement, ')}${s.progress ? ` · ${pct} %` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = pct + '%'; }
     else if (s.state === 'ready') { bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = 'IA : modèle prêt ✓'; bar.querySelector('.ai-lbbar b').style.width = '100%'; hideTm = setTimeout(() => { bar.hidden = true; }, 1800); }
     else bar.hidden = true;
@@ -10464,7 +10488,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'L’IA sur l’appareil est fiabilisée : le Quiz IA et la correction ne s’arrêtent plus sur une erreur du moteur (« already disposed », « grammar matcher »), et le moteur se relance tout seul en cas de pépin.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'L’IA sur l’appareil ne fige plus Alixo : le moteur tourne à part, la réponse s’affiche au fur et à mesure, F7 et le Quiz IA passent devant la correction pendant la frappe, et le modèle conseillé s’adapte à votre carte graphique.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

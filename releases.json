@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-17T11:08:04.420Z",
+ "generatedAt": "2026-10-17T11:39:13.422Z",
  "version": "1.36.3",
  "date": "2026-10-17T11:07:47Z",
  "notes": "Nouveautés 1.36.3 — L’IA sur l’appareil fiabilisée : fin des erreurs du moteur au lancement d’un quiz\n\n\n- **Corrigé : « The current Object has already been disposed » (et, avant lui, « grammar matcher … ») au lancement du\n  Quiz IA ou de la correction.** Ces erreurs venaient toutes du même composant : le « mode JSON forcé » du moteur WebLLM,\n  qui contraint la réponse par une grammaire compilée à la volée et qui s’est révélé instable selon les cartes graphiques.\n  Alixo ne l’utilise plus. Le modèle répond librement à des consignes qui exigent du JSON et en donnent un exemple complet\n  (Qwen3 s’y tient), et Alixo nettoie la réponse avant de la lire : clôtures ```json, texte avant ou après, bloc de\n  « réflexion » résiduel.\n- **Le moteur se relance tout seul.** Si une requête échoue malgré tout (objet graphique perdu, moteur dans un état\n  incohérent), Alixo décharge le modèle, le recharge depuis l’appareil et rejoue la requête une fois, sans rien demander ;\n  le message d’erreur n’apparaît que si cette seconde tentative échoue aussi.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.3",
