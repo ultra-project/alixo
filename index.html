@@ -6,9 +6,9 @@
 <meta name="robots" content="index, follow, noai, noimageai">
 <meta name="tdm-reservation" content="1">
 <title>Alixo — L'app de prise de notes des étudiants en Droit, Éco et Santé</title>
-<meta name="description" content="Alixo est le cockpit d'amphi des étudiants : numérotation juridique automatique, fiches d'arrêt, formules, graphiques, IA de correction, quiz en direct, planches (tableau blanc), présentations, agenda, partage en direct et recherche instantanée. Gratuit sur Windows et dans le navigateur. Bientôt sur macOS.">
+<meta name="description" content="Alixo est le cockpit d'amphi des étudiants : numérotation juridique automatique, fiches d'arrêt, formules, graphiques, IA sur l'appareil, quiz en direct, planches, tableurs, présentations, agenda, travail à plusieurs et recherche instantanée. Gratuit sur Windows, macOS et dans le navigateur.">
 <meta property="og:title" content="Alixo — Ton cours va vite. Alixo va plus vite.">
-<meta property="og:description" content="La prise de notes pensée pour l'amphi. Gratuit sur Windows, bientôt sur macOS.">
+<meta property="og:description" content="La prise de notes pensée pour l'amphi. Gratuit sur Windows, macOS et dans le navigateur.">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alixoapp.com/">
 <link rel="canonical" href="https://alixoapp.com/">
@@ -17,7 +17,7 @@
 <script>(function(){try{if(/[?&]site(?=&|=|$)/.test(location.search))return;var app='/docs/';var abs=new URL(app,location.href).href;if(document.referrer&&document.referrer.indexOf(abs)===0)return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(s&&s.uid)location.replace(app);}catch(e){}})();</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <link rel="stylesheet" href="styles.css">
 <link rel="icon" type="image/png" href="img/logo.png">
@@ -25,22 +25,21 @@
 <meta property="og:image" content="https://alixoapp.com/img/shot-droit-light.jpg">
 <script defer src="/protection.js"></script>
 </head>
-<body>
+<body class="home">
 
-<!-- ================= Navigation ================= -->
+<!-- ================= Navigation flottante ================= -->
 <header id="nav">
   <div class="nav-inner">
     <a class="logo" href="#top" aria-label="Alixo — accueil">
-      <img class="logo-img" src="img/logo.png" alt="" width="30" height="30"><span class="logo-name">Alixo</span>
+      <img class="logo-img" src="img/logo.png" alt="" width="28" height="28"><span class="logo-name">Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#fonctions">Fonctionnalités</a>
-      <a href="#plus">Nouveautés</a>
+      <a href="#ia">IA</a>
+      <a href="#plus">Tour</a>
       <a href="#alixo-plus">Alixo+</a>
-      <a href="#seance">En amphi</a>
       <a href="#telecharger">Télécharger</a>
       <a href="documentation.html">Documentation</a>
-      <a href="#faq">FAQ</a>
     </nav>
     <div class="nav-actions">
       <button id="btn-theme" class="icon-btn" title="Apparence claire / sombre" aria-label="Changer de thème">
@@ -55,26 +54,37 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
         Télécharger
       </a>
+      <button class="icon-btn nav-burger" id="nav-burger" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
     </div>
   </div>
+  <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
+    <a href="#fonctions">Fonctionnalités</a>
+    <a href="#ia">Intelligence artificielle</a>
+    <a href="#plus">Le tour d'Alixo</a>
+    <a href="#alixo-plus">Alixo+</a>
+    <a href="#telecharger">Télécharger</a>
+    <a href="documentation.html">Documentation</a>
+    <a href="#faq">Questions fréquentes</a>
+    <a href="https://alixoapp.com/docs/?login">Se connecter</a>
+  </nav>
 </header>
 
 <!-- ================= Hero ================= -->
 <section id="top" class="hero">
-  <div class="hero-bg" aria-hidden="true"><span class="orb o1"></span><span class="orb o2"></span><span class="grid"></span></div>
+  <div class="hero-bg" aria-hidden="true"><span class="grid"></span><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
   <div class="hero-inner">
-    <a class="pill reveal" href="#plus">
+    <a class="pill reveal" href="#ia">
       <span class="pill-tag">Nouveau</span>
-      <span class="pill-txt">Quiz en direct &amp; planches · <span class="js-version">dernière version</span> · <span id="pill-mac">la version macOS arrive bientôt</span></span>
+      <span class="pill-txt">L'IA tourne sur ton appareil · <span class="js-version">dernière version</span> · <span id="pill-mac">macOS bientôt</span></span>
       <span class="pill-arrow">→</span>
     </a>
-    <h1 class="reveal">Ton cours va vite.<br><em>Alixo va plus vite.</em></h1>
-    <p class="hero-sub reveal">
-      L'application de prise de notes conçue pour l'amphi&nbsp;: structure juridique automatique,
-      fiches d'arrêt, formules, graphiques, IA de correction, <strong>quiz en direct</strong>, <strong>planches</strong>
-      pour réviser, présentations, agenda, partage en direct et recherche instantanée. Tout au clavier, même hors-ligne.
+    <h1 class="reveal d1">Ton cours va vite.<br><em>Alixo va plus vite.</em></h1>
+    <p class="hero-sub reveal d2">
+      L'application de prise de notes conçue pour l'amphi&nbsp;: <strong>structure juridique automatique</strong>, fiches d'arrêt,
+      formules, graphiques, <strong>IA sur ton appareil</strong>, quiz en direct, planches, tableurs et présentations.
+      Tout au clavier, même hors-ligne.
     </p>
-    <div class="hero-ctas reveal">
+    <div class="hero-ctas reveal d3">
       <a class="btn primary big" href="#telecharger" data-download>
         <svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
         Télécharger pour Windows
@@ -86,36 +96,37 @@
         <span class="soon-badge">Bientôt</span>
       </a>
     </div>
-    <div class="hero-web reveal">
+    <div class="hero-web reveal d3">
       <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Pas envie d'installer&nbsp;? <strong>Essayer dans le navigateur&nbsp;→</strong></a>
       <span class="hero-web-sep">·</span>
       <a href="https://alixoapp.com/docs/?login">Déjà un compte&nbsp;? <strong>Se connecter&nbsp;→</strong></a>
     </div>
-    <div class="hero-trust reveal">
-      <span>✓ Sans compte pour télécharger</span>
-      <span>✓ Mises à jour automatiques</span>
-      <span>✓ Fonctionne hors-ligne</span>
-      <span>✓ Aussi sur le web et mobile</span>
+    <div class="hero-trust reveal d3">
+      <span>Sans compte pour télécharger</span>
+      <span>Mises à jour automatiques</span>
+      <span>Fonctionne hors-ligne</span>
+      <span>Web et mobile inclus</span>
     </div>
     <div id="mac-notice" class="mac-notice reveal" hidden>
        Tu es sur Mac&nbsp;? La version macOS arrive bientôt. <a href="/versions/">Suivre les versions →</a>
     </div>
   </div>
 
-  <!-- ================= Captures réelles de l'application ================= -->
+  <!-- Captures réelles de l'application -->
   <div class="shots reveal" id="demo">
     <div class="shots-tabs" role="tablist" aria-label="Choisir un écran de l'application">
-      <button class="shots-tab active" data-shot="droit" role="tab" aria-selected="true">⚖️ Droit</button>
-      <button class="shots-tab" data-shot="eco" role="tab" aria-selected="false">📈 Économie</button>
-      <button class="shots-tab" data-shot="quiz" role="tab" aria-selected="false">🏆 Quiz <span class="tab-new">Nouveau</span></button>
-      <button class="shots-tab" data-shot="board" role="tab" aria-selected="false">🧩 Planche <span class="tab-new">Nouveau</span></button>
-      <button class="shots-tab" data-shot="sheet" role="tab" aria-selected="false">🧮 Tableur</button>
-      <button class="shots-tab" data-shot="galaxy" role="tab" aria-selected="false">🪐 Galaxie</button>
-      <button class="shots-tab" data-shot="slides" role="tab" aria-selected="false">🎞️ Présentations</button>
-      <button class="shots-tab" data-shot="agenda" role="tab" aria-selected="false">📅 Agenda</button>
-      <button class="shots-tab" data-shot="search" role="tab" aria-selected="false">⌕ Recherche</button>
+      <button class="shots-tab active" data-shot="droit" role="tab" aria-selected="true">Droit</button>
+      <button class="shots-tab" data-shot="eco" role="tab" aria-selected="false">Économie</button>
+      <button class="shots-tab" data-shot="quiz" role="tab" aria-selected="false">Quiz</button>
+      <button class="shots-tab" data-shot="board" role="tab" aria-selected="false">Planche</button>
+      <button class="shots-tab" data-shot="sheet" role="tab" aria-selected="false">Tableur</button>
+      <button class="shots-tab" data-shot="galaxy" role="tab" aria-selected="false">Galaxie</button>
+      <button class="shots-tab" data-shot="slides" role="tab" aria-selected="false">Présentations</button>
+      <button class="shots-tab" data-shot="agenda" role="tab" aria-selected="false">Agenda</button>
+      <button class="shots-tab" data-shot="search" role="tab" aria-selected="false">Recherche</button>
     </div>
-    <div class="shots-frame">
+    <div class="shots-glow" aria-hidden="true"></div>
+    <div class="shots-frame" id="shots-frame">
       <div class="shots-bar"><span class="dots"><i></i><i></i><i></i></span><span class="shots-title" id="shots-title">Droit des obligations — fiche d'arrêt, définition, références Légifrance</span><span class="shots-theme-hint" id="shots-theme-hint">Les captures suivent le thème du site</span></div>
       <div class="shots-stage">
         <img class="shot on timg" data-shot="droit" data-light="img/shot-droit-light.jpg" data-dark="img/shot-droit-dark.jpg" width="2880" height="1800" alt="Alixo — séance de droit des obligations avec plan automatique, encadré définition, références d'articles et fiche d'arrêt" fetchpriority="high">
@@ -129,25 +140,17 @@
         <img class="shot timg" data-shot="search" data-light="img/shot-search-light.jpg" data-dark="img/shot-search-dark.jpg" width="2880" height="1800" alt="Alixo — recherche universelle Ctrl+K dans tous les cours" loading="lazy">
       </div>
     </div>
-    <div class="mock-caption">Captures réelles de l'application · clique sur un onglet pour changer d'écran · bascule le thème en haut à droite, les captures suivent</div>
+    <div class="mock-caption">Captures réelles · un onglet pour changer d'écran · le thème du site s'applique aux captures</div>
   </div>
 </section>
 
-<!-- ================= Bandeau filières ================= -->
+<!-- ================= Filières (défilement) ================= -->
 <section class="strip" id="filieres">
-  <div class="strip-inner reveal">
-    <span class="strip-label">Conçu pour</span>
-    <div class="strip-chips">
-      <span class="chip on">⚖️ Droit</span>
-      <span class="chip on">📈 Économie</span>
-      <span class="chip on">🩺 Médecine</span>
-      <span class="chip on">💊 Pharmacie</span>
-      <span class="chip on">🦷 Odontologie</span>
-      <span class="chip on">🤰 Maïeutique</span>
-      <span class="chip on">🦵 Kinésithérapie</span>
-      <span class="chip">📊 Gestion · bientôt</span>
-      <span class="chip">🛍️ Commerce · bientôt</span>
-      <span class="chip">🎓 Double licence ✓</span>
+  <div class="strip-label">Conçu pour les filières qui vont vite</div>
+  <div class="marquee-wrap">
+    <div class="marquee" aria-hidden="false">
+      <span class="chip on">⚖️ Droit</span><span class="chip on">📈 Économie</span><span class="chip on">🩺 Médecine</span><span class="chip on">💊 Pharmacie</span><span class="chip on">🦷 Odontologie</span><span class="chip on">🤰 Maïeutique</span><span class="chip on">🦵 Kinésithérapie</span><span class="chip on">🎓 Double licence</span><span class="chip soon">📊 Gestion · bientôt</span><span class="chip soon">🛍️ Commerce · bientôt</span>
+      <span class="chip on" aria-hidden="true">⚖️ Droit</span><span class="chip on" aria-hidden="true">📈 Économie</span><span class="chip on" aria-hidden="true">🩺 Médecine</span><span class="chip on" aria-hidden="true">💊 Pharmacie</span><span class="chip on" aria-hidden="true">🦷 Odontologie</span><span class="chip on" aria-hidden="true">🤰 Maïeutique</span><span class="chip on" aria-hidden="true">🦵 Kinésithérapie</span><span class="chip on" aria-hidden="true">🎓 Double licence</span><span class="chip soon" aria-hidden="true">📊 Gestion · bientôt</span><span class="chip soon" aria-hidden="true">🛍️ Commerce · bientôt</span>
     </div>
   </div>
 </section>
@@ -161,49 +164,46 @@
   </div>
 
   <div class="bento">
-    <!-- Structure -->
-    <article class="card span2 reveal">
+    <article class="card span4 reveal">
       <div class="card-visual">
         <div class="v-doc">
           <div class="v-h l1"><span class="hnum">I.</span> La formation du contrat</div>
           <div class="v-h l2"><span class="hnum">A.</span> L'offre et l'acceptation</div>
           <div class="v-h l3"><span class="hnum">1.</span> Les caractères de l'offre</div>
-          <div class="v-h l4"><span class="hnum">a.</span> La fermeté <span class="v-caret"></span></div>
-          <div class="v-hint"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>4</kbd> → niveau a.</div>
+          <div class="v-h l4"><span class="hnum">a.</span> La fermeté<span class="v-caret"></span></div>
+          <div class="v-hint">Ctrl + Alt + 4 → niveau a.</div>
         </div>
       </div>
       <h3>Structure automatique I. A. 1. a.</h3>
-      <p>La numérotation juridique se gère toute seule. Le plan du cours se construit en direct, avec ta progression, dans le volet de droite.</p>
+      <p>La numérotation juridique se gère toute seule. Le plan du cours se construit en direct dans le volet de gauche, avec ta progression.</p>
     </article>
 
-    <!-- IA -->
-    <article class="card reveal accent">
+    <article class="card span2 brand reveal d1">
       <div class="card-visual">
         <div class="v-ai">
-          <div class="v-ai-line">Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s><mark>acceptation</mark>.</div>
-          <div class="v-ai-pop">✨ Orthographe · <kbd>Tab</kbd> pour corriger</div>
+          <div>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>.</div>
+          <div class="v-ai-pop">✨ <b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
+          <div class="v-local"><span>sur l'appareil</span><span>hors ligne</span><span>sans clé</span></div>
         </div>
       </div>
       <h3>IA qui corrige pendant que tu tapes <span class="plus-badge">Alixo+</span></h3>
-      <p>Fautes, grammaire et mise en forme proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore. Désactivable.</p>
+      <p>Fautes, grammaire, mise en forme proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore. Le modèle tourne sur ta machine.</p>
     </article>
 
-    <!-- Fiches d'arrêt -->
-    <article class="card reveal">
+    <article class="card span2 reveal">
       <div class="card-visual">
         <div class="v-juris">
-          <div class="v-juris-head">⚖️ Cass. civ. 1re, 12 juill. 2023</div>
-          <div class="v-juris-row"><span>Faits</span><i>Rétractation d'une offre…</i></div>
-          <div class="v-juris-row"><span>Solution</span><i>Responsabilité de l'offrant.</i></div>
-          <div class="v-juris-row"><span>Portée</span><i>Confirme l'art. 1116.</i></div>
+          <div class="v-juris-head">⚖️ Cass. ass. plén., 9 mai 1984, Derguini</div>
+          <div class="v-juris-row"><span>Faits</span><i>Une enfant de cinq ans, renversée…</i></div>
+          <div class="v-juris-row"><span>Solution</span><i>Faute retenue sans discernement.</i></div>
+          <div class="v-juris-row"><span>Portée</span><i>Objectivation de la faute civile.</i></div>
         </div>
       </div>
       <h3>Fiches d'arrêt guidées</h3>
       <p>Faits, procédure, problème, solution, portée&nbsp;: la trame est prête. Tape «&nbsp;art. 1240 C. civ.&nbsp;» et Alixo propose le lien Légifrance.</p>
     </article>
 
-    <!-- Formules -->
-    <article class="card reveal">
+    <article class="card span2 reveal d1">
       <div class="card-visual">
         <div class="v-formula">
           <code class="v-src">e_p = (ΔQ/Q) / (ΔP/P)</code>
@@ -215,8 +215,7 @@
       <p><kbd>Ctrl</kbd><kbd>E</kbd> et tu écris naturellement&nbsp;: fractions, racines, matrices, limites, sommes, lettres grecques. Rendu instantané.</p>
     </article>
 
-    <!-- Graphiques -->
-    <article class="card reveal">
+    <article class="card span2 reveal d2">
       <div class="card-visual">
         <svg class="v-graph" viewBox="0 0 220 120" aria-hidden="true">
           <path class="axis" d="M20 8v96h192"/>
@@ -232,203 +231,156 @@
       <p>Offre, demande, équilibre, taxe, prix plafond&nbsp;: des courbes que tu déplaces à la souris, directement dans la page.</p>
     </article>
 
-    <!-- Recherche -->
-    <article class="card reveal">
+    <article class="card span3 reveal">
       <div class="card-visual">
-        <div class="v-search">
-          <div class="v-search-bar"><span>⌕</span> nullité relative <kbd>Ctrl K</kbd></div>
-          <div class="v-hit"><span class="hit-chip">Contrats · S4</span> …sanctionnée par la <mark>nullité relative</mark>…</div>
+        <div class="v-cmd">
+          <div class="v-cmd-bar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="typed">nullité relative</span><kbd>Ctrl K</kbd></div>
+          <div class="v-hit sel"><span class="hit-chip">Contrats · S4</span> …sanctionnée par la <mark>nullité relative</mark>…<span class="ret">↵</span></div>
           <div class="v-hit"><span class="hit-chip">Famille · S2</span> …invoquer la <mark>nullité relative</mark> du…</div>
           <div class="v-hit"><span class="hit-chip pdf">Fiche TD.pdf</span> …cas de <mark>nullité relative</mark>…</div>
         </div>
       </div>
       <h3>Recherche universelle</h3>
-      <p>Une notion, un arrêt, une formule, un PDF&nbsp;? <kbd>Ctrl</kbd><kbd>K</kbd> fouille tous tes cours et tes fichiers en un instant.</p>
+      <p>Une notion, un arrêt, une formule, un PDF&nbsp;? <kbd>Ctrl</kbd><kbd>K</kbd> fouille tous tes cours, planches, tableurs et fichiers en un instant.</p>
     </article>
 
-    <!-- Fichiers -->
-    <article class="card span2 reveal">
+    <article class="card span3 reveal d1">
       <div class="card-visual">
-        <div class="v-files">
-          <div class="v-file"><span class="fi pdf">PDF</span><span>Fiche TD 3.pdf</span></div>
-          <div class="v-file"><span class="fi doc">DOC</span><span>Plan du cours.docx</span></div>
-          <div class="v-file"><span class="fi ppt">PPT</span><span>Diapos amphi.pptx</span></div>
-          <div class="v-file"><span class="fi xls">XLS</span><span>Données TD.xlsx</span></div>
-          <div class="v-file"><span class="fi img">IMG</span><span>Schéma.png</span></div>
-          <div class="v-file"><span class="fi aud">MP3</span><span>Enregistrement.mp3</span></div>
+        <div class="v-quiz">
+          <div class="v-quiz-q">Quel arrêt objective la faute civile&nbsp;? <span class="timer">00:12</span></div>
+          <div class="v-quiz-opts"><span class="a" data-k="A">Lemaire</span><span class="b win" data-k="B">Derguini</span><span class="c" data-k="C">Blieck</span><span class="d" data-k="D">Jand'heur</span></div>
+          <div class="v-quiz-bar">28 réponses <i></i> 72 %</div>
         </div>
       </div>
-      <h3>Tes fichiers, à côté du cours</h3>
-      <p>Glisse un PDF, un Word, un PowerPoint, une image ou un audio dans un dossier&nbsp;: il s'ouvre dans Alixo, à côté de tes notes, se synchronise avec ton compte et se partage comme une séance.</p>
+      <h3>Quiz en direct, dans l'amphi</h3>
+      <p>Transforme ton cours en quiz, révise seul avec chrono et score, ou affiche un code&nbsp;: chacun répond depuis son téléphone, le classement bouge, les stats restent.</p>
     </article>
+  </div>
 
-    <!-- Agenda -->
-    <article class="card reveal">
-      <div class="card-visual">
-        <div class="v-cal">
-          <div class="v-cal-head">Septembre</div>
-          <div class="v-cal-grid">
-            <i></i><i></i><i class="ev b"></i><i></i><i class="ev o"></i><i></i><i></i>
-            <i></i><i class="ev b"></i><i class="today">22</i><i></i><i class="ev g"></i><i></i><i></i>
-          </div>
-          <div class="v-cal-now"><b>En cours</b> Droit des obligations · reste 38 min</div>
-        </div>
-      </div>
-      <h3>Agenda intégré</h3>
-      <p>Tes cours dans un calendrier façon Apple. Pendant le cours, «&nbsp;＋ séance&nbsp;» crée la prise de notes du jour en un clic.</p>
-    </article>
-
-    <!-- Santé -->
-    <article class="card reveal">
-      <div class="card-visual">
-        <div class="v-score">
-          <div class="v-score-head">Score de Glasgow</div>
-          <div class="v-score-row"><span>Yeux</span><b>4</b></div>
-          <div class="v-score-row"><span>Verbal</span><b>5</b></div>
-          <div class="v-score-row"><span>Moteur</span><b>6</b></div>
-          <div class="v-score-total">15 / 15</div>
-        </div>
-      </div>
-      <h3>Fiches &amp; scores Santé</h3>
-      <p>Pathologie, médicament, cas clinique, ECOS… et 15 scores cliniques calculés (Glasgow, Wells, CHA₂DS₂-VASc…). Na+ devient Na⁺ tout seul.</p>
-    </article>
-
-    <!-- Tableaux & dessin -->
-    <article class="card reveal">
-      <div class="card-visual">
-        <div class="v-table">
-          <div class="v-tr th"><span>Nullité</span><span>Relative</span><span>Absolue</span></div>
-          <div class="v-tr"><span>Intérêt</span><span>Privé</span><span>Général</span></div>
-          <div class="v-tr"><span>Délai</span><span>5 ans</span><span>5 ans</span></div>
-        </div>
-      </div>
-      <h3>Tableaux, dessins, images</h3>
-      <p>Tableaux collés depuis Excel, blocs imbriqués, schémas dessinés à main levée, images redimensionnables. Tout part dans l'export.</p>
-    </article>
-
-    <!-- Calculatrices -->
-    <article class="card reveal">
-      <div class="card-visual">
-        <div class="v-calc">
-          <div class="v-calc-screen">√(2) × 3<span>≈ 4,243</span></div>
-          <div class="v-calc-tabs"><span class="on">TI-83</span><span>Casio fx-92</span><span>Simple</span></div>
-        </div>
-      </div>
-      <h3>Calculatrices intégrées</h3>
-      <p>TI-83 Premium CE, Casio fx-92 Collège et calculatrice contextuelle, dans un panneau à côté de tes notes.</p>
-    </article>
-
-    <!-- Export / Share -->
-    <article class="card span2 reveal">
-      <div class="card-visual v-split">
-        <div class="v-page light"><span class="v-line w80"></span><span class="v-line w60"></span><span class="v-line w70"></span><span class="v-box"></span><span class="v-badge">PDF</span></div>
-        <div class="v-page light"><span class="v-line w70"></span><span class="v-line w80"></span><span class="v-line w50"></span><span class="v-box"></span><span class="v-badge">Word</span></div>
-        <div class="v-share">
-          <span class="v-share-ico">↗</span>
-          <b>Alixo Share</b>
-          <span>Envoie une séance ou un dossier complet à un camarade.</span>
-        </div>
-      </div>
-      <h3>Export impeccable &amp; partage</h3>
-      <p>Un PDF propre avec sommaire, en-tête et date, un export Word fidèle. Et Alixo Share pour envoyer un cours entier à quelqu'un.</p>
-    </article>
-
-    <!-- Sync / offline -->
-    <article class="card span2 reveal">
-      <div class="card-visual">
-        <div class="v-sync">
-          <span class="v-dev">💻</span><span class="v-link"></span><span class="v-cloud">☁</span><span class="v-link"></span><span class="v-dev">🖥️</span>
-        </div>
-      </div>
-      <h3>Hors-ligne &amp; synchronisé</h3>
-      <p>Tes notes vivent sur ta machine, l'amphi sans wifi n'est plus un problème. Elles se synchronisent avec ton compte dès que tu retrouves du réseau.</p>
-    </article>
-
-    <!-- Mode sombre -->
-    <article class="card reveal">
-      <div class="card-visual">
-        <div class="v-themes">
-          <div class="v-theme light"><span></span><span class="w60"></span><span class="w80"></span></div>
-          <div class="v-theme dark"><span></span><span class="w60"></span><span class="w80"></span></div>
-        </div>
-      </div>
-      <h3>Mode sombre</h3>
-      <p>Clair, sombre ou automatique, gratuitement. Pour les amphis à 8h comme pour les révisions à 2h du matin. Et 80 teintes pour surligner, colorer, dessiner.</p>
-    </article>
+  <div class="also reveal">
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 3v5h5M6 3h8l5 5v13H6z"/></svg></div>
+      <h4>Tes fichiers à côté du cours</h4><p>PDF, Word, PowerPoint, Excel, images, audio&nbsp;: glissés dans un dossier, ouverts dans Alixo, synchronisés, partagés.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
+      <h4>Agenda intégré</h4><p>Tes cours dans un calendrier façon Apple. Pendant le cours, «&nbsp;+ séance&nbsp;» ouvre la prise de notes du jour.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-11a7 7 0 0 1 14 0c0 6.5-7 11-7 11Z"/><path d="M9 10h6M12 7v6"/></svg></div>
+      <h4>Fiches &amp; scores Santé</h4><p>Pathologie, médicament, cas clinique, ECOS et 15 scores cliniques calculés (Glasgow, Wells, CHA₂DS₂-VASc…).</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
+      <h4>Tableaux, dessins, images</h4><p>Tableaux collés depuis Excel, blocs imbriqués, schémas à main levée, images redimensionnables. Tout part dans l'export.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0M8 19h2M12 19h2"/></svg></div>
+      <h4>Calculatrices intégrées</h4><p>TI-83 Premium CE, Casio fx-92 et calculatrice contextuelle dans un panneau à côté de tes notes.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></div>
+      <h4>Export impeccable</h4><p>PDF propre avec sommaire, en-tête et date&nbsp;; export Word fidèle&nbsp;; fichiers .alx pour tout emporter.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><path d="M7 17a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8a4.5 4.5 0 0 1 .5 9H7Z"/></svg></div>
+      <h4>Hors-ligne &amp; synchronisé</h4><p>Tes notes vivent sur ta machine. Elles se synchronisent avec ton compte dès que tu retrouves du réseau.</p>
+    </div>
+    <div class="also-item">
+      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></div>
+      <h4>Clair, sombre, 12 thèmes</h4><p>Pour les amphis à 8h comme les révisions à 2h. Et 80 teintes pour surligner, colorer, dessiner.</p>
+    </div>
   </div>
 </section>
 
-<!-- ================= Bien plus qu'un éditeur ================= -->
+<!-- ================= IA sur l'appareil ================= -->
+<section id="ia" class="section tight">
+  <div class="ai-band reveal">
+    <div>
+      <div class="eyebrow">Intelligence artificielle</div>
+      <h2>L'IA tourne dans Alixo.<br><em>Sur ton ordinateur.</em></h2>
+      <p>Plus de serveur, plus de clé, plus de limite. À la première activation, Alixo télécharge <strong>une seule fois</strong> le modèle ouvert <strong>Qwen3</strong> et l'exécute sur la carte graphique de l'appareil. Correction, quiz et fiches de révision se calculent chez toi&nbsp;: <strong>tes notes ne quittent jamais l'ordinateur</strong>, et une fois le modèle téléchargé, tout fonctionne hors ligne.</p>
+      <ul class="ai-points">
+        <li>Trois tailles de modèle, la bonne conseillée pour ta machine</li>
+        <li>Correction <kbd>F7</kbd>, Quiz IA <kbd>F8</kbd>, analyse pendant la frappe, fiches de révision</li>
+        <li>Sans carte graphique compatible&nbsp;: Ollama sur ton PC, OpenRouter ou le serveur de ton établissement</li>
+      </ul>
+    </div>
+    <div class="ai-panel" aria-hidden="true">
+      <div class="ai-panel-head"><b>IA sur l'appareil</b><span>Paramètres › IA</span></div>
+      <div class="ai-models">
+        <div class="ai-model"><b>Léger</b><span>Ordinateur modeste, téléphone récent</span><span class="size">0,4 Go</span></div>
+        <div class="ai-model sel"><b>Équilibré <span class="reco">· conseillé ici</span></b><span>La plupart des portables</span><span class="size">1,1 Go</span></div>
+        <div class="ai-model"><b>Complet</b><span>Carte graphique ou Mac récent</span><span class="size">2,4 Go</span></div>
+      </div>
+      <div class="ai-progress"><div class="row"><span>Téléchargement du modèle</span><span>1,1 Go</span></div><i></i></div>
+      <div class="ai-ready">✓ IA prête — la correction répond tout de suite</div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= Le tour ================= -->
 <section id="plus" class="section alt">
   <div class="section-head reveal">
-    <div class="eyebrow">Nouveau</div>
+    <div class="eyebrow">Le tour</div>
     <h2>Bien plus qu'un <em>éditeur.</em></h2>
-    <p>Les dernières versions d'Alixo ajoutent tout ce qu'il faut pour réviser, faire réviser, calculer, organiser, présenter et travailler à plusieurs.</p>
+    <p>Réviser, faire réviser, calculer, organiser, présenter, travailler à plusieurs&nbsp;: tout est dans la même application, synchronisé avec ton compte.</p>
   </div>
 
   <div class="feat-row reveal" id="quiz">
-    <div class="feat-img"><img class="timg" data-light="img/shot-quizplay-light.jpg" data-dark="img/shot-quizplay-dark.jpg" width="2880" height="1800" alt="Quiz Alixo en cours : question, chronomètre et propositions A B C D" loading="lazy"></div>
+    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-quizplay-light.jpg" data-dark="img/shot-quizplay-dark.jpg" width="2880" height="1800" alt="Quiz Alixo en cours : question, chronomètre et propositions A B C D" loading="lazy"></div></div>
     <div class="feat-txt">
-      <div class="feat-tag">Nouveau · Quiz</div>
+      <div class="feat-tag">Quiz</div>
       <h3>Des quiz pour réviser, ou pour faire jouer tout l'amphi</h3>
-      <p>Transforme ton cours en quiz en quelques minutes&nbsp;: choix multiple, vrai / faux, nombre, curseur, réponse écrite, remise en ordre, association, sondage, échelle, nuage de mots et pages d'explication, à glisser dans le déroulé. <strong>Tester</strong> (<kbd>F5</kbd>) te fait réviser seul avec chronomètre et score&nbsp;; <strong>Présenter en direct</strong> affiche un code et un QR code&nbsp;: chacun répond depuis son téléphone sur <strong>alixoapp.com/quiz</strong>, sans compte.</p>
-      <ul class="feat-list"><li>Révélation avec pourcentages, classement qui bouge, podium animé</li><li>8 thèmes ou le tien, musiques de fond et sons intégrés</li><li>Partageable comme une séance, export PDF des corrigés</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal">
-    <div class="feat-img"><img class="timg" data-light="img/shot-quizstats-light.jpg" data-dark="img/shot-quizstats-dark.jpg" width="2880" height="1800" alt="Résultats d'un quiz Alixo : participants, score moyen, réussite question par question" loading="lazy"></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Quiz · Résultats</div>
-      <h3>Tu sais tout de suite ce qui n'est pas compris</h3>
-      <p>Après chaque partie, les <strong>statistiques</strong> s'enregistrent dans le quiz&nbsp;: participants, score moyen et médiane, taux de bonnes réponses, temps moyen, répartition des scores, réussite question par question avec <em>la plus dure</em> signalée, et le tableau de chaque participant. Idéal pour un TD, une conférence de méthode ou un groupe de révision.</p>
-      <ul class="feat-list"><li>Tests en solo et parties en direct, tous gardés</li><li>Export CSV vers ton tableur</li><li>Le présentateur garde la main&nbsp;: Espace pour avancer, Échap pour arrêter</li></ul>
+      <p>Choix multiple, vrai / faux, nombre, curseur, réponse écrite, remise en ordre, association, sondage, nuage de mots&nbsp;: dix types de questions à glisser dans le déroulé. <strong>Tester</strong> (<kbd>F5</kbd>) te fait réviser seul&nbsp;; <strong>Présenter en direct</strong> affiche un code et un QR code, chacun répond depuis son téléphone sur <strong>alixoapp.com/quiz</strong>, sans compte.</p>
+      <ul class="feat-list"><li>Révélation avec pourcentages, classement qui bouge, podium animé</li><li>Statistiques par question, export CSV, la plus dure signalée</li><li>Quiz IA (<kbd>F8</kbd>)&nbsp;: Alixo génère les questions depuis ton cours</li></ul>
       <div class="feat-btns"><a class="btn ghost small" href="/quiz/" target="_blank" rel="noopener">Rejoindre un quiz avec un code →</a></div>
     </div>
   </div>
 
-  <div class="feat-row reveal" id="planches">
-    <div class="feat-img"><img class="timg" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Planche Alixo : carte de révision du contrat avec zones, post-it, formes et flèches" loading="lazy"></div>
+  <div class="feat-row rev reveal" id="planches">
+    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Planche Alixo : carte de révision du contrat avec zones, post-it, formes et flèches" loading="lazy"></div></div>
     <div class="feat-txt">
-      <div class="feat-tag">Nouveau · Planches</div>
+      <div class="feat-tag">Planches</div>
       <h3>Un tableau blanc infini pour tes cartes de révision</h3>
-      <p>La planche, c'est l'endroit où tu étales tes idées&nbsp;: <strong>post-it</strong>, textes, <strong>formes</strong>, <strong>zones</strong> nommées, <strong>flèches</strong> courbes ou pointillées, images, liens, listes à cocher, stickers, et même des <strong>blocs de tes séances</strong> épinglés qui rouvrent le cours au double-clic. Tu déplaces, tu zoomes, tu alignes, tu verrouilles.</p>
-      <ul class="feat-list"><li>Modèles prêts&nbsp;: carte mentale, fiche d'arrêt, plan de dissertation, SWOT, kanban, frise</li><li>Mini-carte, mode présentation plein écran, export PDF</li><li>Synchronisée, partageable, cherchable avec Ctrl+K</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal">
-    <div class="feat-img"><img class="timg" data-light="img/shot-sheet-light.jpg" data-dark="img/shot-sheet-dark.jpg" width="2880" height="1800" alt="Tableur Alixo avec formules et graphique" loading="lazy"></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Nouveau · Tableurs</div>
-      <h3>Un vrai tableur, à côté de tes cours</h3>
-      <p>Budget, données de TD, séries statistiques&nbsp;: crée un tableur dans n'importe quel dossier. Formules <code>=SOMME(B2:B5)</code>, une cinquantaine de fonctions en français et en anglais (SOMME, MOYENNE, SI, RECHERCHEV, NB.SI…), plusieurs feuilles par classeur, tri, formats monnaie et pourcentage, et un graphique de la sélection dans le volet de droite.</p>
-      <ul class="feat-list"><li>Copier-coller avec Excel, LibreOffice et Google Sheets</li><li>Import et export CSV, export PDF</li><li>Synchronisé, partageable, cherchable avec Ctrl+K</li></ul>
+      <p>Post-it, textes, formes, zones nommées, flèches, images, listes à cocher, stickers, et des <strong>blocs de tes séances</strong> épinglés qui rouvrent le cours au double-clic. Tu déplaces, tu zoomes, tu alignes, tu verrouilles.</p>
+      <ul class="feat-list"><li>Modèles prêts&nbsp;: carte mentale, fiche d'arrêt, plan de dissertation, SWOT, kanban, frise</li><li>Mini-carte, mode présentation plein écran, export PDF</li><li>Synchronisée, partageable, cherchable avec <kbd>Ctrl K</kbd></li></ul>
     </div>
   </div>
 
   <div class="feat-row reveal">
-    <div class="feat-img"><img class="timg" data-light="img/shot-galaxy-light.jpg" data-dark="img/shot-galaxy-dark.jpg" width="2880" height="1800" alt="Vue Galaxie de la bibliothèque Alixo" loading="lazy"></div>
+    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-sheet-light.jpg" data-dark="img/shot-sheet-dark.jpg" width="2880" height="1800" alt="Tableur Alixo avec formules et graphique" loading="lazy"></div></div>
+    <div class="feat-txt">
+      <div class="feat-tag">Tableurs</div>
+      <h3>Un vrai tableur, à côté de tes cours</h3>
+      <p>Budget, données de TD, séries statistiques&nbsp;: un tableur dans n'importe quel dossier. Formules <code>=SOMME(B2:B5)</code>, une cinquantaine de fonctions en français et en anglais, plusieurs feuilles, tri, formats monnaie et pourcentage, graphique de la sélection.</p>
+      <ul class="feat-list"><li>Copier-coller avec Excel, LibreOffice et Google Sheets</li><li>Import et export CSV, export PDF</li></ul>
+    </div>
+  </div>
+
+  <div class="feat-row rev reveal">
+    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-galaxy-light.jpg" data-dark="img/shot-galaxy-dark.jpg" width="2880" height="1800" alt="Vue Galaxie de la bibliothèque Alixo" loading="lazy"></div></div>
     <div class="feat-txt">
       <div class="feat-tag">Bibliothèque</div>
       <h3>Ta bibliothèque en Galaxie, en 2D ou en 3D</h3>
-      <p>Chaque dossier devient un soleil, ses sous-dossiers des planètes, tes séances des étoiles en orbite. Tout flotte, les liens s'illuminent, tu tournes, tu zoomes, tu ouvres un cours d'un clic. Grille et arbre restent à un clic pour les jours sérieux.</p>
-      <ul class="feat-list"><li>Rendu 3D avec anneaux, halos et champ d'étoiles</li><li>Glisser un astre pour le ranger ailleurs</li><li>Clic droit&nbsp;: les mêmes menus que partout</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal">
-    <div class="feat-img"><img class="timg" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Éditeur de présentations Alixo" loading="lazy"></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Présentations</div>
-      <h3>Des diapos dans le style de tes cours</h3>
-      <p>Un exposé à rendre&nbsp;? Crée une présentation à côté de ta séance&nbsp;: 34 blocs à glisser-déposer (titre, liste, fiche d'arrêt, formule, tableau, graphique, frise, QCM, QR code…), 12 thèmes de couleurs et polices, notes pour l'orateur, mode présentation plein écran avec <kbd>F5</kbd>.</p>
-      <ul class="feat-list"><li>Export PDF une page 16:9 par diapositive</li><li>Sélection multiple, alignement, duplication</li><li>Se partage comme une séance</li></ul>
+      <p>Chaque dossier devient un soleil, ses sous-dossiers des planètes, tes séances des étoiles en orbite. Tu tournes, tu zoomes, tu ouvres un cours d'un clic. Grille et arbre restent à portée pour les jours sérieux.</p>
+      <ul class="feat-list"><li>Rendu 3D avec anneaux, halos et champ d'étoiles</li><li>Glisser un astre pour le ranger ailleurs</li></ul>
     </div>
   </div>
 
   <div class="feat-row reveal">
-    <div class="feat-img collab">
+    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Éditeur de présentations Alixo" loading="lazy"></div></div>
+    <div class="feat-txt">
+      <div class="feat-tag">Présentations</div>
+      <h3>Des diapos dans le style de tes cours</h3>
+      <p>Un exposé à rendre&nbsp;? 34 blocs à glisser-déposer (titre, liste, fiche d'arrêt, formule, tableau, graphique, frise, QCM, QR code…), 12 thèmes, notes pour l'orateur, mode présentation plein écran avec <kbd>F5</kbd>.</p>
+      <ul class="feat-list"><li>Export PDF, une page 16:9 par diapositive</li><li>Se partage comme une séance</li></ul>
+    </div>
+  </div>
+
+  <div class="feat-row rev reveal">
+    <div class="feat-wrap">
+      <div class="feat-img-glow" aria-hidden="true"></div>
       <div class="collab-card">
         <div class="collab-head">
           <span class="collab-title">Séance 4 — La formation</span>
@@ -437,110 +389,68 @@
         <div class="collab-line"><span class="hnum">A.</span> L'offre</div>
         <div class="collab-line edited" data-who="Léa est dessus">L'offre doit être ferme et précise, faute de quoi elle ne constitue qu'une invitation à entrer en pourparlers.</div>
         <div class="collab-line">La rétractation de l'offre avant l'expiration du délai…<span class="mock-caret"></span></div>
-        <div class="collab-foot"><span class="collab-dot"></span> 3 personnes en direct · droits lecture / écriture par membre</div>
+        <div class="collab-foot"><span class="collab-dot"></span> 3 personnes en direct · lecture / écriture par membre</div>
       </div>
     </div>
     <div class="feat-txt">
       <div class="feat-tag">Alixo Share</div>
       <h3>Travaillez à plusieurs, en direct</h3>
-      <p>Partage une séance, un dossier ou un événement par e-mail ou pseudo. Les cours reçus apparaissent dans «&nbsp;Partagés avec moi&nbsp;», les membres présents s'affichent dans la barre, et le bloc qu'un camarade modifie se colore. Les modifications se fondent bloc par bloc, sans jamais couper ta saisie.</p>
-      <ul class="feat-list"><li>Lecture ou écriture, par membre</li><li>Journal de qui a rejoint, consulté, modifié</li><li>Présentations, tableurs et fichiers (PDF, Word, images…) partageables aussi</li></ul>
+      <p>Partage une séance, un dossier ou un événement par e-mail ou pseudo. Les membres présents s'affichent dans la barre, le bloc qu'un camarade modifie se colore, et les modifications se fondent bloc par bloc, sans jamais couper ta saisie.</p>
+      <ul class="feat-list"><li>Lecture ou écriture, par membre</li><li>Journal de qui a rejoint, consulté, modifié</li><li>Présentations, tableurs et fichiers partageables aussi</li></ul>
     </div>
   </div>
 
-  <div class="feat-row rev reveal">
-    <div class="feat-img phone-wrap">
-      <div class="phone"><img class="timg" data-light="img/shot-mobile-light.jpg" data-dark="img/shot-mobile-dark.jpg" width="780" height="1688" alt="Alixo sur téléphone" loading="lazy"></div>
+  <div class="feat-row reveal">
+    <div class="feat-wrap">
+      <div class="feat-img-glow" aria-hidden="true"></div>
+      <div class="feat-img phone-wrap"><div class="phone"><img class="timg" data-light="img/shot-mobile-light.jpg" data-dark="img/shot-mobile-dark.jpg" width="780" height="1688" alt="Alixo sur téléphone" loading="lazy"></div></div>
     </div>
     <div class="feat-txt">
       <div class="feat-tag">Partout</div>
       <h3>Sur PC, dans le navigateur, sur ton téléphone</h3>
-      <p>L'application PC pour l'amphi, la version web pour la BU sans installer, la version mobile pour relire dans le tram. Même compte, mêmes cours, synchronisés. Sur téléphone, l'explorateur devient un tiroir et un bouton «&nbsp;+&nbsp;» flotte en bas de l'écran.</p>
+      <p>L'application PC pour l'amphi, la version web pour la BU sans installer, la version mobile pour relire dans le tram. Même compte, mêmes cours, synchronisés.</p>
       <div class="feat-btns">
         <a class="btn ghost small" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Ouvrir la version web →</a>
         <a class="btn ghost small" href="https://alixoapp.com/docs/mobile.html" target="_blank" rel="noopener">Version mobile →</a>
       </div>
     </div>
   </div>
-
-  <div class="mini-grid reveal">
-    <div class="mini">
-      <div class="mini-visual swatches"><i style="background:#f6f7f9"></i><i style="background:#141414"></i><i style="background:#0f1a33"></i><i style="background:#1b3a2f"></i><i style="background:#2c3440"></i><i style="background:#e6f0fb"></i><i style="background:#e5f0e6"></i><i style="background:#fbe6ee"></i><i style="background:#f3ead9"></i><i style="background:#ece6f7"></i></div>
-      <h4>12 thèmes de couleurs <span class="plus-badge">Alixo+</span></h4>
-      <p>Clair, sombre et automatique pour tous. Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur, Sauge, Rose, Sable, Lavande et 11 polices avec Alixo+.</p>
-    </div>
-    <div class="mini">
-      <div class="mini-visual"><div class="todo"><span class="done">Fiche d'arrêt Derguini</span><span>Relire IS-LM avant jeudi <b>urgent</b></span><span>Rendre le TD 3</span></div></div>
-      <h4>Tâches &amp; rappels <span class="plus-badge">Alixo+</span></h4>
-      <p>Catégories, échéances, priorités, rappel quotidien dans la cloche. Synchronisées avec ton compte.</p>
-    </div>
-    <div class="mini">
-      <div class="mini-visual"><div class="bilan"><b>Bonjour Nathan</b><span>Cette semaine&nbsp;: <strong>4 820 mots</strong> ↑ 18 %</span><span>6 séances · 11 h de cours · série de 5 jours 🔥</span></div></div>
-      <h4>Bilan de la semaine</h4>
-      <p>À chaque ouverture, tes mots écrits, tes séances, ton agenda et ta série de jours consécutifs.</p>
-    </div>
-    <div class="mini">
-      <div class="mini-visual"><div class="tabs-v"><span>Cours</span><span class="on">TD</span><span>Fiches</span><span>＋</span></div></div>
-      <h4>Onglets dans une séance</h4>
-      <p>Comme Google Docs&nbsp;: plusieurs pages dans une même séance, chacune avec son plan. Ctrl+K et l'export couvrent tout.</p>
-    </div>
-  </div>
 </section>
 
-<!-- ================= Une séance type ================= -->
-<section id="seance" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">En amphi</div>
-    <h2>Une heure de cours <em>avec Alixo.</em></h2>
-    <p>Voilà à quoi ressemble une séance quand l'outil ne se met pas en travers.</p>
-  </div>
-  <div class="timeline reveal">
-    <div class="tl-item">
-      <span class="tl-time">08:00</span>
-      <div><h4>Le cours commence</h4><p>L'agenda affiche «&nbsp;En cours&nbsp;». Un clic sur ＋ séance et la prise de notes du jour est ouverte dans le bon dossier.</p></div>
-    </div>
-    <div class="tl-item">
-      <span class="tl-time">08:07</span>
-      <div><h4>Le prof passe au «&nbsp;A.&nbsp;»</h4><p><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>2</kbd> : le titre est numéroté et apparaît dans le plan. Tu n'as jamais quitté le clavier.</p></div>
-    </div>
-    <div class="tl-item">
-      <span class="tl-time">08:21</span>
-      <div><h4>Un arrêt est cité</h4><p><kbd>/</kbd> puis «&nbsp;arrêt&nbsp;» : la fiche apparaît avec ses champs. Tu remplis Faits et Portée, tu compléteras le reste en TD.</p></div>
-    </div>
-    <div class="tl-item">
-      <span class="tl-time">08:34</span>
-      <div><h4>Tu tapes trop vite</h4><p>L'IA souligne deux fautes sous le paragraphe. <kbd>Tab</kbd>, c'est réglé. Elle propose aussi de passer la phrase en encadré «&nbsp;Définition&nbsp;».</p></div>
-    </div>
-    <div class="tl-item">
-      <span class="tl-time">08:48</span>
-      <div><h4>«&nbsp;On l'a déjà vu en S2&nbsp;»</h4><p><kbd>Ctrl</kbd><kbd>K</kbd> «&nbsp;nullité relative&nbsp;» : le passage de la séance 2 s'affiche. Tu colles la référence et tu continues.</p></div>
-    </div>
-    <div class="tl-item">
-      <span class="tl-time">09:00</span>
-      <div><h4>Fin du cours</h4><p>Export PDF avec sommaire pour ton binôme via Alixo Share. Tes notes sont déjà synchronisées sur ton autre ordinateur.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= Raccourcis ================= -->
+<!-- ================= Tout au clavier ================= -->
 <section id="raccourcis" class="section">
   <div class="section-head reveal">
     <div class="eyebrow">Tout au clavier</div>
     <h2>Tes mains restent <em>sur les touches.</em></h2>
+    <p>Un «&nbsp;/&nbsp;» ouvre la palette de blocs. Le reste, ce sont des raccourcis que tu connais déjà.</p>
   </div>
-  <div class="keys reveal">
-    <div class="key-row"><span><kbd>/</kbd></span><p>Insérer un bloc : encadré, fiche d'arrêt, formule, graphique, tableau, image, dessin…</p></div>
-    <div class="key-row"><span><kbd>Ctrl</kbd><kbd>K</kbd></span><p>Rechercher dans tous les cours et fichiers</p></div>
-    <div class="key-row"><span><kbd>Ctrl</kbd><kbd>E</kbd></span><p>Ouvrir une formule</p></div>
-    <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1…4</kbd></span><p>Titre de niveau I. / A. / 1. / a.</p></div>
-    <div class="key-row"><span><kbd>Tab</kbd></span><p>Accepter la correction ou la mise en forme proposée par l'IA</p></div>
-    <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd></span><p>Ouvrir l'agenda</p></div>
-    <div class="key-row"><span><kbd>-&gt;</kbd> <kbd>=&gt;</kbd> <kbd>&lt;=&gt;</kbd></span><p>Deviennent → ⇒ ⇔ automatiquement. Na+ devient Na⁺, &gt;= devient ≥.</p></div>
-    <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>L / E / R / J</kbd></span><p>Aligner à gauche, centrer, à droite, justifier</p></div>
+  <div class="keys-wrap">
+    <div class="palette reveal" aria-hidden="true">
+      <div class="palette-bar"><span class="slash">/</span><span class="typed">arr</span></div>
+      <div class="palette-grp">Droit</div>
+      <div class="palette-item sel"><span class="pi">⚖️</span>Fiche d'arrêt<kbd>↵</kbd></div>
+      <div class="palette-item"><span class="pi">§</span>Référence d'article</div>
+      <div class="palette-grp">Blocs</div>
+      <div class="palette-item"><span class="pi">▦</span>Encadré définition</div>
+      <div class="palette-item"><span class="pi">∑</span>Formule<kbd>Ctrl E</kbd></div>
+      <div class="palette-item"><span class="pi">📈</span>Graphique économique</div>
+      <div class="palette-item"><span class="pi">▤</span>Tableau</div>
+      <div class="palette-foot"><span>↑↓ naviguer</span><span>↵ insérer</span><span>échap fermer</span></div>
+    </div>
+    <div class="keys reveal d1">
+      <div class="key-row"><span><kbd>/</kbd></span><p>Insérer un bloc : encadré, fiche d'arrêt, formule, graphique, tableau, image, dessin…</p></div>
+      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>K</kbd></span><p>Rechercher dans tous les cours et fichiers</p></div>
+      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>E</kbd></span><p>Ouvrir une formule</p></div>
+      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1…4</kbd></span><p>Titre de niveau I. / A. / 1. / a.</p></div>
+      <div class="key-row"><span><kbd>F7</kbd> <kbd>F8</kbd></span><p>Correction par l'IA, Quiz IA généré depuis le cours</p></div>
+      <div class="key-row"><span><kbd>Tab</kbd></span><p>Accepter la correction ou la mise en forme proposée</p></div>
+      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd></span><p>Ouvrir l'agenda</p></div>
+      <div class="key-row"><span><kbd>-&gt;</kbd> <kbd>=&gt;</kbd> <kbd>&lt;=&gt;</kbd></span><p>Deviennent → ⇒ ⇔ automatiquement. Na+ devient Na⁺, &gt;= devient ≥.</p></div>
+    </div>
   </div>
 </section>
 
-<!-- ================= Pourquoi pas Word ? ================= -->
+<!-- ================= Comparatif ================= -->
 <section id="pourquoi" class="section alt">
   <div class="section-head reveal">
     <div class="eyebrow">Comparatif</div>
@@ -557,10 +467,9 @@
         <tr><td>Fiches d'arrêt, fiches Santé guidées</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Graphiques éco manipulables</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Formules tapées en langage naturel</td><td class="me">✓</td><td class="part">Éditeur d'équations</td><td class="part">LaTeX</td></tr>
-        <tr><td>IA de correction en tapant, sans quitter le clavier</td><td class="me">✓</td><td class="part">Correcteur</td><td class="part">Variable</td></tr>
+        <tr><td>IA sur l'appareil, sans envoyer tes notes</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
+        <tr><td>Quiz en direct depuis le cours</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Recherche dans tous les cours et fichiers</td><td class="me">✓</td><td class="part">Fichier par fichier</td><td class="part">✓</td></tr>
-        <tr><td>Scores cliniques et calculatrices intégrés</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
-        <tr><td>Présentations intégrées au cours</td><td class="me">✓</td><td class="part">Autre logiciel</td><td class="no">✕</td></tr>
         <tr><td>Travail à plusieurs en direct</td><td class="me">✓</td><td class="part">✓</td><td class="part">✓</td></tr>
         <tr><td>Hors-ligne complet</td><td class="me">✓</td><td class="part">Selon l'abonnement</td><td class="part">Partiel</td></tr>
         <tr><td>Prix</td><td class="me">Gratuit · Alixo+ en option</td><td class="part">Abonnement</td><td class="part">Freemium</td></tr>
@@ -570,13 +479,13 @@
 </section>
 
 <!-- ================= Chiffres ================= -->
-<section class="section stats-band">
+<section class="section tight">
   <div class="stats reveal">
     <div class="stat"><span class="stat-n" data-count="7">0</span><span class="stat-l">filières avec leurs blocs dédiés</span></div>
+    <div class="stat"><span class="stat-n" data-count="10">0</span><span class="stat-l">types de questions de quiz</span></div>
     <div class="stat"><span class="stat-n" data-count="34">0</span><span class="stat-l">blocs de présentation</span></div>
     <div class="stat"><span class="stat-n" data-count="15">0</span><span class="stat-l">scores cliniques calculés</span></div>
-    <div class="stat"><span class="stat-n" data-count="12">0</span><span class="stat-l">thèmes de couleurs</span></div>
-    <div class="stat"><span class="stat-n" data-count="0" data-suffix="€">0</span><span class="stat-l">pour l'essentiel, sans limite de temps</span></div>
+    <div class="stat"><span class="stat-n" data-count="0" data-suffix=" €">0</span><span class="stat-l">pour l'essentiel, sans limite de temps</span></div>
   </div>
 </section>
 
@@ -589,34 +498,36 @@
   </div>
   <div class="plans reveal">
     <div class="plan">
-      <div class="plan-head"><img src="img/logo.png" alt="" width="36" height="36"><div><h3>Gratuit</h3><span>Pour toujours, sans carte</span></div></div>
+      <div class="plan-head"><img src="img/logo.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Pour toujours, sans carte</span></div></div>
+      <div class="plan-price">0 €<small>sans limite de temps</small></div>
       <ul class="plan-list">
-        <li>Cours, présentations, tableurs, dossiers, fichiers</li>
+        <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
         <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
         <li>Agenda, dictionnaire, export PDF et Word</li>
         <li>Alixo Share et travail à plusieurs en direct</li>
-        <li>Synchronisation PC, Mac, web, mobile</li>
-        <li>3 Go de stockage</li>
+        <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
         <li>Thèmes clair, sombre, automatique · 3 polices</li>
       </ul>
       <a class="btn ghost full" href="#telecharger" data-download>Commencer gratuitement</a>
     </div>
     <div class="plan plus">
-      <div class="plan-head"><img src="img/logo-plus.png" alt="" width="36" height="36"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
+      <div class="plan-head"><img src="img/logo-plus.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
+      <div class="plan-price"><span class="grad-text">Alixo+</span><small>prix et durées dans l'application</small></div>
       <ul class="plan-list">
-        <li><strong>Intelligence artificielle</strong> : correction, mise en forme et reformulations pendant la frappe</li>
-        <li><strong>Tâches à faire</strong> : catégories, échéances, priorités, rappel du matin</li>
-        <li><strong>Tous les thèmes de couleurs</strong> : Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
-        <li><strong>Toutes les polices</strong> : Georgia, Garamond, Cambria, Calibri, Verdana…</li>
+        <li><strong>Intelligence artificielle sur l'appareil</strong>&nbsp;: correction, mise en forme, Quiz IA, fiches de révision</li>
+        <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
+        <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
+        <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
         <li><strong>Stockage au-delà de 3 Go</strong></li>
       </ul>
-      <div class="plan-note">Le prix TTC, les durées (1, 3, 6 ou 12 mois, sans reconduction automatique) et l'abonnement sont indiqués dans l'application, dans Paramètres › Alixo+, avant tout paiement. Droit de rétractation de 14 jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>. Un thème ou une police Alixo+ choisis restent mémorisés et reviennent dès la réactivation.</div>
+      <a class="btn brand full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application</a>
+      <div class="plan-note">Le prix TTC, les durées (1, 3, 6 ou 12 mois, sans reconduction automatique) et l'abonnement sont indiqués dans l'application, dans Paramètres › Alixo+, avant tout paiement. Droit de rétractation de 14 jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</div>
     </div>
   </div>
 </section>
 
 <!-- ================= Téléchargement ================= -->
-<section id="telecharger" class="section">
+<section id="telecharger" class="section alt">
   <div class="section-head reveal">
     <div class="eyebrow">Télécharger</div>
     <h2>Alixo sur ton ordinateur.<br><em>En un clic.</em></h2>
@@ -624,7 +535,6 @@
   </div>
 
   <div class="dl-grid reveal">
-    <!-- Windows -->
     <div class="dl-card win">
       <div class="dl-head">
         <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
@@ -635,7 +545,7 @@
         Télécharger Alixo-Setup.exe
         <small class="btn-meta"><span class="js-version">Dernière version</span> · <span class="js-size">71 Mo</span></small>
       </a>
-      <a class="dl-alt" id="dl-portable" href="/telecharger/windows-portable/">Version portable (sans installation) →</a>
+      <a class="dl-alt" id="dl-portable" href="/telecharger/windows-portable/">Version portable, sans installation →</a>
       <ul class="dl-list">
         <li>Mises à jour automatiques au démarrage</li>
         <li>Fonctionne hors-ligne</li>
@@ -647,7 +557,6 @@
       </div>
     </div>
 
-    <!-- macOS -->
     <div class="dl-card mac" id="dl-mac">
       <div class="dl-head">
         <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
@@ -657,9 +566,7 @@
         La version macOS est en cours de finalisation. Même application, mêmes fonctionnalités, même compte&nbsp;:
         tes cours pris sur Windows seront déjà là.
       </p>
-      <a class="btn ghost big full" id="btn-mac" href="/versions/">
-        🔔 Être prévenu de la sortie
-      </a>
+      <a class="btn ghost big full" id="btn-mac" href="/versions/">Être prévenu de la sortie</a>
       <div class="dl-meta-mac" id="mac-meta" hidden><span class="js-version">Dernière version</span> · <span id="mac-size"></span> · universel Intel / Apple Silicon</div>
       <ul class="dl-list muted">
         <li>Universel&nbsp;: Apple Silicon et Intel</li>
@@ -671,7 +578,6 @@
       </div>
     </div>
 
-    <!-- Web -->
     <div class="dl-card web">
       <div class="dl-head">
         <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
@@ -686,7 +592,6 @@
       <ul class="dl-list">
         <li>Sans compte&nbsp;: «&nbsp;Continuer sans compte&nbsp;», tout reste sur l'appareil</li>
         <li>Même compte, mêmes cours que sur PC</li>
-        <li>Version mobile pour relire partout</li>
         <li>Toujours au niveau de la version PC</li>
       </ul>
     </div>
@@ -694,33 +599,33 @@
 </section>
 
 <!-- ================= Nouveautés (changelog live) ================= -->
-<section id="nouveautes" class="section alt">
+<section id="nouveautes" class="section">
   <div class="section-head reveal">
     <div class="eyebrow">Nouveautés</div>
     <h2>Une mise à jour <em>chaque semaine.</em></h2>
     <p>Alixo évolue avec les retours des étudiants. Les versions installées se mettent à jour toutes seules.</p>
   </div>
   <div class="news-grid reveal">
+    <a class="news-card" href="#ia">
+      <span class="news-ico" aria-hidden="true">✨</span>
+      <span class="news-tag">À la une</span>
+      <b>L'IA sur ton appareil</b>
+      <span>Le modèle Qwen3 s'installe tout seul et tourne sur ta carte graphique&nbsp;: correction, Quiz IA et fiches de révision sans serveur, sans clé, hors ligne.</span>
+      <span class="news-more">Découvrir →</span>
+    </a>
     <a class="news-card" href="#quiz">
       <span class="news-ico" aria-hidden="true">🏆</span>
-      <span class="news-tag">À la une</span>
+      <span class="news-tag">Quiz</span>
       <b>Quiz en direct</b>
       <span>Crée un quiz depuis ton cours, révise seul ou fais jouer le groupe&nbsp;: code, QR code, réponses sur téléphone, classement et statistiques.</span>
       <span class="news-more">Découvrir les quiz →</span>
     </a>
     <a class="news-card" href="#planches">
       <span class="news-ico" aria-hidden="true">🧩</span>
-      <span class="news-tag">À la une</span>
-      <b>Planches</b>
-      <span>Un tableau blanc infini&nbsp;: post-it, formes, zones, flèches, listes, blocs de cours épinglés et modèles (carte mentale, fiche d'arrêt, plan).</span>
+      <span class="news-tag">Planches</span>
+      <b>Un tableau blanc infini</b>
+      <span>Post-it, formes, zones, flèches, listes, blocs de cours épinglés et modèles (carte mentale, fiche d'arrêt, plan de dissertation).</span>
       <span class="news-more">Découvrir les planches →</span>
-    </a>
-    <a class="news-card" href="#fonctions">
-      <span class="news-ico" aria-hidden="true">✨</span>
-      <span class="news-tag">Nouveau</span>
-      <b>IA ouverte, au choix</b>
-      <span>La correction par IA tourne sur Qwen3.8, un modèle ouvert&nbsp;: en ligne, sur le serveur de ton établissement ou sur ton PC avec Ollama, hors ligne.</span>
-      <span class="news-more">Voir les fonctionnalités →</span>
     </a>
   </div>
   <div class="changelog reveal" id="changelog">
@@ -730,10 +635,10 @@
     </div>
     <div class="cl-body" id="cl-body">
       <ul>
-        <li><strong>Quiz</strong> : dix types de questions et des pages, test en solo, présentation en direct avec code et QR code, thèmes, musiques, statistiques et export CSV.</li>
-        <li><strong>Planches</strong> : tableau blanc infini avec post-it, formes, zones, flèches, listes, blocs de cours épinglés et modèles prêts à l'emploi.</li>
-        <li><strong>IA de correction</strong> sur un modèle ouvert (Qwen3.8), en ligne ou en local avec Ollama.</li>
-        <li><strong>Tableurs</strong>, partage des fichiers, version web et mobile, travail à plusieurs en direct, Galaxie 3D, présentations.</li>
+        <li><strong>IA sur l'appareil</strong> : le modèle Qwen3 s'installe tout seul et tourne sur la carte graphique, hors ligne.</li>
+        <li><strong>Quiz</strong> : dix types de questions, test en solo, présentation en direct avec code et QR code, statistiques et export CSV.</li>
+        <li><strong>Planches</strong> : tableau blanc infini avec post-it, formes, zones, flèches et modèles prêts à l'emploi.</li>
+        <li><strong>Word comme une séance</strong>, écran partagé, fichiers .alx, table des matières, tableurs, Galaxie 3D, présentations.</li>
       </ul>
     </div>
     <a class="cl-more" href="/versions/">Voir toutes les versions →</a>
@@ -741,7 +646,7 @@
 </section>
 
 <!-- ================= FAQ ================= -->
-<section id="faq" class="section">
+<section id="faq" class="section alt">
   <div class="section-head reveal">
     <div class="eyebrow">Questions</div>
     <h2>Tout ce qu'on nous <em>demande.</em></h2>
@@ -749,7 +654,11 @@
   <div class="faq reveal">
     <details open>
       <summary>Alixo est-il vraiment gratuit&nbsp;?</summary>
-      <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
+      <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
+    </details>
+    <details>
+      <summary>L'IA envoie-t-elle mes notes quelque part&nbsp;?</summary>
+      <p>Non. Avec Alixo+, le modèle (Qwen3, licence ouverte) est téléchargé une seule fois puis tourne sur la carte graphique de ton appareil, dans l'application ou le navigateur. Tes notes ne quittent pas l'ordinateur et, une fois le modèle installé, l'IA fonctionne hors ligne. Si ta machine ne le permet pas, tu peux au choix brancher Ollama sur ton PC, OpenRouter ou le serveur de ton établissement, dans Paramètres › IA.</p>
     </details>
     <details>
       <summary>Je peux essayer sans rien installer&nbsp;?</summary>
@@ -757,11 +666,11 @@
     </details>
     <details>
       <summary>Il faut un compte pour utiliser la version web&nbsp;?</summary>
-      <p>Non. À l'ouverture, l'écran de connexion propose «&nbsp;<strong>Continuer sans compte (local uniquement)</strong>&nbsp;»&nbsp;: tes cours restent alors dans ce navigateur. Un compte (Google, Apple ou e-mail) sert à retrouver tes cours sur tous tes appareils, à partager et à activer Alixo+. Tu peux en créer un plus tard depuis Paramètres › Compte, ou avec le bouton <a href="https://alixoapp.com/docs/?login=signup">Créer un compte</a>&nbsp;: les cours créés sans compte sont récupérés à la première connexion.</p>
+      <p>Non. À l'ouverture, l'écran de connexion propose «&nbsp;<strong>Continuer sans compte (local uniquement)</strong>&nbsp;»&nbsp;: tes cours restent alors dans ce navigateur. Un compte (Google, Apple ou e-mail) sert à retrouver tes cours sur tous tes appareils, à partager et à activer Alixo+. Les cours créés sans compte sont récupérés à la première connexion.</p>
     </details>
     <details>
       <summary id="faq-mac-q">Quand sort la version macOS&nbsp;?</summary>
-      <p id="faq-mac-a">Bientôt. Elle est en cours de finalisation (application universelle Intel et Apple Silicon) et sera publiée sur la même page de téléchargement, avec le même compte et les mêmes cours. Pour être prévenu, suis la <a href="/versions/">page des versions</a>. Cette page se mettra à jour automatiquement le jour de la sortie. En attendant, la version web fonctionne parfaitement sur Mac.</p>
+      <p id="faq-mac-a">Bientôt. Elle est en cours de finalisation (application universelle Intel et Apple Silicon) et sera publiée sur la même page de téléchargement, avec le même compte et les mêmes cours. Pour être prévenu, suis la <a href="/versions/">page des versions</a>. En attendant, la version web fonctionne parfaitement sur Mac.</p>
     </details>
     <details>
       <summary>Comment installer Alixo sur Windows&nbsp;?</summary>
@@ -772,16 +681,12 @@
       <p>La version installée se met à jour automatiquement au démarrage. Tu n'as rien à faire. Avec la version portable, il suffit de retélécharger le fichier.</p>
     </details>
     <details>
-      <summary>L'IA, c'est obligatoire&nbsp;?</summary>
-      <p>Non. L'IA fait partie d'Alixo+ et, même avec un abonnement, chaque fonction (analyse pendant la frappe, fautes, mise en forme, reformulations) s'active ou se coupe dans Paramètres › Intelligence artificielle, avec un niveau de correction léger, standard ou strict. Les propositions ne sont jamais imposées&nbsp;: <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore.</p>
-    </details>
-    <details>
       <summary>Je suis en double licence, comment ça marche&nbsp;?</summary>
       <p>Tu sélectionnes plusieurs filières (par exemple Droit + Économie) et Alixo active les blocs des deux mondes&nbsp;: fiches d'arrêt et graphiques d'équilibre cohabitent dans le même cours.</p>
     </details>
     <details>
       <summary>Mes notes sont-elles en sécurité&nbsp;?</summary>
-      <p>Tes cours restent les tiens. L'application travaille hors-ligne sur ta machine, se synchronise avec ton compte, et tu peux exporter tes cours en PDF ou Word à tout moment.</p>
+      <p>Tes cours restent les tiens. L'application travaille hors-ligne sur ta machine, se synchronise avec ton compte, et tu peux exporter tes cours en PDF, Word ou .alx à tout moment.</p>
     </details>
   </div>
 </section>
@@ -790,6 +695,7 @@
 <section id="cta" class="section">
   <div class="cta-card reveal">
     <div class="cta-glow" aria-hidden="true"></div>
+    <div class="cta-grid" aria-hidden="true"></div>
     <h2>Le prochain cours<br>se prend en notes avec <em>Alixo.</em></h2>
     <p>L'essentiel est gratuit, sans limite de temps. Aucun engagement, tes notes t'appartiennent.</p>
     <div class="cta-btns">
@@ -797,14 +703,14 @@
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
         Télécharger pour Windows
       </a>
-      <span class="cta-mac"> macOS · bientôt</span>
+      <span class="cta-mac">macOS · bientôt</span>
       <a class="cta-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">ou essayer dans le navigateur →</a>
     </div>
     <div class="cta-note"><span class="js-version">Dernière version</span> · <span class="js-size">71 Mo</span> · le téléchargement démarre immédiatement</div>
   </div>
 </section>
 
-<!-- ================= Footer ================= -->
+<!-- ================= Pied de page ================= -->
 <footer>
   <div class="foot-inner">
     <div class="foot-brand">
@@ -814,21 +720,33 @@
         <div class="foot-tag">Le cockpit d'amphi des étudiants.</div>
       </div>
     </div>
-    <nav class="foot-links" aria-label="Pied de page">
-      <a href="#fonctions">Fonctionnalités</a>
-      <a href="#telecharger">Télécharger</a>
-      <a href="#nouveautes">Nouveautés</a>
-      <a href="documentation.html">Documentation</a>
-      <a href="#faq">FAQ</a>
-      <a href="https://alixoapp.com/docs/?login">Se connecter</a>
-      <a href="/versions/">Versions</a>
-      <a href="confidentialite.html">Confidentialité</a>
-      <a href="conditions.html">Conditions</a>
-      <a href="cgv.html">CGV</a>
-      <a href="mentions-legales.html">Mentions légales</a>
-      <a href="contact.html">Contact</a>
-    </nav>
-    <div class="foot-copy" id="foot-copy">© 2026 Alixo · Windows aujourd'hui, macOS bientôt.</div>
+    <div class="foot-cols">
+      <div class="foot-col">
+        <h5>Produit</h5>
+        <a href="#fonctions">Fonctionnalités</a>
+        <a href="#ia">Intelligence artificielle</a>
+        <a href="#alixo-plus">Alixo+</a>
+        <a href="#telecharger">Télécharger</a>
+        <a href="/versions/">Versions</a>
+      </div>
+      <div class="foot-col">
+        <h5>Utiliser</h5>
+        <a href="https://alixoapp.com/docs/">Application web</a>
+        <a href="https://alixoapp.com/docs/?login">Se connecter</a>
+        <a href="/quiz/">Rejoindre un quiz</a>
+        <a href="documentation.html">Documentation</a>
+        <a href="#faq">Questions fréquentes</a>
+      </div>
+      <div class="foot-col">
+        <h5>Alixo</h5>
+        <a href="contact.html">Contact</a>
+        <a href="confidentialite.html">Confidentialité</a>
+        <a href="conditions.html">Conditions</a>
+        <a href="cgv.html">CGV</a>
+        <a href="mentions-legales.html">Mentions légales</a>
+      </div>
+    </div>
+    <div class="foot-copy"><span id="foot-copy">© 2026 Alixo · Windows aujourd'hui, macOS bientôt.</span><span class="foot-made">Fait pour les amphis.</span></div>
   </div>
 </footer>
 
