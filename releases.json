@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-17T17:00:18.646Z",
- "version": "1.37.0",
- "date": "2026-10-17T15:22:52Z",
- "notes": "Nouveautés 1.37.0 — AlixoAI : l’intelligence artificielle d’Alixo, prête dès l’ouverture et bien plus rapide\n\n\n- **AlixoAI remplace tout.** Plus de serveur à choisir, plus de clé, plus de taille de modèle à régler : l’intelligence\n  artificielle d’Alixo s’appelle AlixoAI, elle est intégrée à l’application et se prépare toute seule, en silence, au\n  premier démarrage qui suit l’installation ou une mise à jour (version PC comme version web). Elle choisit d’elle-même la\n  configuration adaptée à l’appareil ; sur le web, chaque demande est ajustée à ce que l’appareil sait faire. Paramètres › IA\n  se résume à l’état d’AlixoAI, « Désactiver » / « Réactiver », et aux réglages de ce qu’elle propose. Les anciens réglages\n  de serveur (OpenRouter, Ollama, serveur d’établissement) et les accès attribués par l’administration ne sont plus lus.\n- **Le Quiz IA commence dès la première question.** AlixoAI découpe le cours en passages, écrit une question par passage\n  et la livre dès qu’elle est terminée : vous répondez à la première pendant qu’elle rédige les suivantes. Si vous la\n  rattrapez, une carte « AlixoAI écrit la question suivante… » patiente à votre place. Un quiz de dix questions se joue\n  ainsi sans attente, là où il fallait plusieurs minutes avant d’en voir une seule.\n- **Des réponses deux à trois fois plus courtes à produire.** Consignes réécrites pour un petit modèle (courtes, avec un\n  exemple), réponses en lignes plutôt qu’en JSON bavard, budgets de texte adaptés à la taille d’AlixoAI, lots courts :\n  la correction (F7, frappe), la mise en forme, le quiz et la fiche de révision répondent nettement plus vite. Les lots\n  d’un même quiz s’enchaînent dans une seule conversation : AlixoAI ne relit pas sa consigne à chaque fois.\n- **La fiche de révision s’écrit sous vos yeux.** Chaque partie apparaît à l’écran d’attente dès qu’elle est rédigée, puis la\n  fiche complète s’affiche (résumé, parties, définitions, « À retenir », pièges).\n- **Rien ne s’affiche tant que vous ne demandez rien.** La préparation d’AlixoAI est invisible ; la petite barre en bas à\n  droite ne paraît que si une de vos demandes attend (« AlixoAI se prépare… », « AlixoAI rédige · n mots »). Si Alixo\n  s’est fermé brutalement pendant qu’AlixoAI travaillait, elle repart en version plus légère au démarrage suivant.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.0",
+ "generatedAt": "2026-10-17T17:06:32.891Z",
+ "version": "1.37.1",
+ "date": "2026-10-17T17:06:17Z",
+ "notes": "Nouveautés 1.37.1 — Correction : « WebGPU n’a pas pu démarrer sur cet appareil »\n\n\n- **AlixoAI démarre sur davantage d’ordinateurs.** Sur bien des portables (puce graphique Intel ou AMD intégrée, pilote\n  ancien), la version PC refusait l’accélération graphique et AlixoAI répondait « WebGPU n’a pas pu démarrer sur cet\n  appareil ». La version PC force désormais l’accélération graphique et ignore la liste noire de Chromium ; AlixoAI\n  demande ensuite la carte graphique de trois façons (performante, par défaut, économe) avant de renoncer.\n- **« Réessayer » réessaie vraiment.** Un premier échec au lancement (processus graphique encore en train de démarrer)\n  n’est plus mémorisé pour toute la session : la demande suivante refait l’essai.\n- **Un message qui dit pourquoi.** En cas d’échec, le message indique la cause exacte (adaptateur absent, accélération\n  matérielle désactivée, erreur du pilote) plutôt qu’une phrase générique.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Setup.exe",
-   "size": 78629214
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Setup.exe",
+   "size": 78629073
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Portable.exe",
-   "size": 78392136
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Portable.exe",
+   "size": 78392001
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-Mac.dmg",
-   "size": 186628485
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-Mac.dmg",
+   "size": 186610235
   },
   "macZip": {
-   "name": "Alixo-1.37.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.0/Alixo-1.37.0-mac.zip",
-   "size": 179908675
+   "name": "Alixo-1.37.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.37.1/Alixo-1.37.1-mac.zip",
+   "size": 179910370
   }
  },
  "history": [
+  {
+   "version": "1.37.1",
+   "date": "2026-10-17T17:06:17Z",
+   "notes": "Nouveautés 1.37.1 — Correction : « WebGPU n’a pas pu démarrer sur cet appareil »\n\n\n- **AlixoAI démarre sur davantage d’ordinateurs.** Sur bien des portables (puce graphique Intel ou AMD intégrée, pilote\n  ancien), la version PC refusait l’accélération graphique et AlixoAI répondait « WebGPU n’a pas pu démarrer sur cet\n  appareil ». La version PC force désormais l’accélération graphique et ignore la liste noire de Chromium ; AlixoAI\n  demande ensuite la carte graphique de trois façons (performante, par défaut, économe) avant de renoncer.\n- **« Réessayer » réessaie vraiment.** Un premier échec au lancement (processus graphique encore en train de démarrer)\n  n’est plus mémorisé pour toute la session : la demande suivante refait l’essai.\n- **Un message qui dit pourquoi.** En cas d’échec, le message indique la cause exacte (adaptateur absent, accélération\n  matérielle désactivée, erreur du pilote) plutôt qu’une phrase générique.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.1"
+  },
   {
    "version": "1.37.0",
    "date": "2026-10-17T15:22:52Z",
@@ -220,11 +225,6 @@
    "version": "1.12.0",
    "date": "2026-09-21T21:57:19Z",
    "notes": "Alixo 1.12.0 — formules enrichies, messages directs, présence, explorateur de base\n\n**Nouveautés**\n\n- **Formules** : mots avec espaces et accents (`Coût total = Prix xx Quantité`), exposant et indice empilés (`x_i^2`), accents `vec(u)` `bar(x)` `hat(β)`, `abs(x)`, `norm(v)`, racine n-ième `root(3)(x)`, `binom(n)(k)`, matrices `mat(a, b; c, d)`, systèmes `cases(…)`, `lim_(x->oo)`, ensembles `RR NN ZZ QQ CC`, décimales à la française, plusieurs lignes (Maj+Entrée). Palette Symboles enrichie.\n- - **Notifications** : la clé IA attribuée est notifiée à chaque attribution ; si une clé personnelle est conservée, « Une clé IA vous a été proposée ».\n- - **Messages directs de l'administrateur** : arrivent en direct dans la cloche (toast + notification), option fenêtre, suivi reçu / lu.\n- - **Bilan de la semaine** affiché à chaque ouverture (désactivable).\n- - **Sélection à la souris** : relâcher une sélection dans la marge ne déplace plus le curseur."
-  },
-  {
-   "version": "1.11.0",
-   "date": "2026-09-19T18:02:08Z",
-   "notes": "Alixo 1.11.0 — onglets de séance, tâches, notifications, cartes, panneau d'administration"
   }
  ]
 }
