@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-17T10:15:40.984Z",
- "version": "1.36.0",
- "date": "2026-10-17T09:53:28Z",
- "notes": "Nouveautés 1.36.0 — L’IA tourne dans Alixo, sur votre appareil : sans serveur, sans clé, sans limite\n\n\n- **Le modèle d’intelligence artificielle s’installe dans Alixo et travaille sur votre ordinateur.** Plus besoin d’un serveur,\n  d’un compte chez un hébergeur ni d’une clé API : à la première activation (Paramètres › IA, ou ✨ / F7 dans une séance),\n  Alixo télécharge **une seule fois** le modèle ouvert **Qwen3** (Alibaba, licence Apache 2.0) puis l’exécute directement sur\n  la **carte graphique de l’appareil**, dans le navigateur (Chrome, Edge, Safari 26, Firefox 141+ sous Windows) comme dans la\n  version PC. Aucune limite d’usage, aucun crédit à recharger, et **vos notes ne quittent jamais l’ordinateur** : correction,\n  quiz et fiches de révision se calculent chez vous. Une fois le modèle téléchargé, **l’IA fonctionne hors ligne**.\n- **Trois tailles de modèle, une conseillée pour votre machine.** « Léger » (0,4 Go à télécharger, 1,4 Go de mémoire\n  graphique) pour un ordinateur modeste ou un téléphone récent ; « Équilibré » (1,1 Go) pour la plupart des portables ;\n  « Complet » (2,4 Go) pour une carte graphique ou un Mac récent : grammaire fine, mise en forme, fiches détaillées. Alixo\n  examine la carte graphique et la mémoire disponibles et marque la taille **conseillée ici** ; vous pouvez en changer à tout\n  moment (le modèle déjà téléchargé est signalé « sur l’appareil », « Effacer de l’appareil » libère la place).\n- **Téléchargement et chargement visibles.** « Télécharger et activer » affiche la progression (gigaoctets reçus, pourcentage,\n  préparation de la carte graphique) ; s’il est interrompu, il reprend où il en était. Aux lancements suivants, le modèle se\n  charge depuis l’appareil en quelques secondes, à la première demande, avec une **barre discrète** en bas à droite de la\n  fenêtre — puis la correction (F7), le Quiz IA (F8) et l’analyse pendant la frappe répondent sans attendre.\n- **Des consignes réécrites pour le modèle.** Les instructions données à l’IA pour la correction, la mise en forme (définitions,\n  arrêts, titres, encadrés…), les quiz et les fiches de révision sont plus courtes, structurées et accompagnées d’un exemple\n  complet : réponses plus justes et plus rapides, en JSON garanti par le moteur. Les textes longs sont découpés en lots\n  adaptés au modèle sur l’appareil (correction) ou résumés partie par partie (quiz, fiches).\n- **Sans carte graphique compatible, rien n’est perdu.** Si le navigateur ne propose pas WebGPU (version trop ancienne, machine\n  très modeste), Alixo l’explique et propose, comme avant, de faire tourner le modèle ailleurs : **Ollama** sur votre\n  ordinateur, **OpenRouter**, Alibaba Cloud Model Studio ou tout serveur compatible OpenAI (Paramètres › IA › « Où tourne le\n  modèle »). La clé attribuée par l’administrateur (Alixo Business) continue de s’appliquer.\n- **Sous le capot** : moteur WebLLM (`app/js/vendor/web-llm.js`, chargé à la demande) piloté par `app/js/ailocal.js`\n  (catalogue des modèles, détection de la machine, téléchargement, mémoire du navigateur, file d’attente des requêtes),\n  nouveau fournisseur « Dans Alixo » dans `app/js/corr.js` (réglage par défaut, lots adaptés, consignes compactes), bloc\n  de configuration refait dans `app/js/app.js`, WebGPU activé sous Linux dans la version PC, suite de tests\n  `scripts/v1360-ailocal-test.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.0",
+ "generatedAt": "2026-10-17T10:21:43.235Z",
+ "version": "1.36.1",
+ "date": "2026-10-17T10:21:26Z",
+ "notes": "Nouveautés 1.36.1 — L’IA s’installe toute seule, et tourne sur toutes les cartes graphiques\n\n\n- **Plus rien à configurer : l’IA s’installe d’elle-même.** Avec Alixo+, dès que l’appareil sait faire tourner le modèle\n  (WebGPU), Alixo télécharge tout seul le modèle conseillé quelques secondes après l’ouverture, sans rien demander — une\n  petite barre en bas à droite montre l’avancement, puis « IA prête ». Aux lancements suivants, le modèle se charge au\n  démarrage : la correction (F7), l’analyse pendant la frappe et le Quiz IA (F8) répondent tout de suite. Si le\n  téléchargement n’a pas encore eu lieu, la première demande le lance. Paramètres › IA se résume à l’essentiel : l’état,\n  la taille du modèle (Léger / Équilibré / Complet, la taille conseillée est marquée), « Installer maintenant »,\n  « Désactiver » (qui arrête tout, « Réactiver » pour revenir) et « Effacer de l’appareil ».\n- **Correction : l’erreur « Invalid ShaderModule … index_kernel » au chargement du modèle.** Sur les cartes graphiques\n  (ou pilotes) qui n’acceptent pas les calculs en demi-précision (extension WebGPU « shader-f16 »), le programme du modèle\n  ne compilait pas. Alixo détecte maintenant cette extension et sert la variante compatible du même modèle (f32, un peu\n  plus de mémoire graphique) ; si la compilation échoue malgré tout, il bascule de lui-même sur cette variante et s’en\n  souvient. Le message d’erreur, le cas échéant, dit quoi faire.\n- Le Quiz IA et le panneau de correction n’affichent plus d’écran d’activation : ils travaillent directement ; seul un\n  appareil sans WebGPU, ou une IA désactivée, mène aux Paramètres.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.0/Alixo-Setup.exe",
-   "size": 78630401
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Setup.exe",
+   "size": 78629190
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.0/Alixo-Portable.exe",
-   "size": 78393328
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Portable.exe",
+   "size": 78392125
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.0/Alixo-Mac.dmg",
-   "size": 186626604
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-Mac.dmg",
+   "size": 186626967
   },
   "macZip": {
-   "name": "Alixo-1.36.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.0/Alixo-1.36.0-mac.zip",
-   "size": 179911468
+   "name": "Alixo-1.36.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.36.1/Alixo-1.36.1-mac.zip",
+   "size": 179912419
   }
  },
  "history": [
+  {
+   "version": "1.36.1",
+   "date": "2026-10-17T10:21:26Z",
+   "notes": "Nouveautés 1.36.1 — L’IA s’installe toute seule, et tourne sur toutes les cartes graphiques\n\n\n- **Plus rien à configurer : l’IA s’installe d’elle-même.** Avec Alixo+, dès que l’appareil sait faire tourner le modèle\n  (WebGPU), Alixo télécharge tout seul le modèle conseillé quelques secondes après l’ouverture, sans rien demander — une\n  petite barre en bas à droite montre l’avancement, puis « IA prête ». Aux lancements suivants, le modèle se charge au\n  démarrage : la correction (F7), l’analyse pendant la frappe et le Quiz IA (F8) répondent tout de suite. Si le\n  téléchargement n’a pas encore eu lieu, la première demande le lance. Paramètres › IA se résume à l’essentiel : l’état,\n  la taille du modèle (Léger / Équilibré / Complet, la taille conseillée est marquée), « Installer maintenant »,\n  « Désactiver » (qui arrête tout, « Réactiver » pour revenir) et « Effacer de l’appareil ».\n- **Correction : l’erreur « Invalid ShaderModule … index_kernel » au chargement du modèle.** Sur les cartes graphiques\n  (ou pilotes) qui n’acceptent pas les calculs en demi-précision (extension WebGPU « shader-f16 »), le programme du modèle\n  ne compilait pas. Alixo détecte maintenant cette extension et sert la variante compatible du même modèle (f32, un peu\n  plus de mémoire graphique) ; si la compilation échoue malgré tout, il bascule de lui-même sur cette variante et s’en\n  souvient. Le message d’erreur, le cas échéant, dit quoi faire.\n- Le Quiz IA et le panneau de correction n’affichent plus d’écran d’activation : ils travaillent directement ; seul un\n  appareil sans WebGPU, ou une IA désactivée, mène aux Paramètres.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.1"
+  },
   {
    "version": "1.36.0",
    "date": "2026-10-17T09:53:28Z",
@@ -220,11 +225,6 @@
    "version": "1.9.0",
    "date": "2026-09-10T14:40:37Z",
    "notes": "## Alixo 1.9.0\n\n### Éditeur continu (façon Google Docs)\n- Une seule zone d'écriture : sélection, suppression, flèches, copier-coller et mise en forme traversent tout le cours. Titres, encadrés, fiches restent des blocs (plan, journal, export, synchronisation inchangés).\n- **Images** dans le cours (fichier, collage, glisser-déposer) : taille par poignées ou clic droit (25 / 50 / 75 / 100 % ou personnalisée en % / px), alignement, recadrage non destructif, légende, remplacement. Les encadrés et tableaux se placent à côté d'une image flottante.\n- Taille de police libre, exposant / indice, listes à puces / numérotées / cases à cocher sur quatre niveaux, correcteur natif.\n\n### Nouveautés de cette version\n- **Dessin** (bouton ✎, `/dessin`) : rectangle, ellipse, trait, flèche, zone de texte, main levée, couleurs, épaisseur, devant / derrière, poignées, Suppr, Ctrl+D. Exporté en PDF et Word.\n- **Encadré Bilan** (`/bilan` ou « Bilan : » en début de ligne) ; « - » en début de ligne dans un encadré donne une puce •.\n- **Alignement** gauche / centré / droite / justifié (Ctrl+Maj+L / E / R / J) pour paragraphes, titres, listes, encadrés, cases de tableau et images.\n- **Couleurs** : palette de 80 teintes + couleur personnalisée pour le texte, le surlignage, les cases de tableau et le dessin ; encre blanche automatique sur fond foncé.\n- **Flèches automatiques** : `->` → →, `-->` → ⟶, `=>` → ⇒, `<-` → ←, `<->` → ↔, `<=>` → ⇔, `>` → →.\n- **IA** : corrections (Tab) et mise en forme (Maj+Tab) proposées séparément, Tab ne change jamais le style ; les règles de français s'effacent après quelques secondes ou dès que l'on reprend la frappe.\n- **Export PDF (Ctrl+P)** : rendu propre sur fond blanc, sans bordures parasites, pied de page « titre · n / N », enregistrement au **nom de la séance**.\n- **Agenda** : heures saisies librement (« 8h30 », « 14 »), ↑ ↓ par quart d'heure, la fin suit le début.\n- **Onglets** réordonnables par glisser-déposer ou Ctrl+Maj+PageUp / PageDown.\n- **Listes** dans les cases de tableau depuis la barre ; puces exportées en points.\n\nMise à jour automatique pour la version installée (Alixo-Setup.exe) ; la version portable se télécharge ici."
-  },
-  {
-   "version": "1.6.2",
-   "date": "2026-09-03T16:31:26Z",
-   "notes": "## Alixo 1.6.2\n\n- **Analyse IA automatique pendant la frappe** : plus besoin d'appuyer sur ✨. Dès qu'un paragraphe est quitté (ou après 2,5 s sans frappe), les **fautes d'orthographe / grammaire** (avec la règle) et, s'il y a lieu, la **mise en forme** (définition, titre, encadré…) sont proposées juste sous le paragraphe. **Tab** applique tout, Échap ignore, ✓ / ✕ par proposition. Désactivable dans Paramètres ou dans le panneau IA.\n- **Erreur 503 « high demand » de Google** : plusieurs modèles Gemini sont essayés à tour de rôle (les rapides pour l'analyse pendant la frappe), second passage après une courte pause, délai maximal par appel, message clair si Google reste saturé.\n- Les nouvelles clés AI Studio (commençant par `AQ.`) sont acceptées.\n\nLes installations à partir de la 1.4.0 se mettent à jour automatiquement au démarrage. Version portable : retéléchargez `Alixo-1.6.2-portable.exe`."
   }
  ]
 }
