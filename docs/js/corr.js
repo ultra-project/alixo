@@ -342,7 +342,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
       if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: c.off ? 'L’IA est désactivée sur cet appareil (Paramètres › IA › Réactiver).' : L.support().reason };
       // le chargement du modèle (téléchargement la première fois, 10 à 60 s depuis l'appareil ensuite) n'entame pas le délai
       try { await L.load(c.model); } catch (e) { return { ok: false, status: 0, error: e.message }; }
-      return L.chat({ system, user, maxTokens, temperature, json: true, timeoutMs: Math.max(timeoutMs, 90000) * 3, key: c.model });
+      return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 90000) * 3, key: c.model });
     }
     if (!configured(c)) return { ok: false, status: 0, error: 'Aucun serveur d’IA configuré (Paramètres › Correction par IA).' };
     const url = c.endpoint + '/chat/completions';

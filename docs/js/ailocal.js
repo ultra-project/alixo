@@ -16,7 +16,7 @@
      recommend()                  clé conseillée pour cet appareil (après probe, sinon heuristique)
      cached(key)                  → Promise<bool> : le modèle est déjà sur l'appareil
      load(key, onProgress)        → Promise<engine> : télécharge si besoin puis charge sur la carte graphique
-     chat({ system, user, maxTokens, temperature, json, timeoutMs }) → { ok, text, tokIn, tokOut, model } | { ok:false, error }
+     chat({ system, user, maxTokens, temperature, timeoutMs }) → { ok, text (JSON nettoyé), tokIn, tokOut, model } | { ok:false, error }
      status()                     { state: 'idle'|'loading'|'ready'|'error', key, progress, text, phase }
      unload(), remove(key)        libère la mémoire / efface le modèle de l'appareil
    Événement document « alixo-ai-local » (detail = status()) à chaque changement : app.js affiche la progression.
@@ -50,8 +50,6 @@ window.AlixoLocalAI = (() => {
   let engine = null;             // MLCEngine chargé
   let loading = null;            // Promise en cours de load()
   let queue = Promise.resolve(); // les requêtes se suivent : un seul passage GPU à la fois
-  let noGrammar = false;         // la grammaire JSON a échoué sur cet appareil : réponses libres (JSON demandé par la consigne)
-  const OBJECT_SCHEMA = '{"type":"object"}';
   const st = { state: 'idle', key: '', progress: 0, text: '', phase: '', error: '' };
   let probed = null;             // résultat de probe()
 
@@ -173,42 +171,49 @@ window.AlixoLocalAI = (() => {
     return m || 'Le modèle n’a pas pu être chargé.';
   }
 
-  /* ---------------- une requête ---------------- */
-  async function chat({ system, user, maxTokens = 1024, temperature = 0, json = true, timeoutMs = 180000, key } = {}) {
-    const run = async () => {
-      let eng;
-      try { eng = await load(key || st.key || recommend()); }
-      catch (e) { return { ok: false, status: 0, error: e.message }; }
+  /* ---------------- une requête ----------------
+     1.36.3 : plus de « mode JSON forcé » (response_format json_object). Cette contrainte passe par le compilateur de
+     grammaire xgrammar embarqué dans WebLLM, qui a échoué de trois façons différentes sur les postes des utilisateurs
+     (« Invalid ShaderModule », « Cannot pass non-string to std::string », « The current Object has already been
+     disposed »). Les consignes demandent du JSON avec un exemple, Qwen3 s'y tient, et chaque appelant extrait le premier
+     objet JSON de la réponse (toJSON ci-dessous nettoie les clôtures ``` et le texte autour). Si une requête plante
+     quand même (objet GPU perdu, moteur dans un état incohérent), le moteur est rechargé une fois et la requête rejouée. */
+  const toJSON = raw => {
+    let t = String(raw || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    t = t.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/, '').trim();
+    const i = t.search(/[\[{]/); if (i > 0) t = t.slice(i);
+    const j = Math.max(t.lastIndexOf('}'), t.lastIndexOf(']')); if (j >= 0 && j < t.length - 1) t = t.slice(0, j + 1);
+    return t;
+  };
+  async function chat({ system, user, maxTokens = 1024, temperature = 0, timeoutMs = 180000, key } = {}) {
+    const once = async () => {
+      const eng = await load(key || st.key || recommend());
       const req = {
         messages: [{ role: 'system', content: String(system || '') }, { role: 'user', content: String(user || '') }],
         max_tokens: Math.max(16, Math.min(4096, Math.round(maxTokens))),
         temperature, top_p: 0.9,
         extra_body: { enable_thinking: false }
       };
-      /* 1.36.2 : WebLLM 0.2.86 passe `schema` tel quel au compilateur de grammaire ; sans schéma, « Cannot pass non-string
-         to std::string ». On fournit donc toujours un schéma (un objet JSON quelconque, ou celui donné par l'appelant) ;
-         si la grammaire échoue malgré tout sur cet appareil, on recommence sans contrainte (les consignes demandent
-         déjà du JSON et les appelants extraient le premier objet de la réponse). */
-      if (json && !noGrammar) req.response_format = { type: 'json_object', schema: typeof json === 'string' ? json : OBJECT_SCHEMA };
       let timer; const guard = new Promise((_, rej) => { timer = setTimeout(() => { rej(new Error('timeout')); try { eng.interruptGenerate(); } catch { /* */ } }, timeoutMs); });
-      try {
-        let res;
-        try { res = await Promise.race([eng.chat.completions.create(req), guard]); }
-        catch (e) {
-          if (req.response_format && /grammar|xgrammar|std::string|schema/i.test(String(e && e.message || e))) {
-            noGrammar = true; delete req.response_format;
-            res = await Promise.race([eng.chat.completions.create(req), guard]);
-          } else throw e;
-        }
-        const ch = res && res.choices && res.choices[0];
-        const text = String(ch && ch.message && ch.message.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-        if (!text) return { ok: false, status: 0, error: 'Le modèle n’a pas renvoyé de réponse' + (ch && ch.finish_reason === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
-        const u = res.usage || {};
-        return { ok: true, text, model: idFor(st.key), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || 0, local: true };
-      } catch (e) {
-        if (e && e.message === 'timeout') return { ok: false, status: 0, error: 'Le modèle met trop de temps à répondre sur cet appareil : réessayez avec un passage plus court, ou choisissez un modèle plus léger (Paramètres › IA).' };
-        return { ok: false, status: 0, error: friendly(e) };
-      } finally { clearTimeout(timer); }
+      try { return await Promise.race([eng.chat.completions.create(req), guard]); }
+      finally { clearTimeout(timer); }
+    };
+    const run = async () => {
+      let res;
+      try { res = await once(); }
+      catch (e) {
+        const m = String(e && e.message || e || '');
+        if (m === 'timeout') return { ok: false, status: 0, error: 'Le modèle met trop de temps à répondre sur cet appareil : réessayez avec un passage plus court, ou choisissez un modèle plus léger (Paramètres › IA).' };
+        if (/ContextWindowSizeExceeded|context window/i.test(m)) return { ok: false, status: 0, error: friendly(e) };
+        // moteur abîmé (objet libéré, périphérique perdu…) : on le recharge une fois et on rejoue la requête
+        try { await unload(); res = await once(); }
+        catch (e2) { return { ok: false, status: 0, error: String(e2 && e2.message || e2) === 'timeout' ? 'Le modèle met trop de temps à répondre sur cet appareil — réessayez.' : friendly(e2) }; }
+      }
+      const ch = res && res.choices && res.choices[0];
+      const text = toJSON(ch && ch.message && ch.message.content);
+      if (!text) return { ok: false, status: 0, error: 'Le modèle n’a pas renvoyé de réponse' + (ch && ch.finish_reason === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
+      const u = res.usage || {};
+      return { ok: true, text, model: idFor(st.key), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || 0, local: true };
     };
     const p = queue.then(run, run);
     queue = p.then(() => { }, () => { });
@@ -222,5 +227,5 @@ window.AlixoLocalAI = (() => {
     try { const L = await getLib(); for (const id of [m.id, m.id32]) { try { await L.deleteModelAllInfoInCache(id, appConfig(L)); } catch { /* variante absente */ } } return true; } catch { return false; }
   }
 
-  return { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, cached, load, chat, status, unload, remove, translate, friendly, idFor, vramFor, useF32, LIB_URL };
+  return { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, cached, load, chat, status, unload, remove, translate, friendly, toJSON, idFor, vramFor, useF32, LIB_URL };
 })();

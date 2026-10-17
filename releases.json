@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-17T10:50:35.678Z",
+ "generatedAt": "2026-10-17T11:03:16.686Z",
  "version": "1.36.2",
  "date": "2026-10-17T10:50:17Z",
  "notes": "Nouveautés 1.36.2 — Correction : l’IA sur l’appareil répondait par une erreur « grammar matcher »\n\n\n- **Corrigé : « Failed to initialize the grammar matcher for response format `json_object`: Cannot pass non-string to\n  std::string ».** Le modèle se chargeait bien, mais la première demande (correction F7, Quiz IA F8, mise en forme) échouait :\n  le moteur WebLLM exige un schéma pour garantir une réponse JSON et Alixo ne lui en donnait pas. Alixo fournit désormais ce\n  schéma (les réponses restent du JSON garanti) et, si la grammaire échouait malgré tout sur un appareil, recommence sans\n  contrainte : les consignes demandent déjà du JSON et Alixo sait l’extraire de la réponse.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.36.2",
