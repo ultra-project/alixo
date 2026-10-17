@@ -280,7 +280,8 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
       const L = LOCAL(); const last = loadJSON(LOCAL_LAST_LS, '');
       const model = localKeys().includes(o.model) ? o.model : localKeys().includes(last) ? last : (L ? L.recommend() : P.model);
       if (o.on === true && model !== last) saveJSON(LOCAL_LAST_LS, model);   // dernière taille activée (reprise après « Désactiver »)
-      return { provider, endpoint: 'local', model, key: '', on: o.on === true };
+      // on = déjà installée une première fois (affichage) ; off = l'utilisateur a désactivé l'IA sur cet appareil
+      return { provider, endpoint: 'local', model, key: '', on: o.on === true, off: o.off === true };
     }
     return { provider, endpoint: normEndpoint(o.endpoint) || P.endpoint, model: String(o.model || '').trim() || P.model, key: String(o.key || '').trim() };
   }
@@ -290,7 +291,9 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
      configuré : clé présente, ou serveur qui n'en demande pas (local) */
   function configured(c) {
     c = c || getConfig();
-    if (PROVIDERS[c.provider].local) return c.on === true && !!LOCAL();
+    // 1.36.1 : l'IA de l'application est disponible d'office dès que l'appareil sait la faire tourner (WebGPU) —
+    // le modèle se télécharge tout seul au démarrage (Alixo+) ou à la première demande ; seul « Désactiver » l'éteint
+    if (PROVIDERS[c.provider].local) { const L = LOCAL(); return !!L && !c.off && L.support().ok; }
     return !!(c.endpoint && c.model && (c.key || !PROVIDERS[c.provider].needsKey));
   }
   /* l'IA tourne dans l'application (modèle petit : lots plus courts, consignes plus compactes) */
@@ -336,7 +339,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     if (PROVIDERS[c.provider].local) {
       const L = LOCAL();
       if (!L) return { ok: false, status: 0, error: 'Le moteur d’IA de l’application n’est pas chargé.' };
-      if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: 'L’IA n’est pas encore activée sur cet appareil (Paramètres › IA › Télécharger et activer).' };
+      if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: c.off ? 'L’IA est désactivée sur cet appareil (Paramètres › IA › Réactiver).' : L.support().reason };
       // le chargement du modèle (téléchargement la première fois, 10 à 60 s depuis l'appareil ensuite) n'entame pas le délai
       try { await L.load(c.model); } catch (e) { return { ok: false, status: 0, error: e.message }; }
       return L.chat({ system, user, maxTokens, temperature, json: true, timeoutMs: Math.max(timeoutMs, 90000) * 3, key: c.model });

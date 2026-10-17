@@ -4388,7 +4388,7 @@ body.pane #toolbar { padding-left: 8px; }
 .ai-ptext { font-size: 12px; color: var(--ink-2); margin-top: 5px; }
 .ai-keybtns .ai-forget { margin-left: auto; }
 /* barre discrète en bas à droite : le modèle se charge pour une demande (F7, F8…) */
-#ai-loadbar { position: fixed; right: 18px; bottom: 18px; z-index: 900; display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 12px; background: var(--panel, var(--bg)); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font-size: 12.5px; max-width: min(420px, calc(100vw - 36px)); }
+#ai-loadbar { position: fixed; right: 18px; bottom: 18px; z-index: 900; display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 12px; background: var(--panel, var(--bg)); color: var(--ink); border: 1px solid var(--border); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font-size: 12.5px; max-width: min(520px, calc(100vw - 36px)); }
 #ai-loadbar[hidden] { display: none; }
 #ai-loadbar .ai-lbico { font-size: 15px; }
 #ai-loadbar .ai-lbtext { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

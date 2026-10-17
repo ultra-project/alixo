@@ -29,11 +29,20 @@ window.AlixoLocalAI = (() => {
 
   /* Qwen3 (Alibaba, Apache 2.0), poids quantifiés q4f16 préparés par MLC : très bon en français pour sa taille,
      « réflexion » désactivée à chaque requête (réponses JSON directes). dl = téléchargement, vram = mémoire graphique. */
+  /* 1.36.1 : deux variantes par taille — q4f16 (calculs en demi-précision, plus légère) quand la carte graphique
+     expose l'extension WebGPU « shader-f16 », sinon q4f32 (même modèle, même téléchargement à peu près, un peu
+     plus de mémoire graphique). Sans ce choix, les shaders f16 ne compilent pas sur certaines cartes / pilotes
+     (« Invalid ShaderModule … entryPoint: index_kernel »). */
   const MODELS = {
-    leger:     { id: 'Qwen3-0.6B-q4f16_1-MLC', label: 'Léger',    dl: '0,4 Go', vram: 1.4, ctx: 8192, desc: 'Fautes de frappe et accords courants. Pour un ordinateur modeste ou un téléphone récent.' },
-    equilibre: { id: 'Qwen3-1.7B-q4f16_1-MLC', label: 'Équilibré', dl: '1,1 Go', vram: 2.1, ctx: 8192, desc: 'Correction fine et quiz corrects. Le bon choix pour la plupart des portables.' },
-    complet:   { id: 'Qwen3-4B-q4f16_1-MLC',   label: 'Complet',  dl: '2,4 Go', vram: 3.5, ctx: 8192, desc: 'Le plus précis : grammaire subtile, mise en forme, fiches de révision détaillées. Carte graphique ou Mac récent.' }
+    leger:     { id: 'Qwen3-0.6B-q4f16_1-MLC', id32: 'Qwen3-0.6B-q4f32_1-MLC', label: 'Léger',    dl: '0,4 Go', vram: 1.4, vram32: 1.9, ctx: 8192, desc: 'Ordinateur modeste ou téléphone récent.' },
+    equilibre: { id: 'Qwen3-1.7B-q4f16_1-MLC', id32: 'Qwen3-1.7B-q4f32_1-MLC', label: 'Équilibré', dl: '1,1 Go', vram: 2.1, vram32: 2.6, ctx: 8192, desc: 'La plupart des portables.' },
+    complet:   { id: 'Qwen3-4B-q4f16_1-MLC',   id32: 'Qwen3-4B-q4f32_1-MLC',   label: 'Complet',  dl: '2,4 Go', vram: 3.5, vram32: 4.3, ctx: 8192, desc: 'Carte graphique ou Mac récent : le plus précis.' }
   };
+  const F32_LS = 'alixo.ai.f32';   // '1' : les shaders f16 ont échoué sur cet appareil → variantes f32 désormais
+  let forceF32 = false; try { forceF32 = localStorage.getItem(F32_LS) === '1'; } catch { /* stockage indisponible */ }
+  const useF32 = () => forceF32 || (probed && probed.ok && probed.f16 === false);
+  const idFor = key => { const m = MODELS[key] || MODELS[DEFAULT_KEY]; return useF32() ? m.id32 : m.id; };
+  const vramFor = key => { const m = MODELS[key] || MODELS[DEFAULT_KEY]; return useF32() ? m.vram32 : m.vram; };
   const ORDER = ['leger', 'equilibre', 'complet'];
   const DEFAULT_KEY = 'equilibre';
 
@@ -45,7 +54,7 @@ window.AlixoLocalAI = (() => {
   let probed = null;             // résultat de probe()
 
   const emit = () => { try { document.dispatchEvent(new CustomEvent('alixo-ai-local', { detail: status() })); } catch { /* hors document */ } };
-  function status() { return { state: st.state, key: st.key, model: st.key && MODELS[st.key] ? MODELS[st.key].id : '', progress: st.progress, text: st.text, phase: st.phase, error: st.error }; }
+  function status() { return { state: st.state, key: st.key, model: st.key && MODELS[st.key] ? idFor(st.key) : '', progress: st.progress, text: st.text, phase: st.phase, error: st.error }; }
   function set(patch) { Object.assign(st, patch); emit(); }
 
   /* ---------------- l'appareil peut-il faire tourner le modèle ? ---------------- */
@@ -71,10 +80,11 @@ window.AlixoLocalAI = (() => {
       const bind = Number(adapter.limits && adapter.limits.maxStorageBufferBindingSize) || 0;   // ≥ 1 Gio chez les cartes capables
       const memory = Number(navigator.deviceMemory) || 0;                                      // Go de RAM (plafonné à 8 par le navigateur)
       const mobile = /android|iphone|ipad|mobile/i.test(navigator.userAgent || '');
+      const f16 = !!(adapter.features && adapter.features.has && adapter.features.has('shader-f16'));
       let recommended = DEFAULT_KEY;
       if (mobile || (memory && memory <= 4) || (bind && bind < 1024 * 1024 * 1024)) recommended = 'leger';
       else if (/nvidia|amd|radeon|geforce|rtx|apple/.test(vendor) && (!memory || memory >= 8)) recommended = 'complet';
-      probed = { ok: true, reason: '', vendor, memory, bind, mobile, recommended };
+      probed = { ok: true, reason: '', vendor, memory, bind, mobile, f16, recommended };
     } catch (e) {
       probed = { ok: false, reason: 'La carte graphique n’a pas répondu (' + (e && e.message || e) + ').', recommended: 'leger' };
     }
@@ -109,8 +119,7 @@ window.AlixoLocalAI = (() => {
     return { phase, text, progress: Math.min(1, Math.max(0, p)) };
   }
   async function cached(key) {
-    const m = MODELS[key] || MODELS[DEFAULT_KEY];
-    try { const L = await getLib(); return await L.hasModelInCache(m.id, appConfig(L)); } catch { return false; }
+    try { await probe(); const L = await getLib(); return await L.hasModelInCache(idFor(key), appConfig(L)); } catch { return false; }
   }
   async function load(key, onProgress) {
     key = MODELS[key] ? key : recommend();
@@ -121,13 +130,24 @@ window.AlixoLocalAI = (() => {
       try {
         if (engine) { try { await engine.unload(); } catch { /* déjà libéré */ } engine = null; }
         set({ state: 'loading', key, progress: 0, text: 'Préparation…', phase: 'prep', error: '' });
+        const p = await probe(); if (!p.ok) throw new Error(p.reason);
         const L = await getLib();
         const m = MODELS[key];
-        const eng = await L.CreateMLCEngine(m.id, {
+        const create = () => L.CreateMLCEngine(idFor(key), {
           appConfig: appConfig(L),
           initProgressCallback: r => { const tr = translate(r); set({ progress: tr.progress, text: tr.text, phase: tr.phase }); if (onProgress) { try { onProgress(status()); } catch { /* interface */ } } },
           logLevel: 'WARN'
         }, { context_window_size: m.ctx });
+        let eng;
+        try { eng = await create(); }
+        catch (e) {
+          // shaders f16 refusés par cette carte graphique → on passe aux variantes f32, une fois pour toutes
+          if (!useF32() && isShaderError(e)) {
+            forceF32 = true; try { localStorage.setItem(F32_LS, '1'); } catch { /* */ }
+            set({ progress: 0, text: 'Carte graphique sans demi-précision : passage à la variante compatible…', phase: 'prep' });
+            eng = await create();
+          } else throw e;
+        }
         engine = eng;
         set({ state: 'ready', progress: 1, text: 'Modèle prêt', phase: 'ready' });
         return eng;
@@ -139,11 +159,13 @@ window.AlixoLocalAI = (() => {
     })();
     return loading;
   }
+  const isShaderError = e => /ShaderModule|shader|compute stage|entryPoint|f16|Tint|WGSL/i.test(String(e && e.message || e || ''));
   function friendly(e) {
     const m = String(e && e.message || e || '');
     if (/Failed to fetch|NetworkError|network|ERR_|fetch/i.test(m) && !/context/i.test(m)) return 'Le téléchargement du modèle a été interrompu (connexion internet ou huggingface.co inaccessible depuis ce réseau). Réessayez : il reprend là où il s’était arrêté.';
     if (/QuotaExceeded|quota|storage/i.test(m)) return 'Pas assez d’espace libre dans le navigateur pour garder le modèle sur l’appareil : libérez de la place (ou choisissez un modèle plus léger).';
     if (/maxStorageBufferBindingSize|maxBufferSize|out of memory|OutOfMemory|device lost|DeviceLost/i.test(m)) return 'La carte graphique n’a pas assez de mémoire pour ce modèle : choisissez un modèle plus léger dans Paramètres › IA.';
+    if (/ShaderModule|compute stage|entryPoint|WGSL|Tint/i.test(m)) return 'La carte graphique n’a pas accepté le programme du modèle (pilotes graphiques à mettre à jour ?). Alixo a basculé sur la variante compatible : réessayez ; si l’erreur persiste, choisissez « Léger » ou un serveur dans Paramètres › IA.';
     if (/Cannot find adapter|requestAdapter|WebGPU/i.test(m)) return 'WebGPU n’a pas pu démarrer sur cet appareil (navigateur ou pilotes graphiques trop anciens).';
     if (/ContextWindowSizeExceeded|context window/i.test(m)) return 'Le texte envoyé est trop long pour le modèle sur l’appareil : sélectionnez une partie plus courte.';
     return m || 'Le modèle n’a pas pu être chargé.';
@@ -169,7 +191,7 @@ window.AlixoLocalAI = (() => {
         const text = String(ch && ch.message && ch.message.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
         if (!text) return { ok: false, status: 0, error: 'Le modèle n’a pas renvoyé de réponse' + (ch && ch.finish_reason === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
         const u = res.usage || {};
-        return { ok: true, text, model: MODELS[st.key].id, tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || 0, local: true };
+        return { ok: true, text, model: idFor(st.key), tokIn: u.prompt_tokens || 0, tokOut: u.completion_tokens || 0, local: true };
       } catch (e) {
         if (e && e.message === 'timeout') return { ok: false, status: 0, error: 'Le modèle met trop de temps à répondre sur cet appareil : réessayez avec un passage plus court, ou choisissez un modèle plus léger (Paramètres › IA).' };
         return { ok: false, status: 0, error: friendly(e) };
@@ -184,8 +206,8 @@ window.AlixoLocalAI = (() => {
   async function remove(key) {
     const m = MODELS[key] || MODELS[DEFAULT_KEY];
     if (engine && st.key === key) await unload();
-    try { const L = await getLib(); await L.deleteModelAllInfoInCache(m.id, appConfig(L)); return true; } catch { return false; }
+    try { const L = await getLib(); for (const id of [m.id, m.id32]) { try { await L.deleteModelAllInfoInCache(id, appConfig(L)); } catch { /* variante absente */ } } return true; } catch { return false; }
   }
 
-  return { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, cached, load, chat, status, unload, remove, translate, friendly, LIB_URL };
+  return { MODELS, ORDER, DEFAULT_KEY, support, probe, recommend, cached, load, chat, status, unload, remove, translate, friendly, idFor, vramFor, useF32, LIB_URL };
 })();

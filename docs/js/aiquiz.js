@@ -228,7 +228,7 @@ Réponds uniquement avec ce JSON :
   const kindWord = d => (d.kind === 'slides' ? 'présentation' : d.kind === 'sheet' ? 'tableur' : d.kind === 'board' ? 'planche' : 'séance');
   const docIco = d => (d.kind === 'slides' ? I.slides : d.kind === 'sheet' ? I.sheetdoc : I.doc);
   const srcReadOnly = d => !!(typeof isSharedDoc === 'function' && isSharedDoc(d.id) && !(window.AlixoShare && AlixoShare.canWrite(d.id)));
-  const settingsLink = () => `<button class="aq-btn ghost" type="button" data-aq="settings">${I.gear}<span>Activer l’IA (Paramètres › IA)</span></button>`;
+  const settingsLink = () => `<button class="aq-btn ghost" type="button" data-aq="settings">${I.gear}<span>Paramètres › IA</span></button>`;
 
   /* ---------------- ouverture : depuis le bouton ✨ Quiz IA, F8 (séance, présentation, tableur) ---------------- */
   function open(d) {
@@ -312,7 +312,7 @@ Réponds uniquement avec ce JSON :
     if (s.step === 'gen') animateGen(s);
   }
   const stage = s => s.root.querySelector('.aq-stage');
-  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>L’IA n’est pas encore activée sur cet appareil.</b><p>Le Quiz IA utilise le même modèle que la correction par IA : il tourne directement dans Alixo, sur votre appareil (téléchargé une fois, sans serveur ni clé). Activez-le dans Paramètres › IA, puis revenez ici.</p>${settingsLink()}</div>`;
+  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>L’IA n’est pas disponible sur cet appareil.</b><p>${esc((typeof AlixoCorr !== 'undefined' && AlixoCorr.getConfig().off) ? 'Elle a été désactivée dans les Paramètres.' : (window.AlixoLocalAI ? AlixoLocalAI.support().reason : ''))} Réglez cela dans Paramètres › IA (réactiver, ou choisir un serveur).</p>${settingsLink()}</div>`;
   const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
   const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
   const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;
