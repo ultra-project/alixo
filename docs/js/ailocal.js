@@ -50,6 +50,8 @@ window.AlixoLocalAI = (() => {
   let engine = null;             // MLCEngine chargé
   let loading = null;            // Promise en cours de load()
   let queue = Promise.resolve(); // les requêtes se suivent : un seul passage GPU à la fois
+  let noGrammar = false;         // la grammaire JSON a échoué sur cet appareil : réponses libres (JSON demandé par la consigne)
+  const OBJECT_SCHEMA = '{"type":"object"}';
   const st = { state: 'idle', key: '', progress: 0, text: '', phase: '', error: '' };
   let probed = null;             // résultat de probe()
 
@@ -183,10 +185,21 @@ window.AlixoLocalAI = (() => {
         temperature, top_p: 0.9,
         extra_body: { enable_thinking: false }
       };
-      if (json) req.response_format = { type: 'json_object' };
+      /* 1.36.2 : WebLLM 0.2.86 passe `schema` tel quel au compilateur de grammaire ; sans schéma, « Cannot pass non-string
+         to std::string ». On fournit donc toujours un schéma (un objet JSON quelconque, ou celui donné par l'appelant) ;
+         si la grammaire échoue malgré tout sur cet appareil, on recommence sans contrainte (les consignes demandent
+         déjà du JSON et les appelants extraient le premier objet de la réponse). */
+      if (json && !noGrammar) req.response_format = { type: 'json_object', schema: typeof json === 'string' ? json : OBJECT_SCHEMA };
       let timer; const guard = new Promise((_, rej) => { timer = setTimeout(() => { rej(new Error('timeout')); try { eng.interruptGenerate(); } catch { /* */ } }, timeoutMs); });
       try {
-        const res = await Promise.race([eng.chat.completions.create(req), guard]);
+        let res;
+        try { res = await Promise.race([eng.chat.completions.create(req), guard]); }
+        catch (e) {
+          if (req.response_format && /grammar|xgrammar|std::string|schema/i.test(String(e && e.message || e))) {
+            noGrammar = true; delete req.response_format;
+            res = await Promise.race([eng.chat.completions.create(req), guard]);
+          } else throw e;
+        }
         const ch = res && res.choices && res.choices[0];
         const text = String(ch && ch.message && ch.message.content || '').replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
         if (!text) return { ok: false, status: 0, error: 'Le modèle n’a pas renvoyé de réponse' + (ch && ch.finish_reason === 'length' ? ' (réponse tronquée : demandez moins de texte à la fois)' : '') + '.' };
