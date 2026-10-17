@@ -18,6 +18,8 @@
 
 window.AlixoAIQuiz = (() => {
   const MAX_CHARS = 16000;        // texte envoyé au modèle (au-delà : raccourci, en gardant le début de chaque partie)
+  const MAX_CHARS_LOCAL = 6000;   // 1.36 : modèle sur l'appareil (fenêtre de 8 000 jetons) — le document est résumé partie par partie
+  const maxChars = () => (typeof AlixoCorr !== 'undefined' && AlixoCorr.isLocal && AlixoCorr.isLocal() ? MAX_CHARS_LOCAL : MAX_CHARS);
   const COUNTS = [5, 10, 15, 20];
   const KINDS = [['mix', 'Mélange', 'QCM, vrai / faux et réponses courtes'], ['qcm', 'QCM', 'Une bonne réponse parmi quatre'], ['vf', 'Vrai / Faux', 'Une affirmation, deux boutons'], ['courte', 'Réponse courte', 'Un mot ou une expression à taper']];
   const LEVELS = [['facile', 'Facile', 'Les notions principales, telles qu’elles sont écrites'], ['moyen', 'Moyen', 'Comprendre et distinguer'], ['difficile', 'Difficile', 'Détails, cas limites, raisonnement']];
@@ -79,7 +81,7 @@ window.AlixoAIQuiz = (() => {
     return parts.join('\n').trim();
   }
   /* raccourcit un long texte en gardant le début de chaque partie (titres) */
-  function shorten(text, max = MAX_CHARS) {
+  function shorten(text, max = maxChars()) {
     if (text.length <= max) return { text, cut: false };
     const secs = text.split(/\n(?=#{1,4} )/);
     if (secs.length < 3) return { text: text.slice(0, max) + '\n[…]', cut: true };
@@ -119,15 +121,23 @@ window.AlixoAIQuiz = (() => {
   }
   async function genQuizBatch(ctx, avoid) {
     const system = `Tu es un enseignant qui prépare un quiz de révision pour un étudiant (droit, économie, commerce, médecine et santé, STAPS…), à partir de SES notes de cours.
-Règles : les questions portent uniquement sur le contenu fourni ; une seule bonne réponse par QCM, quatre propositions courtes et homogènes ; les affirmations vrai/faux sont tranchées ; chaque question a une explication d'une ou deux phrases qui cite l'élément du cours. Varie les parties du document. Français soigné (typographie : « », apostrophe ’).
+Règles :
+- chaque question porte sur un élément précis du document fourni, jamais sur des connaissances extérieures ;
+- varie les parties du document : pas deux questions sur le même passage ;
+- QCM : quatre propositions courtes, de même nature, une seule juste, des distracteurs plausibles ;
+- vrai / faux : une affirmation nette, tranchée par le cours ;
+- réponse courte : un mot, un nom, une date, un chiffre ou une expression de trois mots au plus ;
+- "explication" : une ou deux phrases qui citent l’élément du cours ;
+- français soigné (typographie : « », apostrophe ’).
 ${kindLine(ctx.kind)} ${levelLine(ctx.level)} Exactement ${ctx.n} questions.
-Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
-{"titre":"titre court du quiz","questions":[
- {"type":"qcm","question":"…","choix":["…","…","…","…"],"reponse":0,"explication":"…"},
- {"type":"vf","question":"affirmation…","reponse":true,"explication":"…"},
- {"type":"courte","question":"…","reponses":["réponse attendue","variante acceptée"],"explication":"…"}
+Réponds uniquement avec ce JSON :
+{"titre":"<titre court du quiz>","questions":[
+ {"type":"qcm","question":"…","choix":["…","…","…","…"],"reponse":<indice 0 à 3 de la bonne proposition>,"explication":"…"},
+ {"type":"vf","question":"<affirmation>","reponse":true,"explication":"…"},
+ {"type":"courte","question":"…","reponses":["<réponse attendue>","<variante acceptée>"],"explication":"…"}
 ]}
-"reponse" d'un QCM = l'indice (0 à 3) de la bonne proposition dans "choix".`;
+Exemple (extrait de cours : « La prescription extinctive de droit commun est de cinq ans depuis la loi du 17 juin 2008. ») :
+{"titre":"La prescription","questions":[{"type":"qcm","question":"Quelle est la durée de la prescription extinctive de droit commun ?","choix":["Deux ans","Cinq ans","Dix ans","Trente ans"],"reponse":1,"explication":"Le cours précise que, depuis la loi du 17 juin 2008, le délai de droit commun est de cinq ans."}]}`;
     const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}${avoid || ''}`;
     const r = await AlixoCorr.call(null, { system, user, maxTokens: 350 + ctx.n * 240, minTokens: 120 + ctx.n * 110, timeoutMs: 120000, temperature: 0.35 });
     if (!r.ok) return { ok: false, error: r.error || 'Le modèle n’a pas répondu' };
@@ -164,10 +174,15 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     return q;
   }
   async function genSheet(ctx) {
-    const system = `Tu es un enseignant qui rédige une fiche de révision à partir des notes de cours d'un étudiant (droit, économie, commerce, médecine et santé, STAPS…).
-Règles : ne rien inventer, tout vient du document ; phrases courtes ; définitions exactes ; les points clés sont des phrases complètes et autonomes (pas de « voir plus haut ») ; 3 à 7 parties selon la longueur du document ; français soigné (typographie : « », apostrophe ’).
-Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
-{"titre":"…","resume":"deux ou trois phrases qui situent le sujet","parties":[{"titre":"…","points":["…","…"],"definitions":[{"terme":"…","definition":"…"}]}],"retenir":["l'essentiel en 3 à 6 phrases"],"pieges":["erreurs fréquentes, confusions à éviter (0 à 4)"]}`;
+    const system = `Tu es un enseignant qui rédige une fiche de révision à partir des notes de cours d’un étudiant (droit, économie, commerce, médecine et santé, STAPS…).
+Règles :
+- tout vient du document : n’invente aucune notion, aucun chiffre, aucune date ;
+- phrases courtes et complètes, lisibles sans le cours (jamais « voir plus haut ») ;
+- "parties" : 3 à 7 parties qui suivent le plan du document, chacune avec 2 à 6 points clés et les définitions exactes qu’elle contient ;
+- "retenir" : l’essentiel en 3 à 6 phrases ; "pieges" : 0 à 4 confusions ou erreurs fréquentes ;
+- français soigné (typographie : « », apostrophe ’).
+Réponds uniquement avec ce JSON :
+{"titre":"…","resume":"<deux ou trois phrases qui situent le sujet>","parties":[{"titre":"…","points":["…","…"],"definitions":[{"terme":"…","definition":"…"}]}],"retenir":["…"],"pieges":["…"]}`;
     const user = `Titre du document : ${ctx.title || 'Sans titre'}\n\n${ctx.text}`;
     const r = await AlixoCorr.call(null, { system, user, maxTokens: 3200, minTokens: 900, timeoutMs: 150000, temperature: 0.25 });
     if (!r.ok) throw new Error(r.error || 'Le modèle n’a pas répondu');
@@ -213,7 +228,7 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
   const kindWord = d => (d.kind === 'slides' ? 'présentation' : d.kind === 'sheet' ? 'tableur' : d.kind === 'board' ? 'planche' : 'séance');
   const docIco = d => (d.kind === 'slides' ? I.slides : d.kind === 'sheet' ? I.sheetdoc : I.doc);
   const srcReadOnly = d => !!(typeof isSharedDoc === 'function' && isSharedDoc(d.id) && !(window.AlixoShare && AlixoShare.canWrite(d.id)));
-  const settingsLink = () => `<button class="aq-btn ghost" type="button" data-aq="settings">${I.gear}<span>Configurer l’IA (Paramètres › IA)</span></button>`;
+  const settingsLink = () => `<button class="aq-btn ghost" type="button" data-aq="settings">${I.gear}<span>Activer l’IA (Paramètres › IA)</span></button>`;
 
   /* ---------------- ouverture : depuis le bouton ✨ Quiz IA, F8 (séance, présentation, tableur) ---------------- */
   function open(d) {
@@ -297,7 +312,7 @@ Réponds UNIQUEMENT avec ce JSON, sans commentaire ni texte autour :
     if (s.step === 'gen') animateGen(s);
   }
   const stage = s => s.root.querySelector('.aq-stage');
-  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>Aucun serveur d’IA n’est configuré.</b><p>Le Quiz IA utilise le même modèle que la correction par IA : indiquez un serveur (OpenRouter, Ollama sur votre ordinateur, ou un autre serveur compatible) dans Paramètres › IA, puis revenez ici.</p>${settingsLink()}</div>`;
+  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>L’IA n’est pas encore activée sur cet appareil.</b><p>Le Quiz IA utilise le même modèle que la correction par IA : il tourne directement dans Alixo, sur votre appareil (téléchargé une fois, sans serveur ni clé). Activez-le dans Paramètres › IA, puis revenez ici.</p>${settingsLink()}</div>`;
   const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
   const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
   const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;

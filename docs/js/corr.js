@@ -17,11 +17,13 @@
 
 window.AlixoCorr = (() => {
   /* ---------------- réglages ---------------- */
-  const DEFAULT_MODEL = 'Qwen3.8-27B';      // nom affiché ; l'identifiant exact dépend du serveur (voir PROVIDERS)
+  const DEFAULT_MODEL = 'Qwen3';            // famille affichée ; l'identifiant exact dépend de l'endroit où il tourne (voir PROVIDERS, AlixoLocalAI.MODELS)
   /* préréglages de serveurs compatibles OpenAI servant Qwen3.8-27B. `endpoint` : base de l'API (sans /chat/completions).
      `needsKey` : faux pour un serveur local. `keysUrl` / `keyPrefix` : parcours guidé. `remote` : vrai si le texte quitte
      l'ordinateur (information de confidentialité). */
   const PROVIDERS = {
+    navigateur: { label: 'Dans Alixo — sur cet appareil (gratuit, sans compte, hors ligne)', endpoint: 'local', model: 'equilibre', keysUrl: '', keyPrefix: '', needsKey: false, remote: false, local: true,
+      hint: 'Le modèle est téléchargé une fois (0,4 à 2,4 Go selon la taille choisie) puis tourne dans Alixo, sur la carte graphique de l’appareil : aucun serveur, aucune clé, aucune limite, rien ne quitte l’ordinateur. Il faut un navigateur récent (Chrome, Edge, Safari 26) ou la version PC.' },
     openrouter: { label: 'OpenRouter (hébergé, recommandé)', endpoint: 'https://openrouter.ai/api/v1', model: 'qwen/qwen3.8-27b', keysUrl: 'https://openrouter.ai/keys', keyPrefix: 'sk-or-', needsKey: true, remote: true,
       hint: 'Compte sur openrouter.ai, quelques centimes pour un cours entier ; l’hébergeur du modèle est choisi par OpenRouter (politique de données réglable dans son compte).' },
     alibaba: { label: 'Alibaba Cloud Model Studio (éditeur de Qwen)', endpoint: 'https://dashscope-intl.aliyuncs.com/compatible-mode/v1', model: 'qwen3.8-27b', keysUrl: 'https://modelstudio.console.alibabacloud.com/', keyPrefix: 'sk-', needsKey: true, remote: true,
@@ -31,14 +33,19 @@ window.AlixoCorr = (() => {
     custom: { label: 'Autre serveur compatible OpenAI', endpoint: '', model: 'qwen3.8-27b', keysUrl: '', keyPrefix: '', needsKey: false, remote: true,
       hint: 'vLLM, SGLang, LM Studio, llama.cpp, un serveur de votre établissement… Indiquez la base de l’API (…/v1) et l’identifiant du modèle tel que le serveur le connaît.' }
   };
-  const DEFAULT_PROVIDER = 'openrouter';
+  const DEFAULT_PROVIDER = 'navigateur';   // 1.36 : le modèle tourne dans l'application
   const CONFIG_LS = 'alixo.ai.config';     // { provider, endpoint, model, key } — reste sur l'appareil
+  const LOCAL_LAST_LS = 'alixo.ai.localmodel';   // 1.36 : dernière taille de modèle activée sur l'appareil (leger / equilibre / complet)
   const MIN_GAP = 3000;            // ms entre deux requêtes « en direct » (facturation à l'usage : on limite le nombre d'appels)
   const PAUSE_MS = 2500;           // pause de frappe avant d'envoyer les phrases en cours
   const SENTENCE_MS = 700;         // délai après une fin de phrase (. ! ? Entrée)
   const LEAVE_MS = 250;            // délai après la sortie d'un bloc
-  const MAX_BATCH_LIVE = 2400;     // caractères par requête (frappe)
-  const MAX_BATCH_FULL = 7000;     // caractères par requête (F7)
+  const MAX_BATCH_LIVE = 2400;     // caractères par requête (frappe) — serveur
+  const MAX_BATCH_FULL = 7000;     // caractères par requête (F7) — serveur
+  const MAX_LOCAL_LIVE = 1200;     // 1.36 : modèle sur l'appareil (fenêtre de 8 000 jetons, génération plus lente) : lots courts
+  const MAX_LOCAL_FULL = 3000;
+  const maxBatchLive = () => (isLocal() ? MAX_LOCAL_LIVE : MAX_BATCH_LIVE);
+  const maxBatchFull = () => (isLocal() ? MAX_LOCAL_FULL : MAX_BATCH_FULL);
   const MIN_WORDS = 3;             // une phrase plus courte n'est pas envoyée
   const CACHE_MAX = 4000;          // phrases mémorisées
   const LS = { learned: 'alixo.corr.learned', ignored: 'alixo.corr.ignored', cache: 'alixo.corr.cache', stats: 'alixo.corr.stats' };
@@ -216,7 +223,34 @@ window.AlixoCorr = (() => {
     return '';
   }
   const STYLE_TYPES = `"definition" (notion suivie de sa définition ; "terme" = la notion, telle qu'écrite au début), "arret" (arrêt ou décision de jurisprudence), "exemple" (exemple, cas pratique), "retenir" (règle essentielle, point clé), "controverse" (débat doctrinal), "bilan" (synthèse, récapitulatif), "drapeau" (santé : signes de gravité), "reflexe" (santé : réflexe clinique, piège), "mnemo" (moyen mnémotechnique), "h1"/"h2"/"h3"/"h4" (titre de plan, du plus général au plus fin), "li" (élément d'énumération), "quote" (citation textuelle)`;
+  /* 1.36 : consignes pour le modèle qui tourne dans l'application (0,6 à 4 milliards de paramètres) : plus courtes,
+     une tâche nette, un exemple complet — un petit modèle suit mieux un exemple qu'une longue liste de catégories. */
+  function systemPromptLocal(mode, ctx, withStyle) {
+    const live = mode === 'live';
+    const level = ctx.level === 'leger' ? 'Relève seulement les fautes indiscutables (orthographe, accords, conjugaison) ; ignore la ponctuation et les majuscules.'
+      : ctx.level === 'strict' ? 'Relève aussi la ponctuation, la typographie française (espace avant ; : ? !, guillemets « »), les majuscules et les anglicismes.'
+        : 'Relève les fautes d’orthographe, d’accord, de conjugaison, d’homophone et la ponctuation courante.';
+    let p = `Tu es le correcteur d’Alixo. Tu relis des notes de cours prises vite par un étudiant (droit, économie, commerce, médecine, STAPS), en français.
+Entrée : des phrases numérotées « n| texte ».${live ? ' Certaines sont encore en cours de frappe : une phrase inachevée ou sans point final n’est pas une faute.' : ''}
+${level}${ctx.rephrase ? ' Au plus une fois par paragraphe, tu peux proposer une phrase plus claire (type "r", règle commençant par « Reformulation : »).' : ''}
+Règles :
+- corrige uniquement le mot ou le groupe fautif ; jamais le style, le sens ni le vocabulaire ;
+- laisse tels quels : abréviations (art., Cass., C. civ., al., n°), sigles, noms propres, mots latins ou étrangers, nombres, notes télégraphiques volontaires ;
+- "avant" est copié EXACTEMENT du texte (accents, majuscules, apostrophes), le plus court possible ; "apres" est le même extrait corrigé ;
+- "type" : "f" faute de frappe d’un seul mot, "o" orthographe, "g" grammaire ou accord, "t" ponctuation${ctx.rephrase ? ', "r" reformulation' : ''} ;
+- "regle" : la règle en dix mots au plus, pour que l’étudiant comprenne.${langLine(ctx.lang)}
+Réponds uniquement avec ce JSON : {"c":{"<numéro>":[["avant","apres","type","regle"]]}} — seulement les phrases fautives ; aucune faute : {"c":{}}.
+Exemple d’entrée :
+1| Le contrat et formé quand les partie sont d’accord.
+2| L’arrêt Cass. civ. 1re du 3 mai 2000 est célèbre.
+Exemple de réponse :
+{"c":{"1":[["et formé","est formé","g","Verbe être : on peut dire « était formé »"],["les partie","les parties","g","Pluriel après « les »"]]}}`;
+    if (withStyle) p += `
+Les lignes « § A : 1, 2 » désignent des paragraphes entiers (les phrases 1 et 2). Si un paragraphe est CLAIREMENT une définition, un arrêt, un exemple, un point à retenir, une controverse, un bilan ou un titre de plan (h1 à h4), ajoute "m":{"A":{"t":"<type>","terme":"<notion définie, pour definition seulement>","raison":"<trois mots>"}} avec un type parmi ${STYLE_TYPES}. Dans le doute, n’ajoute rien.`;
+    return p;
+  }
   function systemPrompt(mode, ctx, withStyle) {
+    if (isLocal()) return systemPromptLocal(mode, ctx, withStyle);
     const live = mode === 'live';
     let p = `Tu corriges des notes de cours en français (droit, économie, commerce, médecine et santé, STAPS, sciences humaines). Entrée : des phrases numérotées${live ? ', parfois encore en cours de rédaction (ponctuation finale absente, phrase inachevée : ce n\'est pas une faute)' : ''}.
 ${live ? CHECK_SHORT : CHECK_FULL}
@@ -235,16 +269,32 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
      { provider, endpoint, model, key } : lu dans localStorage (alixo.ai.config), jamais synchronisé.
      `provider` est un préréglage de PROVIDERS ; endpoint et model peuvent être modifiés par l'utilisateur. */
   const normEndpoint = u => String(u || '').trim().replace(/\/+$/, '').replace(/\/chat\/completions$/i, '');
+  const LOCAL = () => window.AlixoLocalAI || null;
+  const localKeys = () => { const L = LOCAL(); return L ? Object.keys(L.MODELS) : ['leger', 'equilibre', 'complet']; };
   function normConfig(c) {
     const o = c && typeof c === 'object' ? c : {};
     const provider = PROVIDERS[o.provider] ? o.provider : DEFAULT_PROVIDER;
     const P = PROVIDERS[provider];
+    if (P.local) {
+      // modèle = taille choisie (leger / equilibre / complet) ; `on` = l'utilisateur a activé l'IA sur cet appareil
+      const L = LOCAL(); const last = loadJSON(LOCAL_LAST_LS, '');
+      const model = localKeys().includes(o.model) ? o.model : localKeys().includes(last) ? last : (L ? L.recommend() : P.model);
+      if (o.on === true && model !== last) saveJSON(LOCAL_LAST_LS, model);   // dernière taille activée (reprise après « Désactiver »)
+      return { provider, endpoint: 'local', model, key: '', on: o.on === true };
+    }
     return { provider, endpoint: normEndpoint(o.endpoint) || P.endpoint, model: String(o.model || '').trim() || P.model, key: String(o.key || '').trim() };
   }
   function getConfig() { return normConfig(loadJSON(CONFIG_LS, null)); }
   function setConfig(c) { if (!c) { try { localStorage.removeItem(CONFIG_LS); } catch { } return; } saveJSON(CONFIG_LS, normConfig(c)); }
-  /* prêt = un serveur joignable est configuré : clé présente, ou serveur qui n'en demande pas (local) */
-  function configured(c) { c = c || getConfig(); return !!(c.endpoint && c.model && (c.key || !PROVIDERS[c.provider].needsKey)); }
+  /* prêt = l'IA sur l'appareil a été activée (modèle téléchargé une première fois), ou un serveur joignable est
+     configuré : clé présente, ou serveur qui n'en demande pas (local) */
+  function configured(c) {
+    c = c || getConfig();
+    if (PROVIDERS[c.provider].local) return c.on === true && !!LOCAL();
+    return !!(c.endpoint && c.model && (c.key || !PROVIDERS[c.provider].needsKey));
+  }
+  /* l'IA tourne dans l'application (modèle petit : lots plus courts, consignes plus compactes) */
+  const isLocal = c => !!PROVIDERS[(c || getConfig()).provider].local;
   const isLocalUrl = u => { try { const h = new URL(u).hostname; return /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.local$/.test(h); } catch { return false; } };
 
   /* ---------------- appel du modèle ----------------
@@ -283,6 +333,14 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
   /* cfg : { endpoint, model, key } (ou null → configuration enregistrée). `models` (ancien paramètre) est ignoré. */
   async function call(cfg, { system, user, maxTokens, minTokens = 0, timeoutMs = 25000, temperature = 0 }) {
     const c = cfg && typeof cfg === 'object' ? normConfig(cfg) : getConfig();
+    if (PROVIDERS[c.provider].local) {
+      const L = LOCAL();
+      if (!L) return { ok: false, status: 0, error: 'Le moteur d’IA de l’application n’est pas chargé.' };
+      if (!configured(c) && !(cfg && cfg.force)) return { ok: false, status: 0, error: 'L’IA n’est pas encore activée sur cet appareil (Paramètres › IA › Télécharger et activer).' };
+      // le chargement du modèle (téléchargement la première fois, 10 à 60 s depuis l'appareil ensuite) n'entame pas le délai
+      try { await L.load(c.model); } catch (e) { return { ok: false, status: 0, error: e.message }; }
+      return L.chat({ system, user, maxTokens, temperature, json: true, timeoutMs: Math.max(timeoutMs, 90000) * 3, key: c.model });
+    }
     if (!configured(c)) return { ok: false, status: 0, error: 'Aucun serveur d’IA configuré (Paramètres › Correction par IA).' };
     const url = c.endpoint + '/chat/completions';
     const q = quirks[c.endpoint] || (quirks[c.endpoint] = {});
@@ -338,6 +396,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
   /* liste des modèles du serveur (GET <endpoint>/models) — pour tester une clé ou vérifier qu'un modèle est installé */
   async function listModels(cfg, timeoutMs = 12000) {
     const c = normConfig(cfg || getConfig());
+    if (PROVIDERS[c.provider].local) { const L = LOCAL(); return { ok: true, models: L ? Object.values(L.MODELS).map(m => m.id) : [] }; }
     const url = c.endpoint + '/models';
     const headers = {}; if (c.key) headers.Authorization = 'Bearer ' + c.key;
     const desk = window.alixoDesktop;
@@ -499,10 +558,10 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     // lot : phrases de tous les blocs en attente, dans la limite de taille ; paragraphes à classer en plus
     const items = []; const styleBlocks = {}; const styleTags = {}; let chars = 0; let tag = 65;
     for (const [blockId, entry] of pending) {
-      if (chars > MAX_BATCH_LIVE) break;
+      if (chars > maxBatchLive()) break;
       const start = items.length;
       for (const [key, v] of entry.keys) {
-        if (chars > MAX_BATCH_LIVE) break;
+        if (chars > maxBatchLive()) break;
         items.push({ key, text: v.text, blockId, lang: entry.lang }); inflight.add(key); chars += v.text.length + 4;
         entry.keys.delete(key);
       }
@@ -552,7 +611,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     // lots par taille (une langue par lot)
     const batches = []; let cur = [], n = 0;
     for (const it of todo) {
-      if (cur.length && (n + it.text.length > MAX_BATCH_FULL || cur[0].lang !== it.lang || cur.length >= 120)) { batches.push(cur); cur = []; n = 0; }
+      if (cur.length && (n + it.text.length > maxBatchFull() || cur[0].lang !== it.lang || cur.length >= (isLocal() ? 40 : 120))) { batches.push(cur); cur = []; n = 0; }
       cur.push(it); n += it.text.length + 4;
     }
     if (cur.length) batches.push(cur);
@@ -583,7 +642,7 @@ Mise en forme : les lignes « § <lettre> : <numéros> » désignent des paragra
     localFix, learn, ignore, isIgnored, forget, known,
     sentences, worth, sureTypo, levenshtein, locate, align,
     analyzeBlocks, request, call, listModels,
-    getConfig, setConfig, configured, isLocalUrl,
+    getConfig, setConfig, configured, isLocalUrl, isLocal,
     cacheGet, cacheSet, clearCache, keyOf,
     stats: getStats, resetStats, note,
     TYPO_FIXES, LANG_NAMES, PROVIDERS, DEFAULT_PROVIDER, DEFAULT_MODEL

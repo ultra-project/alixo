@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.35.0 (ou nouveautes.html?v=1.35.0 en page seule).
+   Aperçu : index.html?nouveautes=1.36.0 (ou nouveautes.html?v=1.36.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.36.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'L’IA tourne<br><em>chez vous</em>', text: 'Le modèle d’intelligence artificielle s’installe dans Alixo et travaille sur votre appareil : sans serveur, sans clé, sans limite.' },
+    { title: 'Téléchargé <em>une fois</em>, à vous pour toujours', text: 'Le modèle ouvert Qwen3 se télécharge à la première activation, puis reste sur l’appareil et marche hors ligne.',
+      bullets: ['<b>Aucun compte</b>, aucune clé, aucun crédit à recharger', '<b>Aucune limite</b> : corrigez et révisez autant que vous voulez', '<b>Hors ligne</b> ensuite, même en amphi sans réseau'],
+      art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 7500 },
+    { title: 'Vos notes ne <em>quittent</em> jamais l’ordinateur', text: 'Tout se calcule sur la carte graphique de votre machine : rien n’est envoyé à qui que ce soit.',
+      bullets: ['<b>Confidentiel</b> : cours, quiz et fiches restent chez vous', '<b>Carte graphique</b> de l’ordinateur, dans le navigateur ou la version PC', '<b>Chrome, Edge, Safari 26</b> ou l’application Alixo'],
+      art: 'text', accent: '#2e8b6a', accent2: '#33658a', dur: 7500 },
+    { title: 'Trois tailles, <em>une conseillée</em>', text: 'Léger, Équilibré ou Complet : Alixo repère votre machine et vous conseille la taille qui lui va.',
+      bullets: ['<b>Léger</b> (0,4 Go) : ordinateur modeste ou téléphone récent', '<b>Équilibré</b> (1,1 Go) : la plupart des portables', '<b>Complet</b> (2,4 Go) : carte graphique ou Mac récent'],
+      art: 'cards', accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
+    { title: 'Correction, quiz, fiches : <em>tout</em> y passe', text: 'F7 corrige, F8 génère quiz et fiches de révision, l’analyse pendant la frappe propose titres et encadrés — avec le même modèle.',
+      bullets: ['<b>Consignes</b> réécrites pour des réponses justes et rapides', '<b>Progression</b> visible pendant le téléchargement', '<b>Serveurs</b> (Ollama, OpenRouter…) toujours possibles en option'],
+      art: 'quiz', accent: '#8a4b9c', accent2: '#b3762a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'Activez-la dans<br>Paramètres › IA', text: 'Un clic sur « Télécharger et activer », et c’est parti. Le détail est sur alixoapp.com/versions.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.35.0', {
   scenes: [
@@ -55,25 +74,6 @@ AlixoWhatsNew.register('1.34.1', {
     { title: 'Le Quiz IA <em>réparé</em>', text: 'Il marche maintenant avec les clés dont le crédit est limité, comme la correction par IA.',
       bullets: ['<b>Lots de 5 questions</b> : des demandes plus courtes', '<b>Nouvel essai</b> automatique si le crédit est juste', '<b>Imprimer / PDF</b> aussi sur la version PC'],
       art: 'quiz', accent: '#b3762a', accent2: '#2e8b6a', dur: 7000 },
-    { kind: 'outro', kicker: 'Bonnes révisions', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.34.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Révisez avec<br>l’<em>IA</em>', text: 'Des quiz et des fiches de révision générés depuis vos cours, vos documents Word modifiables, et le zoom partout.' },
-    { title: 'Un <em>quiz</em> tiré de votre cours', text: 'Dans une séance, une présentation ou un tableur : ✨ Quiz IA (ou F8), et l’IA vous interroge sur vos propres notes.',
-      bullets: ['<b>QCM</b>, vrai / faux, réponses courtes ou mélange', '<b>5 à 20 questions</b>, trois niveaux de difficulté', '<b>Corrigé sur place</b>, avec l’explication tirée du cours'],
-      art: 'quiz', accent: '#b3762a', accent2: '#33658a', dur: 8000 },
-    { title: 'Une <em>fiche de révision</em> en un clic', text: 'La même fenêtre rédige une fiche : résumé, points clés, définitions, à retenir, pièges.',
-      bullets: ['<b>Insérer</b> à la fin de la séance, en titres et encadrés', '<b>Nouvelle séance</b> ou copie du texte', '<b>Imprimer / PDF</b>, aussi pour les quiz'],
-      art: 'text', accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
-    { title: 'Word et ODT <em>modifiables</em>', text: 'Un document Word ou OpenDocument s’ouvre dans Alixo et devient une séance que l’on modifie.',
-      bullets: ['<b>Modifier dans Alixo</b> : titres, listes, tableaux, images repris', '<b>Retour en Word</b> par Exporter › Word', '<b>.odt</b> lisibles partout où les .docx l’étaient'],
-      art: 'cards', accent: '#3d6bb5', accent2: '#2e8b6a', dur: 7500 },
-    { title: 'Le <em>zoom</em> des documents', text: 'Ctrl + molette, Ctrl + / −, ou le contrôle « − 100 % + » de la barre d’outils.',
-      bullets: ['<b>Séances</b>, présentations et tableurs', '<b>Mémorisé</b> par type de document sur l’appareil', '<b>Version PC</b> : le menu Affichage agrandit le document ouvert'],
-      art: 'palette', accent: '#8a4b9c', accent2: '#33658a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonnes révisions', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
