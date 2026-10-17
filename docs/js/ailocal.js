@@ -94,13 +94,25 @@ window.AlixoLocalAI = (() => {
     }
     return { ok: true, reason: '' };
   }
+  /* 1.37.1 : trois tentatives d'adaptateur (carte performante, par défaut, économe) : certains pilotes refusent la
+     demande « high-performance » mais acceptent l'adaptateur par défaut. Un échec n'est plus mémorisé : le processus
+     graphique de Chromium peut être en train de redémarrer au lancement, « Réessayer » ou la demande suivante refait
+     l'essai. La raison garde le détail (adaptateur absent, erreur), pour comprendre ce qui bloque sur un appareil. */
+  async function requestAdapter() {
+    let last = null;
+    for (const opts of [{ powerPreference: 'high-performance' }, {}, { powerPreference: 'low-power' }]) {
+      try { const a = await navigator.gpu.requestAdapter(opts); if (a) return a; } catch (e) { last = e; }
+    }
+    if (last) throw last;
+    return null;
+  }
   async function probe() {
-    if (probed) return probed;
+    if (probed && probed.ok) return probed;
     const s = support();
-    if (!s.ok) return (probed = { ok: false, reason: s.reason, recommended: 'leger' });
+    if (!s.ok) return { ok: false, reason: s.reason, recommended: 'leger' };
     try {
-      const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-      if (!adapter) return (probed = { ok: false, reason: 'WebGPU est présent mais aucune carte graphique utilisable n’a été trouvée (pilotes graphiques à mettre à jour ?).', recommended: 'leger' });
+      const adapter = await requestAdapter();
+      if (!adapter) return { ok: false, reason: 'Aucune carte graphique utilisable n’a été trouvée par le navigateur (WebGPU présent, adaptateur absent : pilotes graphiques à mettre à jour, ou accélération matérielle désactivée).', recommended: 'leger' };
       const info = adapter.info || {};
       const vendor = String(info.vendor || info.description || '').toLowerCase();
       const bind = Number(adapter.limits && adapter.limits.maxStorageBufferBindingSize) || 0;   // ≥ 1 Gio chez les cartes capables
@@ -114,10 +126,10 @@ window.AlixoLocalAI = (() => {
       if (mobile || (memory && memory <= 4) || (bind && bind < 1024 * 1024 * 1024)) recommended = 'leger';
       else if (/nvidia|geforce|rtx|quadro|apple/.test(vendor) && (!memory || memory >= 8)) recommended = 'complet';
       probed = { ok: true, reason: '', vendor, memory, bind, mobile, f16, recommended };
+      return probed;
     } catch (e) {
-      probed = { ok: false, reason: 'La carte graphique n’a pas répondu (' + (e && e.message || e) + ').', recommended: 'leger' };
+      return { ok: false, reason: 'La carte graphique n’a pas répondu (' + (e && e.message || e) + ').', recommended: 'leger' };
     }
-    return probed;
   }
   /* 1.37 : plafond mémorisé après une fermeture brutale (alixo.ai.cap) : la taille conseillée ne le dépasse plus */
   const CAP_LS = 'alixo.ai.cap';
@@ -238,7 +250,8 @@ window.AlixoLocalAI = (() => {
     if (/QuotaExceeded|quota|storage/i.test(m)) return 'Pas assez d’espace libre dans le navigateur pour garder le modèle sur l’appareil : libérez de la place.';
     if (/maxStorageBufferBindingSize|maxBufferSize|out of memory|OutOfMemory|device lost|DeviceLost/i.test(m)) return 'La mémoire graphique de l’appareil ne suffit pas pour AlixoAI dans cette taille : elle sera allégée au prochain démarrage.';
     if (/ShaderModule|compute stage|entryPoint|WGSL|Tint/i.test(m)) return 'La carte graphique n’a pas accepté le programme du modèle (pilotes graphiques à mettre à jour ?). AlixoAI a basculé sur la variante compatible : réessayez.';
-    if (/Cannot find adapter|requestAdapter|WebGPU/i.test(m)) return 'WebGPU n’a pas pu démarrer sur cet appareil (navigateur ou pilotes graphiques trop anciens).';
+    if (/Aucune carte graphique utilisable|n’a pas répondu/.test(m)) return m;   // 1.37.1 : raison détaillée de probe()
+    if (/Cannot find adapter|requestAdapter|WebGPU/i.test(m)) return 'WebGPU n’a pas pu démarrer sur cet appareil (navigateur ou pilotes graphiques trop anciens) — ' + m.slice(0, 160);
     if (/ContextWindowSizeExceeded|context window/i.test(m)) return 'Le texte envoyé est trop long pour AlixoAI : sélectionnez une partie plus courte.';
     return m || 'AlixoAI n’a pas pu démarrer.';
   }

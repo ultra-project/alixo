@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.37.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.37.1 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.37.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'AlixoAI <em>démarre</em> partout', text: 'Correction pour les ordinateurs où AlixoAI répondait « WebGPU n’a pas pu démarrer ».' },
+    { title: 'Fini le message <em>« WebGPU »</em>', text: 'Sur bien des portables, l’accélération graphique était refusée. La version PC la force désormais, et AlixoAI insiste avant de renoncer.',
+      bullets: ['<b>Accélération graphique</b> forcée dans la version PC', '<b>Trois essais</b> pour trouver la carte graphique', '<b>« Réessayer »</b> refait vraiment l’essai, et le message dit pourquoi'],
+      art: { icon: '✨' }, accent: '#2e8b6a', accent2: '#33658a', dur: 7500 },
+    { title: 'Et toujours <em>AlixoAI</em>', text: 'Prête dès l’ouverture, le quiz dès la première question, des réponses bien plus rapides.',
+      bullets: ['<b>Rien à installer</b>, rien à configurer', '<b>Quiz IA</b> : la suite s’écrit pendant que vous répondez'],
+      art: 'quiz', accent: '#33658a', accent2: '#8a4b9c', dur: 6000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.37.0', {
   scenes: [
@@ -49,19 +62,6 @@ AlixoWhatsNew.register('1.36.4', {
     { title: 'Un modèle <em>adapté</em> à votre machine', text: '« Complet » n’est conseillé que sur carte NVIDIA ou Mac Apple Silicon ; ailleurs, « Équilibré ». Au choix dans Paramètres › IA.',
       bullets: ['<b>Fermeture brutale</b> pendant l’IA : modèle allégé au prochain démarrage', '<b>Version PC</b> : la fenêtre se recharge au lieu de rester blanche'],
       art: 'list', accent: '#2e8b6a', accent2: '#b3762a', dur: 7000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.36.3', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'L’IA, <em>fiable</em>', text: 'Le Quiz IA et la correction ne s’arrêtent plus sur une erreur du moteur. Rien à faire de votre côté.' },
-    { title: 'Quiz et correction : <em>ça marche</em>', text: 'L’erreur « already disposed » au lancement d’un quiz venait d’un composant instable du moteur : Alixo ne l’utilise plus.',
-      bullets: ['<b>F8</b> génère quiz et fiches, <b>F7</b> corrige', '<b>Réponses nettoyées</b> avant lecture : plus de surprise', '<b>Même modèle</b>, même qualité, sans la contrainte fragile'],
-      art: 'quiz', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
-    { title: 'Le moteur se <em>relance</em> tout seul', text: 'En cas de pépin, Alixo recharge le modèle depuis l’appareil et rejoue la demande, sans rien vous demander.',
-      bullets: ['<b>Une seconde tentative</b> automatique et silencieuse', '<b>Message d’erreur</b> seulement si elle échoue aussi'],
-      art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 6500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
