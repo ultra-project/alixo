@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-19T15:24:27.775Z",
- "version": "1.39.0",
- "date": "2026-10-19T15:24:05Z",
- "notes": "Nouveautés 1.39.0 — Un plan par séance, trois modes de plan, nouvelles icônes de fichiers\n\n\n- **Le plan se règle séance par séance.** Dans la barre d’outils, bouton **Niveau de plan** › **« Plan de cette séance… »** : la séance ouverte reçoit son propre mode de plan et sa propre pyramide de niveaux (noms, numérotation, mots déclencheurs), sans toucher aux autres séances. Un bouton « Suivre le plan des paramètres » la ramène au réglage commun. Paramètres › Écriture garde le plan de toutes les séances (lien « Plan de toutes les séances… »).\n- **Trois modes de plan** (Paramètres › Écriture › Mode du plan, ou par séance) :\n  - **Automatique** : comme avant, le plan numérote les titres et reconnaît « I. », « A. », « 1. », « a. » et les mots déclencheurs en début de ligne.\n  - **Adaptatif** : le plan s’adapte à votre façon d’écrire et n’impose rien. Le premier style de numéro que vous tapez (« 1. », « A. »…) devient le niveau 1, le style suivant le niveau 2, et ainsi de suite ; les numéros affichés reprennent vos styles, dans votre ordre.\n  - **Aucun plan** : aucune détection en début de ligne, aucun numéro automatique ; les titres restent des titres, vous écrivez les numéros comme vous voulez.\n- **Nouvelles icônes des fichiers Alixo** sur le bureau : des feuilles à coin replié en relief, dans la couleur du type — séance bleu, présentation orange, tableur vert, quiz violet, planche rose — avec leur symbole (lignes, écran, grille, liste cochée, tableau d’affichage). Fond transparent et cadrage soignés, sur Windows comme sur macOS.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.0",
+ "generatedAt": "2026-10-19T16:08:10.850Z",
+ "version": "1.39.1",
+ "date": "2026-10-19T15:53:40Z",
+ "notes": "Nouveautés 1.39.1 — Correction : icônes de fichiers coupées sur le bureau Windows\n\n\n- **Les icônes des fichiers Alixo s’affichent entières.** Sur le bureau et dans l’Explorateur Windows, l’icône d’une séance, d’une présentation, d’un tableur, d’un quiz ou d’une planche apparaissait rognée (bords et coin replié coupés). Les petites tailles de l’icône sont désormais enregistrées dans le format classique attendu par Windows, et l’image garde une petite marge : plus rien n’est coupé, quelle que soit la taille d’affichage. (Appliqué par la mise à jour, qui repasse par l’installateur.)\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.0/Alixo-Setup.exe",
-   "size": 79223953
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Setup.exe",
+   "size": 79185283
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.0/Alixo-Portable.exe",
-   "size": 78398681
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Portable.exe",
+   "size": 78460138
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.0/Alixo-Mac.dmg",
-   "size": 189966350
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Mac.dmg",
+   "size": 189543041
   },
   "macZip": {
-   "name": "Alixo-1.39.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.0/Alixo-1.39.0-mac.zip",
-   "size": 183236056
+   "name": "Alixo-1.39.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-1.39.1-mac.zip",
+   "size": 182750392
   }
  },
  "history": [
+  {
+   "version": "1.39.1",
+   "date": "2026-10-19T15:53:40Z",
+   "notes": "Nouveautés 1.39.1 — Correction : icônes de fichiers coupées sur le bureau Windows\n\n\n- **Les icônes des fichiers Alixo s’affichent entières.** Sur le bureau et dans l’Explorateur Windows, l’icône d’une séance, d’une présentation, d’un tableur, d’un quiz ou d’une planche apparaissait rognée (bords et coin replié coupés). Les petites tailles de l’icône sont désormais enregistrées dans le format classique attendu par Windows, et l’image garde une petite marge : plus rien n’est coupé, quelle que soit la taille d’affichage. (Appliqué par la mise à jour, qui repasse par l’installateur.)\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.1"
+  },
   {
    "version": "1.39.0",
    "date": "2026-10-19T15:24:05Z",
@@ -220,11 +225,6 @@
    "version": "1.16.0",
    "date": "2026-09-22T17:28:03Z",
    "notes": "Nouveautés 1.16.0 — Alixo+, fenêtres de partage et d'événement, corrections\n\n\n- **Alixo+** (formule payante, activée par l'administrateur) : le compte gratuit garde tout l'essentiel — cours, présentations, dossiers, agenda, partage, dictionnaire, export PDF, synchronisation — avec **3 Go** de stockage, les thèmes **clair / sombre / automatique** et **3 polices** (Alixo, Times New Roman, Segoe UI). **Alixo+** ouvre le stockage au-delà de 3 Go, tous les thèmes de couleurs, toutes les polices, l'**intelligence artificielle** (correction, mise en forme, reformulations) et les **tâches**. Les fonctions verrouillées ouvrent la fenêtre « Passer à Alixo+ » (tableau gratuit / Alixo+, prix et lien de paiement) ; Paramètres › **Alixo+** montre la formule du compte. Un thème ou une police Alixo+ choisis avant la fin de l'abonnement sont conservés et reviennent dès sa réactivation. Sans service en ligne configuré (mode 100 % local), tout reste ouvert.\n- **Panneau admin** : Utilisateurs › **Alixo+…** active, prolonge (1, 3, 6, 12 mois, sans fin ou jusqu'à une date) ou retire l'abonnement (`plans/{uid}`, nouvelle règle Firestore à déployer : `npm run rules`) ; colonne, filtre et export CSV Alixo+, compteur d'abonnés ; Annonces › **Alixo+ — offre** : prix, lien de paiement et note affichés dans l'application (`config/public`).\n- **Fenêtres centrales** (même présentation que les Paramètres) à la place des petits pop-overs : **Partager** (invitation, rôles expliqués), **gestionnaire de partage** (Membres / Contenu / Journal en volet de gauche, la liste se met à jour sans clignoter), **séance partagée avec moi** ; **fiche d'événement** en grande fenêtre avec aperçu en direct (jour, heures, lieu, couleur), champ « Chaque semaine » lisible, raccourcis clavier. Plein écran sur téléphone.\n- **Réglages IA corrigés** : les cases à cocher (analyse automatique, fautes, mise en forme, reformulations) s'affichaient étirées et décalées (règle générique des champs de saisie) ; l'interrupteur « Analyse automatique » n'apparaît plus en double dans les Paramètres. Même correction pour « Chaque semaine » dans la fiche d'événement.\n- **Police et thème qui « revenaient en arrière »** : les réglages (police, thème, IA…) sont maintenant **datés** (`settingsAt` dans la méta du compte) ; l'appareil qui démarre avec d'anciens réglages ne les impose plus aux autres, ce sont les réglages les plus récents qui gagnent, et une police remise par défaut sur un appareil l'est aussi sur les autres.\n- Version `1.16.0` dans `package.json` et `app/js/app.js`."
-  },
-  {
-   "version": "1.15.0",
-   "date": "2026-09-22T14:03:43Z",
-   "notes": "Nouveautés 1.15.0 — macOS, mobile, partage en direct, réglages de l'IA\n\n\n- **macOS** : compilation d'un `.dmg` universel (Intel et Apple Silicon) à chaque release (`Alixo-Mac.dmg`, lien stable). Application non signée : clic droit › Ouvrir au premier lancement. Les mises à jour sont signalées par une notification avec le lien de téléchargement (pas d'installation silencieuse sans signature Apple). Paramètres › À propos propose le bon téléchargement selon le système.\n- **Questionnaire de bienvenue** (niveau, spécialités) : posé uniquement au compte tout juste créé sur l'appareil ; une connexion sur un autre ordinateur ou téléphone récupère le profil par la synchronisation, sans redemander (Paramètres › Compte › Modifier mon profil reste disponible).\n- **Version téléphone** (`app/mobile.html`, générée depuis `index.html` par `scripts/make-mobile.js` + `mobile.css` + `js/mobile.js`) : même application, même compte, même code ; explorateur en tiroir, bouton « + » flottant, plan replié, barres qui défilent, panneaux en plein écran, présentations avec vignettes en haut. Sur un téléphone, `index.html` redirige vers `mobile.html` (lien « Version complète » pour revenir) ; la version web de bureau n'est pas modifiée.\n- **IA** (Paramètres › Intelligence artificielle) : analyse automatique pendant la frappe, correction des fautes, propositions de mise en forme, propositions de reformulation (chacune activable), et **niveau de correction** léger / standard / strict. Réglages synchronisés avec le compte.\n- **Partage** : les **dossiers et séances partagés avec moi apparaissent dans la bibliothèque** (section « Partagés avec moi » de « Mes cours », cartes en pointillé avec le nom du propriétaire et le droit, explorateur de gauche) et se parcourent comme les miens ; **qui a accès** : pastilles des membres dans la barre supérieure de la séance ouverte (le propriétaire voit tous les membres et gère les droits d'un clic ; un membre ne voit que le propriétaire et les personnes présentes).\n- **Travail à plusieurs en direct** : **présence** (`shares/{sid}/presence/{uid}`, règles Firestore à redéployer) — point vert sur les pastilles des personnes présentes, **étiquette colorée sur le bloc qu'un autre membre est en train de modifier**, mention « X est dessus » sur les cartes ; **fusion bloc par bloc** des modifications reçues : le paragraphe en cours de frappe est conservé, les autres blocs prennent la version reçue et clignotent brièvement, plus de rechargement complet qui coupait la saisie.\n- **Partage des présentations** : une présentation se partage comme une séance (clic droit › Partager…, ou via un dossier partagé) ; les membres en lecture seule la consultent et la présentent (F5), ceux en écriture la modifient ; les images des diapositives suivent le partage ; les modifications reçues se fondent sans couper une saisie en cours."
   }
  ]
 }

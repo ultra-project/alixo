@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.39.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.39.1 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.39.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Icônes <em>entières</em>', text: 'Correction pour les fichiers Alixo dont l’icône apparaissait coupée sur le bureau Windows.', dur: 5000 },
+    { title: 'Plus rien n’est <em>coupé</em>', text: 'Séance, présentation, tableur, quiz, planche : chaque fichier montre sa feuille en relief au complet, avec son coin replié.',
+      bullets: ['<b>Toutes les tailles</b> d’affichage de l’Explorateur', '<b>Une petite marge</b> autour de l’image', '<b>Appliqué</b> par la mise à jour'],
+      art: 'cards', accent: '#3d6bb5', accent2: '#b3762a', dur: 8000 },
+    { title: 'Et toujours : le plan à <em>votre</em> façon', text: 'Un plan par séance et trois modes : automatique, adaptatif ou aucun plan.',
+      bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… »', '<b>Adaptatif</b> : votre premier numéro devient le niveau 1'],
+      art: 'list', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.39.0', {
   scenes: [
@@ -49,16 +62,6 @@ AlixoWhatsNew.register('1.38.0', {
     { title: 'Et <em>aussi</em>', text: 'La barre d’outils s’allège, la mise en forme marche partout, le nom en haut à gauche dit votre formule.',
       bullets: ['<b>Agenda</b> dans la barre des raccourcis, nouvelles icônes IA', '<b>Centrer, gras…</b> dans les tableaux, encadrés, fiches et cartes', '<b>Alixo, Alixo+ ou Alixo Business</b> : même logo, le nom change', '<b>Plus d’en-tête</b> « séance + date » en haut des séances'],
       art: 'palette', accent: '#c04343', accent2: '#3d6bb5', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.37.2', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'AlixoAI <em>s’adapte</em>', text: 'Correction pour les ordinateurs où AlixoAI répondait « le moteur a été relancé, réessayez ».' },
-    { title: 'Muette ? Elle <em>s’allège</em>', text: 'Si la carte graphique ne produit aucun mot, AlixoAI passe en version plus légère, recharge et rejoue votre demande, sans rien demander.',
-      bullets: ['<b>Taille en dessous</b>, puis variante compatible', '<b>Délais</b> adaptés aux petites puces graphiques', '<b>Message précis</b> si rien ne marche malgré tout'],
-      art: { icon: '✨' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
