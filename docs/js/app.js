@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.37.2';
+const ALIXO_VERSION = '1.38.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -68,6 +68,7 @@ function save() {
   saveTm = setTimeout(() => {
     localStorage.setItem(LS_KEY, JSON.stringify(state));
     if (window.AlixoSync) window.AlixoSync.onLocalSave();
+    if (window.AlixoAlx && window.AlixoAlx.onLocalSave) window.AlixoAlx.onLocalSave();   // 1.38 : documents .alx du disque
     if (window.AlixoShare && window.AlixoShare.enabled) window.AlixoShare.onLocalSave();
     if (window.AlixoWidgets && !ALIXO_PANE) window.AlixoWidgets.onSave();
     setSaveStatus('saved');
@@ -144,6 +145,28 @@ const doc = () => findDoc(currentDocId);
 const folder = id => state.folders.find(f => f.id === id);
 const childFolders = pid => state.folders.filter(f => (f.parentId || null) === (pid || null));
 const folderDocs = fid => state.docs.filter(d => (d.folderId || null) === (fid || null));
+/* 1.38 : document .alx ouvert depuis un fichier du disque (version PC) — d.alxFile = { path, name, dir, online }.
+   Tant que « Sauvegarde en ligne » n'est pas activée (online: false), il vit dans son fichier : hors bibliothèque
+   (folderId '__fichier__', un dossier qui n'existe pas) et jamais envoyé dans le nuage (js/sync.js). */
+const isLocalOnly = d => !!(d && d.alxFile && !d.alxFile.online);
+const LOCAL_FOLDER_ID = '__fichier__';
+function syncCloudSaveBtn() {
+  const b = $('#btn-cloudsave'); if (!b) return;
+  const d = currentDocId && !isVTabId(currentDocId) ? findDoc(currentDocId) : null;
+  const on = !!(d && d.alxFile);
+  b.hidden = !on;
+  if (!on) return;
+  const online = !!d.alxFile.online;
+  b.classList.toggle('on', online);
+  b.title = online ? `Sauvegarde en ligne activée : ce document est dans votre bibliothèque (dossier « ${(folder(d.folderId) || {}).nom || 'Mes cours'} ») et dans le fichier ${d.alxFile.name}` : `Ce document n’existe que dans le fichier ${d.alxFile.name} (enregistré automatiquement). Cliquer pour l’ajouter à votre bibliothèque Alixo, synchronisée sur vos appareils.`;
+}
+/* dossier de premier niveau portant ce nom (sans tenir compte de la casse), créé au besoin */
+function folderNamed(nom, { create = false } = {}) {
+  const want = String(nom || '').trim().toLowerCase();
+  let f = state.folders.find(x => !x.parentId && String(x.nom || '').trim().toLowerCase() === want) || null;
+  if (!f && create) { f = { id: uid(), nom: String(nom || '').trim() || 'Fichiers', couleur: FOLDER_COLORS[11], icone: 'folder', parentId: null, prof: '' }; state.folders.push(f); }
+  return f;
+}
 
 function folderPath(fid) {
   const path = [];
@@ -440,6 +463,7 @@ const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffi
 let openTabs = [];
 function loadTabs() { try { const t = JSON.parse(localStorage.getItem(TABS_LS)); openTabs = Array.isArray(t) ? t : []; } catch { openTabs = []; } }
 function renderTabs() {
+  syncCloudSaveBtn();
   const bar = $('#tabbar'); if (!bar) return;
   openTabs = openTabs.filter(tabAlive);
   try { localStorage.setItem(TABS_LS, JSON.stringify(openTabs)); } catch { /* stockage indisponible */ }
@@ -671,6 +695,10 @@ function renderCrumbs() {
   if (isSharedDoc(d.id)) {
     const info = AlixoShare.infoFor(d.id) || {};
     c.innerHTML = `<button class="crumb-root" data-nav="__shared" title="Partagés avec moi">Partagés avec moi</button><span class="sep">›</span><span class="chip">${esc(info.owner || '')}${info.kind === 'folder' ? ' › ' + esc(info.title || '') : ''}</span><span class="sep">›</span><input id="tb-title" placeholder="Sans titre" value="${esc(d.titre || '')}" spellcheck="false" autocomplete="off" title="Titre de la séance" ${readOnly ? 'readonly' : ''}>`;
+    return;
+  }
+  if (isLocalOnly(d)) {   // 1.38 : document d'un fichier du disque, hors bibliothèque
+    c.innerHTML = `<button class="crumb-root" data-nav="" title="Retour à Mes cours">Mes cours</button><span class="sep">›</span><span class="chip" title="${esc(d.alxFile.path || '')}">${DOC_ICON.replace('class="dicon"', 'class="chip-ico"')}Fichier${d.alxFile.dirName ? ' · ' + esc(d.alxFile.dirName) : ''}</span><span class="sep">›</span><input id="tb-title" placeholder="Sans titre" value="${esc(d.titre || '')}" spellcheck="false" autocomplete="off" title="Titre du document" ${readOnly ? 'readonly' : ''}>`;
     return;
   }
   const path = folderPath(d.folderId);
@@ -1859,7 +1887,7 @@ body { overflow: auto; background: #fff; padding: 40px 16px; }
 #blocks [data-ph]::before, #blocks .jref::before, #blocks .jval::before, #blocks figcaption::before, #blocks .qcite::before { content: none !important; }
 .exp-title { font-family: var(--font-serif); font-size: 28px; font-weight: 650; margin-bottom: 24px; padding-bottom: 14px; border-bottom: 1px solid var(--border); }
 </style></head>
-<body><article id="doc"><h1 class="exp-title">${esc(d.titre || 'Sans titre')}</h1><div id="blocks">${body}</div></article>${exportWatermarked() ? `<div id="alixo-wm" class="wm-screen" aria-hidden="true"><span class="wm-big">${WM_TEXT}</span><span class="wm-foot">Fait avec Alixo · alixoapp.com</span></div>` : ''}</body></html>`;
+<body><article id="doc"><h1 class="exp-title">${esc(d.titre || 'Sans titre')}</h1><div id="blocks">${body}</div></article>${exportWatermarked() ? `<div id="alixo-wm" class="wm-screen" aria-hidden="true">${WM_HTML}</div>` : ''}</body></html>`;
 }
 
 const EXPORT_FORMATS = { pdf: { label: 'PDF', ext: '.pdf' }, docx: { label: 'Word (.docx)', ext: '.docx' }, html: { label: 'Page web (.html)', ext: '.html' }, alx: { label: 'Fichier Alixo (.alx)', ext: '.alx-docs' } };   // 1.35 : .alx (js/alx.js) — l'extension suit le type du document
@@ -2251,29 +2279,36 @@ const plusBadge = (t = 'Alixo+') => `<span class="plus-badge">${t}</span>`;
 const hasPlusPlan = () => editionActive() || !!(window.AlixoAuth && window.AlixoAuth.isConfigured && planActive(planInfo));
 /* 1.24 : filigrane « Alixo » sur les exports (PDF de tous les types de documents, Word, page web, archive .zip)
    tant que le compte n'a pas Alixo+ ; Alixo+ exporte des documents vierges. Un calque fixe est posé sur la page
-   le temps de l'impression (position: fixed → répété sur chaque page du PDF, voir #alixo-wm dans styles.css). */
-const WM_TEXT = 'Alixo';
+   le temps de l'impression (position: fixed → répété sur chaque page du PDF, voir #alixo-wm dans styles.css).
+   1.38 : refonte — plus de grand « Alixo » en travers de la page : une petite mention « Fait avec Alixo » au bas de
+   chaque page (trait d'accent, logo, texte en capitales grises), lisible mais qui ne gêne pas la lecture. */
+const WM_FOOT = 'Fait avec Alixo · alixoapp.com';
+const WM_MARK = '<svg viewBox="0 0 24 24" width="11" height="11" aria-hidden="true"><defs><linearGradient id="wmg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3d6bb5"/><stop offset="1" stop-color="#7a5cc7"/></linearGradient></defs><rect x="1" y="1" width="22" height="22" rx="6" fill="url(#wmg)"/><text x="12" y="17" font-size="14" font-weight="700" text-anchor="middle" fill="#fff" font-family="Segoe UI, Arial, sans-serif">A</text></svg>';
+const WM_HTML = `<span class="wm-foot">${WM_MARK}${WM_FOOT}</span>`;
 const exportWatermarked = () => !isPlus();
 function exportWatermark(on) {
   let el = $('#alixo-wm');
   if (!on || !exportWatermarked()) { if (el) el.remove(); return; }
   if (el) return;
   el = document.createElement('div'); el.id = 'alixo-wm'; el.setAttribute('aria-hidden', 'true');
-  el.innerHTML = `<span class="wm-big">${WM_TEXT}</span><span class="wm-foot">Fait avec Alixo · alixoapp.com</span>`;
+  el.innerHTML = WM_HTML;
   document.body.appendChild(el);
 }
-/* logo de l'application : le « A » Alixo+ (orange, avec le +) dès que le compte a Alixo+ */
-const APP_LOGO = 'logo.png', APP_LOGO_PLUS = 'logo-plus.png', APP_LOGO_BUSINESS = 'logo-business.png';
-/* 1.32 : un membre d'une entreprise (Alixo Business) voit le logo Business */
-const appLogoSrc = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? APP_LOGO_BUSINESS : hasPlusPlan() ? APP_LOGO_PLUS : APP_LOGO);
+/* 1.38 : tout le monde a le même logo (le « A » d'Alixo) ; c'est le nom en haut à gauche qui dit la formule :
+   « Alixo » (version de base), « Alixo+ » (abonnement), « Alixo Business » (membre d'une entreprise) */
+const APP_LOGO = 'logo.png';
+const appLogoSrc = () => APP_LOGO;
+const appName = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? 'Alixo Business' : hasPlusPlan() ? 'Alixo+' : 'Alixo');
 function applyAppLogo() {
   const src = appLogoSrc();
   $$('.app-logo-img').forEach(img => { if (img.getAttribute('src') !== src) img.setAttribute('src', src); });
   for (const id of ['#app-favicon', '#app-touchicon']) {
     const l = $(id); if (l && l.getAttribute('href') !== src) l.setAttribute('href', src);
   }
+  const name = appName();
+  $$('#btn-home .logo-name').forEach(el => { if (el.textContent !== name) el.textContent = name; });
   const desk = window.alixoDesktop;
-  if (desk && desk.setPlusBranding) { try { desk.setPlusBranding(hasPlusPlan()); } catch { /* non bloquant */ } }
+  if (desk && desk.setPlusBranding) { try { desk.setPlusBranding(false); } catch { /* non bloquant */ } }
 }
 function refreshPlusUi() {
   const locked = !isPlus();
@@ -2615,7 +2650,6 @@ const SET_CATS = [
   { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Raccourcis de frappe et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
-  { k: 'export', name: 'Export', sub: 'PDF, archives .zip des dossiers' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
   { k: 'business', name: 'Entreprise', sub: 'Alixo Business : votre entreprise, tableau de bord en ligne, messagerie' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
@@ -2763,14 +2797,7 @@ function settingsSectionHTML(k) {
     <div class="set-sect"><div class="po-label">Économie de requêtes</div>
       <div class="po-hint" style="margin:0 0 8px">${esc(aiStatsText(AlixoCorr.stats()))}</div>
       <div class="po-row" style="gap:8px; flex-wrap:wrap"><button class="cta ghost small" id="set-aiforget" type="button" title="Oublie les mots appris des corrections et les mots que vous avez demandé à ne plus corriger">Oublier les mots appris et ignorés</button><button class="cta ghost small" id="set-aicache" type="button" title="Les phrases déjà relues seront analysées à nouveau à la prochaine occasion">Vider la mémoire des phrases</button></div></div>`; }
-  if (k === 'export') return `<div class="set-sect"><div class="po-label">Format d’export des séances</div>
-      <div class="po-radios" id="po-fmt">
-        ${Object.entries(EXPORT_FORMATS).map(([k2, v]) => `<label><input type="radio" name="fmt" value="${k2}" ${k2 === fmt ? 'checked' : ''}> ${v.label}</label>`).join('')}
-      </div>
-      <div class="po-hint">Utilisé par le bouton ⤓ de la barre du haut et par les archives .zip d’un dossier (clic droit → Télécharger en .zip). Ctrl+P exporte toujours en PDF. Les graphiques sont inclus sous forme d’images. <b>Fichier Alixo (.alx)</b> : le document complet (séance .alx-docs, présentation .alx-slide, tableur .alx-sheet, quiz .alx-quiz, planche .alx-planche), à rouvrir dans Alixo par Importer ou d’un double-clic sur la version PC — aussi dans le clic droit d’un document.</div></div>
-    <div class="set-sect"><div class="po-label">PDF</div>
-      <div class="po-hint" style="margin:0">Une séance s’exporte en A4 (bouton ⤓ ou Ctrl+P), avec sommaire au-delà de six titres ; une présentation s’exporte en pages 16:9, une diapositive par page.</div></div>`;
-  if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">Alixo${hasPlusPlan() ? '+' : ''} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
+  if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">${appName()} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
       <div class="po-row" style="gap:8px; margin-top:12px; flex-wrap:wrap">
         <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION) ? '<button id="set-wn" class="cta ghost small" type="button">▶ Revoir la présentation</button>' : ''}
         ${desk && desk.checkUpdates ? '<button id="set-upd" class="cta ghost small" type="button">Rechercher les mises à jour</button>' : ''}
@@ -2872,12 +2899,6 @@ function bindSettingsSection(k, root) {
     root.querySelector('#set-ailevel').addEventListener('click', e => { const b = e.target.closest('[data-level]'); if (!b) return; aiOpt(); state.settings.ai.level = b.dataset.level; save(); root.querySelectorAll('#set-ailevel .set-tile').forEach(t => t.classList.toggle('on', t === b)); });
     const fg = root.querySelector('#set-aiforget'); if (fg) fg.addEventListener('click', () => { AlixoCorr.forget(); toast('Mots appris et ignorés oubliés'); });
     const cc = root.querySelector('#set-aicache'); if (cc) cc.addEventListener('click', () => { AlixoCorr.clearCache(); toast('Mémoire des phrases vidée'); });
-    return;
-  }
-  if (k === 'export') {
-    root.querySelector('#po-fmt').addEventListener('change', e => {
-      if (e.target.name === 'fmt') { state.settings.exportFormat = e.target.value; save(); syncExportBtn(); toast(`Export : ${EXPORT_FORMATS[e.target.value].label}`); }
-    });
     return;
   }
   if (k === 'apropos') {
@@ -3087,6 +3108,8 @@ function ficheDef(b) {
 }
 const PH_P = 'Écrivez, ou tapez « / » pour insérer…';
 const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
+/* 1.38 : alignement d'un champ de bloc (fiche d'arrêt, fiche, cartes) — b.fal = { <data-f> : 'center' | 'right' | 'justify' } */
+const falStyle = (b, k) => (b && b.fal && b.fal[k] ? ` style="text-align:${b.fal[k]}"` : '');
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
 const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc'];
 const BLOCK_PROPS = ['text', 'level', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans'];
@@ -3231,8 +3254,8 @@ function blockHTML(b, numMap) {
       const badge = year && new Date().getFullYear() - year >= 5 ? `<span class="jbadge" contenteditable="false" title="Recommandation de plus de 5 ans : vérifier qu’elle est toujours en vigueur">ancienne</span>` : '';
       const timer = def.timer ? `<button class="jtimer" contenteditable="false" data-tstart="${def.timer}" type="button" title="Lancer un compte à rebours de ${Math.round(def.timer / 60)} min">⏱ ${Math.round(def.timer / 60)} min</button>` : '';
       return `<div class="block ${b.type === 'juris' ? 'juris' : 'fiche juris'}" data-id="${b.id}"${b.type === 'fiche' ? ` data-fk="${esc(b.fk || 'patho')}" style="--fc:${def.color}"` : ''}>
-        <div class="juris-head"><span class="jico" contenteditable="false">${AlixoIcons.svg(def.ico)}</span>${b.type === 'fiche' ? `<span class="jkind" contenteditable="false">${esc(def.name)}</span>` : ''}<div class="jref" data-f="ref" data-ph="${esc(def.head)}">${f.ref || '<br>'}</div>${badge}${timer}</div>
-        <div class="juris-grid">${def.fields.map(([k, lab]) => `<div class="jlabel" contenteditable="false">${lab}</div><div class="jval" data-f="${k}">${f[k] || '<br>'}</div>`).join('')}</div></div>`;
+        <div class="juris-head"><span class="jico" contenteditable="false">${AlixoIcons.svg(def.ico)}</span>${b.type === 'fiche' ? `<span class="jkind" contenteditable="false">${esc(def.name)}</span>` : ''}<div class="jref" data-f="ref" data-ph="${esc(def.head)}"${falStyle(b, 'ref')}>${f.ref || '<br>'}</div>${badge}${timer}</div>
+        <div class="juris-grid">${def.fields.map(([k, lab]) => `<div class="jlabel" contenteditable="false">${lab}</div><div class="jval" data-f="${k}"${falStyle(b, k)}>${f[k] || '<br>'}</div>`).join('')}</div></div>`;
     }
     case 'chart': {
       const t = AlixoCharts.TYPES[b.ck] ? b.ck : 'bar';
@@ -3293,7 +3316,7 @@ function blockHTML(b, numMap) {
     case 'cards': {
       const cards = cardsOf(b);
       return `<div class="block cards" data-id="${b.id}">
-        <div class="cards-grid">${cards.map((c, i) => `<div class="card-item"><div class="cd-t" data-f="t${i}" data-ph="Titre">${c.t || '<br>'}</div><div class="cd-x" data-f="x${i}" data-ph="Texte de la carte…">${c.x || '<br>'}</div></div>`).join('')}</div>
+        <div class="cards-grid">${cards.map((c, i) => `<div class="card-item"><div class="cd-t" data-f="t${i}" data-ph="Titre"${falStyle(b, 't' + i)}>${c.t || '<br>'}</div><div class="cd-x" data-f="x${i}" data-ph="Texte de la carte…"${falStyle(b, 'x' + i)}>${c.x || '<br>'}</div></div>`).join('')}</div>
         <div class="cards-tools" contenteditable="false"><button data-cd="add" type="button" title="Ajouter une carte">＋ carte</button><button data-cd="del" type="button" title="Retirer la dernière carte">− carte</button><button data-cd="rm" class="danger" type="button" title="Supprimer le bloc">Supprimer</button></div></div>`;
     }
     case 'timer': {
@@ -5802,6 +5825,7 @@ function currentAlign() {
   if (f && f.classList.contains('tcell')) { const b = getBlock(f.closest('.block').dataset.id); return (b && cellTa(b, +f.dataset.r, +f.dataset.c)) || 'left'; }
   const bl = blockAtSelection(); const b = bl && getBlock(bl.dataset.id);
   if (b && TEXT_TYPES.includes(b.type)) return b.al || 'left';
+  if (b && f && f.dataset.f && f.closest('.block') === bl) return (b.fal && b.fal[f.dataset.f]) || 'left';   // 1.38 : champ de fiche ou de carte
   return '';
 }
 function setAlign(al) {
@@ -5821,6 +5845,17 @@ function setAlign(al) {
     return;
   }
   const blocks = selectionBlocks().filter(b => TEXT_TYPES.includes(b.type));
+  /* 1.38 : la mise en forme de la barre s'applique aussi dans les blocs — champ d'une fiche d'arrêt, d'une fiche ou d'une carte */
+  if (!blocks.length && f && f.dataset.f) {
+    const bl = f.closest('.block'); const b = bl && getBlock(bl.dataset.id);
+    if (b) {
+      const snap = caretSnapshot();
+      b.fal = b.fal || {}; if (al === 'left') delete b.fal[f.dataset.f]; else b.fal[f.dataset.f] = al;
+      if (!Object.keys(b.fal).length) delete b.fal;
+      touch(); renderBlocks(b.id, snap ? snap.off : 'end', (snap && snap.key) || 'f:' + f.dataset.f);
+      return;
+    }
+  }
   if (!blocks.length) { toast('Placez le curseur dans un paragraphe, une case ou sur une image'); return; }
   const snap = caretSnapshot();
   blocks.forEach(b => { if (al === 'left') delete b.al; else b.al = al; });
@@ -7211,6 +7246,8 @@ function renderCalNow() {
 }
 setInterval(renderCalNow, 30000);
 $('#cal-now').addEventListener('click', () => { if (currentDocId) openCalPanel(); else openAgendaHome(); });
+/* 1.38 : l'agenda quitte la barre d'outils pour la barre des raccourcis (à côté de la recherche, du téléchargement et des notifications) */
+$('#btn-agenda').addEventListener('click', () => { if (currentDocId && !$('#calpanel').hidden) { closeRightPanels(); return; } if (currentDocId) openCalPanel(); else openAgendaHome(); });
 
 function openCalPanel(weekOf) {
   calWeekStart = mondayOf(weekOf || calWeekStart || new Date());
@@ -7963,7 +8000,6 @@ $('#toolbar').addEventListener('click', e => {
     editingFormula[nb.id] = true; renderBlocks(nb.id); openMathPanel();
   }
   if (act === 'graph') openGraphChooser(bid);
-  if (act === 'calc') openCalculator(bid);
   if (act === 'table') {
     const nb = insertSpecial({ type: 'table', rows: [['', '', ''], ['', '', ''], ['', '', '']], head: true });
     focusTableCell(nb.id, 0, 0);
@@ -7977,7 +8013,6 @@ $('#toolbar').addEventListener('click', e => {
   if (act === 'link') openLinkPopover({});
   if (act === 'refart') { if (!specAllowed('droit')) { toast('Les références d’articles ne sont pas disponibles avec vos spécialités (Paramètres › Modifier mon profil)'); return; } openArticlePopover(bid); }
   if (act === 'dict') togglePanel('#dictpanel', openDictPanel);
-  if (act === 'cal') togglePanel('#calpanel', openCalPanel);
   if (act === 'viewer') { if (!$('#viewpanel').hidden) { const d = doc(); if (d && d.vwOpen) { d.vwOpen = false; save(); } closeRightPanels(); } else { openViewer(); const d = doc(); if (d && $('#vw-body').dataset.loaded === '1') { d.vwOpen = true; save(); } } }
 });
 function togglePanel(sel, open) { if (!$(sel).hidden) closeRightPanels(); else open(); }
@@ -8844,11 +8879,9 @@ function setWindowBg(color) {
 }
 
 /* en-tête imprimé : titre, dossier, professeur, date */
-function preparePrintHead(d) {
-  let ph = $('#print-head');
-  if (!ph) { ph = document.createElement('div'); ph.id = 'print-head'; $('#doc').prepend(ph); }
-  const sub = [folderPath(d.folderId).map(x => x.nom).join(' › '), d.prof ? 'Professeur : ' + d.prof : '', fmtDate(d.updatedAt)].filter(Boolean).join('  ·  ');
-  ph.innerHTML = `<div class="ph-title">${esc(d.titre || 'Sans titre')}</div><div class="ph-sub">${esc(sub)}</div>`;
+/* 1.38 : plus d'en-tête « nom de la séance + date » en tête du PDF : la séance commence directement par son contenu */
+function preparePrintHead() {
+  const ph = $('#print-head'); if (ph) ph.remove();
 }
 /* ============================================================
    1.23 — Vue par pages : la feuille est découpée en pages A4 identiques à celles du PDF.
@@ -8896,10 +8929,11 @@ function schedulePaginate(reset) {
 function renderPgHead(d) {
   let h = $('#pg-head');
   if (!h) { h = document.createElement('div'); h.id = 'pg-head'; h.contentEditable = 'false'; $('#doc').insertBefore(h, blocksEl); }
-  const sub = [folderPath(d.folderId).map(x => x.nom).join(' › '), d.prof ? 'Professeur : ' + d.prof : '', fmtDate(d.updatedAt)].filter(Boolean).join('  ·  ');
+  /* 1.38 : plus de titre ni de date en tête de la page 1 ; seul le nom de l'onglet reste, quand la séance en a plusieurs */
   const tabs = docPages(d);
-  const html = `<div class="ph-title">${esc(d.titre || 'Sans titre')}</div><div class="ph-sub">${esc(sub)}</div>${tabs.length > 1 ? `<div class="ph-tab">${esc((curPage(d) || {}).titre || '')}</div>` : ''}`;
+  const html = tabs.length > 1 ? `<div class="ph-tab">${esc((curPage(d) || {}).titre || '')}</div>` : '';
   if (h.innerHTML !== html) h.innerHTML = html;
+  h.classList.toggle('ph-empty', !html);
   return h;
 }
 /* calcule les sauts de page ; force : recalcul même si rien n'a changé (après un rendu complet) */
@@ -9012,10 +9046,35 @@ async function exportPDF() {
   if (r && r.ok) toast(`PDF enregistré : ${r.path.split(/[\\/]/).pop()}`, { action: 'Ouvrir', onAction: () => desk.openPath && desk.openPath(r.path) });
   else if (r && r.error) toast('Enregistrement impossible : ' + r.error);
 }
-/* 1.20 : le bouton ⤓ suit le format choisi dans Paramètres › Export (PDF, Word, page web) ; Ctrl+P reste le PDF */
-async function exportDoc() {
+/* 1.38 : le bouton ⤓ ouvre une petite fenêtre sous lui qui demande le format (PDF, Word, page web, fichier Alixo) ;
+   le dernier choix est mémorisé (state.settings.exportFormat, aussi utilisé par les archives .zip d'un dossier).
+   Ctrl+P reste le PDF. */
+const EXPORT_FORMAT_ICONS = {
+  pdf: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 17v-5h1.6a1.5 1.5 0 0 1 0 3H8.5"/></svg>',
+  docx: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="m8 12 1.3 5 1.7-4 1.7 4 1.3-5"/></svg>',
+  html: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
+  alx: '<img src="logo.png" alt="" class="po-ico po-ico-img">'
+};
+function openExportMenu(btn) {
   const d = doc(); if (!d) return;
-  const fmt = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
+  const special = isSpecialDoc(d);
+  const cur = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
+  const formats = Object.entries(EXPORT_FORMATS).filter(([k]) => !special || k === 'pdf' || k === 'alx');
+  const r = btn.getBoundingClientRect();
+  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque' };
+  showPopover(`<h4>Télécharger « ${esc(d.titre || 'Sans titre')} »</h4><div class="po-list po-export">
+      ${formats.map(([k, v]) => `<button data-fmt="${k}" class="${k === cur ? 'on' : ''}">${k === 'alx' ? EXPORT_FORMAT_ICONS.alx : EXPORT_FORMAT_ICONS[k].replace('<svg', '<svg class="po-ico"')}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
+    </div>${isPlus() ? '' : '<div class="po-hint" style="margin:6px 0 0">Une petite mention « Fait avec Alixo » figure au bas de chaque page des PDF, Word et pages web ; Alixo+ l’enlève.</div>'}`,
+    { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
+      const b = ev.target.closest('[data-fmt]'); if (!b) return;
+      hidePopover();
+      state.settings.exportFormat = b.dataset.fmt; save();
+      exportDoc(b.dataset.fmt);
+    }));
+}
+async function exportDoc(fmtWanted) {
+  const d = doc(); if (!d) return;
+  const fmt = EXPORT_FORMATS[fmtWanted] ? fmtWanted : (EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf');
   if (fmt === 'alx' && window.AlixoAlx) { AlixoAlx.exportDoc(d.id); return; }   // 1.35 : fichier Alixo, pour tout type de document
   if (fmt === 'pdf' || isSpecialDoc(d)) { exportPDF(); return; }
   toast(`Préparation du fichier ${EXPORT_FORMATS[fmt].label}…`, { duration: 3000 });
@@ -9036,11 +9095,9 @@ async function exportDoc() {
   a.download = name; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
-function syncExportBtn() {
-  const fmt = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
-  const b = $('#btn-export'); if (b) b.title = fmt === 'pdf' ? 'Exporter en PDF (Ctrl+P)' : `Exporter en ${EXPORT_FORMATS[fmt].label} (Paramètres › Export) · Ctrl+P : PDF`;
-}
-$('#btn-export').addEventListener('click', exportDoc);
+function syncExportBtn() { /* 1.38 : le format se choisit au clic ; le titre du bouton ne change plus */ }
+$('#btn-export').addEventListener('click', e => openExportMenu(e.currentTarget));
+$('#btn-cloudsave').addEventListener('click', () => { if (window.AlixoAlx && AlixoAlx.goOnline) AlixoAlx.goOnline(currentDocId); });
 
 /* Ctrl+A (1.18) : jamais la page entière — la barre d'outils, le plan et les menus se retrouvaient sélectionnés
    avec le texte. Dans un champ ou dans le texte du cours : comportement natif (le champ, ou tout le cours) ;
@@ -10176,6 +10233,16 @@ window.AlixoApp = {
   showLibrary: () => { showLibrary(); return true; },
   /* 1.29 : exposés pour les tests automatisés (scripts Playwright) — pas une API pour les modules */
   currentDoc: doc, createDoc: createDocIn, renderBlocks, focusBlock, specAllowed, applyPagesMode, openMathPanel,
+  /* 1.38 : documents .alx du disque (js/alx.js) */
+  isLocalOnly, LOCAL_FOLDER_ID, folderNamed, syncCloudSaveBtn, renderCrumbs, renderTabs, refreshLibrary, folderProf,
+  newDocOfKind(kind) {
+    const prof = '';
+    if (kind === 'slide' && window.AlixoSlides) return AlixoSlides.newDoc(null, prof);
+    if (kind === 'sheet' && window.AlixoSheets) return AlixoSheets.newDoc(null, prof);
+    if (kind === 'planche' && window.AlixoBoard) return AlixoBoard.newDoc(null, prof);
+    if (kind === 'quiz' && window.AlixoQuiz) return AlixoQuiz.newDoc(null, prof);
+    return { id: uid(), folderId: null, titre: '', createdAt: Date.now(), updatedAt: Date.now(), pinned: false, prof, blocks: [{ id: uid(), type: 'p', text: '', day: todayKey() }] };
+  },
   /* 1.35 : polices — partagées avec les présentations, tableurs et planches */
   DOC_FONTS, fontByKey, openFontMenu, docFontCss,
 
@@ -10288,7 +10355,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'AlixoAI s’allège toute seule si la carte graphique reste muette (taille en dessous, puis variante compatible), avec des délais adaptés aux petites puces et un message qui dit ce qui bloque.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Créez un document Alixo depuis le bureau de votre PC (clic droit › Nouveau), enregistré dans son fichier jusqu’à « Sauvegarde en ligne » ; une icône par type de fichier ; zoom fluide sous le curseur ; choix du format au téléchargement ; mention discrète « Fait avec Alixo » à la place du grand filigrane.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

@@ -186,7 +186,6 @@
      Écrivain PDF minimal (A4, polices Helvetica, images JPEG)
      ============================================================ */
   /* filigrane des exports (1.24) : tant que le compte n'a pas Alixo+ (exportWatermarked() d'app.js) */
-  const WM_TEXT = 'Alixo';
   const watermarkWanted = () => (typeof exportWatermarked === 'function' ? exportWatermarked() : false);
   class Pdf {
     constructor() {
@@ -584,12 +583,11 @@
     pdf.pages.forEach((p, i) => {
       pdf.page = p;
       if (wm) {
-        const t = WM_TEXT, sz = 110, w = textWidth(t, sz, true);
-        const c = Math.cos(Math.PI / 5), si = Math.sin(Math.PI / 5);   // rotation de 36°
-        const cx = pdf.W / 2, cy = pdf.H / 2;
-        pdf.op(`q 0.9 0.9 0.9 rg BT /F2 ${n2(sz)} Tf ${n2(c)} ${n2(si)} ${n2(-si)} ${n2(c)} ${n2(cx - (w / 2) * c + (sz * 0.35) * si)} ${n2(cy - (w / 2) * si - (sz * 0.35) * c)} Tm (${pdfStr(t)}) Tj ET Q`);
-        const f = toCp1252('Fait avec Alixo · alixoapp.com');
-        pdf.text(pdf.W - pdf.M - textWidth(f, 7.5), pdf.H - 18, f, 7.5, false, false, [150, 153, 158]);
+        /* 1.38 : mention discrète en bas à droite — un trait d'accent bleu puis « FAIT AVEC ALIXO · ALIXOAPP.COM » en petit gris */
+        const f = toCp1252('FAIT AVEC ALIXO  ·  ALIXOAPP.COM');
+        const fw = textWidth(f, 6.5, true), fx = pdf.W - pdf.M - fw, fy = pdf.H - 17;
+        pdf.op(`q 0.24 0.42 0.71 RG 1.2 w ${n2(fx - 30)} ${n2(fy + 2.2)} m ${n2(fx - 8)} ${n2(fy + 2.2)} l S Q`);
+        pdf.text(fx, fy, f, 6.5, true, false, [120, 124, 130]);
       }
       const s = toCp1252(`${d.titre || 'Sans titre'}  ·  ${i + 1} / ${n}`);
       pdf.text(pdf.W / 2 - textWidth(s, 8.5) / 2, pdf.H - 30, s, 8.5, false, false, INK3);
@@ -827,11 +825,11 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         body += para(runXml({ text: l.label, b: true }) + runXml({ text: '  ' + l.url, color: [70, 73, 78] }), '<w:jc w:val="center"/>');
       }
     }
-    /* filigrane « Alixo » (1.24, sans Alixo+) : un en-tête de page portant une forme WordArt en diagonale, comme
-       le filigrane de Word (Création › Filigrane) ; il se répète sur toutes les pages */
+    /* filigrane « Alixo » (1.24, sans Alixo+) : un en-tête de page, répété sur toutes les pages */
     const wm = watermarkWanted();
+    /* 1.38 : plus de forme WordArt en travers de la page — une seule ligne discrète, à droite de l'en-tête */
     const headerXml = wm ? `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w10="urn:schemas-microsoft-com:office:word"><w:p><w:pPr><w:pStyle w:val="Header"/></w:pPr><w:r><w:pict><v:shapetype id="_x0000_t136" coordsize="21600,21600" o:spt="136" adj="10800" path="m@7,l@8,m@5,21600l@6,21600e"><v:formulas><v:f eqn="sum #0 0 10800"/><v:f eqn="prod #0 2 1"/><v:f eqn="sum 21600 0 @1"/><v:f eqn="sum 0 0 @2"/><v:f eqn="sum 21600 0 @3"/><v:f eqn="if @0 @3 0"/><v:f eqn="if @0 21600 @1"/><v:f eqn="if @0 0 @2"/><v:f eqn="if @0 @4 21600"/><v:f eqn="mid @5 @6"/><v:f eqn="mid @8 @5"/><v:f eqn="mid @7 @8"/><v:f eqn="mid @6 @7"/><v:f eqn="sum @6 0 @5"/></v:formulas><v:path textpathok="t" o:connecttype="custom" o:connectlocs="@9,0;@10,10800;@11,21600;@12,10800" o:connectangles="270,180,90,0"/><v:textpath on="t" fitshape="t"/><v:handles><v:h position="#0,bottomRight" xrange="6629,14971"/></v:handles><o:lock v:ext="edit" text="t" shapetype="t"/></v:shapetype><v:shape id="PowerPlusWaterMarkObject1" o:spid="_x0000_s2049" type="#_x0000_t136" style="position:absolute;margin-left:0;margin-top:0;width:460pt;height:115pt;rotation:315;z-index:-251656192;mso-position-horizontal:center;mso-position-horizontal-relative:margin;mso-position-vertical:center;mso-position-vertical-relative:margin" o:allowincell="f" fillcolor="silver" stroked="f"><v:fill opacity=".45"/><v:textpath style="font-family:&quot;Calibri&quot;;font-size:1pt" string="${WM_TEXT}"/><w10:wrap anchorx="margin" anchory="margin"/></v:shape></w:pict></w:r></w:p><w:p><w:pPr><w:pStyle w:val="Header"/><w:jc w:val="right"/></w:pPr>${runXml({ text: 'Fait avec Alixo · alixoapp.com', color: [150, 153, 158] })}</w:p></w:hdr>` : '';
+<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><w:p><w:pPr><w:pStyle w:val="Header"/><w:jc w:val="right"/></w:pPr>${runXml({ text: 'FAIT AVEC ALIXO  ·  ALIXOAPP.COM', px: 9, color: [120, 124, 130] })}</w:p></w:hdr>` : '';
     const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><w:body>${body}<w:sectPr>${wm ? '<w:headerReference w:type="default" r:id="rIdHdr1"/>' : ''}<w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/></w:sectPr></w:body></w:document>`;
     const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

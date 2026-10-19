@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-17T20:10:50.494Z",
+ "generatedAt": "2026-10-19T08:38:37.999Z",
  "version": "1.37.2",
  "date": "2026-10-17T20:10:36Z",
  "notes": "Nouveautés 1.37.2 — Correction : « AlixoAI n’a pas répondu : le moteur a été relancé »\n\n\n- **AlixoAI s’allège toute seule quand la carte graphique reste muette.** Si aucun mot n’est produit dans le délai, AlixoAI\n  ne rend plus la main avec une erreur : elle passe à la taille en dessous (puis, au plus léger, à la variante compatible\n  f32, car certains pilotes se figent sur les programmes f16), recharge et rejoue la demande dans la foulée. L’allègement\n  est mémorisé pour les fois suivantes.\n- **Des délais adaptés aux petites puces graphiques.** La première réponse après un chargement (programmes graphiques\n  encore à préparer) dispose de 240 s, les suivantes de 150 s, au lieu de 90 s.\n- **Un message qui aide à comprendre.** Si rien ne marche malgré tout, le message indique la carte graphique détectée, la\n  taille et la variante utilisées : de quoi signaler précisément ce qui bloque.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.37.2",

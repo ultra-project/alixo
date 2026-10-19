@@ -1,5 +1,5 @@
 /* ============================================================
-   Alixo — zoom des documents (1.34)
+   Alixo — zoom des documents (1.34, zoom continu ancré sur le curseur en 1.38)
    Un facteur d'agrandissement par type de vue (séance, présentation, tableur), conservé sur l'appareil
    (localStorage alixo.zoom.<vue>) : Ctrl + molette au-dessus du document, Ctrl + / Ctrl − / Ctrl 0 au
    clavier, et un petit contrôle « − 100 % + » dans la barre d'outils de chaque vue.
@@ -8,7 +8,7 @@
      AlixoZoom.set('doc', 1.25)      → applique, enregistre, prévient les abonnés
      AlixoZoom.onChange('doc', cb)   → cb(z) à chaque changement
      AlixoZoom.controlHTML('doc')    → le contrôle de la barre (boutons [data-zoom] portant data-zkind)
-     AlixoZoom.bindWheel(el, 'doc')  → Ctrl + molette sur l'élément
+     AlixoZoom.bindWheel(el, 'doc')  → Ctrl + molette sur l'élément (continu, ancré sous le curseur)
      AlixoZoom.handleKey(e, 'doc')   → Ctrl + / − / 0 (renvoie true si la touche a été consommée)
    ============================================================ */
 'use strict';
@@ -66,15 +66,45 @@ window.AlixoZoom = (() => {
     if (a === '+') step(k, 1); else if (a === '-') step(k, -1); else reset(k);
   }, true);
 
-  /* Ctrl + molette : un cran par événement de molette (le navigateur n'agrandit plus toute la page) */
-  function bindWheel(el, k) {
+  /* 1.38 : Ctrl + molette (ou pincement du pavé tactile) — zoom continu façon Word : chaque cran de molette agrandit
+     d'environ 10 %, un pincement avance par petites touches, et le point du document qui se trouve sous le curseur
+     reste sous le curseur (le défilement de `el` est corrigé dans le même rendu). Les événements d'une même image
+     sont regroupés (un seul recalcul par image : pas de saccades). `opts.pad` : marges intérieures de `el`
+     ({ left, top }) si elles ne se lisent pas dans le style ; `opts.anchor = false` : pas de correction du défilement. */
+  function bindWheel(el, k, opts = {}) {
     if (!el) return;
-    let last = 0;
+    let pending = 0, raf = 0, at = null;
+    const apply = () => {
+      raf = 0;
+      const was = get(k);
+      const z = clamp(was * Math.exp(pending)); pending = 0;
+      if (z === was) return;
+      const a = at; at = null;
+      if (!a || opts.anchor === false) { set(k, z); return; }
+      /* ancrage : position du point sous le curseur dans le contenu, avant / après */
+      const rect = el.getBoundingClientRect();
+      const cs = getComputedStyle(el);
+      const pad = { left: opts.pad && opts.pad.left != null ? opts.pad.left : parseFloat(cs.paddingLeft) || 0, top: opts.pad && opts.pad.top != null ? opts.pad.top : parseFloat(cs.paddingTop) || 0 };
+      const mx = a.x - rect.left, my = a.y - rect.top;
+      const cx = el.scrollLeft + mx - pad.left, cy = el.scrollTop + my - pad.top;   // point dans le contenu (échelle `was`)
+      const ratio = z / was;
+      const sb = el.style.scrollBehavior; el.style.scrollBehavior = 'auto';
+      el.classList.add('no-anim');
+      set(k, z);
+      void el.offsetHeight;   // la vue a appliqué le zoom : on force la mise en page avant de corriger le défilement
+      el.scrollLeft = Math.max(0, pad.left + cx * ratio - mx);
+      el.scrollTop = Math.max(0, pad.top + cy * ratio - my);
+      requestAnimationFrame(() => { el.classList.remove('no-anim'); el.style.scrollBehavior = sb; });
+    };
     el.addEventListener('wheel', e => {
       if (!(e.ctrlKey || e.metaKey)) return;
       e.preventDefault();
-      const now = Date.now(); if (now - last < 60) return; last = now;   // trackpads : rafales d'événements
-      step(k, e.deltaY < 0 ? 1 : -1);
+      let dy = e.deltaY;
+      if (e.deltaMode === 1) dy *= 40; else if (e.deltaMode === 2) dy *= 400;   // lignes / pages → pixels
+      // souris : un cran (≈ 100 px) ≈ 10 % ; pavé tactile (pincement) : petites valeurs → progression douce
+      pending += -dy * 0.001;
+      at = { x: e.clientX, y: e.clientY };
+      if (!raf) raf = requestAnimationFrame(apply);
     }, { passive: false });
   }
   /* Ctrl + / − / 0 — appelé par la vue active ; renvoie true si la touche a été consommée */

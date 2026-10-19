@@ -1,5 +1,5 @@
 /* ============================================================
-   Alixo — fichiers .alx (1.35) : exporter un document d'Alixo dans un fichier qui se rouvre avec Alixo
+   Alixo — fichiers .alx (1.35, documents liés à un fichier du disque en 1.38) : exporter un document d'Alixo dans un fichier qui se rouvre avec Alixo
    Un fichier .alx est une archive ZIP (JSZip, js/vendor/jszip.min.js) :
      mimetype       « application/x-alixo » (en premier, non compressé)
      alixo.json     { format: 'alx', version: 1, app, kind, exportedAt, title, doc, images }
@@ -204,14 +204,111 @@ window.AlixoAlx = (() => {
     return made.map(m => m.doc);
   }
 
-  /* ---------------- version PC : fichier ouvert par double-clic (association d'extension) ---------------- */
-  if (window.alixoDesktop && alixoDesktop.onOpenFile) {
-    alixoDesktop.onOpenFile(f => {
-      if (!f || !f.name || !isAlx(f.name)) return;
-      const data = f.data instanceof Uint8Array ? f.data : new Uint8Array(f.data);
-      importFiles([{ name: f.name, data: data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) }], typeof currentFolderId !== 'undefined' ? currentFolderId : null);
-    });
+  /* ---------------- 1.38 : version PC — documents qui vivent dans un fichier du disque ----------------
+     Un fichier .alx ouvert par double-clic (ou créé par « Nouveau › Séance Alixo » sur le bureau : fichier vide) n'est
+     plus importé dans la bibliothèque : il s'ouvre tel quel, lié à son fichier (d.alxFile = { path, name, dir, dirName,
+     online: false }). Chaque modification est réenregistrée dans le fichier (writeFile), jamais dans le nuage, tant que
+     l'utilisateur n'active pas « Sauvegarde en ligne » (barre du haut) : le document rejoint alors sa bibliothèque,
+     dans un dossier qui porte le nom du dossier du fichier (Bureau, Documents…), créé au besoin — et le fichier
+     continue d'être tenu à jour. Un fichier .alx téléchargé depuis un document de la bibliothèque est indépendant :
+     rouvert, c'est un autre document (nouveaux identifiants), ses modifications ne touchent pas l'original. */
+  const DIR_NAMES = { desktop: 'Bureau', documents: 'Documents', downloads: 'Téléchargements', onedrive: 'OneDrive', pictures: 'Images', music: 'Musique', videos: 'Vidéos' };
+  const baseName = p => String(p || '').split(/[\\/]/).filter(Boolean).pop() || '';
+  const dirOf = p => { const m = /^(.*)[\\/][^\\/]*$/.exec(String(p || '')); return m ? m[1] : ''; };
+  const dirName = p => { const n = baseName(p); return DIR_NAMES[n.toLowerCase()] || n || 'Fichiers'; };
+  const desk = () => window.alixoDesktop;
+  const bytesOf = f => (f.data instanceof Uint8Array ? f.data : new Uint8Array(f.data || []));
+
+  /* ouvre (ou rouvre) le document du fichier `f` = { name, data, path } reçu de main.js */
+  async function openFromDisk(f) {
+    if (!f || !f.name || !isAlx(f.name)) return null;
+    const kind = kindOf(f.name);
+    const data = bytesOf(f);
+    const path = String(f.path || '');
+    const existing = path ? state.docs.find(x => x.alxFile && x.alxFile.path === path) : null;
+    if (existing && existing.alxFile.online) {   // déjà dans la bibliothèque : c'est elle qui fait foi
+      openDoc(existing.id);
+      toast(`« ${existing.titre || 'Sans titre'} » est dans votre bibliothèque (dossier « ${(typeof folder === 'function' && folder(existing.folderId) || {}).nom || 'Mes cours'} »)`);
+      return existing;
+    }
+    let d;
+    try {
+      if (!data.byteLength) {   // fichier vide (« Nouveau › … Alixo » du bureau) : document neuf du type de l'extension
+        d = AlixoApp.newDocOfKind(kind);
+        d.titre = f.name.replace(EXT_RE, '').replace(/^Nouveau (document |fichier )?/i, '').trim() || KINDS[kind].name;
+      } else {
+        const { meta, images } = await read(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), f.name);
+        const imap = new Map();
+        for (const [iid, v] of images) { const nid = uid(); imap.set(nid, nid); imap.set(iid, nid); try { await AlixoImages.put(nid, v); } catch (e) { console.error('Image non lue :', e); } }
+        d = freshIds(JSON.parse(JSON.stringify(meta.doc)), imap);
+        d.titre = S(d.titre) || S(meta.title) || f.name.replace(EXT_RE, '');
+        delete d.vwOpen; d.pinned = false;
+      }
+    } catch (e) { console.error('Ouverture du fichier Alixo impossible :', f.name, e); toast('Ouverture impossible — ' + (e && e.message || e), { duration: 7000 }); return null; }
+    if (existing) d.id = existing.id;   // même fichier rouvert : même onglet, contenu relu du fichier
+    d.folderId = AlixoApp.LOCAL_FOLDER_ID;
+    d.createdAt = d.createdAt || Date.now(); d.updatedAt = Date.now();
+    d.alxFile = { path, name: f.name, dir: dirOf(path), dirName: dirName(dirOf(path)), online: false };
+    const i = state.docs.findIndex(x => x.id === d.id);
+    if (i >= 0) state.docs[i] = d; else state.docs.push(d);
+    written.set(d.id, '');   // forcer la première écriture (fichier vide → document complet)
+    save();
+    openDoc(d.id);
+    toast(data.byteLength ? `« ${d.titre} » ouvert depuis ${f.name} — enregistré dans ce fichier, pas en ligne (bouton « Sauvegarde en ligne » pour l’ajouter à votre bibliothèque)` : `${KINDS[kind].name} créée sur votre ordinateur : ${f.name} — enregistrée dans ce fichier à chaque modification`, { duration: 7000 });
+    return d;
   }
 
-  return { KINDS, MIME, isAlx, kindOf, kindOfDoc, extFor, fileName, build, exportDoc, importFiles, read };
+  /* réécriture du fichier après chaque enregistrement local (débouncée par document) */
+  const written = new Map();    // id → JSON écrit (ou en cours d'écriture)
+  const writeTm = new Map();
+  const warned = new Set();
+  function onLocalSave() {
+    const dk = desk(); if (!dk || !dk.writeFile) return;
+    for (const d of state.docs) {
+      if (!d.alxFile || !d.alxFile.path) continue;
+      const j = JSON.stringify(d);
+      if (written.get(d.id) === j) continue;
+      written.set(d.id, j);
+      clearTimeout(writeTm.get(d.id));
+      writeTm.set(d.id, setTimeout(() => writeDoc(d.id), 900));
+    }
+  }
+  async function writeDoc(id) {
+    const d = state.docs.find(x => x.id === id); if (!d || !d.alxFile || !d.alxFile.path) return;
+    const dk = desk(); if (!dk || !dk.writeFile) return;
+    try {
+      const buf = await build(d);
+      const r = await dk.writeFile(d.alxFile.path, new Uint8Array(buf));
+      if (!r || !r.ok) throw new Error(r && r.error || 'écriture refusée');
+      warned.delete(id);
+    } catch (e) {
+      console.error('Fichier Alixo non réécrit :', d.alxFile.path, e);
+      if (!warned.has(id)) { warned.add(id); toast(`Le fichier ${d.alxFile.name} n’a pas pu être réenregistré (${e && e.message || e}) — vos modifications restent dans Alixo`, { duration: 8000 }); }
+    }
+  }
+
+  /* « Sauvegarde en ligne » : le document rejoint la bibliothèque (dossier du nom du dossier du fichier) et le nuage */
+  async function goOnline(docId) {
+    const d = state.docs.find(x => x.id === docId);
+    if (!d || !d.alxFile) return false;
+    if (d.alxFile.online) { toast(`Sauvegarde en ligne déjà active : « ${d.titre || 'Sans titre'} » est dans votre bibliothèque (dossier « ${(typeof folder === 'function' && folder(d.folderId) || {}).nom || 'Mes cours'} »)`); return true; }
+    if (typeof AlixoApp.storageAllows === 'function' && !await AlixoApp.storageAllows(JSON.stringify(d).length)) return false;   // espace de stockage épuisé : message déjà affiché
+    const nom = d.alxFile.dirName || dirName(d.alxFile.dir);
+    const fo = AlixoApp.folderNamed(nom, { create: true });
+    d.folderId = fo.id;
+    d.prof = d.prof || AlixoApp.folderProf(fo.id) || '';
+    d.alxFile.online = true;
+    d.updatedAt = Date.now();
+    if (typeof expandedFolders !== 'undefined' && expandedFolders) expandedFolders.add(fo.id);
+    save();
+    AlixoApp.syncCloudSaveBtn(); AlixoApp.renderCrumbs(); AlixoApp.refreshLibrary();
+    toast(`« ${d.titre || 'Sans titre'} » ajouté à votre bibliothèque dans « ${fo.nom} » — synchronisé sur vos appareils ; le fichier ${d.alxFile.name} reste à jour`, { duration: 7000 });
+    return true;
+  }
+
+  if (window.alixoDesktop && alixoDesktop.onOpenFile) {
+    alixoDesktop.onOpenFile(f => { openFromDisk(f); });
+  }
+
+  return { KINDS, MIME, isAlx, kindOf, kindOfDoc, extFor, fileName, build, exportDoc, importFiles, read, openFromDisk, onLocalSave, goOnline, dirName };
 })();

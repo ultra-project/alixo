@@ -61,6 +61,7 @@ window.AlixoSync = (() => {
       let n = 0;
       const seen = new Set();
       for (const d of app.state.docs) {
+        if (app.isLocalOnly && app.isLocalOnly(d)) continue;   // 1.38 : document .alx du disque sans « Sauvegarde en ligne » : jamais dans le nuage
         seen.add(d.id);
         const j = docJson(d);
         if (lastPushedDocs.get(d.id) === j) continue;

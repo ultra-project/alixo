@@ -769,6 +769,12 @@ mark, .hl { background: color-mix(in srgb, #e9c46a 55%, transparent); border-rad
 :is(#popover, .po-scope) .po-icons button { height: 32px; border-radius: 6px; display: grid; place-items: center; color: var(--ink-2); }
 :is(#popover, .po-scope) .po-icons button svg { width: 18px; height: 18px; }
 :is(#popover, .po-scope) .po-icons button:hover { background: var(--hover); color: var(--ink); }
+:is(#popover, .po-scope) .po-export button { display: flex; align-items: center; gap: 10px; padding: 8px 10px; }
+:is(#popover, .po-scope) .po-export button.on { background: var(--hover); box-shadow: inset 0 0 0 1px var(--border); }
+:is(#popover, .po-scope) .po-export button span { display: flex; flex-direction: column; line-height: 1.25; }
+:is(#popover, .po-scope) .po-export button small { font-size: 11.5px; color: var(--ink-3); }
+:is(#popover, .po-scope) .po-export .po-ico { width: 20px; height: 20px; margin: 0; flex: none; }
+:is(#popover, .po-scope) .po-export .po-ico-img { object-fit: contain; }
 :is(#popover, .po-scope) .po-list .po-ico { width: 16px; height: 16px; vertical-align: -3px; margin-right: 8px; color: var(--ink-2); }
 :is(#popover, .po-scope) .po-icons button.sel { background: var(--tint-soft); outline: 1.5px solid var(--tint); }
 :is(#popover, .po-scope) .po-icons button.none svg { width: 18px; height: 18px; color: var(--ink-2); }
@@ -1073,6 +1079,13 @@ body.mode-editor .tbtn.only-editor { display: grid; }
    1.5.1 — indicateur d’enregistrement, professeur, tableaux,
    journal par jour, corrections IA, panneau TI-83
    ============================================================ */
+/* 1.38 : document .alx ouvert depuis le bureau (version PC) — bouton « Sauvegarde en ligne » dans la barre du haut */
+#btn-cloudsave[hidden] { display: none !important; }
+body.mode-slides #btn-cloudsave, body.mode-sheet #btn-cloudsave, body.mode-board #btn-cloudsave, body.mode-quiz #btn-cloudsave { display: flex; }
+.tbtn.cloudsave { width: auto; padding: 0 11px 0 9px; gap: 6px; border-radius: 999px; border: 1px solid var(--border); font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-right: 4px; }
+.tbtn.cloudsave svg { width: 17px; height: 17px; }
+.tbtn.cloudsave.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
+.tbtn.cloudsave.on span::after { content: " ✓"; }
 #save-status { font-size: 11.5px; color: var(--ink-3); margin-right: 8px; white-space: nowrap; align-items: center; gap: 6px; }
 #save-status::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ok); flex: none; }
 #save-status[data-st="saving"]::before { background: var(--warn); }
@@ -3301,6 +3314,7 @@ body.pages-mode #blocks { min-height: 0; }
 body.pages-mode #pg-head { display: block; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); user-select: none; }
 #pg-head .ph-title { font-family: var(--font-serif); font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; }
 #pg-head .ph-sub { font-family: var(--font-ui); font-size: 11.5px; color: var(--ink-2); margin-top: 6px; }
+body.pages-mode #pg-head.ph-empty { display: none; }   /* 1.38 : plus de titre ni de date en tête de page */
 #pg-head .ph-tab { font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-top: 12px; }
 #pg-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 #pg-layer .pg-gap { position: absolute; left: -1px; right: -1px; background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
@@ -3578,21 +3592,22 @@ body.printing-board #toast, body.printing-board #print-summary, body.printing-bo
    ============================================================ */
 #alixo-wm { display: none; }
 #alixo-wm.wm-screen, body.printing #alixo-wm, body.printing-slides #alixo-wm, body.printing-sheet #alixo-wm, body.printing-board #alixo-wm, body.printing-quiz #alixo-wm { display: block; }
+/* 1.38 : fini le grand « Alixo » en travers de la page — une petite mention discrète au bas de chaque page,
+   qui dit d'où vient le document sans gêner la lecture : un trait d'accent, le logo et « Fait avec Alixo » */
 #alixo-wm, #alixo-wm.wm-screen {
   position: fixed; inset: 0; z-index: 9999; pointer-events: none; overflow: hidden;
   font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif;
 }
-#alixo-wm .wm-big {
-  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-32deg);
-  font-size: 150px; font-weight: 800; letter-spacing: .06em; color: #1a1a1a; opacity: .065; white-space: nowrap;
-}
+#alixo-wm .wm-big { display: none; }
 #alixo-wm .wm-foot {
-  position: absolute; right: 14px; bottom: 10px; font-size: 10px; font-weight: 600; letter-spacing: .04em;
-  color: #1a1a1a; opacity: .35; white-space: nowrap;
+  position: absolute; right: 16px; bottom: 9px; display: inline-flex; align-items: center; gap: 6px;
+  font-size: 8.5px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase;
+  color: #6b7280; white-space: nowrap; opacity: .85;
 }
+#alixo-wm .wm-foot img { width: 11px; height: 11px; display: inline-block; vertical-align: middle; opacity: .9; }
+#alixo-wm .wm-foot::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #3d6bb5, #7a5cc7); opacity: .7; }
 @media print {
   #alixo-wm { display: block !important; }
-  #alixo-wm .wm-big { opacity: .07; }
 }
 
 /* ============================================================

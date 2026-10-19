@@ -11,9 +11,31 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.37.2 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.38.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.38.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Alixo sur votre <em>bureau</em>', text: 'Des documents Alixo créés depuis le bureau de votre PC, un zoom fluide, un téléchargement simplifié.' },
+    { title: 'Nouveau › <em>Séance Alixo</em>', text: 'Comme pour Word : clic droit sur le bureau ou dans un dossier, Nouveau, puis le type de document Alixo.',
+      bullets: ['<b>Cinq types</b> : séance, présentation, tableur, quiz, planche', '<b>Une icône par type</b>, dans la couleur du type', '<b>Version PC</b> Windows, après installation'],
+      art: 'cards', accent: '#3d6bb5', accent2: '#b3762a', dur: 7500 },
+    { title: 'Enregistré dans son <em>fichier</em>', text: 'Un document ouvert depuis un fichier reste dans ce fichier : chaque modification y est enregistrée, rien ne part en ligne.',
+      bullets: ['<b>« Sauvegarde en ligne »</b> dans la barre du haut pour l’ajouter à la bibliothèque', '<b>Dossier « Bureau »</b> (ou « Documents »…) créé au besoin', '<b>Fichier .alx téléchargé</b> : indépendant du document du nuage'],
+      art: { icon: '☁️' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
+    { title: 'Un zoom <em>fluide</em>', text: 'Ctrl + molette ou pincement : la page grandit en douceur, et ce qui est sous le curseur y reste.',
+      bullets: ['<b>Comme dans Word</b> : environ 10 % par cran', '<b>Sous le curseur</b> : la page ne file plus vers la gauche', '<b>Séance, présentation, tableur</b>'],
+      art: 'text', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 7000 },
+    { title: 'Téléchargez dans le <em>format</em> voulu', text: 'Le bouton ⤓ ouvre une petite fenêtre : PDF, Word, page web ou fichier Alixo. Plus rien à régler dans les paramètres.',
+      bullets: ['<b>Dernier choix</b> proposé en premier', '<b>Filigrane discret</b> : une petite mention en bas de page, fini le grand « Alixo »', '<b>Ctrl + P</b> : toujours le PDF'],
+      art: 'list', accent: '#b3762a', accent2: '#8a4b9c', dur: 7500 },
+    { title: 'Et <em>aussi</em>', text: 'La barre d’outils s’allège, la mise en forme marche partout, le nom en haut à gauche dit votre formule.',
+      bullets: ['<b>Agenda</b> dans la barre des raccourcis, nouvelles icônes IA', '<b>Centrer, gras…</b> dans les tableaux, encadrés, fiches et cartes', '<b>Alixo, Alixo+ ou Alixo Business</b> : même logo, le nom change', '<b>Plus d’en-tête</b> « séance + date » en haut des séances'],
+      art: 'palette', accent: '#c04343', accent2: '#3d6bb5', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.37.2', {
   scenes: [
@@ -34,25 +56,6 @@ AlixoWhatsNew.register('1.37.1', {
     { title: 'Et toujours <em>AlixoAI</em>', text: 'Prête dès l’ouverture, le quiz dès la première question, des réponses bien plus rapides.',
       bullets: ['<b>Rien à installer</b>, rien à configurer', '<b>Quiz IA</b> : la suite s’écrit pendant que vous répondez'],
       art: 'quiz', accent: '#33658a', accent2: '#8a4b9c', dur: 6000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.37.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Voici <em>AlixoAI</em>', text: 'L’intelligence artificielle d’Alixo : prête dès l’ouverture, sans rien installer ni configurer.' },
-    { title: 'Prête dès l’<em>ouverture</em>', text: 'AlixoAI se prépare toute seule, en silence. Plus de serveur, de clé ni de réglage de modèle.',
-      bullets: ['<b>Rien à installer</b>, rien à configurer', '<b>Paramètres › IA</b> : un simple interrupteur', '<b>Version PC et web</b> : la même AlixoAI'],
-      art: { icon: '✨' }, accent: '#33658a', accent2: '#8a4b9c', dur: 7000 },
-    { title: 'Le quiz commence <em>tout de suite</em>', text: 'La première question arrive en quelques secondes ; les suivantes s’écrivent pendant que vous répondez.',
-      bullets: ['<b>Une question</b> par passage du cours', '<b>Vous rattrapez l’IA ?</b> Une carte patiente pour vous', '<b>Fini</b> les minutes d’attente avant la première question'],
-      art: 'quiz', accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
-    { title: 'Des réponses bien plus <em>rapides</em>', text: 'Consignes plus courtes, réponses deux à trois fois moins longues à produire, lots courts enchaînés.',
-      bullets: ['<b>Correction</b> (F7 et frappe) et mise en forme accélérées', '<b>Fiche de révision</b> rédigée partie par partie, sous vos yeux', '<b>Conversation suivie</b> : AlixoAI ne relit pas sa consigne'],
-      art: 'text', accent: '#b3762a', accent2: '#33658a', dur: 7500 },
-    { title: 'Discrète, <em>vraiment</em>', text: 'Rien ne s’affiche tant que vous ne demandez rien ; la barre en bas à droite ne paraît que si une demande attend.',
-      bullets: ['<b>« AlixoAI rédige · n mots »</b> pendant une réponse', '<b>Fermeture brutale</b> : AlixoAI repart plus légère'],
-      art: 'list', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 6500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
