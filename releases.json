@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-19T16:08:10.850Z",
- "version": "1.39.1",
- "date": "2026-10-19T15:53:40Z",
- "notes": "Nouveautés 1.39.1 — Correction : icônes de fichiers coupées sur le bureau Windows\n\n\n- **Les icônes des fichiers Alixo s’affichent entières.** Sur le bureau et dans l’Explorateur Windows, l’icône d’une séance, d’une présentation, d’un tableur, d’un quiz ou d’une planche apparaissait rognée (bords et coin replié coupés). Les petites tailles de l’icône sont désormais enregistrées dans le format classique attendu par Windows, et l’image garde une petite marge : plus rien n’est coupé, quelle que soit la taille d’affichage. (Appliqué par la mise à jour, qui repasse par l’installateur.)\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.1",
+ "generatedAt": "2026-10-19T16:39:06.492Z",
+ "version": "1.39.2",
+ "date": "2026-10-19T16:15:27Z",
+ "notes": "Nouveautés 1.39.2 — Correction : icônes des fichiers Alixo refaites, nettes et entières\n\n\n- **Les icônes des fichiers Alixo retrouvent leur dessin d’origine.** Sur le bureau et dans l’Explorateur, les symboles blancs au centre des icônes (lignes de la séance, écran de la présentation, grille du tableur, liste du quiz, tableau de la planche) apparaissaient troués et granuleux : le détourage retirait tout ce qui était presque blanc, y compris dans le dessin. Désormais, seul le fond blanc autour de la feuille est retiré ; les symboles restent entiers, les coins arrondis aussi, et le contour est net, sans liseré blanc, sur un fond clair comme sur un fond sombre. (Appliqué par la mise à jour, qui repasse par l’installateur. Si Windows montre encore l’ancienne icône, son cache d’icônes se met à jour après un redémarrage de l’ordinateur.)\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.2",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Setup.exe",
-   "size": 79185283
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.2/Alixo-Setup.exe",
+   "size": 79262834
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Portable.exe",
-   "size": 78460138
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.2/Alixo-Portable.exe",
+   "size": 78459366
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-Mac.dmg",
-   "size": 189543041
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.2/Alixo-Mac.dmg",
+   "size": 189750068
   },
   "macZip": {
-   "name": "Alixo-1.39.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.1/Alixo-1.39.1-mac.zip",
-   "size": 182750392
+   "name": "Alixo-1.39.2-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.39.2/Alixo-1.39.2-mac.zip",
+   "size": 183006930
   }
  },
  "history": [
+  {
+   "version": "1.39.2",
+   "date": "2026-10-19T16:15:27Z",
+   "notes": "Nouveautés 1.39.2 — Correction : icônes des fichiers Alixo refaites, nettes et entières\n\n\n- **Les icônes des fichiers Alixo retrouvent leur dessin d’origine.** Sur le bureau et dans l’Explorateur, les symboles blancs au centre des icônes (lignes de la séance, écran de la présentation, grille du tableur, liste du quiz, tableau de la planche) apparaissaient troués et granuleux : le détourage retirait tout ce qui était presque blanc, y compris dans le dessin. Désormais, seul le fond blanc autour de la feuille est retiré ; les symboles restent entiers, les coins arrondis aussi, et le contour est net, sans liseré blanc, sur un fond clair comme sur un fond sombre. (Appliqué par la mise à jour, qui repasse par l’installateur. Si Windows montre encore l’ancienne icône, son cache d’icônes se met à jour après un redémarrage de l’ordinateur.)\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.39.2"
+  },
   {
    "version": "1.39.1",
    "date": "2026-10-19T15:53:40Z",
@@ -220,11 +225,6 @@
    "version": "1.17.0",
    "date": "2026-09-22T19:01:22Z",
    "notes": "Nouveautés 1.17.0 — tableurs, partage des fichiers, logo Alixo+, panneau admin redessiné\n\n\n- **Tableurs** (nouveau type de document, à côté des séances et des présentations) : « ＋ Tableur » dans la bibliothèque, ou clic droit › Nouveau tableur ici. Grille A1 (26 colonnes × 100 lignes, extensible), **plusieurs feuilles** par classeur (renommer, dupliquer, déplacer, supprimer), largeurs de colonnes et hauteurs de lignes réglables à la souris, lignes et colonnes figées.\n  - **Formules** : `=A1+B2`, plages `A1:B10`, opérateurs `+ − × ÷ ^ % &` et comparaisons, **une cinquantaine de fonctions en français et en anglais** (SOMME/SUM, MOYENNE/AVERAGE, MIN, MAX, NB, NBVAL, MEDIANE, ECARTYPE, SOMME.SI, NB.SI, MOYENNE.SI, RANG, SI/IF, ET, OU, SIERREUR, ARRONDI, RACINE, PUISSANCE, MOD, RECHERCHEV, INDEX, EQUIV, CONCATENER, GAUCHE, DROITE, NBCAR, MAJUSCULE, AUJOURDHUI, ANNEE…), détection des références circulaires (`#CYCLE!`) et erreurs lisibles (`#DIV/0!`, `#NOM?`, `#VALEUR!`).\n  - **Mise en forme** : gras, italique, souligné, alignement, renvoi à la ligne, couleur du texte et du fond, formats **Nombre / Monnaie (€) / Pourcentage / Date** et nombre de décimales. Saisir « 12,5 % » ou « 40 € » applique le format tout seul.\n  - **Édition** : insérer et supprimer des lignes et des colonnes, **tri A→Z / Z→A**, copier-couper-coller (avec Excel, LibreOffice et Google Sheets : TSV et CSV), annuler / rétablir, effacer le contenu ou la mise en forme, menu contextuel sur les cellules, les en-têtes et les onglets.\n  - **Barre d'état** : somme, moyenne, minimum, maximum et nombre de valeurs de la sélection. **Graphique de la sélection** en volet de droite (barres, barres horizontales, courbes, aires, secteurs, anneau).\n  - **Entrées et sorties** : import d'un fichier **CSV**, export **CSV** de la feuille, export **PDF** (A4 paysage, une page par feuille) ; dans l'archive `.zip` d'un dossier, chaque feuille part en CSV.\n  - Les tableurs sont **synchronisés** avec le compte, **partageables** comme les séances (lecture ou écriture), **cherchables** (Ctrl+K trouve les cellules et ouvre la bonne feuille), et apparaissent dans la bibliothèque, l'explorateur et la galaxie.\n  - Raccourcis : flèches, Tab / Entrée, **F2** modifier, Suppr effacer, **Ctrl+flèche** bord de la zone remplie, Ctrl+C/X/V, Ctrl+Z / Ctrl+Y, Ctrl+B/I/U, Ctrl+A, Ctrl+P export PDF.\n- **Partage des fichiers** (PDF, Word, diaporamas, images, audio…) : clic droit sur un fichier › **Partager…**, comme une séance. Les fichiers d'un **dossier partagé** (moins de 20 Mo, décochables dans l'onglet Contenu) partent avec lui. Les membres les ouvrent dans la visionneuse d'Alixo, les affichent à côté d'un cours, les enregistrent ou les **copient dans leurs fichiers**. Le contenu est recopié dans `shares/{sid}/files/{id}` (nouvelles règles Firestore à déployer : `npm run rules`).\n- **Logo Alixo+** : sur un compte **Alixo+**, le logo de l'application devient le « A » orange avec le **+** — barre supérieure, favicon, Paramètres › À propos et icône de la fenêtre (version PC). Retour au logo habituel à la fin de l'abonnement.\n- **Paramètres › Compte** redessiné : carte d'identité (avatar, nom, e-mail, badge Alixo+ et bordure dorée), études, spécialités, état de la synchronisation avec pastille de couleur et formule du compte ; **stockage** dans sa propre carte (total en gros, barre par type, légende chiffrée, nombre de séances et de fichiers) ; pseudo Alixo Share dans une carte avec son rappel.\n- **Alixo Admin redessiné** : barres de défilement fines et discrètes (fini le bandeau clair), en-tête translucide et navigation en pastilles, cartes et tuiles avec ombres et survol, tableaux plus lisibles (en-têtes en petites capitales, colonne d'actions **figée à droite**), champs avec anneau de focus, fenêtres modales animées sur fond flouté, thème sombre repris en entier.\n- **Corrections** : la rangée d'onglets ne montre plus de ligne de défilement claire quand beaucoup de séances sont ouvertes (dégradé de bord, molette pour défiler) ; la case « Chaque semaine » de la fiche d'événement est alignée sur son titre.\n- Version `1.17.0` dans `package.json` et `app/js/app.js`."
-  },
-  {
-   "version": "1.16.0",
-   "date": "2026-09-22T17:28:03Z",
-   "notes": "Nouveautés 1.16.0 — Alixo+, fenêtres de partage et d'événement, corrections\n\n\n- **Alixo+** (formule payante, activée par l'administrateur) : le compte gratuit garde tout l'essentiel — cours, présentations, dossiers, agenda, partage, dictionnaire, export PDF, synchronisation — avec **3 Go** de stockage, les thèmes **clair / sombre / automatique** et **3 polices** (Alixo, Times New Roman, Segoe UI). **Alixo+** ouvre le stockage au-delà de 3 Go, tous les thèmes de couleurs, toutes les polices, l'**intelligence artificielle** (correction, mise en forme, reformulations) et les **tâches**. Les fonctions verrouillées ouvrent la fenêtre « Passer à Alixo+ » (tableau gratuit / Alixo+, prix et lien de paiement) ; Paramètres › **Alixo+** montre la formule du compte. Un thème ou une police Alixo+ choisis avant la fin de l'abonnement sont conservés et reviennent dès sa réactivation. Sans service en ligne configuré (mode 100 % local), tout reste ouvert.\n- **Panneau admin** : Utilisateurs › **Alixo+…** active, prolonge (1, 3, 6, 12 mois, sans fin ou jusqu'à une date) ou retire l'abonnement (`plans/{uid}`, nouvelle règle Firestore à déployer : `npm run rules`) ; colonne, filtre et export CSV Alixo+, compteur d'abonnés ; Annonces › **Alixo+ — offre** : prix, lien de paiement et note affichés dans l'application (`config/public`).\n- **Fenêtres centrales** (même présentation que les Paramètres) à la place des petits pop-overs : **Partager** (invitation, rôles expliqués), **gestionnaire de partage** (Membres / Contenu / Journal en volet de gauche, la liste se met à jour sans clignoter), **séance partagée avec moi** ; **fiche d'événement** en grande fenêtre avec aperçu en direct (jour, heures, lieu, couleur), champ « Chaque semaine » lisible, raccourcis clavier. Plein écran sur téléphone.\n- **Réglages IA corrigés** : les cases à cocher (analyse automatique, fautes, mise en forme, reformulations) s'affichaient étirées et décalées (règle générique des champs de saisie) ; l'interrupteur « Analyse automatique » n'apparaît plus en double dans les Paramètres. Même correction pour « Chaque semaine » dans la fiche d'événement.\n- **Police et thème qui « revenaient en arrière »** : les réglages (police, thème, IA…) sont maintenant **datés** (`settingsAt` dans la méta du compte) ; l'appareil qui démarre avec d'anciens réglages ne les impose plus aux autres, ce sont les réglages les plus récents qui gagnent, et une police remise par défaut sur un appareil l'est aussi sur les autres.\n- Version `1.16.0` dans `package.json` et `app/js/app.js`."
   }
  ]
 }
