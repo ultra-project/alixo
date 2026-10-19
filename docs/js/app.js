@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.38.0';
+const ALIXO_VERSION = '1.39.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -2665,8 +2665,8 @@ const SHORTCUTS = [
 ];
 
 /* ---------------- Paramètres › Écriture › Plan du cours (1.24) : pyramide des niveaux ---------------- */
-function planRowsHTML() {
-  const lv = planLevels();
+function planRowsHTML(lv) {
+  lv = lv || planLevelsGlobal();
   return lv.map((l, i) => `<div class="plan-lv" draggable="true" data-i="${i}" style="--d:${i}">
       <span class="plan-grip" title="Glisser pour déplacer ce niveau">⋮⋮</span>
       <span class="plan-sample" title="Exemple de numéro">${esc(NUM_STYLES[l.num][0])}</span>
@@ -2677,14 +2677,17 @@ function planRowsHTML() {
       <button type="button" class="plan-del" title="Retirer ce niveau" ${lv.length <= 1 ? 'disabled' : ''}>✕</button>
     </div>`).join('');
 }
-function bindPlanEditor(root) {
+/* `store` (1.39) : { get() → niveaux, set(lv), reset() } — les paramètres (toutes les séances) ou une séance (d.plan) */
+const PLAN_STORE_GLOBAL = { get: planLevelsGlobal, set(lv) { state.settings.plan = { levels: lv.slice(0, PLAN_MAX) }; }, reset() { delete state.settings.plan; } };
+const planStoreFor = d => ({ get: () => docOwnPlan(d) || planLevelsGlobal(), set(lv) { d.plan = { levels: lv.slice(0, PLAN_MAX) }; d.updatedAt = Date.now(); }, reset() { delete d.plan; d.updatedAt = Date.now(); } });
+function bindPlanEditor(root, store = PLAN_STORE_GLOBAL) {
   const box = root.querySelector('#set-plan'); if (!box) return;
   const addBtn = root.querySelector('#set-planadd');
-  const levels = () => planLevels().map(l => Object.assign({}, l));
+  const levels = () => store.get().map(l => Object.assign({}, l));
   const commit = (lv, rerender = true) => {
-    state.settings.plan = { levels: lv.slice(0, PLAN_MAX) };
+    store.set(lv);
     save(); applyPlanChange();
-    if (rerender) { box.innerHTML = planRowsHTML(); if (addBtn) addBtn.disabled = planDepth() >= PLAN_MAX; }
+    if (rerender) { box.innerHTML = planRowsHTML(store.get()); if (addBtn) addBtn.disabled = store.get().length >= PLAN_MAX; }
   };
   const readRows = () => [...box.querySelectorAll('.plan-lv')].map(row => ({ name: row.querySelector('.plan-name').value.trim(), num: row.querySelector('.plan-num').value, pre: row.querySelector('.plan-pre').value }));
   box.addEventListener('input', e => {
@@ -2728,7 +2731,37 @@ function bindPlanEditor(root) {
     commit(lv);
     const rows = box.querySelectorAll('.plan-lv'); if (rows.length) rows[rows.length - 1].querySelector('.plan-name').select();
   });
-  root.querySelector('#set-planreset').addEventListener('click', () => { delete state.settings.plan; save(); applyPlanChange(); box.innerHTML = planRowsHTML(); if (addBtn) addBtn.disabled = false; toast('Plan par défaut rétabli : I. A. 1. a.'); });
+  root.querySelector('#set-planreset').addEventListener('click', () => { store.reset(); save(); applyPlanChange(); box.innerHTML = planRowsHTML(store.get()); if (addBtn) addBtn.disabled = false; toast(store === PLAN_STORE_GLOBAL ? 'Plan par défaut rétabli : I. A. 1. a.' : 'Cette séance suit de nouveau le plan des paramètres'); });
+}
+/* tuiles du mode de plan ; `cur` : mode choisi, `inherit` : libellé de la tuile « comme les paramètres » (séance) ou '' */
+function planModeTilesHTML(id, cur, inherit) {
+  return `<div class="set-tiles set-tiles4 plan-modes" id="${id}">
+      ${inherit ? `<button type="button" class="set-tile ${!cur ? 'on' : ''}" data-mode=""><b>Comme les paramètres</b><span>${esc(inherit)}</span></button>` : ''}
+      ${PLAN_MODES.map(([k, n, h]) => `<button type="button" class="set-tile ${cur === k ? 'on' : ''}" data-mode="${k}"><b>${n}</b><span>${h}</span></button>`).join('')}
+    </div>`;
+}
+/* 1.39 : « Plan de cette séance… » — mode et pyramide propres à la séance ouverte */
+function openDocPlanDialog() {
+  const d = doc(); if (!d || isSpecialDoc(d)) return;
+  const inheritName = PLAN_MODES.find(m => m[0] === planModeGlobal())[1];
+  openDialog({ id: 'docplan', cls: 'plan-dlg', eyebrow: 'Plan de la séance', title: esc(d.titre || 'Sans titre'),
+    sub: 'Ces réglages ne valent que pour cette séance ; les autres suivent Paramètres › Écriture.',
+    body: `<div class="set-sect"><div class="po-label">Mode du plan</div>${planModeTilesHTML('dp-mode', d.planMode || '', inheritName)}</div>
+      <div class="set-sect"><div class="po-label">Niveaux de titres de cette séance</div>
+        <div class="po-hint" style="margin:0 0 10px">${docOwnPlan(d) ? 'Cette séance a sa propre pyramide.' : 'Cette séance suit la pyramide des paramètres : la modifier ici crée une pyramide propre à la séance.'}</div>
+        <div id="set-plan" class="plan-pyr">${planRowsHTML(docOwnPlan(d) || planLevelsGlobal())}</div>
+        <div class="po-row" style="gap:8px; margin-top:10px; flex-wrap:wrap"><button id="set-planadd" class="cta ghost small" type="button" ${(docOwnPlan(d) || planLevelsGlobal()).length >= PLAN_MAX ? 'disabled' : ''}>＋ Ajouter un niveau</button><button id="set-planreset" class="cta ghost small" type="button">Suivre le plan des paramètres</button></div></div>`,
+    foot: '<button class="cta" type="button" data-dlg-close>Fermer</button>',
+    onMount(root) {
+      bindPlanEditor(root, planStoreFor(d));
+      root.querySelector('#dp-mode').addEventListener('click', e => {
+        const b = e.target.closest('[data-mode]'); if (!b) return;
+        if (b.dataset.mode) d.planMode = b.dataset.mode; else delete d.planMode;
+        d.updatedAt = Date.now(); save(); applyPlanChange();
+        root.querySelectorAll('#dp-mode .set-tile').forEach(t => t.classList.toggle('on', t === b));
+        root.querySelector('#set-plan').innerHTML = planRowsHTML(docOwnPlan(d) || planLevelsGlobal());
+      });
+    } });
 }
 
 function settingsSectionHTML(k) {
@@ -2762,6 +2795,9 @@ function settingsSectionHTML(k) {
         <label class="set-inline">Taille <select id="set-fontsize">${DOC_SIZES.map(([v, l]) => `<option value="${v}" ${(state.settings.docSize || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       </div>
       <div class="set-checks" style="margin-top:12px"><label><input type="checkbox" id="set-pageview" ${state.settings.pageView !== false ? 'checked' : ''}><span><b>Feuille découpée en pages A4</b><small>Le cours s’affiche page par page, exactement comme dans le PDF (Ctrl+P) ; le bloc « Saut de page » du menu / force le passage à la page suivante. Décoché : une seule feuille continue.</small></span></label></div></div>
+    <div class="set-sect"><div class="po-label">Mode du plan</div>
+      <div class="po-hint" style="margin:0 0 10px">Pour toutes les séances ; chaque séance peut avoir le sien (bouton Niveau de plan de la barre d’outils › « Plan de cette séance… »).</div>
+      ${planModeTilesHTML('set-planmode', planModeGlobal(), '')}</div>
     <div class="set-sect"><div class="po-label">Plan du cours</div>
       <div class="po-hint" style="margin:0 0 10px">Les niveaux de titres, du plus général (en haut de la pyramide) au plus fin. <b>Glissez un niveau</b> pour le monter ou le descendre (ou ▲ ▼), ajoutez-en (Chapitre, Titre, §…), choisissez sa numérotation. Les <b>mots déclencheurs</b> transforment une ligne qui commence par l’un d’eux en titre de ce niveau : avec « Chapitre » sur le niveau placé au-dessus de « Section », taper « Chapitre 1 : Le contrat » crée un chapitre — comme « I. », « A. », « 1. » et « a. » le font déjà. Tab / Maj+Tab change le niveau d’un titre ; Ctrl+Alt+1…6 le fixe.</div>
       <div id="set-plan" class="plan-pyr">${planRowsHTML()}</div>
@@ -2848,6 +2884,12 @@ function bindSettingsSection(k, root) {
     return;
   }
   if (k === 'ecriture') {
+    root.querySelector('#set-planmode').addEventListener('click', e => {
+      const b = e.target.closest('[data-mode]'); if (!b) return;
+      state.settings.planMode = b.dataset.mode; save(); applyPlanChange();
+      root.querySelectorAll('#set-planmode .set-tile').forEach(t => t.classList.toggle('on', t === b));
+      toast(`Plan : ${PLAN_MODES.find(m => m[0] === b.dataset.mode)[1]}`);
+    });
     root.querySelector('#set-font').addEventListener('click', e => {
       const b = e.target.closest('[data-font]'); if (!b) return;
       if (fontLocked(b.dataset.font)) { openPlusDialog('polices'); return; }
@@ -2992,14 +3034,56 @@ const PLAN_DEFAULT = [
 /* styles de numérotation : [exemple, fonction] */
 const NUM_STYLES = { I: ['I.', ROMAN], A: ['A.', ALPHA], '1': ['1.', String], a: ['a.', alpha], i: ['i.', roman], '§': ['§ 1', n => '§ ' + n], '-': ['—', () => ''] };
 const NUM_STYLE_NAMES = { I: 'I. II. III.', A: 'A. B. C.', '1': '1. 2. 3.', a: 'a. b. c.', i: 'i. ii. iii.', '§': '§ 1, § 2', '-': 'Sans numéro' };
-function planLevels() {
-  const p = state.settings && state.settings.plan;
-  const raw = p && Array.isArray(p.levels) && p.levels.length ? p.levels : PLAN_DEFAULT;
+/* 1.39 : trois modes de plan — 'auto' (le plan numérote et détecte les titres, comme avant), 'adaptive' (le plan
+   suit l'ordre dans lequel vous introduisez les styles de numéros, sans rien imposer : « 1. » tapé en premier devient
+   le niveau 1, le style suivant le niveau 2…), 'none' (aucune détection, aucun numéro automatique).
+   Le mode et la pyramide se règlent dans Paramètres › Écriture (pour toutes les séances) et, depuis 1.39, pour chaque
+   séance (bouton Niveau de plan › « Plan de cette séance… » : d.planMode, d.plan). */
+const PLAN_MODES = [['auto', 'Automatique', 'Le plan numérote les titres et reconnaît « I. », « A. », « 1. »… en début de ligne'], ['adaptive', 'Adaptatif', 'Le plan s’adapte à votre façon d’écrire : l’ordre de vos numéros fait la hiérarchie, rien n’est imposé'], ['none', 'Aucun plan', 'Pas de détection ni de numéro automatique : vous écrivez vos titres comme vous voulez']];
+const planModeGlobal = () => (state.settings && PLAN_MODES.some(m => m[0] === state.settings.planMode) ? state.settings.planMode : 'auto');
+function planModeOf(d) {
+  d = d === undefined ? (currentDocId && !isVTabId(currentDocId) ? findDoc(currentDocId) : null) : d;
+  return d && PLAN_MODES.some(m => m[0] === d.planMode) ? d.planMode : planModeGlobal();
+}
+function normLevels(raw) {
   return raw.slice(0, PLAN_MAX).map((l, i) => ({
     name: String((l && l.name) || (PLAN_DEFAULT[i] ? PLAN_DEFAULT[i].name : '') || `Niveau ${i + 1}`),
     num: l && NUM_STYLES[l.num] ? l.num : (PLAN_DEFAULT[i] ? PLAN_DEFAULT[i].num : '1'),
     pre: String((l && l.pre) || '')
   }));
+}
+/* la pyramide des paramètres (toutes les séances) */
+function planLevelsGlobal() {
+  const p = state.settings && state.settings.plan;
+  return normLevels(p && Array.isArray(p.levels) && p.levels.length ? p.levels : PLAN_DEFAULT);
+}
+/* la pyramide propre à une séance (d.plan), ou null si elle suit les paramètres */
+const docOwnPlan = d => (d && d.plan && Array.isArray(d.plan.levels) && d.plan.levels.length ? normLevels(d.plan.levels) : null);
+/* mode adaptatif : les styles de numéros des titres, dans l'ordre où ils apparaissent dans la séance */
+let adaptiveCache = { id: '', key: '', order: [] };
+function adaptiveOrder(d) {
+  if (!d) return [];
+  const key = (d.blocks || []).map(b => (b && b.type === 'h' ? (b.st || '?') + (b.level || 1) : '')).join('');
+  if (adaptiveCache.id === d.id && adaptiveCache.key === key) return adaptiveCache.order;
+  const order = [];
+  /* ordre par niveau d'abord (un titre déplacé par Tab garde son rang), puis par apparition */
+  const byLevel = new Map();
+  for (const b of d.blocks || []) if (b && b.type === 'h' && b.st && NUM_STYLES[b.st]) { const L = Math.max(1, +b.level || 1); if (!byLevel.has(L)) byLevel.set(L, b.st); }
+  for (const L of [...byLevel.keys()].sort((a, b) => a - b)) { const st = byLevel.get(L); if (!order.includes(st)) order.push(st); }
+  adaptiveCache = { id: d.id, key, order };
+  return order;
+}
+/* les niveaux du plan de la séance courante (ou de `d`) : sa pyramide, sinon celle des paramètres ;
+   en mode adaptatif, les styles de numéros suivent l'ordre d'apparition dans la séance */
+function planLevels(d) {
+  d = d === undefined ? (currentDocId && !isVTabId(currentDocId) ? findDoc(currentDocId) : null) : d;
+  const base = docOwnPlan(d) || planLevelsGlobal();
+  if (planModeOf(d) !== 'adaptive' || !d) return base;
+  const order = adaptiveOrder(d);
+  if (!order.length) return base;
+  const out = base.map((l, i) => Object.assign({}, l, { num: order[i] || l.num }));
+  for (let i = base.length; i < Math.min(PLAN_MAX, order.length); i++) out.push({ name: `Niveau ${i + 1}`, num: order[i], pre: '' });
+  return out;
 }
 const planDepth = () => planLevels().length;
 const planLevelOf = level => { const lv = planLevels(); return lv[Math.min(lv.length, Math.max(1, +level || 1)) - 1]; };
@@ -3033,6 +3117,7 @@ function applyPlanChange() {
 
 /* numéros des titres (I. A. 1. a. — ou le plan personnalisé) et des listes numérotées (1. a. i.) */
 function computeNumbers(blocks) {
+  const mode = planModeOf();   // 1.39 : 'none' → les titres n'ont pas de numéro automatique
   const counters = new Array(PLAN_MAX).fill(0);
   const map = {};
   const lc = [0, 0, 0, 0];
@@ -3052,7 +3137,7 @@ function computeNumbers(blocks) {
     const L = Math.min(PLAN_MAX, Math.max(1, +b.level || 1));
     counters[L - 1]++;
     for (let i = L; i < PLAN_MAX; i++) counters[i] = 0;
-    map[b.id] = planNum(L, counters[L - 1]);
+    map[b.id] = mode === 'none' ? '' : planNum(L, counters[L - 1]);
   }
   return map;
 }
@@ -3112,7 +3197,7 @@ const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
 const falStyle = (b, k) => (b && b.fal && b.fal[k] ? ` style="text-align:${b.fal[k]}"` : '');
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
 const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc'];
-const BLOCK_PROPS = ['text', 'level', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans'];
+const BLOCK_PROPS = ['text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans'];
 /* « atomes » non éditables dans le texte : références d'articles, items LiSA, résultats de calcul, liens, rangs */
 const ATOM_SEL = '.refart, .calc-res, .lnk, .rtag';
 const ATOM_RE = /<img|refart|calc-res|class="lnk"|rtag/;
@@ -4385,12 +4470,19 @@ const AUTO_NUM = [
 ];
 /* { m, patch, keep } si la ligne commence par un numéro de titre ou un mot déclencheur du plan (1.24) */
 function autoHeadingMatch(t) {
+  const mode = planModeOf();
+  if (mode === 'none') return null;   // 1.39 : aucun plan — la ligne reste du texte
   const lv = planLevels();
   for (const [re, st, legacy] of AUTO_NUM) {
     const m = t.match(re); if (!m) continue;
+    if (mode === 'adaptive') {   // 1.39 : le premier style rencontré est le niveau 1, le suivant le niveau 2…
+      const order = adaptiveOrder(doc());
+      const L = Math.min(PLAN_MAX, (order.indexOf(st) + 1) || (order.length + 1));
+      return { m, patch: { type: 'h', level: L, st } };
+    }
     let L = lv.findIndex(l => l.num === st) + 1;
     if (!L) { if (!legacy) continue; L = Math.min(legacy, lv.length); }
-    return { m, patch: { type: 'h', level: L } };
+    return { m, patch: { type: 'h', level: L, st } };
   }
   for (const r of planPrefixRules()) if (r.re.test(t)) return { m: [''], patch: { type: 'h', level: r.level }, keep: true };   // le mot reste dans le titre
   return null;
@@ -4418,6 +4510,7 @@ function detectAutoPattern(b, el) {
   const off = caretOffsetIn(el);
   const patch = { type: p.type, text: p.text };
   if (p.level) patch.level = p.level;
+  if (p.st) patch.st = p.st;   // 1.39 : style de numéro tapé (mode adaptatif)
   if (p.lt) patch.lt = p.lt;
   if (p.ind) patch.ind = p.ind;
   if (p.ct) patch.ct = p.ct;
@@ -7976,8 +8069,8 @@ $('#toolbar').addEventListener('click', e => {
   if (act === 'heading') {
     showPopover(`<h4>Niveau de plan</h4><div class="po-list">
         ${planLevels().map((l, i) => `<button data-l="${i + 1}"><b style="color:var(--tint)">${esc(NUM_STYLES[l.num][0])}</b>&nbsp; ${esc(l.name)}</button>`).join('')}</div>
-        <div class="po-hint" style="margin:6px 0 0"><a href="#" id="po-planset">Modifier le plan…</a></div>`,
-      above, pop => { pop.querySelector('#po-planset').addEventListener('click', ev => { ev.preventDefault(); hidePopover(); openSettings('ecriture'); setTimeout(() => { const el = $('#set-plan'); if (el) el.scrollIntoView({ block: 'center' }); }, 80); }); pop.querySelector('.po-list').addEventListener('click', ev => {
+        <div class="po-hint" style="margin:6px 0 0"><a href="#" id="po-plandoc">Plan de cette séance…</a> · <a href="#" id="po-planset">Plan de toutes les séances…</a></div>`,
+      above, pop => { pop.querySelector('#po-plandoc').addEventListener('click', ev => { ev.preventDefault(); hidePopover(); openDocPlanDialog(); }); pop.querySelector('#po-planset').addEventListener('click', ev => { ev.preventDefault(); hidePopover(); openSettings('ecriture'); setTimeout(() => { const el = $('#set-plan'); if (el) el.scrollIntoView({ block: 'center' }); }, 80); }); pop.querySelector('.po-list').addEventListener('click', ev => {
         const l = ev.target.closest('[data-l]'); if (!l) return;
         hidePopover();
         const b = getBlock(bid);
@@ -10355,7 +10448,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Créez un document Alixo depuis le bureau de votre PC (clic droit › Nouveau), enregistré dans son fichier jusqu’à « Sauvegarde en ligne » ; une icône par type de fichier ; zoom fluide sous le curseur ; choix du format au téléchargement ; mention discrète « Fait avec Alixo » à la place du grand filigrane.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le plan se règle séance par séance (bouton Niveau de plan › « Plan de cette séance… ») et selon trois modes : automatique, adaptatif (le plan suit votre façon d’écrire) ou aucun plan ; nouvelles icônes des fichiers Alixo sur le bureau.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

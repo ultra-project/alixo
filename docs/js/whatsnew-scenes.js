@@ -11,9 +11,25 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.38.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.39.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.39.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Le plan, à <em>votre</em> façon', text: 'Un plan par séance, trois modes de plan, et de nouvelles icônes pour vos fichiers Alixo.', dur: 5000 },
+    { title: 'Un plan par <em>séance</em>', text: 'Chaque séance peut avoir sa propre pyramide de niveaux et son propre mode, sans toucher aux autres.',
+      bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… » dans la barre d’outils', '<b>Noms, numéros, mots déclencheurs</b> propres à la séance', '<b>Paramètres › Écriture</b> garde le plan de toutes les séances'],
+      art: 'text', accent: '#3d6bb5', accent2: '#b3762a', dur: 8000 },
+    { title: 'Trois <em>modes</em> de plan', text: 'Automatique, adaptatif ou aucun plan : à vous de choisir comment Alixo vous suit.',
+      bullets: ['<b>Automatique</b> : numérote et reconnaît « I. », « A. », « 1. »…', '<b>Adaptatif</b> : votre premier style de numéro devient le niveau 1, rien n’est imposé', '<b>Aucun plan</b> : ni détection ni numéro automatique'],
+      art: 'list', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 8500 },
+    { title: 'De nouvelles <em>icônes</em>', text: 'Sur le bureau, vos fichiers Alixo portent une feuille en relief dans la couleur de leur type.',
+      bullets: ['<b>Séance</b> bleu, <b>présentation</b> orange, <b>tableur</b> vert', '<b>Quiz</b> violet, <b>planche</b> rose', '<b>Windows et macOS</b>'],
+      art: 'cards', accent: '#b3762a', accent2: '#3d6bb5', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.38.0', {
   scenes: [
@@ -43,19 +59,6 @@ AlixoWhatsNew.register('1.37.2', {
     { title: 'Muette ? Elle <em>s’allège</em>', text: 'Si la carte graphique ne produit aucun mot, AlixoAI passe en version plus légère, recharge et rejoue votre demande, sans rien demander.',
       bullets: ['<b>Taille en dessous</b>, puis variante compatible', '<b>Délais</b> adaptés aux petites puces graphiques', '<b>Message précis</b> si rien ne marche malgré tout'],
       art: { icon: '✨' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.37.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'AlixoAI <em>démarre</em> partout', text: 'Correction pour les ordinateurs où AlixoAI répondait « WebGPU n’a pas pu démarrer ».' },
-    { title: 'Fini le message <em>« WebGPU »</em>', text: 'Sur bien des portables, l’accélération graphique était refusée. La version PC la force désormais, et AlixoAI insiste avant de renoncer.',
-      bullets: ['<b>Accélération graphique</b> forcée dans la version PC', '<b>Trois essais</b> pour trouver la carte graphique', '<b>« Réessayer »</b> refait vraiment l’essai, et le message dit pourquoi'],
-      art: { icon: '✨' }, accent: '#2e8b6a', accent2: '#33658a', dur: 7500 },
-    { title: 'Et toujours <em>AlixoAI</em>', text: 'Prête dès l’ouverture, le quiz dès la première question, des réponses bien plus rapides.',
-      bullets: ['<b>Rien à installer</b>, rien à configurer', '<b>Quiz IA</b> : la suite s’écrit pendant que vous répondez'],
-      art: 'quiz', accent: '#33658a', accent2: '#8a4b9c', dur: 6000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 5000 }
   ]
 });
