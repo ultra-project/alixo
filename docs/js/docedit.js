@@ -583,9 +583,10 @@ window.AlixoDocEdit = (() => {
     const e = my || ed; if (!e) return;
     e.stateTxt = t;
     if (e !== ed) return;
+    const st = /Échec/.test(t) ? 'error' : /non enregistr|Enregistrement…/.test(t) ? 'saving' : 'saved';
+    if (window.AlixoSaveStatus) { window.AlixoSaveStatus(st, t); return; }
     const el = document.getElementById('save-status'); if (!el) return;
-    el.dataset.st = /non enregistr|Enregistrement…|Échec/.test(t) ? 'saving' : 'saved';
-    el.textContent = t;
+    el.dataset.st = st; el.title = t;
   }
   function updateStatus() {
     if (!ed) return;

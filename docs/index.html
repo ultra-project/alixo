@@ -276,7 +276,7 @@
   <button data-menu="font" class="tb-font" title="Police d’écriture : de tout le document, ou du texte sélectionné"><span class="tb-fontname">Alixo</span><span class="tcaret">▾</span></button>
   <div class="fsize" title="Taille du texte">
     <button data-fs="-" title="Réduire la taille (Ctrl+Maj+<)">−</button>
-    <input id="fs-input" value="16" inputmode="numeric" maxlength="3" aria-label="Taille du texte">
+    <input id="fs-input" value="11" inputmode="decimal" maxlength="4" aria-label="Taille du texte (points)" title="Taille du texte, en points comme dans Word (police 11 par défaut)">
     <button data-fs="+" title="Augmenter la taille (Ctrl+Maj+>)">+</button>
   </div>
   <span data-zoom-mount="doc"></span>
@@ -301,7 +301,8 @@
   <button data-align="right" title="Aligner à droite (Ctrl+Maj+R)"><svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg></button>
   <button data-align="justify" title="Justifier (Ctrl+Maj+J)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg></button>
   <button data-act="link"    title="Insérer un lien (bouton cliquable, QR code à l’export PDF)"><svg viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1.5-1.5"/></svg></button>
-  <button data-act="refart"  title="Référence d’article (art. 1240 C. civ. → lien Légifrance)"><span class="tt" style="font-style:normal">§</span></button>
+  <button data-act="refart"  title="Article de loi (art. 1240 C. civ. → lien Légifrance) — ou tapez « art. 1240 c. civ. » dans le texte"><span class="tt" style="font-style:normal">§</span></button>
+  <button data-act="phone"   title="Photo depuis le téléphone : scannez le QR code, la photo prise apparaît dans la séance"><svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 9.5h1.2l.8-1.2h2l.8 1.2h1.2v4.5h-6Z"/><circle cx="12" cy="11.6" r="1.1"/></svg></button>
   <span class="tb-sep"></span>
   <span class="tb-hint" title="Les blocs (titres, encadrés, fiches, formules, graphiques, tableaux, images, dessins) s’insèrent avec « / » sur une ligne vide">/ blocs</span>
   <span class="tb-sep"></span>
@@ -411,5 +412,6 @@
 <script src="js/wallpaper.js"></script>
 <script src="js/blockpicker.js"></script>
 <script src="js/split.js"></script>
+<script src="js/photodrop.js"></script>
 </body>
 </html>

@@ -895,7 +895,7 @@ window.AlixoSheets = (() => {
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor((d() || {}).id) : null;
       bar.innerHTML = `<div class="sh-barl"><span class="sh-barlabel">${esc(s.name)}</span><span class="sh-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}</div>
-        <div class="sh-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}<button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button><button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button></div>`;
+        <div class="sh-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}<button data-sh="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF, CSV (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
       return;
     }
     const on = (p, v) => (v === undefined ? (cell[p] ? 'on' : '') : (cell[p] || '') === v ? 'on' : '');
@@ -935,9 +935,7 @@ window.AlixoSheets = (() => {
     <div class="sh-barr">
       ${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}
       <button data-sh="font" class="sh-font" title="Police du tableur (toutes les feuilles)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && d() && d().font && AlixoApp.fontByKey(d().font) ? AlixoApp.fontByKey(d().font).name : 'Police')}</span><span class="tcaret">▾</span></button>
-      <button data-sh="csv" title="Exporter la feuille en CSV">${I.csv}</button>
-      <button data-sh="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button>
-      ${window.AlixoAlx ? '<button data-sh="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-sheet) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
+      <button data-sh="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF, CSV (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
     </div>`;
   }
 
@@ -1037,7 +1035,7 @@ window.AlixoSheets = (() => {
   /* onglets des feuilles (bas de l'écran) */
   function renderTabsRow() {
     const dd = d(); const el = $('#sh-tabs'); if (!dd || !el) return;
-    el.innerHTML = sheetsOf(dd).map(s => `<button class="sh-tab ${s.id === curSheet ? 'active' : ''}" data-sheet="${s.id}" title="${esc(s.name)}">${esc(s.name)}</button>`).join('') +
+    el.innerHTML = sheetsOf(dd).map(s => `<button class="sh-tab ${s.id === curSheet ? 'active' : ''}" data-sheet="${s.id}" title="${esc(s.name)} — double-clic : renommer">${esc(s.name)}</button>`).join('') +
       (readOnly ? '' : `<button class="sh-tab add" data-sheet-add="1" title="Nouvelle feuille">＋</button>`);
   }
 
@@ -1336,6 +1334,7 @@ window.AlixoSheets = (() => {
 
       if (k === 'undo') { undo(); return; } if (k === 'redo') { redo(); return; }
       if (k === 'pdf') { exportPDF(); return; } if (k === 'csv') { exportCSV(); return; }
+      if (k === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else exportPDF(); return; }   // 1.40 : petite fenêtre des formats
       if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'chart') { chartOn = !chartOn; renderSide(); renderBar(); return; }
       if (k === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
@@ -1454,11 +1453,16 @@ window.AlixoSheets = (() => {
     $('#sh-tabs').addEventListener('click', e => {
       if (e.target.closest('[data-sheet-add]')) { addSheet(); return; }
       const b = e.target.closest('[data-sheet]'); if (!b) return;
-      if (b.dataset.sheet === curSheet) { if (!readOnly) renameSheet(b.dataset.sheet); return; }
+      if (b.dataset.sheet === curSheet) return;   // 1.40 : renommer = double-clic (ou clic droit)
       commitEdit(true);
       curSheet = b.dataset.sheet;
       sel = { r1: 0, c1: 0, r2: 0, c2: 0, ar: 0, ac: 0 };
       renderAll(); focusGrid();
+    });
+    $('#sh-tabs').addEventListener('click', e => {
+      if (e.detail !== 2) return;   // double-clic (l'onglet a pu être redessiné par le 1er clic)
+      const b = e.target.closest('[data-sheet]'); if (!b || readOnly) return;
+      e.preventDefault(); renameSheet(b.dataset.sheet);
     });
     $('#sh-tabs').addEventListener('contextmenu', e => {
       const b = e.target.closest('[data-sheet]'); if (!b || readOnly) return;
@@ -1609,6 +1613,11 @@ window.AlixoSheets = (() => {
   }
   function renameSheet(id) {
     const dd = d(); const s = sheetsOf(dd).find(x => x.id === id); if (!s) return;
+    const tab = document.querySelector(`#sh-tabs [data-sheet="${id}"]`);
+    if (tab && window.AlixoApp && AlixoApp.inlineRename) {   // 1.40 : sur place, dans l'onglet
+      AlixoApp.inlineRename(tab, { value: s.name, maxLength: 40, placeholder: 'Nom de la feuille', onCommit: v => { pushHist(); s.name = v.slice(0, 40); commit(); renderTabsRow(); renderBar(); } });
+      return;
+    }
     showPopover(`<h4>Renommer la feuille</h4>
       <div class="po-row"><input id="sh-rn" value="${esc(s.name)}" maxlength="40" autocomplete="off"></div>
       <div class="po-row" style="justify-content:flex-end; margin-top:10px"><button class="pobtn" id="sh-rn-ok">Enregistrer</button></div>`,
@@ -2150,6 +2159,6 @@ window.AlixoSheets = (() => {
 
   return {
     newDoc, open, leave, remoteChanged, undo, redo,
-    exportPDF, sheetCSV, preview, cellCount, search, reveal
+    exportPDF, exportCSV, sheetCSV, preview, cellCount, search, reveal
   };
 })();

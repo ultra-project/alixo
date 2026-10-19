@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#33658a">
+<meta name="robots" content="noindex">
+<title>Alixo — Envoyer une photo</title>
+<link rel="icon" href="logo.png">
+<link rel="apple-touch-icon" href="logo.png">
+<!-- Page du téléphone pour « Photo depuis le téléphone » (1.40) : ouverte en scannant le QR code affiché par Alixo
+     sur l'ordinateur (adresse : alixoapp.com/docs/photo.html#<session>). Aucun compte. Voir js/photo.js et js/photodrop.js. -->
+<style>
+  :root { --tint: #33658a; --bg: #f4f6f8; --card: #fff; --ink: #1d2329; --ink2: #5b6570; --line: #dfe4ea; --ok: #2f9e5b; --warn: #f08a24; --err: #d64545; color-scheme: light dark; }
+  @media (prefers-color-scheme: dark) { :root { --tint: #6fa3cc; --bg: #14181d; --card: #1d232a; --ink: #e8ecf0; --ink2: #a0abb6; --line: #2d353e; --ok: #4cc47e; --warn: #ff9f43; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; -webkit-text-size-adjust: 100%; }
+  body { min-height: 100vh; display: flex; flex-direction: column; padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom); }
+  .top { display: flex; align-items: center; gap: 8px; padding: 14px 0; font-weight: 700; font-size: 17px; }
+  .top img { width: 26px; height: 26px; border-radius: 7px; }
+  main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 21px; line-height: 1.25; margin: 10px 0 6px; }
+  .sub { color: var(--ink2); margin: 0 0 20px; font-size: 15px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; min-height: 58px; border-radius: 14px; border: 0; font: inherit; font-weight: 650; font-size: 17px; cursor: pointer; margin-bottom: 12px; -webkit-tap-highlight-color: transparent; }
+  .btn svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.primary { background: var(--tint); color: #fff; box-shadow: 0 6px 18px color-mix(in srgb, var(--tint) 35%, transparent); }
+  .btn.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  .btn:active { transform: scale(.98); }
+  input[type=file] { display: none; }
+  .list { list-style: none; padding: 0; margin: 18px 0 0; display: grid; gap: 10px; }
+  .item { display: flex; align-items: center; gap: 12px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
+  .item img { width: 54px; height: 54px; object-fit: cover; border-radius: 8px; flex: none; background: var(--line); }
+  .item .t { flex: 1; min-width: 0; font-size: 14.5px; }
+  .item .t small { display: block; color: var(--ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .st { width: 26px; height: 26px; flex: none; display: grid; place-items: center; }
+  .st svg { width: 22px; height: 22px; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+  .st.busy svg { stroke: var(--warn); animation: spin .8s linear infinite; }
+  .st.ok svg { stroke: var(--ok); }
+  .st.err svg { stroke: var(--err); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .msg { background: var(--card); border: 1px solid var(--line); border-radius: 14px; padding: 22px 18px; text-align: center; margin-top: 30px; }
+  .msg b { display: block; font-size: 18px; margin-bottom: 6px; }
+  .msg p { margin: 0; color: var(--ink2); }
+  .foot { text-align: center; color: var(--ink2); font-size: 12.5px; padding: 18px 0 14px; }
+  .foot a { color: inherit; }
+</style>
+</head>
+<body>
+  <div class="top"><img src="logo.png" alt="">Alixo</div>
+  <main id="main"><div class="msg"><b>Connexion…</b><p>Un instant.</p></div></main>
+  <div class="foot">Les photos vont directement dans votre document Alixo, puis sont effacées du serveur · <a href="https://alixoapp.com/confidentialite.html" target="_blank" rel="noopener">confidentialité</a></div>
+  <script src="firebase-config.js"></script>
+  <script src="js/vendor/firebase-app-compat.js"></script>
+  <script src="js/vendor/firebase-firestore-compat.js"></script>
+  <script src="js/photo.js"></script>
+</body>
+</html>

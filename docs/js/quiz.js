@@ -166,8 +166,7 @@ window.AlixoQuiz = (() => {
       <button data-qz="live" class="qz-live" title="Présenter en direct : code et QR code à l'écran, les participants répondent sur leur téléphone (alixoapp.com/quiz)">${I.cast}<span class="bd-lbl">Présenter en direct</span></button>
       <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
       <span class="bd-sep"></span>
-      <button data-qz="pdf" title="Exporter en PDF (Ctrl+P) : les questions, avec les réponses">PDF</button>
-      ${window.AlixoAlx ? '<button data-qz="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-quiz) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
+      <button data-qz="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (questions et réponses) (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
     </div>`;
   }
   function renderPalette() {
@@ -399,6 +398,7 @@ window.AlixoQuiz = (() => {
       else if (a === 'test') startTest(); else if (a === 'live') startLive();
       else if (a === 'results') openResults(); else if (a === 'pdf') exportPDF(); else if (a === 'look') openAppearance();
       else if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); }
+      else if (a === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else exportPDF(); }   // 1.40 : petite fenêtre des formats
     });
     /* palette : clic = ajouter après la question ouverte ; glisser = déposer dans la liste */
     $('#qz-palette').addEventListener('click', e => { const t = e.target.closest('[data-type]'); if (t) addQuestion(t.dataset.type); });

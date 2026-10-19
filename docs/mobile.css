@@ -117,3 +117,4 @@ body.mobile .dlg-body { padding: 8px 14px 20px; }
 body.mobile .dlg-foot { padding: 10px 14px calc(12px + env(safe-area-inset-bottom)); }
 body.mobile .ev-form, body.mobile .sh-dlg2 { grid-template-columns: 1fr; gap: 16px; }
 body.mobile .plus-row { grid-template-columns: minmax(0, 1fr) 80px 90px; }
+#toolbar [data-act="phone"] { display: none; }   /* 1.40 : la photo depuis le téléphone sert sur l’ordinateur */

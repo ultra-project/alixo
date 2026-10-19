@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.39.2';
+const ALIXO_VERSION = '1.40.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -74,15 +74,29 @@ function save() {
     setSaveStatus('saved');
   }, 350);
 }
-/* indicateur « Enregistré » dans la barre supérieure (éditeur) */
-function setSaveStatus(st) {
+/* indicateur d'enregistrement dans la barre supérieure (éditeur) — 1.40 : une icône au lieu du texte
+   (orange qui tourne : enregistrement en cours ; vert : enregistré ; rouge : échec) ; le détail (« Enregistré à 17:10 ·
+   synchronisé ») reste dans l'infobulle. Aussi utilisé par l'éditeur Word / OpenDocument (js/docedit.js). */
+const SAVE_ICONS = {
+  saving: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" class="ss-track"/><path d="M12 3.5a8.5 8.5 0 0 1 8.5 8.5" class="ss-arc"/></svg>',
+  saved: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.2 18.5h10a4 4 0 0 0 .6-7.96A6 6 0 0 0 6.3 9.6 4.5 4.5 0 0 0 7.2 18.5Z" class="ss-cloud"/><path d="m9.4 13.6 2 2 3.9-4" class="ss-check"/></svg>',
+  local: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" class="ss-cloud"/><path d="m8.4 12.3 2.4 2.4 4.8-5" class="ss-check"/></svg>',
+  error: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" class="ss-cloud"/><path d="M12 7.5v5.5M12 16.2v.3" class="ss-check"/></svg>'
+};
+function paintSaveStatus(st, label) {
   const el = $('#save-status'); if (!el) return;
+  const kind = st === 'saving' ? 'saving' : st === 'error' ? 'error' : (st === 'local' ? 'local' : 'saved');
+  if (el.dataset.st !== st || !el.firstChild) el.innerHTML = SAVE_ICONS[kind];
   el.dataset.st = st;
-  if (st === 'saving') { el.textContent = 'Enregistrement…'; return; }
+  el.title = label; el.setAttribute('aria-label', label);
+}
+function setSaveStatus(st) {
+  if (st === 'saving') { paintSaveStatus('saving', 'Enregistrement en cours…'); return; }
   const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const sync = window.AlixoSync && window.AlixoSync.enabled;
-  el.textContent = `Enregistré à ${t}${sync ? ' · synchronisé' : ''}`;
+  paintSaveStatus(sync ? 'saved' : 'local', `Enregistré à ${t}${sync ? ' · synchronisé' : ' sur cet appareil'}`);
 }
+window.AlixoSaveStatus = paintSaveStatus;
 function load() {
   try { return migrate(JSON.parse(localStorage.getItem(LS_KEY))); } catch { return null; }
 }
@@ -387,6 +401,44 @@ function addPage() {
   switchPage(np.id);
   openRenamePagePopover(np.id, true);
 }
+/* 1.40 : renommer un onglet sur place (double-clic sur son nom) — un champ se pose exactement sur l'onglet ;
+   Entrée ou clic ailleurs : valider ; Échap : annuler. Sert aux onglets de documents, aux onglets d'une séance
+   et aux feuilles du tableur (js/sheets.js, par AlixoApp.inlineRename). */
+function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titre', onCommit } = {}) {
+  if (!el || !el.isConnected) return;
+  document.querySelectorAll('.inline-rename').forEach(x => x.remove());
+  const r = el.getBoundingClientRect();
+  const cs = getComputedStyle(el);
+  const inp = document.createElement('input');
+  inp.className = 'inline-rename'; inp.value = value; inp.maxLength = maxLength; inp.placeholder = placeholder;
+  inp.spellcheck = false; inp.autocomplete = 'off';
+  Object.assign(inp.style, { left: r.left + 'px', top: r.top + 'px', height: r.height + 'px', minWidth: Math.max(r.width, 90) + 'px', font: cs.font, borderRadius: cs.borderRadius });
+  const fit = () => { inp.style.width = Math.max(r.width, 90, Math.min(360, inp.value.length * (parseFloat(cs.fontSize) * 0.62) + 34)) + 'px'; };
+  fit();
+  document.body.appendChild(inp);
+  let done = false;
+  const finish = ok => {
+    if (done) return; done = true;
+    const v = inp.value.trim();
+    inp.remove();
+    if (ok && v && v !== value && onCommit) onCommit(v);
+  };
+  inp.addEventListener('input', fit);
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+  });
+  inp.addEventListener('blur', () => finish(true));
+  inp.addEventListener('pointerdown', e => e.stopPropagation());
+  requestAnimationFrame(() => { inp.focus(); inp.select(); });
+}
+function renamePageInline(pid) {
+  const d = doc(); if (!d || readOnly) return;
+  const pg = docPages(d).find(p => p.id === pid); const el = $(`#page-tabs [data-page="${pid}"]`);
+  if (!pg || !el) { openRenamePagePopover(pid); return; }
+  inlineRename(el, { value: pg.titre || '', maxLength: 60, placeholder: 'Nom de l’onglet', onCommit: v => { pg.titre = v; d.updatedAt = Date.now(); save(); renderPageTabs(); } });
+}
 function openRenamePagePopover(pid, isNew) {
   const d = doc(); if (!d) return;
   const pg = docPages(d).find(p => p.id === pid); if (!pg) return;
@@ -441,7 +493,8 @@ $('#page-tabs').addEventListener('click', e => {
   if (e.target.closest('[data-pgadd]')) { addPage(); return; }
   const t = e.target.closest('[data-page]'); if (t) switchPage(t.dataset.page);
 });
-$('#page-tabs').addEventListener('dblclick', e => { const t = e.target.closest('[data-page]'); if (t && !readOnly) openRenamePagePopover(t.dataset.page); });
+// 1.40 : double-clic → renommer sur place (2e clic d'un double-clic : l'onglet a pu être redessiné par le 1er, d'où e.detail)
+$('#page-tabs').addEventListener('click', e => { if (e.detail !== 2) return; const t = e.target.closest('[data-page]'); if (t && !readOnly) renamePageInline(t.dataset.page); });
 $('#page-tabs').addEventListener('contextmenu', e => {
   const t = e.target.closest('[data-page]'); if (!t || readOnly) return;
   e.preventDefault();
@@ -482,7 +535,7 @@ function renderTabs() {
       const d = findDoc(id);
       const name = d.titre || 'Sans titre';
       const sh = isSharedDoc(id) ? '<svg class="tab-sh" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>' : '';
-      return `<button class="tab ${id === currentDocId ? 'active' : ''}" data-tab="${id}" draggable="true" title="${esc(name)}${sh ? ' (partagé)' : ''} — glisser pour réordonner">
+      return `<button class="tab ${id === currentDocId ? 'active' : ''}" data-tab="${id}" draggable="true" title="${esc(name)}${sh ? ' (partagé)' : ' — double-clic : renommer'} — glisser pour réordonner">
         ${sh}<span class="tab-name">${esc(name)}</span><span class="tab-x" data-close="${id}" title="Fermer l’onglet (Ctrl+W)">✕</span></button>`;
     }).join('');
   /* 1.19 : plus de défilement horizontal (il laissait une barre claire sous les onglets) : les onglets se
@@ -526,6 +579,20 @@ $('#tabbar').addEventListener('click', e => {
   const t = e.target.closest('[data-tab]'); if (!t) return;
   if (!t.dataset.tab) { if (currentDocId) showLibrary(); return; }
   if (t.dataset.tab !== currentDocId) openDoc(t.dataset.tab);
+});
+/* 1.40 : double-clic sur le nom d'un onglet de document → le renommer sur place */
+$('#tabbar').addEventListener('click', e => {
+  if (e.detail !== 2) return;   // 2e clic d'un double-clic (le 1er a pu redessiner la barre)
+  const t = e.target.closest('.tab[data-tab]'); if (!t || e.target.closest('.tab-x')) return;
+  const d = findDoc(t.dataset.tab);
+  if (!d || !state.docs.includes(d) || isSharedDoc(d.id)) return;   // onglet « vue » ou document partagé : pas de renommage ici
+  e.preventDefault();
+  const live = $(`#tabbar .tab[data-tab="${d.id}"]`);   // le premier clic a pu redessiner la barre
+  if (!live) return;
+  inlineRename(live, { value: d.titre || '', maxLength: 120, onCommit: v => {
+    d.titre = v; d.updatedAt = Date.now(); save(); renderTabs();
+    if (currentDocId === d.id) { renderCrumbs(); if (pagesActive()) schedulePaginate(true); } else if (!currentDocId) renderLibrary();
+  } });
 });
 $('#tabbar').addEventListener('auxclick', e => {
   const t = e.target.closest('[data-tab]');
@@ -1730,7 +1797,7 @@ $('#ctxmenu').addEventListener('click', e => {
   const cm = b.dataset.cm;
   if (cm.startsWith('pg') && menu.dataset.page) {
     const pid = menu.dataset.page;
-    if (cm === 'pgrename') openRenamePagePopover(pid); else if (cm === 'pgleft') movePage(pid, -1); else if (cm === 'pgright') movePage(pid, 1); else if (cm === 'pgadd') addPage(); else if (cm === 'pgdelete') deletePage(pid);
+    if (cm === 'pgrename') renamePageInline(pid); else if (cm === 'pgleft') movePage(pid, -1); else if (cm === 'pgright') movePage(pid, 1); else if (cm === 'pgadd') addPage(); else if (cm === 'pgdelete') deletePage(pid);
     return;
   }
   if (cm === 'cnewdoc') { createDocIn(currentFolderId); return; }
@@ -1890,7 +1957,7 @@ body { overflow: auto; background: #fff; padding: 40px 16px; }
 <body><article id="doc"><h1 class="exp-title">${esc(d.titre || 'Sans titre')}</h1><div id="blocks">${body}</div></article>${exportWatermarked() ? `<div id="alixo-wm" class="wm-screen" aria-hidden="true">${WM_HTML}</div>` : ''}</body></html>`;
 }
 
-const EXPORT_FORMATS = { pdf: { label: 'PDF', ext: '.pdf' }, docx: { label: 'Word (.docx)', ext: '.docx' }, html: { label: 'Page web (.html)', ext: '.html' }, alx: { label: 'Fichier Alixo (.alx)', ext: '.alx-docs' } };   // 1.35 : .alx (js/alx.js) — l'extension suit le type du document
+const EXPORT_FORMATS = { alx: { label: 'Fichier Alixo (.alx)', ext: '.alx-docs' }, pdf: { label: 'PDF', ext: '.pdf' }, docx: { label: 'Word (.docx)', ext: '.docx' }, html: { label: 'Page web (.html)', ext: '.html' } };   // 1.35 : .alx (js/alx.js) — l'extension suit le type du document ; 1.40 : ordre du menu ⤓ (Alixo, PDF, Word, page web)
 
 /* génère le fichier d'une séance dans le format choisi dans les paramètres */
 async function exportDocFile(d0, fmt, css) {
@@ -5598,35 +5665,59 @@ function acceptCalcGhost() {
   return true;
 }
 /* référence d'article tapée au clavier (« art. 1240 c. civ. », « article L. 121-1 c. conso ») → proposition de lien Légifrance, Tab pour accepter */
-const REF_TAIL = /(?:^|[\s(«])((?:art(?:icle)?s?\.?\s*)((?:[LRD]\.?\s*)?\d+[\d\-.]*(?:\s*al\.?\s*\d+(?:er)?)?)\s*(?:du\s+)?((?:c(?:ode)?\.?\s*(?:civ|p[ée]n|com|trav|conso)\.?|cpc|const\.?|cgi)))$/i;
 function refOnInput(b, field) {
   if (!['p', 'li', 'quote', 'callout', 'h'].includes(b.type)) return;
   const before = textBeforeCaret(field); if (before == null) return;
-  const m = before.split('\n').pop().match(REF_TAIL); if (!m) return;
-  const ref = parseRef(m[2] + ' ' + m[3]); if (!ref) return;
+  const line = before.split('\n').pop();
+  // 1.40 : une espace (ou , ; : ) ! ?) tapée juste après une référence complète → elle devient un lien, sans Tab
+  const last = line.slice(-1);
+  if (/[\s ,;:)!?»]/.test(last)) {
+    const m0 = line.slice(0, -1).match(REF_TAIL);
+    if (m0) { const p = parseRefs(m0[2] + ' ' + m0[3]); if (p) { convertTypedRef(field, p, m0[1].length, 1, m0[1]); return; } }
+  }
+  const m = line.match(REF_TAIL); if (!m) return;
+  const p = parseRefs(m[2] + ' ' + m[3]); if (!p) return;
   const rect = caretRect(field); if (!rect) return;
   const g = $('#calc-ghost');
-  g.innerHTML = `<span class="cg-val">§ ${esc(ref.label)}</span><kbd>Tab</kbd>`;
+  g.innerHTML = `<span class="cg-val">§ ${esc(p.refs.map(r => r.label).join(', '))}</span><kbd>Espace</kbd>`;
   g.hidden = false;
   g.style.fontSize = getComputedStyle(field).fontSize;
   g.style.left = (rect.right + 4) + 'px'; g.style.top = rect.top + 'px'; g.style.height = rect.height + 'px';
-  calcGhost = { field, kind: 'ref', ref, len: m[1].length };
+  calcGhost = { field, kind: 'ref', p, len: m[1].length, src: m[1] };
 }
-function acceptRefGhost() {
-  const { field, ref, len } = calcGhost;
+/* remplace les `len` caractères qui précèdent le curseur (moins `skip` caractères juste tapés) par les boutons de références */
+function convertTypedRef(field, p, len, skip, src) {
   hideCalcGhost();
   const sel = getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return false;
   const r = sel.getRangeAt(0);
   if (!field.contains(r.startContainer)) return false;
-  // sélectionne les `len` derniers caractères tapés (peuvent traverser plusieurs nœuds de texte) puis les remplace par le bouton
-  const endOff = offsetInField(field, r.startContainer, r.startOffset);
+  const endOff = offsetInField(field, r.startContainer, r.startOffset) - skip;
   const startPt = pointAtOffset(field, Math.max(0, endOff - len));
-  const del = document.createRange(); del.setStart(startPt.node, startPt.off); del.setEnd(r.startContainer, r.startOffset);
-  domInsertHTML(del, refChipHTML(ref) + '&nbsp;');
+  const endPt = pointAtOffset(field, endOff);
+  const del = document.createRange(); del.setStart(startPt.node, startPt.off); del.setEnd(endPt.node, endPt.off);
+  const typed = skip ? null : '&nbsp;';
+  const mark = 'ref' + Date.now().toString(36);
+  domInsertHTML(del, refsHTML(p).replace(/<a class="refart"/g, `<a data-tmp="${mark}" class="refart"`) + (typed || ''));
+  const chips = [...field.querySelectorAll(`[data-tmp="${mark}"]`)];
+  chips.forEach(c => c.removeAttribute('data-tmp'));
+  if (skip) {   // remet le curseur après le caractère tapé (espace, virgule…)
+    const after = chips[chips.length - 1] && chips[chips.length - 1].nextSibling;
+    if (after && after.nodeType === 3) { const nr = document.createRange(); nr.setStart(after, Math.min(skip, after.length)); nr.collapse(true); sel.removeAllRanges(); sel.addRange(nr); }
+  }
   const bl = field.closest('.block'); const b = bl && getBlock(bl.dataset.id);
   if (b) { syncFieldToModel(b, field); touch(); }
-  toast(ref.full + ' — lien Légifrance');
+  rememberRefs(p);
+  toast(`${p.refs.length > 1 ? p.refs.length + ' articles' : p.refs[0].full} — lien Légifrance`, { action: 'Garder en texte', onAction: () => {
+    if (!chips.length || !chips[0].isConnected) return;
+    const r2 = document.createRange(); r2.setStartBefore(chips[0]); r2.setEndAfter(chips[chips.length - 1]);
+    r2.deleteContents(); r2.insertNode(document.createTextNode(src));
+    if (b) { syncFieldToModel(b, field); touch(); }
+  } });
   return true;
+}
+function acceptRefGhost() {
+  const { field, p, len, src } = calcGhost;
+  return convertTypedRef(field, p, len, 0, src);
 }
 /* recalcul des résultats déjà insérés quand l'expression qui les précède change */
 function updateCalcResults(b, field) {
@@ -5738,7 +5829,7 @@ function afterFmt() {
   touch(); setBlockNumbers(); updateToolbarState();
 }
 
-const FONT_STEPS = [8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28, 32, 36, 48, 72];
+const FONT_STEPS = [8, 9, 10, 10.5, 11, 12, 14, 16, 18, 20, 22, 24, 28, 36, 48, 72];   // en points (1.40)
 /* palette (façon Google Docs) : 10 colonnes, du gris aux teintes foncées */
 const PALETTE = [
   ['#000000', '#434343', '#666666', '#999999', '#b7b7b7', '#cccccc', '#d9d9d9', '#efefef', '#f3f3f3', '#ffffff'],
@@ -5780,25 +5871,27 @@ function openPalettePopover(rect, { title = 'Couleur', none = 'Aucune', quick = 
     });
 }
 
-/* taille de police du point d'insertion (px arrondis) */
+/* taille de police du point d'insertion, en points comme dans Word (1.40 ; arrondie au demi-point) */
+const pxToPt = px => Math.round(px * 0.75 * 2) / 2;
 function currentFontSize() {
   const sel = getSelection(); if (!sel.rangeCount) return null;
   let n = sel.focusNode; if (!n) return null;
   if (n.nodeType === 1 && n.childNodes[sel.focusOffset - 1] && n.childNodes[sel.focusOffset - 1].nodeType === 1) n = n.childNodes[sel.focusOffset - 1];
   const el = n.nodeType === 3 ? n.parentElement : n;
   if (!el || !blocksEl.contains(el)) return null;
-  return Math.round(parseFloat(getComputedStyle(el).fontSize));
+  return pxToPt(parseFloat(getComputedStyle(el).fontSize));
 }
-/* applique une taille (px) à la sélection, ou à la suite de la frappe */
-function applyFontSize(px) {
-  px = Math.max(6, Math.min(120, Math.round(px)));
+/* applique une taille (en points, 1.40) à la sélection, ou à la suite de la frappe */
+function applyFontSize(pt) {
+  pt = Math.max(5, Math.min(96, Math.round(pt * 2) / 2));
+  const px = pt + 'pt';
   const f = activeField(); if (!f || f.tagName === 'INPUT') return;
   const sel = getSelection(); if (!sel.rangeCount) return;
   if (sel.isCollapsed) {
     const r = sel.getRangeAt(0);
     const here = sel.anchorNode && (sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentElement : sel.anchorNode);
-    if (here && here.tagName === 'SPAN' && here.style.fontSize && here.textContent === '\u200B') { here.style.fontSize = px + 'px'; updateToolbarState(); return; }
-    const span = document.createElement('span'); span.style.fontSize = px + 'px'; span.textContent = '\u200B';
+    if (here && here.tagName === 'SPAN' && here.style.fontSize && here.textContent === '\u200B') { here.style.fontSize = px; updateToolbarState(); return; }
+    const span = document.createElement('span'); span.style.fontSize = px; span.textContent = '\u200B';
     r.insertNode(span);
     const nr = document.createRange(); nr.setStart(span.firstChild, 1); nr.collapse(true);
     sel.removeAllRanges(); sel.addRange(nr);
@@ -5813,7 +5906,7 @@ function applyFontSize(px) {
   const host = f.isContentEditable ? f.closest('[contenteditable="true"]') : blocksEl;
   const spans = [];
   host.querySelectorAll('font[size="7"]').forEach(fnt => {
-    const s = document.createElement('span'); s.style.fontSize = px + 'px';
+    const s = document.createElement('span'); s.style.fontSize = px;
     while (fnt.firstChild) s.appendChild(fnt.firstChild);
     fnt.replaceWith(s);
     s.querySelectorAll('[style]').forEach(x => { x.style.fontSize = ''; if (!x.getAttribute('style')) x.removeAttribute('style'); });
@@ -5827,8 +5920,8 @@ function applyFontSize(px) {
   afterFmt();
 }
 function stepFontSize(dir) {
-  const cur = currentFontSize() || 16;
-  const next = dir > 0 ? (FONT_STEPS.find(s => s > cur) || cur + 4) : ([...FONT_STEPS].reverse().find(s => s < cur) || Math.max(6, cur - 1));
+  const cur = currentFontSize() || 11;
+  const next = dir > 0 ? (FONT_STEPS.find(s => s > cur) || cur + 4) : ([...FONT_STEPS].reverse().find(s => s < cur) || Math.max(5, cur - 1));
   applyFontSize(next);
 }
 $('#toolbar .fsize').addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
@@ -5842,11 +5935,11 @@ fsInput.addEventListener('focus', () => { const s = getSelection(); fsSavedSel =
 fsInput.addEventListener('keydown', e => {
   if (e.key === 'Enter') {
     e.preventDefault();
-    const v = parseInt(fsInput.value, 10);
+    const v = parseFloat(String(fsInput.value).replace(',', '.'));
     if (fsSavedSel) { blocksEl.focus({ preventScroll: true }); const s = getSelection(); s.removeAllRanges(); s.addRange(fsSavedSel); }
     if (v) applyFontSize(v); else updateToolbarState();
   } else if (e.key === 'Escape') { e.preventDefault(); if (fsSavedSel) { blocksEl.focus({ preventScroll: true }); const s = getSelection(); s.removeAllRanges(); s.addRange(fsSavedSel); } }
-  else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const v = parseInt(fsInput.value, 10) || 16; fsInput.value = e.key === 'ArrowUp' ? v + 1 : Math.max(6, v - 1); }
+  else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') { e.preventDefault(); const v = parseFloat(String(fsInput.value).replace(',', '.')) || 11; fsInput.value = e.key === 'ArrowUp' ? v + 1 : Math.max(5, v - 1); }
 });
 
 /* états de la barre d'outils (gras, listes, taille…) selon le curseur */
@@ -5863,7 +5956,7 @@ function updateToolbarState() {
     tb.querySelectorAll('[data-list]').forEach(btn => btn.classList.toggle('on', !!b && b.type === 'li' && (b.lt || 'ul') === btn.dataset.list));
     const al = currentAlign();
     tb.querySelectorAll('[data-align]').forEach(btn => btn.classList.toggle('on', btn.dataset.align === al));
-    if (document.activeElement !== fsInput) { const px = inText ? currentFontSize() : null; fsInput.value = px || ''; }
+    if (document.activeElement !== fsInput) { const pt = inText ? currentFontSize() : null; fsInput.value = pt ? String(pt).replace('.', ',') : ''; }
   }, 30);
 }
 
@@ -6040,6 +6133,25 @@ async function addImageFiles(files, afterId) {
     lastId = afterId = nb.id;
   }
   if (lastId) { selectObj(lastId); toast(list.length > 1 ? `${list.length} images insérées` : 'Image insérée — poignées pour la taille, barre pour recadrer ou aligner'); }
+  return lastId;
+}
+/* 1.40 : photo depuis le téléphone — QR code (js/photodrop.js) ; chaque photo reçue s'insère à l'endroit du curseur
+   au moment de l'ouverture, puis à la suite des précédentes, dans la séance d'origine (rouverte au besoin) */
+function openPhoneImage(bid) {
+  const d = doc(); if (!d || readOnly || isSpecialDoc(d)) return;
+  if (!window.AlixoPhotoDrop) { toast('Fonction indisponible'); return; }
+  const docId = d.id;
+  let after = bid || currentBlockId() || null;
+  let queue = Promise.resolve();
+  AlixoPhotoDrop.open({ title: d.titre || 'Sans titre', onPhoto: file => {
+    queue = queue.then(async () => {
+      if (!findDoc(docId)) return;
+      if (currentDocId !== docId) { openDoc(docId); await new Promise(r => setTimeout(r, 60)); }
+      if (after && !getBlock(after)) after = null;
+      const id = await addImageFiles([file], after);
+      if (id) { after = id; const el = $(`.block[data-id="${id}"]`); if (el) scrollToBlockEl(el, { margin: 60 }); }
+    }).catch(e => console.error(e));
+  } });
 }
 let imgReplaceTarget = null;
 $('#img-file').addEventListener('change', async e => {
@@ -6445,6 +6557,7 @@ const SLASH_ITEMS = [
   { sect: 'Mise en page' },
   { id: 'table', ico: '▦', name: 'Tableau', sub: '3 lignes × 3 colonnes, modifiable', kw: 'tableau table grille colonnes lignes' },
   { id: 'image', icon: 'camera', name: 'Image', sub: 'Photo, schéma, capture — recadrable, déplaçable', kw: 'image photo schema capture illustration figure' },
+  { id: 'phoneimg', icon: 'smartphone', name: 'Photo depuis le téléphone', sub: 'QR code à scanner : la photo prise apparaît ici', kw: 'telephone portable smartphone qr code photo scanner mobile image envoyer' },
   { id: 'draw', icon: 'pen-line', name: 'Dessin', sub: 'Formes, flèches, zones de texte, main levée', kw: 'dessin dessiner schema forme fleche croquis rectangle cercle texte' },
   { id: 'link', icon: 'link', name: 'Lien', sub: 'Bouton cliquable, QR code à l’export PDF', kw: 'lien url site web adresse', inline: true },
   { id: 'timer', icon: 'clock', name: 'Minuteur', sub: 'Compte à rebours ou chronomètre dans le cours', kw: 'minuteur chrono chronometre compte a rebours timer temps', },
@@ -6620,6 +6733,7 @@ function applySlash(sid) {
   if (sid === 'ol' || sid === 'cl') { transform({ type: 'li', lt: sid }); return; }
   if (sid === 'quote') { transform({ type: 'quote' }); return; }
   if (sid === 'image') { restore(); pickImages(); return; }
+  if (sid === 'phoneimg') { restore(); openPhoneImage(bid); return; }
   if (sid === 'draw') { restore(); insertDrawing(); return; }
   if (sid.startsWith('c-')) { transform({ type: 'callout', ct: sid.slice(2) }); return; }
   if (sid === 'juris') { const nb = transform({ type: 'juris', fields: {} }); focusBlock(nb.id, 'start', 'f:ref'); toast('Fiche d’arrêt — Entrée ou Tab pour passer au champ suivant'); return; }
@@ -6802,32 +6916,92 @@ function openGraphChooser(bid) {
     });
 }
 
-/* ---------------- référence d'article ---------------- */
+/* ---------------- référence d'article ----------------
+   1.40 : repensé pour aller vite — 25 codes et textes reconnus (abréviation ou nom complet, « du Code civil »…),
+   préfixes L. / R. / D. / LO, alinéas, plusieurs articles d'un coup (« 1240 et 1241 c. civ. ») ; tapé dans le texte,
+   « art. 1240 c. civ. » devient un lien dès l'espace suivante ; la fenêtre § retient le dernier code (il suffit
+   ensuite de taper le numéro) et les références récentes (un clic pour les réinsérer). */
 const CODES = [
-  [/c(?:ode)?\.?\s*civ/i, 'C. civ.', 'Code civil'],
-  [/c(?:ode)?\.?\s*p[ée]n/i, 'C. pén.', 'Code pénal'],
-  [/c(?:ode)?\.?\s*com/i, 'C. com.', 'Code de commerce'],
-  [/c(?:ode)?\.?\s*trav/i, 'C. trav.', 'Code du travail'],
-  [/cpc|proc[ée]dure\s*civ/i, 'CPC', 'Code de procédure civile'],
-  [/const/i, 'Const.', 'Constitution du 4 octobre 1958'],
-  [/conso/i, 'C. conso.', 'Code de la consommation'],
-  [/cgi|imp[oô]t/i, 'CGI', 'Code général des impôts']
+  // l'ordre compte : les intitulés les plus précis d'abord (procédure civile avant civil…)
+  { k: 'cpc', re: "cpc|c(?:ode)?\\.?\\s*(?:de\\s+)?pr(?:oc(?:[ée]dure)?)?\\.?\\s*civ(?:ile)?\\.?", abbr: 'CPC', full: 'Code de procédure civile' },
+  { k: 'cpp', re: "cpp|c(?:ode)?\\.?\\s*(?:de\\s+)?pr(?:oc(?:[ée]dure)?)?\\.?\\s*p[ée]n(?:ale)?\\.?", abbr: 'CPP', full: 'Code de procédure pénale' },
+  { k: 'civ', re: "c(?:ode)?\\.?\\s*civ(?:il)?\\.?|cciv", abbr: 'C. civ.', full: 'Code civil' },
+  { k: 'pen', re: "c(?:ode)?\\.?\\s*p[ée]n(?:al)?\\.?", abbr: 'C. pén.', full: 'Code pénal' },
+  { k: 'com', re: "c(?:ode)?\\.?\\s*(?:de\\s+)?com(?:merce)?\\.?", abbr: 'C. com.', full: 'Code de commerce' },
+  { k: 'trav', re: "c(?:ode)?\\.?\\s*(?:du\\s+)?trav(?:ail)?\\.?", abbr: 'C. trav.', full: 'Code du travail' },
+  { k: 'const', re: "const(?:itution)?\\.?(?:\\s*(?:du\\s+)?4\\s*oct(?:obre|\\.)?\\s*1958)?|c58", abbr: 'Const.', full: 'Constitution du 4 octobre 1958', de: 'de la', all: true },
+  { k: 'ddhc', re: "ddhc|d[ée]cl(?:aration)?\\.?\\s*(?:des\\s+)?dr(?:oits)?\\.?\\s*(?:de\\s+l['’]\\s*)?homme(?:\\s+et\\s+du\\s+citoyen)?", abbr: 'DDHC', full: 'Déclaration des droits de l’homme et du citoyen de 1789', de: 'de la', all: true },
+  { k: 'cedh', re: "conv(?:ention)?\\.?\\s*e\\.?d\\.?h\\.?|cesdh|cedh", abbr: 'Conv. EDH', full: 'Convention européenne des droits de l’homme', de: 'de la', all: true },
+  { k: 'conso', re: "c(?:ode)?\\.?\\s*(?:de\\s+la\\s+)?conso(?:mmation)?\\.?", abbr: 'C. conso.', full: 'Code de la consommation', de: 'du' },
+  { k: 'cgi', re: "cgi|c(?:ode)?\\.?\\s*g[ée]n(?:[ée]ral)?\\.?\\s*(?:des\\s+)?imp[oô]ts?", abbr: 'CGI', full: 'Code général des impôts' },
+  { k: 'csp', re: "csp|c(?:ode)?\\.?\\s*(?:de\\s+la\\s+)?sant[ée](?:\\s*pub(?:lique)?)?\\.?", abbr: 'CSP', full: 'Code de la santé publique' },
+  { k: 'css', re: "css|c(?:ode)?\\.?\\s*(?:de\\s+la\\s+)?s[ée]c(?:urit[ée])?\\.?\\s*soc(?:iale)?\\.?", abbr: 'CSS', full: 'Code de la sécurité sociale' },
+  { k: 'cja', re: "cja|c(?:ode)?\\.?\\s*(?:de\\s+)?(?:la\\s+)?just(?:ice)?\\.?\\s*adm(?:inistrative)?\\.?", abbr: 'CJA', full: 'Code de justice administrative' },
+  { k: 'cgct', re: "cgct", abbr: 'CGCT', full: 'Code général des collectivités territoriales' },
+  { k: 'crpa', re: "crpa", abbr: 'CRPA', full: 'Code des relations entre le public et l’administration' },
+  { k: 'env', re: "c(?:ode)?\\.?\\s*(?:de\\s+l['’]\\s*)?env(?:ironnement)?\\.?", abbr: 'C. env.', full: 'Code de l’environnement' },
+  { k: 'urb', re: "c(?:ode)?\\.?\\s*(?:de\\s+l['’]\\s*)?urb(?:anisme)?\\.?", abbr: 'C. urb.', full: 'Code de l’urbanisme' },
+  { k: 'cpi', re: "cpi|c(?:ode)?\\.?\\s*(?:de\\s+la\\s+)?propr(?:i[ée]t[ée])?\\.?\\s*intell(?:ectuelle)?\\.?", abbr: 'CPI', full: 'Code de la propriété intellectuelle' },
+  { k: 'cmf', re: "cmf|c(?:ode)?\\.?\\s*mon(?:[ée]taire)?\\.?\\s*(?:et\\s+)?fin(?:ancier)?\\.?", abbr: 'CMF', full: 'Code monétaire et financier' },
+  { k: 'assur', re: "c(?:ode)?\\.?\\s*(?:des\\s+)?assur(?:ances)?\\.?", abbr: 'C. assur.', full: 'Code des assurances' },
+  { k: 'rur', re: "c(?:ode)?\\.?\\s*rur(?:al)?\\.?", abbr: 'C. rur.', full: 'Code rural et de la pêche maritime' },
+  { k: 'educ', re: "c(?:ode)?\\.?\\s*(?:de\\s+l['’]\\s*)?[ée]duc(?:ation)?\\.?", abbr: 'C. éduc.', full: 'Code de l’éducation' },
+  { k: 'ceseda', re: "ceseda", abbr: 'CESEDA', full: 'Code de l’entrée et du séjour des étrangers et du droit d’asile' },
+  { k: 'tfue', re: "tfue", abbr: 'TFUE', full: 'Traité sur le fonctionnement de l’Union européenne', all: true },
+  { k: 'tue', re: "tue", abbr: 'TUE', full: 'Traité sur l’Union européenne', all: true }
 ];
+const REF_CODES_TOP = ['civ', 'pen', 'com', 'trav', 'cpc', 'cpp', 'const', 'ddhc', 'cedh', 'conso'];
+const codeByKey = k => CODES.find(c => c.k === k) || CODES.find(c => c.k === 'civ');
+const REF_NUM = "(?:(?:LO|[LRDA])\\.?\\s*)?\\d+(?:[-–.]\\d+)*(?:\\s*(?:al(?:in[ée]a|\\.)?|§)\\s*\\d+(?:er|e)?)?";
+const REF_NUM_RE = /(?:\b(LO|[LRDA])\.?\s*)?(\d+(?:[-–.]\d+)*)(?:\s*(?:al(?:in[ée]a|\.)?|§)\s*(\d+)(?:er|e)?)?/gi;
+const NOT_WORD = 'a-zà-ÿœæ0-9';
+/* fin de ligne tapée au clavier : « art. 1240 c. civ », « article L. 121-1 du code de la consommation », « art. 1240 et 1241 C. civ. » */
+const REF_TAIL = new RegExp(`(?:^|[\\s(«"'’\\u00a0])((?:art(?:icle)?s?\\.?\\s*)(${REF_NUM}(?:\\s*(?:,|et)\\s*${REF_NUM})*)\\s*,?\\s*(?:(?:du|de\\s+la|de\\s+l['’]|des|de)\\s+)?(${CODES.map(c => '(?:' + c.re + ')').join('|')}))$`, 'i');
 
-function parseRef(input) {
-  const m = input.match(/(\d+[\d\-.]*(?:\s*al\.?\s*\d+(?:er)?)?)/);
-  if (!m) return null;
-  const num = m[1].trim();
-  for (const [re, abbr, full] of CODES) {
-    if (re.test(input)) {
-      return {
-        label: `art. ${num} ${abbr}`,
-        full: `article ${num} du ${full}`,
-        url: `https://www.legifrance.gouv.fr/search/code?query=${encodeURIComponent('article ' + num + ' ' + full)}`
-      };
-    }
+/* reconnaît le code dans une saisie ; renvoie { code, rest } (rest = la saisie sans le code) */
+function findCode(input) {
+  for (const c of CODES) {
+    const m = input.match(new RegExp(`(^|[^${NOT_WORD}])(?:(?:du|de\\s+la|de\\s+l['’]|des|de)\\s+)?(?:${c.re})(?=$|[^${NOT_WORD}])`, 'i'));
+    if (m) return { code: c, rest: input.slice(0, m.index) + m[1] + ' ' + input.slice(m.index + m[0].length) };
   }
-  return { label: `art. ${num}`, full: `article ${num}`, url: `https://www.legifrance.gouv.fr/search/all?query=${encodeURIComponent('article ' + num)}` };
+  return null;
+}
+/* « 1240 et 1241 c. civ. » → [{ label, full, url }, …] et les séparateurs à garder entre eux ; defCode : code à défaut */
+function parseRefs(input, defCode) {
+  const fc = findCode(String(input || ''));
+  const code = fc ? fc.code : (defCode ? codeByKey(defCode) : null);
+  const rest = (fc ? fc.rest : String(input || '')).replace(/\bart(?:icle)?s?\.?/gi, ' ');
+  const refs = [], seps = [];
+  let m, lastEnd = -1;
+  REF_NUM_RE.lastIndex = 0;
+  while ((m = REF_NUM_RE.exec(rest))) {
+    if (lastEnd >= 0) seps.push(/\bet\b/i.test(rest.slice(lastEnd, m.index)) ? ' et ' : ', ');
+    lastEnd = m.index + m[0].length;
+    const pfx = m[1] ? m[1].toUpperCase() : '', num = m[2].replace('–', '-'), al = m[3] || '';
+    const shown = (pfx ? pfx + '. ' : '') + num;
+    const q = (pfx || '') + num;
+    if (!code) {
+      refs.push({ label: `art. ${shown}${al ? ' al. ' + al : ''}`, full: `article ${shown}${al ? ', alinéa ' + al : ''}`, url: `https://www.legifrance.gouv.fr/search/all?query=${encodeURIComponent('article ' + q)}` });
+      continue;
+    }
+    refs.push({
+      label: `art. ${shown}${al ? ' al. ' + al : ''} ${code.abbr}`,
+      full: `article ${shown}${al ? ', alinéa ' + al + ',' : ''} ${code.de || 'du'} ${code.full}`,
+      url: `https://www.legifrance.gouv.fr/search/${code.all ? 'all' : 'code'}?query=${encodeURIComponent('article ' + q + ' ' + code.full)}`,
+      code: code.k
+    });
+  }
+  return refs.length ? { refs, seps, code } : null;
+}
+/* compatibilité : une seule référence */
+function parseRef(input, defCode) { const p = parseRefs(input, defCode); return p ? p.refs[0] : null; }
+const refsHTML = p => p.refs.map((r, i) => (i ? esc(p.seps[i - 1] || ', ') : '') + refChipHTML(r)).join('');
+function rememberRefs(p) {
+  if (!p) return;
+  if (p.code) state.settings.refCode = p.code.k;
+  const rec = (state.settings.refRecent || []).filter(x => !p.refs.some(r => r.label === x.label));
+  state.settings.refRecent = p.refs.map(r => ({ label: r.label, full: r.full, url: r.url })).concat(rec).slice(0, 8);
+  save();
 }
 
 /* insère un fragment HTML à une plage (par le DOM : execCommand('insertHTML') perd les atomes non éditables en fin de ligne
@@ -6842,7 +7016,7 @@ function domInsertHTML(range, html) {
   r.collapse(true);
   const s = getSelection(); s.removeAllRanges(); s.addRange(r);
 }
-const refChipHTML = ref => `<a class="refart" contenteditable="false" target="_blank" href="${ref.url}" title="${esc(ref.full)} · Ctrl+clic : ouvrir Légifrance · clic : sélectionner (Suppr pour retirer)">${esc(ref.label)}</a>`;
+const refChipHTML = ref => `<a class="refart" contenteditable="false" target="_blank" href="${esc(ref.url)}" title="${esc(ref.full)} · Ctrl+clic : ouvrir Légifrance · double-clic : modifier · clic : sélectionner (Suppr pour retirer)">${esc(ref.label)}</a>`;
 /* insère un fragment HTML (référence, lien…) à l'endroit mémorisé du curseur ; ctx = { field, range } ou null */
 function insertHTMLAtCtx(ctx, html, fallbackBid) {
   const field = ctx && ctx.field && ctx.field.isConnected ? ctx.field : null;
@@ -6868,24 +7042,65 @@ function captureInsertCtx() {
   const sel = getSelection();
   return { field, range: field && sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null };
 }
-function openArticlePopover(bid) {
-  const ictx = captureInsertCtx();
-  const anchor = ictx.field ? ictx.field.getBoundingClientRect() : anchorForBlock(bid || currentBlockId());
-  showPopover(`<h4>Référence d’article</h4>
-    <div class="po-row"><input id="po-ref" placeholder="1240 c. civ." spellcheck="false"><button class="pobtn" id="po-ref-ok">Insérer</button></div>
-    <div class="po-hint">Saisie rapide : « 1240 c. civ. », « 61-1 const. », « L. 121-1 c. conso »… Codes reconnus : civil, pénal, commerce, travail, procédure civile, Constitution, consommation, CGI.<br>La référence est insérée à l’endroit du curseur, sous forme de bouton vers Légifrance.</div>`,
+function openArticlePopover(bid, editChip) {
+  let ictx = captureInsertCtx();
+  if (editChip && editChip.isConnected) {   // double-clic sur une référence : la remplacer
+    const r = document.createRange(); r.selectNode(editChip);
+    ictx = { field: editChip.closest('.btxt, .jval, .jref, .tcell, .qcite'), range: r };
+  }
+  const anchor = editChip ? editChip.getBoundingClientRect() : ictx.field ? ictx.field.getBoundingClientRect() : anchorForBlock(bid || currentBlockId());
+  let codeK = codeByKey(state.settings.refCode).k;
+  const recent = (state.settings.refRecent || []).filter(x => x && x.label && x.url);
+  const chip = c => `<button type="button" class="ref-code ${c.k === codeK ? 'on' : ''}" data-code="${c.k}" title="${esc(c.full)}">${esc(c.abbr)}</button>`;
+  showPopover(`<h4>${editChip ? 'Modifier la référence' : 'Article de loi'}</h4>
+    <div class="po-row"><input id="po-ref" placeholder="1240, L. 121-1, 1240 et 1241…" spellcheck="false" autocomplete="off" value="${editChip ? esc(editChip.textContent) : ''}"><button class="pobtn" id="po-ref-ok">${editChip ? 'OK' : 'Insérer'}</button></div>
+    <div class="ref-prev" id="po-ref-prev"></div>
+    <div class="po-label">Code</div>
+    <div class="ref-codes">${CODES.filter(c => REF_CODES_TOP.includes(c.k) || c.k === codeK).map(chip).join('')}<button type="button" class="ref-code more" data-more>Autres…</button></div>
+    <div class="ref-codes ref-more" hidden>${CODES.filter(c => !REF_CODES_TOP.includes(c.k) && c.k !== codeK).map(chip).join('')}</div>
+    ${recent.length && !editChip ? `<div class="po-label">Récents — un clic pour insérer</div><div class="ref-recent">${recent.map((r, i) => `<button type="button" data-rec="${i}" title="${esc(r.full)}">${esc(r.label)}</button>`).join('')}</div>` : ''}
+    <div class="po-hint">Plus rapide : tapez <b>art. 1240 c. civ.</b> directement dans le texte, puis une espace — le lien Légifrance se crée tout seul.</div>`,
     anchor, pop => {
-      const input = pop.querySelector('#po-ref');
-      const ok = () => {
-        const ref = parseRef(input.value);
-        if (!ref) { toast('Référence non reconnue'); return; }
-        hidePopover();
-        insertHTMLAtCtx(ictx, refChipHTML(ref) + '&nbsp;', bid);
-        toast(ref.full + ' — lien Légifrance');
+      const input = pop.querySelector('#po-ref'), prev = pop.querySelector('#po-ref-prev');
+      const paint = () => {
+        const p = parseRefs(input.value, codeK);
+        prev.innerHTML = p ? `<span class="ref-arrow">→</span>${p.refs.map(r => `<span class="refart">${esc(r.label)}</span>`).join(' ')}` : `<span class="ref-empty">Code choisi : <b>${esc(codeByKey(codeK).abbr)}</b> — tapez le numéro de l’article</span>`;
+        const fc = findCode(input.value);
+        pop.querySelectorAll('[data-code]').forEach(b => b.classList.toggle('on', b.dataset.code === (fc ? fc.code.k : codeK)));
       };
+      const insert = p => {
+        if (!p) { toast('Tapez le numéro de l’article (ex. 1240)'); input.focus(); return; }
+        hidePopover();
+        rememberRefs(p);
+        insertHTMLAtCtx(ictx, refsHTML(p) + (editChip ? '' : '&nbsp;'), bid);
+        toast(p.refs.length > 1 ? `${p.refs.length} articles insérés — liens Légifrance` : p.refs[0].full + ' — lien Légifrance');
+      };
+      const ok = () => insert(parseRefs(input.value, codeK));
       pop.querySelector('#po-ref-ok').addEventListener('click', ok);
-      input.addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
-      setTimeout(() => input.focus(), 40);
+      input.addEventListener('input', paint);
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
+      pop.addEventListener('click', e => {
+        if (e.target.closest('[data-more]')) { const m = pop.querySelector('.ref-more'); m.hidden = !m.hidden; e.target.closest('[data-more]').textContent = m.hidden ? 'Autres…' : 'Moins'; return; }
+        const cb = e.target.closest('[data-code]');
+        if (cb) {
+          codeK = cb.dataset.code;
+          const fc = findCode(input.value);
+          const v = fc ? fc.rest.trim() : input.value;
+          // un numéro déjà tapé : le clic sur le code insère directement
+          if (/\d/.test(v)) { insert(parseRefs(v, codeK)); return; }
+          paint(); input.focus(); return;
+        }
+        const rb = e.target.closest('[data-rec]');
+        if (rb) {
+          const r = recent[+rb.dataset.rec]; if (!r) return;
+          hidePopover();
+          insertHTMLAtCtx(ictx, refChipHTML(r) + '&nbsp;', bid);
+          rememberRefs({ refs: [r], seps: [], code: null });
+        }
+      });
+      pop.addEventListener('pointerdown', e => { if (e.target.closest('button')) e.preventDefault(); });
+      paint();
+      setTimeout(() => { input.focus(); input.select(); }, 40);
     });
 }
 
@@ -8099,6 +8314,7 @@ $('#toolbar').addEventListener('click', e => {
     toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes');
   }
   if (act === 'image') pickImages();
+  if (act === 'phone') openPhoneImage(bid);
   if (act === 'draw') insertDrawing();
   if (act === 'ai') runAiCorrection();
   if (act === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(); return; }
@@ -9146,21 +9362,26 @@ const EXPORT_FORMAT_ICONS = {
   pdf: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 17v-5h1.6a1.5 1.5 0 0 1 0 3H8.5"/></svg>',
   docx: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="m8 12 1.3 5 1.7-4 1.7 4 1.3-5"/></svg>',
   html: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
-  alx: '<img src="logo.png" alt="" class="po-ico po-ico-img">'
+  alx: '<img src="logo.png" alt="" class="po-ico po-ico-img">',
+  csv: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 12h7M8.5 15h7M8.5 18h7M12 12v6"/></svg>'
 };
 function openExportMenu(btn) {
   const d = doc(); if (!d) return;
   const special = isSpecialDoc(d);
   const cur = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
+  // 1.40 : ordre fixe — Fichier Alixo, PDF, Word, page web ; un tableur propose aussi la feuille en CSV
   const formats = Object.entries(EXPORT_FORMATS).filter(([k]) => !special || k === 'pdf' || k === 'alx');
+  if (isSheetDoc(d) && window.AlixoSheets && AlixoSheets.exportCSV) formats.push(['csv', { label: 'Feuille en CSV (.csv)' }]);
   const r = btn.getBoundingClientRect();
-  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque' };
+  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque', csv: 'La feuille affichée, pour Excel ou un autre tableur' };
+  const icon = k => k === 'alx' ? EXPORT_FORMAT_ICONS.alx : (EXPORT_FORMAT_ICONS[k] || EXPORT_FORMAT_ICONS.csv).replace('<svg', '<svg class="po-ico"');
   showPopover(`<h4>Télécharger « ${esc(d.titre || 'Sans titre')} »</h4><div class="po-list po-export">
-      ${formats.map(([k, v]) => `<button data-fmt="${k}" class="${k === cur ? 'on' : ''}">${k === 'alx' ? EXPORT_FORMAT_ICONS.alx : EXPORT_FORMAT_ICONS[k].replace('<svg', '<svg class="po-ico"')}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
+      ${formats.map(([k, v]) => `<button data-fmt="${k}" class="${k === cur ? 'on' : ''}">${icon(k)}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
     </div>${isPlus() ? '' : '<div class="po-hint" style="margin:6px 0 0">Une petite mention « Fait avec Alixo » figure au bas de chaque page des PDF, Word et pages web ; Alixo+ l’enlève.</div>'}`,
     { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
       const b = ev.target.closest('[data-fmt]'); if (!b) return;
       hidePopover();
+      if (b.dataset.fmt === 'csv') { AlixoSheets.exportCSV(); return; }
       state.settings.exportFormat = b.dataset.fmt; save();
       exportDoc(b.dataset.fmt);
     }));
@@ -9395,6 +9616,8 @@ blocksEl.addEventListener('click', e => {
   touch(); refreshChart(bl, b); selectObj(b.id);
 });
 blocksEl.addEventListener('dblclick', e => {
+  const ra = e.target.closest('a.refart:not(.item)');   // 1.40 : double-clic sur une référence d'article → la modifier
+  if (ra && !readOnly) { e.preventDefault(); const bl = ra.closest('.block'); openArticlePopover(bl ? bl.dataset.id : null, ra); return; }
   const bl = e.target.closest('#blocks > .block.chart .cwrap'); if (!bl) return;
   openChartDataPopover(bl.closest('.block').dataset.id);
 });
@@ -10291,6 +10514,8 @@ window.addEventListener('mouseup', e => {
 window.AlixoApp = {
   get state() { return state; },
   maybeOnboard,
+  openExportMenu,   // 1.40 : bouton ⤓ du tableur, de la planche et du quiz
+  inlineRename,     // 1.40 : double-clic sur le nom d'un onglet
   /* 1.35 : onglets « vues » (fichier Word / OpenDocument, Quiz IA…) — voir « onglets « vues » » plus haut */
   tabs: {
     register(kind, handler) { if (!kind || !handler) return; vtabKinds[kind] = handler; tryRestoreVTabs(); renderTabs(); },
@@ -10448,7 +10673,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Correction : les icônes des fichiers Alixo sur le bureau sont refaites à partir des dessins d’origine — symboles entiers, contours nets, sans trou ni liseré blanc. Et toujours : plan par séance, trois modes de plan.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Envoyez une photo depuis votre téléphone par QR code, tapez « art. 1240 c. civ. » pour un lien Légifrance immédiat, renommez un onglet d’un double-clic ; texte en police 11 et enregistrement en icône.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

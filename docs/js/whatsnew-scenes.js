@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.39.2 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.40.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.40.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Plus <em>vite</em>, au quotidien', text: 'Photos depuis le téléphone, articles de loi en un geste, et des petits gains de temps partout.', dur: 5000 },
+    { title: 'La photo du <em>téléphone</em>, dans la séance', text: 'Scannez le QR code, prenez la photo : elle apparaît aussitôt dans votre document.',
+      bullets: ['<b>Bouton téléphone</b> de la barre d’outils, ou « / » › Photo depuis le téléphone', '<b>Prendre une photo</b> ou choisir dans la galerie, sans application', '<b>À l’endroit du curseur</b>, puis à la suite des précédentes'],
+      art: { svg: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 9.5h1.2l.8-1.2h2l.8 1.2h1.2v4.5h-6Z"/><circle cx="12" cy="11.6" r="1.1"/></svg>' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8500 },
+    { title: 'Les articles de loi, en <em>un geste</em>', text: 'Tapez « art. 1240 c. civ. » puis une espace : le lien Légifrance se crée tout seul.',
+      bullets: ['<b>Noms complets</b>, articles L. / R., alinéas, plusieurs articles d’un coup', '<b>Bouton §</b> : le dernier code est retenu, tapez juste le numéro', '<b>Récents</b> réinsérés d’un clic ; 25 codes et textes reconnus'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 7a3 3 0 0 0 6 0Z"/><path d="m19 7-3 7a3 3 0 0 0 6 0Z"/></svg>' }, accent: '#b3762a', accent2: '#8a4b9c', dur: 8500 },
+    { title: 'Police <em>11</em> et enregistrement en icône', text: 'Le texte des séances passe en police 11, comme dans Word ; la barre d’outils compte en points.',
+      bullets: ['<b>Orange qui tourne</b> : enregistrement en cours', '<b>Nuage vert coché</b> : c’est enregistré', '<b>L’heure</b> reste dans l’infobulle'],
+      art: 'text', accent: '#2e8b6a', accent2: '#f08a24', dur: 7500 },
+    { title: 'Télécharger et <em>renommer</em> plus vite', text: 'La même petite fenêtre partout, et les onglets se renomment sur place.',
+      bullets: ['<b>Ordre fixe</b> : fichier Alixo, PDF, Word, page web', '<b>Tableurs, planches, quiz</b> : un seul bouton Télécharger', '<b>Double-clic</b> sur un onglet, une feuille : renommer'],
+      art: 'list', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.39.2', {
   scenes: [
@@ -37,22 +56,6 @@ AlixoWhatsNew.register('1.39.1', {
     { title: 'Et toujours : le plan à <em>votre</em> façon', text: 'Un plan par séance et trois modes : automatique, adaptatif ou aucun plan.',
       bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… »', '<b>Adaptatif</b> : votre premier numéro devient le niveau 1'],
       art: 'list', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 7000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.39.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Le plan, à <em>votre</em> façon', text: 'Un plan par séance, trois modes de plan, et de nouvelles icônes pour vos fichiers Alixo.', dur: 5000 },
-    { title: 'Un plan par <em>séance</em>', text: 'Chaque séance peut avoir sa propre pyramide de niveaux et son propre mode, sans toucher aux autres.',
-      bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… » dans la barre d’outils', '<b>Noms, numéros, mots déclencheurs</b> propres à la séance', '<b>Paramètres › Écriture</b> garde le plan de toutes les séances'],
-      art: 'text', accent: '#3d6bb5', accent2: '#b3762a', dur: 8000 },
-    { title: 'Trois <em>modes</em> de plan', text: 'Automatique, adaptatif ou aucun plan : à vous de choisir comment Alixo vous suit.',
-      bullets: ['<b>Automatique</b> : numérote et reconnaît « I. », « A. », « 1. »…', '<b>Adaptatif</b> : votre premier style de numéro devient le niveau 1, rien n’est imposé', '<b>Aucun plan</b> : ni détection ni numéro automatique'],
-      art: 'list', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 8500 },
-    { title: 'De nouvelles <em>icônes</em>', text: 'Sur le bureau, vos fichiers Alixo portent une feuille en relief dans la couleur de leur type.',
-      bullets: ['<b>Séance</b> bleu, <b>présentation</b> orange, <b>tableur</b> vert', '<b>Quiz</b> violet, <b>planche</b> rose', '<b>Windows et macOS</b>'],
-      art: 'cards', accent: '#b3762a', accent2: '#3d6bb5', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

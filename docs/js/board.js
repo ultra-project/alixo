@@ -330,8 +330,7 @@ window.AlixoBoard = (() => {
         <span class="bd-sep"></span>
         <button data-bd="font" class="bd-font" title="Police de la planche (post-it, textes, zones)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && dd.font && AlixoApp.fontByKey(dd.font) ? AlixoApp.fontByKey(dd.font).name : 'Police')}</span><span class="tcaret">▾</span></button>
         <button data-bd="present" title="Présenter la planche en plein écran, sans les barres (F11)">${I.present}<span class="bd-lbl">Présenter</span></button>
-        <button data-bd="pdf" title="Exporter en PDF (Ctrl+P)">PDF</button>
-        ${window.AlixoAlx ? '<button data-bd="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-planche) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
+        <button data-bd="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
       </div>`;
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
@@ -1240,6 +1239,7 @@ window.AlixoBoard = (() => {
       const k = b.dataset.bd;
       if (k === 'undo') { undo(); return; } if (k === 'redo') { redo(); return; }
       if (k === 'pdf') { exportPDF(); return; }
+      if (k === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else exportPDF(); return; }   // 1.40
       if (k === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police de la planche', hint: 'Police des post-it, textes et zones de cette planche.', onPick: f => { if (readOnly) return; if (f === null) delete dd.font; else dd.font = f; commit(); renderAll(); } }); return; }
       if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'present') { setPresent(true); return; }
