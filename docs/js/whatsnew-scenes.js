@@ -11,9 +11,34 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.40.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.41.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.41.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Plus <em>fluide</em>, plus riche', text: 'Une IA qui ménage l’ordinateur, deux nouvelles questions de quiz, des Tâches et un bouton Image repensés.', dur: 5000 },
+    { title: 'AlixoAI ne fait plus <em>ramer</em>', text: 'Corrections, fiches et quiz : l’ordinateur reste fluide pendant qu’AlixoAI écrit.',
+      bullets: ['<b>À la demande</b> : plus rien ne se charge au démarrage', '<b>Une pause entre chaque mot</b> : la souris et l’écran suivent', '<b>Mémoire libérée</b> après 5 minutes sans demande'],
+      art: { icon: '✨' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8000 },
+    { title: 'Le vote d’<em>assemblée</em>', text: 'Un sondage dont les résultats se dessinent en direct dans un hémicycle coloré.',
+      bullets: ['<b>Un siège par votant</b>, regroupé par couleur', '<b>Majorité absolue</b> marquée au centre', '<b>Le groupe en tête</b> ressort à la révélation'],
+      art: 'chart', accent: '#c04343', accent2: '#3d6bb5', dur: 7500 },
+    { title: 'Le texte à <em>trous</em>', text: 'Sélectionnez un mot, « Faire un trou » : vos étudiants complètent le texte.',
+      bullets: ['<b>Menu déroulant</b> avec leurres, ou <b>saisie libre</b>', '<b>Tolérant</b> aux majuscules, accents et espaces', '<b>Réussite par trou</b> dans les résultats'],
+      art: 'text', accent: '#8a4b9c', accent2: '#b3762a', dur: 7500 },
+    { title: 'Six thèmes <em>signature</em>', text: 'L’éditeur et l’écran de jeu des quiz sont modernisés, avec un aperçu en direct.',
+      bullets: ['<b>Aurore, Verre, Néon</b>', '<b>Papier, Galaxie, Minéral</b>', '<b>Bouton Apparence</b> : chaque thème en miniature'],
+      art: 'palette', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 7000 },
+    { title: 'Tâches et <em>images</em>, repensées', text: 'Des Tâches claires et rapides, et un seul bouton pour toutes vos images.',
+      bullets: ['<b>Tâches</b> : saisie rapide, En retard, Aujourd’hui, À venir', '<b>Image</b> : vos photos, l’ordinateur ou le téléphone', '<b>Glisser ou coller</b> une image pour l’importer'],
+      art: 'list', accent: '#b3762a', accent2: '#3d6bb5', dur: 8000 },
+    { title: 'Plus de <em>place</em> à l’écran', text: 'Comme dans Word, la barre de titre disparaît ; Réduire, Agrandir et Fermer restent.',
+      bullets: ['<b>Déplacer</b> : saisir la barre d’Alixo', '<b>Télécharger</b> : plus de format surligné', '<b>Fichier Alixo</b> avec l’icône de son type'],
+      art: 'cards', accent: '#33658a', accent2: '#c04343', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.40.0', {
   scenes: [
@@ -43,19 +68,6 @@ AlixoWhatsNew.register('1.39.2', {
     { title: 'Et toujours : le plan à <em>votre</em> façon', text: 'Un plan par séance et trois modes : automatique, adaptatif ou aucun plan.',
       bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… »', '<b>Adaptatif</b> : votre premier numéro devient le niveau 1'],
       art: 'list', accent: '#8a4b9c', accent2: '#b3762a', dur: 7000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.39.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Icônes <em>entières</em>', text: 'Correction pour les fichiers Alixo dont l’icône apparaissait coupée sur le bureau Windows.', dur: 5000 },
-    { title: 'Plus rien n’est <em>coupé</em>', text: 'Séance, présentation, tableur, quiz, planche : chaque fichier montre sa feuille en relief au complet, avec son coin replié.',
-      bullets: ['<b>Toutes les tailles</b> d’affichage de l’Explorateur', '<b>Une petite marge</b> autour de l’image', '<b>Appliqué</b> par la mise à jour'],
-      art: 'cards', accent: '#3d6bb5', accent2: '#b3762a', dur: 8000 },
-    { title: 'Et toujours : le plan à <em>votre</em> façon', text: 'Un plan par séance et trois modes : automatique, adaptatif ou aucun plan.',
-      bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… »', '<b>Adaptatif</b> : votre premier numéro devient le niveau 1'],
-      art: 'list', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

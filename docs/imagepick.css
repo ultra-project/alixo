@@ -1,0 +1,98 @@
+/* ============================================================
+   Alixo — 1.41 : bouton Image (js/imagepick.js)
+   Petit menu sous l'icône, fenêtre « Insérer une image » (photos du cloud), fenêtre « Importer depuis
+   l'ordinateur » (zone de dépôt) par-dessus. Couleurs : variables de styles.css (clair / sombre / thèmes).
+   ============================================================ */
+
+/* --- menu sous l'icône --- */
+#popover:has(.ip-menu) { width: auto; min-width: 236px; padding: 5px; border-radius: 10px; animation: ip-drop .14s ease-out; transform-origin: top left; }
+@keyframes ip-drop { from { opacity: 0; transform: translateY(-4px) scale(.98); } to { opacity: 1; transform: none; } }
+.ip-menu { display: flex; flex-direction: column; gap: 1px; }
+.ip-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; white-space: nowrap;
+  padding: 8px 12px 8px 9px; border-radius: 7px; font-size: 13.5px; color: var(--ink);
+}
+.ip-menu button svg { width: 18px; height: 18px; flex: none; color: var(--ink-2); }
+.ip-menu button:hover, .ip-menu button:focus-visible { background: var(--hover); outline: none; }
+.ip-menu button:focus-visible { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tint) 55%, transparent); }
+.ip-menu button:hover svg, .ip-menu button:focus-visible svg { color: var(--tint); }
+#toolbar [data-act="imgmenu"][aria-expanded="true"] { background: var(--tint-soft); color: var(--tint); }
+
+/* --- fenêtre « Insérer une image » --- */
+.dlg-card.ip-card { width: min(760px, 94vw); height: min(600px, 88vh); }
+.ip-card .dlg-eyebrow { display: inline-flex; align-items: center; gap: 5px; }
+.ip-card .dlg-eyebrow svg { width: 14px; height: 14px; stroke-width: 2; }
+.ip-card .set-head { border-bottom: none; padding-bottom: 6px; }
+.ip-card .dlg-body { padding-top: 8px; }
+.ip-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.ip-ph {
+  position: relative; aspect-ratio: 4 / 3; border-radius: 10px; overflow: hidden;
+  background: var(--bg); border: 1px solid var(--border);
+  transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.ip-ph img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: ip-fade .25s ease; }
+@keyframes ip-fade { from { opacity: 0; } to { opacity: 1; } }
+.ip-ph.loading::before {
+  content: ""; position: absolute; inset: 0;
+  background: linear-gradient(100deg, transparent 30%, var(--hover) 50%, transparent 70%) var(--bg);
+  background-size: 220% 100%; animation: ip-shim 1.2s linear infinite;
+}
+@keyframes ip-shim { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.ip-ph.missing { opacity: .45; cursor: default; }
+.ip-ph:not(.missing):hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tint) 55%, var(--border)); box-shadow: 0 8px 20px rgba(0, 0, 0, .14); }
+.ip-ph:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.ip-cap {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 1; padding: 14px 8px 5px;
+  font-size: 11px; font-weight: 550; color: #fff; text-align: left;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  background: linear-gradient(transparent, rgba(0, 0, 0, .62));
+  opacity: 0; transition: opacity .14s ease;
+}
+.ip-ph:hover .ip-cap, .ip-ph:focus-visible .ip-cap { opacity: 1; }
+.ip-note {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 12px; padding: 8px 12px;
+  border-radius: 9px; background: var(--tint-soft); color: var(--ink-2); font-size: 12.5px;
+}
+.ip-note svg { width: 17px; height: 17px; flex: none; color: var(--tint); }
+.ip-note span { flex: 1; }
+.ip-empty { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 46px 20px 30px; color: var(--ink-2); }
+.ip-empty-ico { width: 64px; height: 64px; border-radius: 18px; display: grid; place-items: center; background: var(--tint-soft); color: var(--tint); margin-bottom: 6px; }
+.ip-empty-ico svg { width: 32px; height: 32px; }
+.ip-empty b { font-size: 15px; color: var(--ink); }
+.ip-empty p { max-width: 400px; font-size: 13px; line-height: 1.5; }
+.ip-empty .cta { margin-top: 8px; }
+.ip-card .dlg-foot .cta { display: inline-flex; align-items: center; gap: 8px; }
+.ip-card .dlg-foot .cta svg { width: 17px; height: 17px; }
+.ip-foot-hint { font-size: 12px; color: var(--ink-3); }
+
+/* --- fenêtre du dessus : « Importer depuis l'ordinateur » --- */
+.dlgov.ip-top { background: rgba(10, 12, 18, .28); }
+.dlg-card.ip-dropcard { width: min(440px, 92vw); height: auto; }
+.ip-dropcard .set-head { border-bottom: none; padding-bottom: 4px; }
+.ip-dropcard .dlg-body { padding: 8px 22px 22px; }
+.ip-zone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center;
+  min-height: 210px; padding: 24px; border-radius: 14px; cursor: pointer;
+  border: 2px dashed color-mix(in srgb, var(--tint) 45%, var(--border)); background: color-mix(in srgb, var(--tint) 5%, transparent);
+  color: var(--ink-2); font-size: 13px;
+  transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.ip-zone b { font-size: 16px; color: var(--ink); }
+.ip-zone u { color: var(--tint); text-underline-offset: 2px; }
+.ip-zone small { font-size: 11.5px; color: var(--ink-3); margin-top: 4px; }
+.ip-zone-ico { width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; background: var(--tint-soft); color: var(--tint); margin-bottom: 4px; transition: transform .15s ease; }
+.ip-zone-ico svg { width: 26px; height: 26px; }
+.ip-zone:hover { background: color-mix(in srgb, var(--tint) 9%, transparent); }
+.ip-zone:focus-visible { outline: 2px solid var(--tint); outline-offset: 3px; }
+.ip-zone.ip-over { border-style: solid; border-color: var(--tint); background: var(--tint-soft); transform: scale(1.01); }
+.ip-zone.ip-over .ip-zone-ico { transform: translateY(-3px); }
+.dlgov.ip-over .dlg-card { box-shadow: 0 0 0 3px var(--tint), 0 30px 80px rgba(0, 0, 0, .3); }
+
+@media (prefers-reduced-motion: reduce) {
+  #popover:has(.ip-menu), .ip-ph img, .ip-ph.loading::before { animation: none; }
+  .ip-ph, .ip-zone, .ip-zone-ico { transition: none; }
+}
+@media (max-width: 560px) {
+  .ip-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+  .ip-foot-hint { display: none; }
+}

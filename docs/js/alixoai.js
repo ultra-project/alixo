@@ -384,6 +384,9 @@ R: résumé en deux phrases
       // conversation suivie : la consigne et les lots précédents restent en mémoire du moteur (pas de relecture)
       if (r.finish === 'stop') messages.push({ role: 'user', content: user }, { role: 'assistant', content: r.raw });
       else { messages.length = 1; }
+      /* 1.41 : mémoire de conversation plafonnée (4 096 jetons) : au-delà d'environ 7 000 caractères, on repart de la seule
+         consigne — sans quoi les longs quiz dépassaient la mémoire et la carte graphique relisait tout à chaque lot */
+      if (messages.reduce((n, m) => n + m.content.length, 0) > 7000) messages.length = 1;
       if (opts.cancelled && opts.cancelled()) break;
     }
     if (!all.length) throw new Error(lastErr || 'AlixoAI n’a pas renvoyé de question — réessayez.');

@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.40.0';
+const ALIXO_VERSION = '1.41.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -9185,6 +9185,19 @@ function setWindowBg(color) {
   if (!window.alixoDesktop || !window.alixoDesktop.setWindowBg) return;
   const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
   window.alixoDesktop.setWindowBg(color || bg || (document.documentElement.dataset.theme === 'dark' ? '#141414' : '#f3f5f8'));
+  if (!color) { setTitleBarColors(); setTimeout(setTitleBarColors, 450); }   // une seconde fois après la transition de couleur
+}
+/* 1.41 : fenêtre sans barre de titre (version PC) — la barre supérieure d'Alixo sert de poignée pour déplacer la fenêtre,
+   et les boutons Réduire / Agrandir / Fermer du système (dessinés par-dessus, à droite) prennent sa couleur et celle du texte */
+if (window.alixoDesktop && window.alixoDesktop.frameless && window.top === window) document.documentElement.classList.add('frameless', window.alixoDesktop.platform === 'darwin' ? 'frameless-mac' : 'frameless-win');
+function setTitleBarColors() {
+  const d = window.alixoDesktop; if (!d || !d.setTitleBarColors) return;
+  const hex = c => { const m = /rgba?\((\d+),\s*(\d+),\s*(\d+)/.exec(c || ''); return m ? '#' + [m[1], m[2], m[3]].map(x => (+x).toString(16).padStart(2, '0')).join('') : ''; };
+  const tb = document.getElementById('topbar'); if (!tb) return;
+  const cs = getComputedStyle(tb);
+  const color = hex(cs.backgroundColor) || hex(getComputedStyle(document.body).backgroundColor);
+  const symbol = hex(cs.color);
+  if (color && symbol) d.setTitleBarColors({ color, symbol });
 }
 
 /* en-tête imprimé : titre, dossier, professeur, date */
@@ -9362,21 +9375,23 @@ const EXPORT_FORMAT_ICONS = {
   pdf: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 17v-5h1.6a1.5 1.5 0 0 1 0 3H8.5"/></svg>',
   docx: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="m8 12 1.3 5 1.7-4 1.7 4 1.3-5"/></svg>',
   html: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
-  alx: '<img src="logo.png" alt="" class="po-ico po-ico-img">',
+  /* 1.41 : le fichier Alixo prend l'icône qu'il aura sur le bureau, selon le type du document (séance, présentation,
+     tableur, quiz, planche — images tirées de build/file-icons-source, voir img/fileicons/) */
+  alx: k => `<img src="img/fileicons/${k || 'docs'}.png" alt="" class="po-ico po-ico-img po-ico-file">`,
   csv: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 12h7M8.5 15h7M8.5 18h7M12 12v6"/></svg>'
 };
 function openExportMenu(btn) {
   const d = doc(); if (!d) return;
   const special = isSpecialDoc(d);
-  const cur = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
   // 1.40 : ordre fixe — Fichier Alixo, PDF, Word, page web ; un tableur propose aussi la feuille en CSV
   const formats = Object.entries(EXPORT_FORMATS).filter(([k]) => !special || k === 'pdf' || k === 'alx');
   if (isSheetDoc(d) && window.AlixoSheets && AlixoSheets.exportCSV) formats.push(['csv', { label: 'Feuille en CSV (.csv)' }]);
   const r = btn.getBoundingClientRect();
   const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque', csv: 'La feuille affichée, pour Excel ou un autre tableur' };
-  const icon = k => k === 'alx' ? EXPORT_FORMAT_ICONS.alx : (EXPORT_FORMAT_ICONS[k] || EXPORT_FORMAT_ICONS.csv).replace('<svg', '<svg class="po-ico"');
+  const alxKind = window.AlixoAlx && AlixoAlx.kindOfDoc ? AlixoAlx.kindOfDoc(d) : 'docs';
+  const icon = k => k === 'alx' ? EXPORT_FORMAT_ICONS.alx(alxKind) : (EXPORT_FORMAT_ICONS[k] || EXPORT_FORMAT_ICONS.csv).replace('<svg', '<svg class="po-ico"');
   showPopover(`<h4>Télécharger « ${esc(d.titre || 'Sans titre')} »</h4><div class="po-list po-export">
-      ${formats.map(([k, v]) => `<button data-fmt="${k}" class="${k === cur ? 'on' : ''}">${icon(k)}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
+      ${formats.map(([k, v]) => `<button data-fmt="${k}">${icon(k)}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
     </div>${isPlus() ? '' : '<div class="po-hint" style="margin:6px 0 0">Une petite mention « Fait avec Alixo » figure au bas de chaque page des PDF, Word et pages web ; Alixo+ l’enlève.</div>'}`,
     { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
       const b = ev.target.closest('[data-fmt]'); if (!b) return;
@@ -10673,9 +10688,9 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Envoyez une photo depuis votre téléphone par QR code, tapez « art. 1240 c. civ. » pour un lien Légifrance immédiat, renommez un onglet d’un double-clic ; texte en police 11 et enregistrement en icône.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'AlixoAI ne fait plus ramer l’ordinateur, deux nouvelles questions de quiz (vote d’assemblée, texte à trous) et de nouveaux thèmes, des Tâches repensées, un bouton Image et plus de barre de titre.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
-  aiAutoInstall(4000);   // 1.37 : AlixoAI se prépare toute seule, en silence
+  setTimeout(() => { if (window.AlixoLocalAI) aiAfterCrash(window.AlixoLocalAI); }, 4000);   // 1.41 : plus de préparation au démarrage (le modèle se charge à la première demande) ; seulement le contrôle après une fermeture brutale
 }, 1400);

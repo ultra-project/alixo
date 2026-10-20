@@ -33,6 +33,7 @@
     themeKey = k;
     const r = t && t.pal ? t : C.resolveTheme(t);
     document.body.style.cssText = C.themeStyle(r);
+    document.body.dataset.qth = C.themeFx(r);   // fond animé des thèmes signature (quiz.css)
     document.documentElement.style.background = r.bg;
     const meta = document.querySelector('meta[name="theme-color"]'); if (meta) meta.content = r.bg;
   }
@@ -117,7 +118,7 @@
     }
     const left0 = game.qEnd ? (game.qEnd - Date.now()) / 1000 : 0;
     main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'}</span><span class="qp-ptype">${esc(label)}</span><span id="qp-timer" style="margin-left:auto">${timerHTML(left0, q.time)}</span></div>
-      ${imgHTML(q)}<div class="qp-q">${esc(q.text || '')}</div>
+      ${imgHTML(q)}<div class="qp-q">${esc(q.text || (q.t === 'cloze' ? 'Complétez le texte' : ''))}</div>
       <div class="qp-widget" id="qp-widget">${answered ? sentHTML() : C.widgetHTML(q)}</div>`;
     if (!answered) C.bindWidget(q, $('#qp-widget'), v => sendAnswer(q, v));
     if (q.time) timer = setInterval(() => { const left = (game.qEnd - Date.now()) / 1000; const t = $('#qp-timer'); if (t) t.innerHTML = timerHTML(left, q.time); if (left <= 0) { clearInterval(timer); if (!answered) { answered = true; const w = $('#qp-widget'); if (w) w.innerHTML = `<div class="qp-sent"><div class="qp-big">⏱</div><h2>Temps écoulé</h2><p>La réponse arrive sur l’écran du présentateur…</p></div>`; } } }, 250);
@@ -137,13 +138,19 @@
     const full = Object.assign({}, q, { ans: a.ans, tol: a.tol || 0, unit: a.unit || q.unit || '' });
     if (q.t === 'order' && Array.isArray(a.ans)) { const by = new Map((q.opts || []).map(o => [o.id, o])); full.opts = a.ans.map(id => by.get(id)).filter(Boolean); }
     if (q.t === 'match') { full.pairs = a.pairs || []; full.rkey = a.rkey || null; }
+    if (q.t === 'cloze') full.ansHoles = Array.isArray(a.holes) ? a.holes : [];
     const fb = mine && mine.fb && mine.fb.qid === q.id ? mine.fb : null;
     const myV = fb ? fb.v : (mine && mine.answers && mine.answers[q.id] ? mine.answers[q.id].v : null);
     const unscored = !C.isScored(q);
-    main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'} · réponse</span></div>
-      <div class="qp-q">${esc(q.text || '')}</div>
-      <div class="qp-widget">${unscored && q.t !== 'poll' ? `<div class="qp-good">Votre réponse : <b>${esc(C.answerText(full, myV))}</b></div>` : C.widgetHTML(full, { reveal: true, v: myV, done: true })}</div>
-      ${fb ? `<div class="qp-fb ${unscored ? 'poll' : fb.ok ? 'ok' : fb.answered ? 'ko' : 'late'}"><div class="qp-fbt">${unscored ? 'Merci pour votre réponse' : fb.ok ? 'Bonne réponse !' : fb.answered ? 'Mauvaise réponse' : 'Pas de réponse'}</div>${unscored ? '' : `<div class="qp-fbp">${fb.ok ? '+ ' + fmtPts(fb.pts) + ' pts' : 'Bonne réponse : <b>' + esc(C.correctText(full)) + '</b>'}</div>`}<div class="qp-fbr">Total : <b>${fmtPts(mine.score)}</b> pts${mine.rank ? ` · ${mine.rank}<sup>${mine.rank === 1 ? 'er' : 'e'}</sup> sur ${Math.max(mine.rank, (game.top || []).length)}` : ''}</div></div>` : '<div class="qp-wait" style="padding:14px 0 0;font-size:15px">Calcul des points<span class="qp-dots"></span></div>'}`;
+    const part = !!(fb && !fb.ok && fb.pts > 0);
+    const st = game.stats || {};
+    const nh = q.t === 'cloze' ? (full.ansHoles || []).length : 0;
+    const wid = q.t === 'vote' ? (st.counts ? C.hemicycleHTML(q, st.counts, { final: true, mine: myV }) : C.widgetHTML(full, { reveal: true, v: myV, done: true }))
+      : unscored && !C.isChoice(q) ? `<div class="qp-good">Votre réponse : <b>${esc(C.answerText(full, myV))}</b></div>` : C.widgetHTML(full, { reveal: true, v: myV, done: true });
+    main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'} · ${unscored ? 'résultat' : 'réponse'}</span></div>
+      <div class="qp-q">${esc(q.text || (q.t === 'cloze' ? 'Complétez le texte' : ''))}</div>
+      <div class="qp-widget">${wid}</div>
+      ${fb ? `<div class="qp-fb ${unscored ? 'poll' : fb.ok ? 'ok' : part ? 'part' : fb.answered ? 'ko' : 'late'}"><div class="qp-fbt">${unscored ? 'Merci pour votre réponse' : fb.ok ? 'Bonne réponse !' : part ? 'Presque !' : fb.answered ? 'Mauvaise réponse' : 'Pas de réponse'}</div>${unscored ? '' : `<div class="qp-fbp">${fb.ok ? '+ ' + fmtPts(fb.pts) + ' pts' : part ? `${Math.round((fb.fr || 0) * nh)} trou${Math.round((fb.fr || 0) * nh) > 1 ? 's' : ''} juste${Math.round((fb.fr || 0) * nh) > 1 ? 's' : ''} sur ${nh} · + ${fmtPts(fb.pts)} pts` : q.t === 'cloze' ? 'Les bonnes réponses sont dans le texte' : 'Bonne réponse : <b>' + esc(C.correctText(full)) + '</b>'}</div>`}<div class="qp-fbr">Total : <b>${fmtPts(mine.score)}</b> pts${mine.rank ? ` · ${mine.rank}<sup>${mine.rank === 1 ? 'er' : 'e'}</sup> sur ${Math.max(mine.rank, (game.top || []).length)}` : ''}</div></div>` : '<div class="qp-wait" style="padding:14px 0 0;font-size:15px">Calcul des points<span class="qp-dots"></span></div>'}`;
   }
   function renderFinal() {
     const top = game.top || [];

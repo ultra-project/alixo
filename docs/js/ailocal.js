@@ -38,7 +38,17 @@ window.AlixoLocalAI = (() => {
   const FIRST_TOKEN_MS = 150000; // 1.36.4 : au-delà sans le moindre jeton (lecture de la consigne), le moteur est considéré bloqué (1.37.2 : 150 s)
   const FIRST_TOKEN_COLD_MS = 240000; // 1.37.2 : première réponse après un chargement (programmes graphiques encore à préparer) : 240 s
   const STALL_MS = 30000;        // entre deux jetons
-  const LIVE_LS = 'alixo.ai.live';   // clé du modèle chargé ; effacée à la fermeture normale de la page → encore là = fermeture brutale
+  const LIVE_LS = 'alixo.ai.live';
+  /* 1.41 : l'ordinateur ne doit plus ramer pendant qu'AlixoAI travaille.
+     - mémoire de conversation ramenée à 4 096 jetons (au lieu de 8 192) : la mémoire graphique réservée au modèle baisse
+       d'un tiers à la moitié, et la carte graphique (souvent partagée avec le système sur un portable) n'est plus saturée ;
+     - « respiration » entre deux mots : après chaque jeton, le moteur laisse la carte graphique libre un temps
+       proportionnel à celui qu'il vient d'y passer (PACE), pour que l'affichage de Windows / macOS continue de suivre
+       (plus de souris figée ni d'écran qui saccade) ; l'arrière-plan (correction pendant la frappe) respire deux fois plus ;
+     - le modèle n'est plus chargé au démarrage ni par une correction d'arrière-plan : seulement à la première demande
+       explicite (F7, quiz, fiche…) ; il est libéré après IDLE_MS sans aucune demande (mémoire graphique rendue). */
+  const PACE = 0.6, PACE_BG = 1.2, PACE_MAX = 80;   // pause = PACE × durée du dernier jeton, plafonnée à PACE_MAX ms
+  const IDLE_MS = 5 * 60000;   // clé du modèle chargé ; effacée à la fermeture normale de la page → encore là = fermeture brutale
 
   /* Qwen3 (Alibaba, Apache 2.0), poids quantifiés q4f16 préparés par MLC : très bon en français pour sa taille,
      « réflexion » désactivée à chaque requête (réponses JSON directes). dl = téléchargement, vram = mémoire graphique. */
@@ -47,9 +57,9 @@ window.AlixoLocalAI = (() => {
      plus de mémoire graphique). Sans ce choix, les shaders f16 ne compilent pas sur certaines cartes / pilotes
      (« Invalid ShaderModule … entryPoint: index_kernel »). */
   const MODELS = {
-    leger:     { id: 'Qwen3-0.6B-q4f16_1-MLC', id32: 'Qwen3-0.6B-q4f32_1-MLC', label: 'Léger',    dl: '0,4 Go', vram: 1.4, vram32: 1.9, ctx: 8192, desc: 'Ordinateur modeste ou téléphone récent.' },
-    equilibre: { id: 'Qwen3-1.7B-q4f16_1-MLC', id32: 'Qwen3-1.7B-q4f32_1-MLC', label: 'Équilibré', dl: '1,1 Go', vram: 2.1, vram32: 2.6, ctx: 8192, desc: 'La plupart des portables.' },
-    complet:   { id: 'Qwen3-4B-q4f16_1-MLC',   id32: 'Qwen3-4B-q4f32_1-MLC',   label: 'Complet',  dl: '2,4 Go', vram: 3.5, vram32: 4.3, ctx: 8192, desc: 'Carte graphique ou Mac récent : le plus précis.' }
+    leger:     { id: 'Qwen3-0.6B-q4f16_1-MLC', id32: 'Qwen3-0.6B-q4f32_1-MLC', label: 'Léger',    dl: '0,4 Go', vram: 1.4, vram32: 1.9, ctx: 4096, desc: 'Ordinateur modeste ou téléphone récent.' },
+    equilibre: { id: 'Qwen3-1.7B-q4f16_1-MLC', id32: 'Qwen3-1.7B-q4f32_1-MLC', label: 'Équilibré', dl: '1,1 Go', vram: 2.1, vram32: 2.6, ctx: 4096, desc: 'La plupart des portables.' },
+    complet:   { id: 'Qwen3-4B-q4f16_1-MLC',   id32: 'Qwen3-4B-q4f32_1-MLC',   label: 'Complet',  dl: '2,4 Go', vram: 3.5, vram32: 4.3, ctx: 4096, desc: 'Carte graphique ou Mac récent : le plus précis.' }
   };
   const F32_LS = 'alixo.ai.f32';   // '1' : les shaders f16 ont échoué sur cet appareil → variantes f32 désormais
   let forceF32 = false; try { forceF32 = localStorage.getItem(F32_LS) === '1'; } catch { /* stockage indisponible */ }
@@ -126,7 +136,10 @@ window.AlixoLocalAI = (() => {
       /* 1.36.4 : « Complet » (4 milliards de paramètres, 3,5 Go de mémoire graphique) n'est conseillé que sur une carte NVIDIA
          ou un Mac Apple Silicon. Une puce AMD ou Intel intégrée (la plupart des portables) partage la mémoire avec le
          système : le modèle y tenait, mais au prix de gels, de réponses de plusieurs minutes et de fermetures brutales. */
-      if (mobile || (memory && memory <= 4) || (bind && bind < 1024 * 1024 * 1024)) recommended = 'leger';
+      /* 1.41 : puce Intel (ou ARM / Qualcomm) intégrée : « Léger » — « Équilibré » y tenait, mais occupait la carte graphique
+         partagée au point de figer tout l'ordinateur pendant chaque réponse. */
+      const integrated = /intel|qualcomm|adreno|arm|mali|powervr/.test(vendor) || /intel|uhd|iris/i.test(desc);
+      if (mobile || integrated || (memory && memory <= 4) || (bind && bind < 1024 * 1024 * 1024)) recommended = 'leger';
       else if (/nvidia|geforce|rtx|quadro|apple/.test(vendor) && (!memory || memory >= 8)) recommended = 'complet';
       probed = { ok: true, reason: '', vendor, desc, memory, bind, mobile, f16, recommended };
       return probed;
@@ -284,7 +297,10 @@ window.AlixoLocalAI = (() => {
      (cache des clés-valeurs réutilisé), au lieu de relire tout le document à chaque lot. `onToken(text)` reçoit le texte au
      fil de l'eau (lecture progressive : le quiz commence dès la première question). `token` permet d'annuler (cancel). */
   async function chat({ system, user, messages, maxTokens = 1024, temperature = 0, timeoutMs = 180000, key, background = false, onToken, token, stop, quiet = false } = {}) {
-    const job = { background, quiet, eng: null, interrupted: false, tokens: 0, token: token || null };   // quiet : l'appelant affiche lui-même l'avancement (pas de barre discrète)
+    const job = { background, quiet, eng: null, interrupted: false, tokens: 0, token: token || null };
+    // 1.41 : une requête d'arrière-plan ne charge jamais le modèle (ni au démarrage, ni pendant la frappe)
+    if (background && !(engine && st.state === 'ready')) return { ok: false, status: 499, error: 'AlixoAI n’est pas encore chargée : la correction pendant la frappe reprendra après la première demande.' };
+    clearTimeout(idleTm);   // quiet : l'appelant affiche lui-même l'avancement (pas de barre discrète)
     const once = async forceKey => {
       // 1.37.2 : jamais au-dessus de la taille conseillée (plafond mémorisé après un moteur muet ou une fermeture brutale)
       const want = forceKey || key || st.key || recommend();
@@ -308,6 +324,7 @@ window.AlixoLocalAI = (() => {
       const arm = ms => { clearTimeout(stallTm); stallTm = setTimeout(stopGen, ms); };
       const consume = async () => {
         const stream = await eng.chat.completions.create(req);
+        let t0 = performance.now();
         for await (const chunk of stream) {
           const ch = chunk && chunk.choices && chunk.choices[0];
           if (ch) {
@@ -320,6 +337,11 @@ window.AlixoLocalAI = (() => {
           }
           if (chunk && chunk.usage) usage = chunk.usage;
           arm(STALL_MS);
+          // 1.41 : respiration — la carte graphique est rendue au système avant le jeton suivant (voir PACE)
+          const spent = performance.now() - t0;
+          const pause = Math.min(PACE_MAX, spent * (background ? PACE_BG : PACE));
+          if (pause >= 2 && !job.interrupted) await new Promise(r => setTimeout(r, pause));
+          t0 = performance.now();
         }
       };
       try {
@@ -390,13 +412,20 @@ window.AlixoLocalAI = (() => {
   }
   let pumping = false;
   function pump() {
-    if (pumping || !jobs.length) return;
+    if (pumping) return;
+    if (!jobs.length) { armIdle(); return; }
     const i = jobs.findIndex(j => !j.job.background);
     const next = jobs.splice(i >= 0 ? i : 0, 1)[0];
     pumping = true;
     next.run().then(next.resolve, e => next.resolve({ ok: false, status: 0, error: friendly(e) })).finally(() => { pumping = false; pump(); });
   }
 
+  /* 1.41 : libération automatique après IDLE_MS sans demande */
+  let idleTm = 0;
+  function armIdle() {
+    clearTimeout(idleTm);
+    idleTm = setTimeout(() => { if (!jobs.length && !current && !loading && engine) unload().catch(() => {}); }, IDLE_MS);
+  }
   async function unload() { await dispose(); set({ state: 'idle', key: '', progress: 0, text: '', phase: '' }); }
   async function remove(key) {
     const m = MODELS[key] || MODELS[DEFAULT_KEY];
