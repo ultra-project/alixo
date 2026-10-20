@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.41.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.41.1 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.41.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Des mises à jour <em>sans accroc</em>', text: 'Correction : la mise à jour automatique ne bloque plus sur un fichier verrouillé.', dur: 5000 },
+    { title: 'Plus de fichier <em>verrouillé</em>', text: 'Quand Windows ou l’antivirus retient le fichier téléchargé, Alixo trouve un autre chemin.',
+      bullets: ['<b>Dossier neuf</b> si l’ancien fichier ne s’efface pas', '<b>Trois nouveaux essais</b> tout seuls : 20 s, 1 min, 3 min', '<b>Rien à faire</b> : la suite se met à jour toute seule'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
+    { title: 'Et toujours : la <em>1.41</em>', text: 'AlixoAI plus légère, vote d’assemblée, texte à trous, Tâches et bouton Image repensés.',
+      bullets: ['<b>Paramètres › À propos</b> : revoir la présentation de la 1.41'],
+      art: 'cards', accent: '#8a4b9c', accent2: '#b3762a', dur: 6500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.41.0', {
   scenes: [
@@ -55,19 +68,6 @@ AlixoWhatsNew.register('1.40.0', {
     { title: 'Télécharger et <em>renommer</em> plus vite', text: 'La même petite fenêtre partout, et les onglets se renomment sur place.',
       bullets: ['<b>Ordre fixe</b> : fichier Alixo, PDF, Word, page web', '<b>Tableurs, planches, quiz</b> : un seul bouton Télécharger', '<b>Double-clic</b> sur un onglet, une feuille : renommer'],
       art: 'list', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.39.2', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Des icônes <em>nettes</em>', text: 'Correction : les icônes de vos fichiers Alixo retrouvent leur dessin d’origine.', dur: 5000 },
-    { title: 'Le dessin, en <em>entier</em>', text: 'Les symboles blancs au centre des icônes apparaissaient troués. Seul le fond autour de la feuille est désormais retiré.',
-      bullets: ['<b>Symboles intacts</b> : lignes, écran, grille, liste, tableau', '<b>Contour net</b>, sans liseré blanc, sur fond clair ou sombre', '<b>Toutes les tailles</b> du bureau et de l’Explorateur'],
-      art: 'cards', accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8000 },
-    { title: 'Et toujours : le plan à <em>votre</em> façon', text: 'Un plan par séance et trois modes : automatique, adaptatif ou aucun plan.',
-      bullets: ['<b>Niveau de plan</b> › « Plan de cette séance… »', '<b>Adaptatif</b> : votre premier numéro devient le niveau 1'],
-      art: 'list', accent: '#8a4b9c', accent2: '#b3762a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
