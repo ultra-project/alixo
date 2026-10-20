@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-20T10:52:09.753Z",
- "version": "1.41.0",
- "date": "2026-10-20T10:12:12Z",
- "notes": "Nouveautés 1.41.0 — AlixoAI ne fait plus ramer l’ordinateur, vote d’assemblée et texte à trous, Tâches et bouton Image repensés\n\n\n- **AlixoAI ne fige plus l’ordinateur.** Corriger un texte, faire une fiche ou un quiz pouvait bloquer la souris et faire saccader l’écran, même pour une petite demande : le modèle se chargeait tout seul sur la carte graphique quelques secondes après chaque démarrage, réservait deux fois trop de mémoire et ne laissait jamais la main à l’affichage pendant qu’il écrivait. Désormais, AlixoAI **ne se charge qu’à votre première demande** (F7, quiz, fiche…), **fait une courte pause entre chaque mot** pour que Windows et macOS restent fluides, utilise **deux fois moins de mémoire graphique** et **libère la carte graphique après 5 minutes** sans demande. Sur les puces Intel intégrées (la plupart des portables), elle passe en taille « Légère » (nouveau téléchargement de 0,4 Go une seule fois). La correction pendant la frappe reprend dès qu’AlixoAI a servi une première fois. Côté technique : `app/js/ailocal.js`, `app/js/alixoai.js`.\n- **Deux nouveaux types de question dans les quiz.** **Vote d’assemblée** : un sondage dont les résultats se dessinent **en direct dans un hémicycle**, comme à l’Assemblée nationale — chaque votant devient un siège coloré selon son groupe (au-delà de 300 votants, 300 sièges répartis à la proportionnelle), la **majorité absolue** est marquée au centre et le groupe en tête ressort à la révélation. **Texte à trous** : écrivez votre texte, sélectionnez un mot puis **« Faire un trou »** (ou tapez `[[mot]]`) ; pour chaque trou, au choix un **menu déroulant** (bonne réponse et leurres) ou une **saisie libre** (variantes acceptées, sans tenir compte des majuscules, accents et espaces). Les points sont donnés au prorata des trous justes, et les résultats montrent le taux de réussite de chaque trou.\n- **Quiz plus modernes et six thèmes signature.** L’éditeur est redessiné avec un **aperçu en direct** de la question dans le thème du quiz, l’écran de jeu est modernisé, et six nouveaux thèmes animés arrivent : **Aurore**, **Verre**, **Néon**, **Papier**, **Galaxie** et **Minéral** (bouton Apparence, chaque thème en miniature). Les anciens thèmes restent disponibles. Correction au passage : dans un quiz en direct, le classement final affichait parfois « 0 / 2 » et un temps moyen vide.\n- **L’onglet Tâches fait peau neuve.** Une grande zone de saisie en haut (Entrée pour ajouter ; « ! » importante, « !! » urgente, « #catégorie »), des sections claires (**En retard, Aujourd’hui, À venir, Sans échéance**, Terminées repliables), des vues **Aujourd’hui, Importantes, Planifiées**, des cases rondes animées, la modification au clic sur le texte et un anneau d’avancement de la journée. Vos tâches et catégories restent telles quelles.\n- **Un bouton « Image » dans la barre d’outils.** Il remplace le bouton téléphone et propose **Insérer une image** ou **Insérer une image via téléphone** (QR code, comme avant). « Insérer une image » montre en grand les photos déjà présentes dans vos documents : un clic la place au curseur. **« Importer depuis l’ordinateur »** ouvre l’explorateur et, en même temps, une petite fenêtre où **glisser** vos images ou les **coller (Ctrl+V)**.\n- **Plus de barre de titre « Alixo — Cockpit d’amphi »** dans la version PC, comme dans Word : la barre d’Alixo monte tout en haut (on la saisit pour déplacer la fenêtre, double-clic pour l’agrandir), les boutons **Réduire, Agrandir, Fermer** restent à droite et prennent les couleurs du thème (sur Mac, les trois pastilles restent à gauche).\n- **Télécharger : plus de format « conseillé ».** Le dernier format utilisé n’est plus surligné (on croyait que PDF était recommandé), et le **fichier Alixo** prend l’icône qu’il aura sur le bureau : séance, présentation, tableur, quiz ou planche.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.41.0",
+ "generatedAt": "2026-10-20T10:57:58.999Z",
+ "version": "1.41.1",
+ "date": "2026-10-20T10:57:42Z",
+ "notes": "Nouveautés 1.41.1 — Correction : mise à jour automatique bloquée par un fichier verrouillé\n\n\n- **La mise à jour automatique ne s’arrête plus sur « Le fichier téléchargé est verrouillé par Windows ou l’antivirus (EPERM … rename) ».** L’installateur de la version précédente (toujours nommé `Alixo-Setup.exe`) pouvait rester verrouillé dans le dossier de téléchargement des mises à jour, ou l’antivirus analysait le nouveau fichier plus d’une minute : Alixo essayait alors de le remplacer et échouait aussitôt. Désormais, si l’ancien fichier ne peut pas être effacé, la mise à jour se télécharge **dans un dossier neuf**, et en cas d’échec Alixo **réessaie tout seul trois fois** (après 20 s, 1 min et 3 min), chaque fois dans un dossier neuf ; les dossiers de ces essais sont effacés au démarrage suivant. Côté technique : `main.js` › `setupAutoUpdate`.\n- **Si vous êtes bloqué sur la 1.40 ou la 1.41.0** : téléchargez une fois **Alixo-Setup.exe** depuis alixoapp.com et installez-le par-dessus (vos cours sont conservés) ; les mises à jour suivantes repasseront toutes seules.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.41.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.0/Alixo-Setup.exe",
-   "size": 79345617
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Setup.exe",
+   "size": 79346237
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.0/Alixo-Portable.exe",
-   "size": 78542144
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Portable.exe",
+   "size": 78542765
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.0/Alixo-Mac.dmg",
-   "size": 189855468
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Mac.dmg",
+   "size": 189864848
   },
   "macZip": {
-   "name": "Alixo-1.41.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.0/Alixo-1.41.0-mac.zip",
-   "size": 183104526
+   "name": "Alixo-1.41.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-1.41.1-mac.zip",
+   "size": 183105284
   }
  },
  "history": [
+  {
+   "version": "1.41.1",
+   "date": "2026-10-20T10:57:42Z",
+   "notes": "Nouveautés 1.41.1 — Correction : mise à jour automatique bloquée par un fichier verrouillé\n\n\n- **La mise à jour automatique ne s’arrête plus sur « Le fichier téléchargé est verrouillé par Windows ou l’antivirus (EPERM … rename) ».** L’installateur de la version précédente (toujours nommé `Alixo-Setup.exe`) pouvait rester verrouillé dans le dossier de téléchargement des mises à jour, ou l’antivirus analysait le nouveau fichier plus d’une minute : Alixo essayait alors de le remplacer et échouait aussitôt. Désormais, si l’ancien fichier ne peut pas être effacé, la mise à jour se télécharge **dans un dossier neuf**, et en cas d’échec Alixo **réessaie tout seul trois fois** (après 20 s, 1 min et 3 min), chaque fois dans un dossier neuf ; les dossiers de ces essais sont effacés au démarrage suivant. Côté technique : `main.js` › `setupAutoUpdate`.\n- **Si vous êtes bloqué sur la 1.40 ou la 1.41.0** : téléchargez une fois **Alixo-Setup.exe** depuis alixoapp.com et installez-le par-dessus (vos cours sont conservés) ; les mises à jour suivantes repasseront toutes seules.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.41.1"
+  },
   {
    "version": "1.41.0",
    "date": "2026-10-20T10:12:12Z",
@@ -220,11 +225,6 @@
    "version": "1.19.1",
    "date": "2026-09-24T08:26:42Z",
    "notes": "Nouveautés 1.19.1 — correctif de la barre d'onglets\n\n\n- Avec peu d'onglets ouverts, les onglets s'étiraient sur toute la largeur de la barre (1.19.0) ; ils reprennent leur largeur normale et ne se serrent que lorsqu'ils ne tiennent plus sur la ligne."
-  },
-  {
-   "version": "1.19.0",
-   "date": "2026-09-24T08:11:31Z",
-   "notes": "Nouveautés 1.19.0 — clé d'activation Alixo+, onglets, corrections\n\n\n- **Clé d'activation** (Paramètres › Alixo+) : saisissez une clé reçue de l'administrateur d'Alixo et Alixo+ s'active sur votre compte pour la durée de la clé (1, 3, 6, 12 mois ou sans fin ; prolongation si Alixo+ est déjà actif). Panneau admin : nouvel onglet **Clés Alixo+** pour générer des clés en série (durée, libellé), voir lesquelles ont été utilisées, par qui et quand, copier ou supprimer celles qui n'ont pas servi. Chaque clé ne sert qu'une fois.\n- **Onglets** : avec beaucoup de séances, présentations et tableurs ouverts, la barre d'onglets ne défile plus (une bande claire apparaissait sous les onglets) : les onglets se serrent pour tenir sur une ligne, l'onglet actif reste lisible, et un bouton **▾** à droite liste tous les onglets ouverts (ouvrir, fermer un par un, tout fermer).\n- **Éditeur** : un clic dans l'espace entre deux blocs place le curseur à la fin du bloc du dessus ; il n'ajoute plus de paragraphe vide en fin de cours (le double-clic entre deux blocs insère toujours un paragraphe à cet endroit).\n- **Correction par IA** : les fautes dans les **cartes** (titre et texte) et dans la source d'une citation sont maintenant corrigées ; avant, l'IA les signalait mais « Appliquer » échouait avec « passage introuvable »."
   }
  ]
 }
