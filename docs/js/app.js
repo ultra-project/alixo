@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.42.0';
+const ALIXO_VERSION = '1.43.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -37,6 +37,9 @@ function toast(msg, opts) {
       try { opts.onAction(); } catch (err) { console.error(err); }
     });
   } else t.textContent = msg;
+  /* 1.43 : un pop-over ouvert en bas à gauche (choix d'un document…) : le toast passe en haut pour ne pas le couvrir */
+  const po = $('#popover'); const pr = po && !po.hidden ? po.getBoundingClientRect() : null;
+  t.classList.toggle('toast-top', !!(pr && pr.bottom > innerHeight - 90 && pr.left < 620));
   t.hidden = false;
   t._tm = setTimeout(() => t.hidden = true, (opts && opts.duration) || (opts && opts.action ? 7000 : 2200));
 }
@@ -399,12 +402,14 @@ function addPage() {
   const np = { id: uid(), titre: `Onglet ${pages.length + 1}`, blocks: [{ id: uid(), type: 'p', text: '', day: todayKey() }] };
   pages.push(np);
   switchPage(np.id);
-  openRenamePagePopover(np.id, true);
+  /* 1.43 : plus de fenêtre — le nom se saisit directement dans le nouvel onglet (comme le renommage) ;
+     Entrée ou Échap : le curseur part dans le premier bloc de l'onglet. */
+  requestAnimationFrame(() => renamePageInline(np.id, true));
 }
 /* 1.40 : renommer un onglet sur place (double-clic sur son nom) — un champ se pose exactement sur l'onglet ;
    Entrée ou clic ailleurs : valider ; Échap : annuler. Sert aux onglets de documents, aux onglets d'une séance
    et aux feuilles du tableur (js/sheets.js, par AlixoApp.inlineRename). */
-function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titre', onCommit } = {}) {
+function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titre', onCommit, onDone, onInput } = {}) {
   if (!el || !el.isConnected) return;
   document.querySelectorAll('.inline-rename').forEach(x => x.remove());
   const r = el.getBoundingClientRect();
@@ -422,22 +427,33 @@ function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titr
     const v = inp.value.trim();
     inp.remove();
     if (ok && v && v !== value && onCommit) onCommit(v);
+    // 1.43 : rappel de fin (validé, annulé ou abandonné) — sert à rendre la main à l'éditeur après un nouvel onglet
+    if (onDone) onDone({ ok, how: doneHow });
   };
-  inp.addEventListener('input', fit);
+  let doneHow = 'blur';
+  inp.addEventListener('input', () => { fit(); if (onInput) { try { onInput(inp.value); } catch { /* aperçu */ } } });
   inp.addEventListener('keydown', e => {
     e.stopPropagation();
-    if (e.key === 'Enter') { e.preventDefault(); finish(true); }
-    else if (e.key === 'Escape') { e.preventDefault(); finish(false); }
+    if (e.key === 'Enter') { e.preventDefault(); doneHow = 'key'; finish(true); }
+    else if (e.key === 'Escape') { e.preventDefault(); doneHow = 'key'; finish(false); }
   });
   inp.addEventListener('blur', () => finish(true));
   inp.addEventListener('pointerdown', e => e.stopPropagation());
   requestAnimationFrame(() => { inp.focus(); inp.select(); });
 }
-function renamePageInline(pid) {
+function renamePageInline(pid, isNew) {
   const d = doc(); if (!d || readOnly) return;
   const pg = docPages(d).find(p => p.id === pid); const el = $(`#page-tabs [data-page="${pid}"]`);
-  if (!pg || !el) { openRenamePagePopover(pid); return; }
-  inlineRename(el, { value: pg.titre || '', maxLength: 60, placeholder: 'Nom de l’onglet', onCommit: v => { pg.titre = v; d.updatedAt = Date.now(); save(); renderPageTabs(); } });
+  if (!pg || !el) { openRenamePagePopover(pid, isNew); return; }
+  if (isNew) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  inlineRename(el, { value: pg.titre || '', maxLength: 60, placeholder: 'Nom de l’onglet', onCommit: v => { pg.titre = v; d.updatedAt = Date.now(); save(); renderPageTabs(); if (doc() === d && pagesActive()) renderPgHead(d); },   // 1.43 : + nom en tête de page
+    // 1.43 : l'en-tête de la page suit la saisie (sinon il affiche encore l'ancien nom pendant qu'on tape)
+    onInput: v => { if (doc() !== d || d.page !== pid) return; const t = $('#pg-head .ph-tab'); if (t) t.textContent = v.trim() || pg.titre || ''; },
+    // 1.43 : nouvel onglet validé au clavier → on écrit tout de suite dans son premier bloc (un clic ailleurs garde sa cible)
+    onDone: ({ how }) => {
+      if (doc() === d && pagesActive()) renderPgHead(d);   // annulé (Échap) : l'en-tête reprend le nom enregistré
+      if (isNew && how === 'key' && doc() === d && d.page === pid && d.blocks[0]) focusBlock(d.blocks[0].id, 'start');
+    } });
 }
 function openRenamePagePopover(pid, isNew) {
   const d = doc(); if (!d) return;
@@ -1947,7 +1963,7 @@ function docExportHTML(d, cssText) {
 <style>${cssText}
 body { overflow: auto; background: #fff; padding: 40px 16px; }
 #doc { margin: 0 auto; border: 1px solid #dadce0; }
-.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dsel { display: none !important; }
+.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dsel, .dref-tools, .dref-go, .q-src { display: none !important; }
 .block.draw.empty .draw-wrap::after { content: none; }
 .block.li.cl .cbox { pointer-events: none; }
 .tbl .tcell:focus { box-shadow: none; }
@@ -2043,8 +2059,9 @@ async function downloadFolderZip(fid) {
 const fmtBytes = n => { if (!(n >= 0)) return '—'; if (n < 1024) return Math.round(n) + ' o'; if (n < 1048576) return Math.round(n / 1024) + ' Ko'; if (n < 1073741824) return (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',') + ' Mo'; return (n / 1073741824).toFixed(2).replace('.', ',') + ' Go'; };
 const fmtGo = n => (Math.max(0, n || 0) / 1073741824).toFixed(n >= 10737418240 ? 1 : 2).replace('.', ',') + ' Go';
 const utf8Len = str => { try { return new TextEncoder().encode(str).length; } catch { return String(str).length; } };
-/* somme des tailles d'un magasin IndexedDB (data URL, ArrayBuffer ou Blob) */
-function idbSum(dbName, store) {
+/* somme des tailles d'un magasin IndexedDB (data URL, ArrayBuffer ou Blob) ;
+   1.43 : sizes (Map facultative) reçoit la taille de chaque entrée (clé → octets), pour attribuer les images aux documents */
+function idbSum(dbName, store, sizes) {
   return new Promise(res => {
     let r; try { r = indexedDB.open(dbName); } catch { res(0); return; }
     r.onerror = () => res(0);
@@ -2055,39 +2072,95 @@ function idbSum(dbName, store) {
       let total = 0;
       try {
         const cur = db.transaction(store).objectStore(store).openCursor();
-        cur.onsuccess = () => { const c = cur.result; if (!c) { db.close(); res(total); return; } const v = c.value; total += typeof v === 'string' ? v.length : (v && v.byteLength) || (v && v.size) || 0; c.continue(); };
+        cur.onsuccess = () => { const c = cur.result; if (!c) { db.close(); res(total); return; } const v = c.value; const n = typeof v === 'string' ? v.length : (v && v.byteLength) || (v && v.size) || 0; total += n; if (sizes) sizes.set(String(c.key), n); c.continue(); };
         cur.onerror = () => { db.close(); res(total); };
       } catch { db.close(); res(0); }
     };
   });
 }
+/* Contrat lu par js/cloudconfig.js (docs, meta, imgs, filesCloud, nDocs, nFiles) et storageAllows (total) : inchangé.
+   1.43 : + cats = [{ k, label, bytes, n }] (ventilation par catégorie, pour la barre façon Apple) et
+   top = [{ kind: 'doc' | 'file', id, name, bytes, dk, imgs, nImgs }] (les 8 plus gros éléments ; un document compte ses images). */
+const STOR_FILE_ICON = '<svg class="dicon" viewBox="0 0 24 24"><path d="M6 2.5h8.5L19 7v14.5H6Z"/><path d="M14.5 2.5V7H19M9 13h6M9 17h4"/></svg>';
+const STOR_CATS = [['cours', 'Séances'], ['slides', 'Présentations'], ['sheet', 'Tableurs'], ['board', 'Planches'], ['quiz', 'Quiz'], ['imgs', 'Images'], ['files', 'Fichiers'], ['meta', 'Dossiers et réglages']];
 async function storageUsage() {
-  const docs = state.docs.reduce((n, d) => n + utf8Len(JSON.stringify(d)), 0);
+  const byKind = {}, nByKind = {}, perDoc = [];
+  let docs = 0;
+  for (const d of state.docs) {
+    const js = JSON.stringify(d); const n = utf8Len(js); docs += n;
+    const k = DREF_KINDS[d.kind] && d.kind !== 'cours' ? d.kind : 'cours';
+    byKind[k] = (byKind[k] || 0) + n; nByKind[k] = (nByKind[k] || 0) + 1;
+    const iids = new Set(); for (const m of js.matchAll(/"iid":"([^"]+)"/g)) iids.add(m[1]);
+    perDoc.push({ d, n, iids });
+  }
   const meta = utf8Len(JSON.stringify({ folders: state.folders, settings: state.settings, events: state.events || [], todos: state.todos || [], todoCats: state.todoCats || [] }));
-  const imgs = await idbSum('alixo-images', 'img');
+  const imgSizes = new Map();
+  const imgs = await idbSum('alixo-images', 'img', imgSizes);
   const fl = Array.isArray(state.files) ? state.files : [];
   const files = fl.reduce((n, f) => n + (f.size || 0), 0);
   const filesCloud = fl.filter(f => f.cloud).reduce((n, f) => n + (f.size || 0), 0);
   let device = null; try { const e = await navigator.storage.estimate(); device = e && e.usage; } catch { device = null; }
-  return { docs, meta, imgs, files, filesCloud, nDocs: state.docs.length, nFiles: fl.length, total: docs + meta + imgs + files, cloud: docs + meta + imgs + filesCloud, device };
+  const val = { imgs: [imgs, imgSizes.size], files: [files, fl.length], meta: [meta, 0] };
+  const cats = STOR_CATS.map(([k, label]) => ({ k, label, bytes: val[k] ? val[k][0] : byKind[k] || 0, n: val[k] ? val[k][1] : nByKind[k] || 0 }));
+  const top = perDoc.map(({ d, n, iids }) => {
+    let ib = 0; for (const id of iids) ib += imgSizes.get(id) || 0;
+    return { kind: 'doc', id: d.id, name: d.titre || 'Sans titre', bytes: n + ib, dk: d.kind || 'cours', imgs: ib, nImgs: iids.size };
+  }).concat(fl.map(f => ({ kind: 'file', id: f.id, name: f.name || 'Fichier', bytes: f.size || 0, cloud: !!f.cloud })))
+    .filter(x => x.bytes > 0).sort((a, b) => b.bytes - a.bytes).slice(0, 8);
+  return { docs, meta, imgs, files, filesCloud, nDocs: state.docs.length, nFiles: fl.length, total: docs + meta + imgs + files, cloud: docs + meta + imgs + filesCloud, device, cats, top };
 }
+/* 1.43 : affichage façon Apple — « X Mo sur 3 Go », barre segmentée par catégorie (couleurs : jetons --stor-*),
+   légende en pastilles, puis la liste des plus gros éléments (un clic l'ouvre ; voir bindStorageCard) */
+/* espace restant arrondi par défaut (3 Go − 3 Mo s'affiche « 2,99 Go », pas « 3,00 Go ») */
+const fmtFree = n => (n >= 1073741824 ? (Math.floor(n / 1073741824 * 100) / 100).toFixed(2).replace('.', ',') + ' Go' : fmtBytes(Math.max(0, n)));
 function storageHTML(u, online) {
-  const parts = [['Cours', u.docs + u.meta, '#33658a'], ['Images', u.imgs, '#2f7d68'], ['Fichiers', online ? u.filesCloud : u.files, '#b3762a']];
-  const tot = online ? u.cloud : u.total;
-  const bar = parts.map(([l, v, c]) => `<span style="width:${tot ? Math.max(v ? 1.5 : 0, v / tot * 100) : 0}%; background:${c}" title="${esc(l)} : ${fmtBytes(v)}"></span>`).join('');
-  const pct = Math.min(100, u.total / FREE_STORAGE * 100);
-  const quota = isPlus() ? `<div class="po-stor-quota plus"><span>${plusBadge()} sans la limite de 3 Go</span></div>`
-    : `<div class="po-stor-quota"><i style="width:${pct.toFixed(1)}%" class="${u.total > FREE_STORAGE * .9 ? 'warn' : ''}"></i></div><div class="po-stor-qtxt">${fmtGo(u.total)} sur ${fmtGo(FREE_STORAGE)} (compte gratuit) · <button class="linklike" id="po-plus" type="button">Alixo+ pour aller au-delà</button></div>`;
+  const plus = isPlus();
+  const used = u.total;
+  const quotaGo = Math.round(FREE_STORAGE / 1073741824);
+  /* Alixo+ : barre à l'échelle de 3 Go tant qu'on est en dessous, sinon de l'usage + 25 % — jamais « pleine » à côté de
+     « sans limite » */
+  const scale = plus ? (used < FREE_STORAGE ? FREE_STORAGE : used * 1.25) : FREE_STORAGE;
+  const full = !plus && used >= FREE_STORAGE;
+  const warn = !plus && used > FREE_STORAGE * .9;
+  const cats = (u.cats || [{ k: 'cours', label: 'Cours', bytes: u.docs + u.meta }, { k: 'imgs', label: 'Images', bytes: u.imgs }, { k: 'files', label: 'Fichiers', bytes: u.files }]).filter(c => c.bytes > 0);
+  const seg = cats.map(c => `<span class="stor-seg" style="--w:${(c.bytes / scale * 100).toFixed(3)}%;--g:${(c.bytes / scale).toFixed(5)};--c:var(--stor-${c.k})" title="${esc(c.label)} : ${fmtBytes(c.bytes)}"></span>`).join('');
+  const label = cats.map(c => `${c.label} ${fmtBytes(c.bytes)}`).join(', ');
+  const head = `<div class="stor-head${warn ? ' warn' : ''}">
+      <div class="stor-used"><b>${fmtBytes(used)}</b><span>${plus ? 'utilisés' : `sur ${quotaGo} Go`}</span></div>
+      <div class="stor-free">${plus ? `${plusBadge()} <span>sans limite</span>` : `${fmtFree(FREE_STORAGE - used)} disponibles`}</div></div>
+    <div class="stor-where">${online ? 'Sur votre compte Alixo, synchronisé entre vos appareils' : 'Sur cet appareil'}</div>`;
+  const bar = `<div class="stor-bar" role="img" aria-label="${esc(`${fmtBytes(used)} utilisés${plus ? '' : ` sur ${quotaGo} Go`} : ${label || 'rien pour l’instant'}`)}">${seg}</div>`;
+  /* la couleur seule ne suffit pas : l'alerte est écrite */
+  const alert = full ? `<div class="stor-alert" role="status">Espace plein : vous ne pouvez plus ajouter de fichiers ni d’images. Libérez de la place ou passez à Alixo+.</div>`
+    : warn ? `<div class="stor-alert" role="status">Presque plein : il reste ${fmtFree(FREE_STORAGE - used)}.</div>` : '';
+  const legend = cats.length ? `<div class="stor-legend">${cats.map(c => `<span class="stor-key" style="--c:var(--stor-${c.k})"><i></i><span>${esc(c.label)}</span><b>${fmtBytes(c.bytes)}</b></span>`).join('')}</div>` : `<div class="stor-empty">Rien n’est encore stocké.</div>`;
+  const top = (u.top || []).map(x => {
+    const ico = x.kind === 'doc' ? docIcon({ kind: x.dk }) : STOR_FILE_ICON;
+    const sub = x.kind === 'doc'
+      ? [DREF_KINDS[x.dk] || 'Séance', x.nImgs ? `dont ${x.nImgs} image${x.nImgs > 1 ? 's' : ''} (${fmtBytes(x.imgs)})` : ''].filter(Boolean).join(' · ')
+      : 'Fichier' + (online && !x.cloud ? ' · sur cet appareil' : '');
+    return `<button type="button" class="stor-item" data-stor-${x.kind}="${esc(x.id)}" style="--c:var(--stor-${x.kind === 'doc' ? (DREF_KINDS[x.dk] ? x.dk : 'cours') : 'files'})" title="Ouvrir « ${esc(x.name)} »"><span class="stor-item-ico">${ico}</span><span class="stor-item-nm"><b>${esc(x.name)}</b><small>${esc(sub)}</small></span><span class="stor-item-sz">${fmtBytes(x.bytes)}</span></button>`;
+  }).join('');
   const facts = [
-    [u.nDocs, `séance${u.nDocs > 1 ? 's' : ''}`],
-    [u.nFiles, `fichier${u.nFiles > 1 ? 's' : ''}`],
-    [u.device ? fmtBytes(u.device) : null, 'sur cet appareil']
-  ].filter(f => f[0] !== null && f[0] !== undefined);
-  return `<div class="po-storage"><div class="po-stor-main"><b>${fmtGo(tot)}</b> <span>${online ? 'stockés sur le compte' : 'stockés sur cet appareil'}</span> <span class="po-stor-sub">${fmtBytes(tot)}</span></div>
-    <div class="po-stor-bar">${bar}</div>${quota}
-    <div class="po-stor-legend">${parts.map(([l, v, c]) => `<span><i style="background:${c}"></i>${l}<b>${fmtBytes(v)}</b></span>`).join('')}</div>
-    <div class="po-stor-facts">${facts.map(([n, l]) => `<span><b>${esc(String(n))}</b> ${esc(l)}</span>`).join('')}</div>
+    `${u.nDocs} document${u.nDocs > 1 ? 's' : ''}`,
+    `${u.nFiles} fichier${u.nFiles > 1 ? 's' : ''}`,
+    /* hors compte, l'en-tête dit déjà « Sur cet appareil » : pas de second chiffre ; avec compte, la copie locale */
+    online && u.device ? `${fmtBytes(u.device)} en cache sur cet appareil` : ''
+  ].filter(Boolean).join(' · ');
+  return `<div class="po-storage stor">${head}${bar}${alert}${legend}
+    ${top ? `<div class="stor-top"><div class="stor-top-h">Les plus gros éléments</div><div class="stor-list">${top}</div></div>` : ''}
+    <div class="stor-foot"><span>${esc(facts)}</span>${plus ? '' : `<button class="linklike" id="po-plus" type="button">Alixo+ pour aller au-delà de ${quotaGo} Go</button>`}</div>
     ${online && u.files > u.filesCloud ? `<div class="po-hint" style="margin-top:6px">${fmtBytes(u.files - u.filesCloud)} de fichiers restent sur cet appareil (plus de 20 Mo par fichier).</div>` : ''}</div>`;
+}
+/* 1.43 : un clic sur un des plus gros éléments l'ouvre (les Paramètres se ferment) */
+function bindStorageCard(stor) {
+  stor.addEventListener('click', e => {
+    const d = e.target.closest('[data-stor-doc]'), f = e.target.closest('[data-stor-file]');
+    if (!d && !f) return;
+    closeSettings();
+    if (d) { if (findDoc(d.dataset.storDoc)) openDoc(d.dataset.storDoc); else toast('Ce document n’existe plus'); }
+    else if (window.AlixoFiles) AlixoFiles.open(f.dataset.storFile);
+  });
 }
 /* état de la synchronisation, pour la pastille de la carte Compte */
 function syncTone(txt) {
@@ -2188,7 +2261,7 @@ const PLUS_ICO = {
 const PLUS_FEATURES = [
   { k: 'stockage', name: 'Plus de 3 Go de stockage', free: '3 Go', plus: 'Au-delà de 3 Go', text: 'Fichiers, images et cours au-delà de la limite de 3 Go du compte gratuit.' },
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
-  { k: 'ia', name: 'Intelligence artificielle', free: '—', plus: 'Incluse', text: 'Correction de l’orthographe et de la grammaire, mise en forme et reformulations par IA, pendant la frappe ou à la demande (F7).' },
+  { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI relit tout le cours (F7), propose la mise en forme et des reformulations.' },
   { k: 'quizia', name: 'Quiz IA et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : QCM, vrai / faux et réponses courtes corrigés sur place, ou une fiche de révision (résumé, points clés, définitions, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
@@ -2266,7 +2339,7 @@ function setPlan(info) {
   refreshPlusUi();
   const ov = $('#setov'); if (ov && !ov.hidden) renderSettingsBody();
   if (isPlus() !== was) {
-    if (isPlus()) { closeDialog('plusov'); toast('Alixo+ est activé sur votre compte — merci !'); aiAutoInstall(1500); }
+    if (isPlus()) { closeDialog('plusov'); toast('Alixo+ est activé sur votre compte — merci !'); }
     else toast('Alixo+ a pris fin sur ce compte : retour aux fonctions gratuites');
   }
 }
@@ -2863,7 +2936,7 @@ const SET_CATS = [
   { k: 'plus', name: 'Alixo+', sub: 'Votre formule, clé d’activation' },
   { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Police, plan du cours et remplacements automatiques' },
-  { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
+  { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction pendant la frappe, AlixoAI' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
   { k: 'business', name: 'Entreprise', sub: 'Alixo Business : votre entreprise, tableau de bord en ligne, messagerie' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
@@ -3033,29 +3106,31 @@ function settingsSectionHTML(k) {
       <button id="po-snipadd" class="cta ghost small">Ajouter un raccourci</button></div>
     <div class="set-sect"><div class="po-label">Remplacements automatiques</div>
       <div class="po-hint" style="margin:0">Les symboles « >= », « +/- », « -> » sont mis en forme pour tout le monde. Avec une spécialité Santé dans le profil, la notation médicale (Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L), les abréviations et les blocs Santé du menu « / » sont activés automatiquement${healthMode() ? ' <b>(actif)</b>' : ''}. Les blocs proposés dépendent des spécialités choisies : Compte › Modifier mon profil.</div></div>`;
-  if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction, la mise en forme, les quiz et les fiches de révision par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7) ; quiz (QCM, vrai / faux, réponses courtes) et fiches de révision générés depuis vos séances, présentations et tableurs (F8), par AlixoAI, l’intelligence artificielle intégrée à Alixo : rien à installer, rien à configurer.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
   if (k === 'plus') return `<div class="set-sect">${plusCtaHTML()}</div>
     ${subscriptionHTML()}
     ${activationHTML()}
     <div class="set-sect"><div class="po-label">Ce que change Alixo+</div>${plusTableHTML('')}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>
     ${window.AlixoBusiness && !(AlixoBusiness.enabled && AlixoBusiness.active()) ? `<div class="set-sect"><div class="po-label">Pour une entreprise</div>${AlixoBusiness.offerHTML()}<div class="po-hint">Le détail (équipe, licences, modérateurs) est dans Paramètres › Entreprise.</div></div>` : ''}`;
-  if (k === 'ia') { const o = aiOpt(); return `<div class="set-sect"><div class="po-label">AlixoAI — l’intelligence artificielle d’Alixo</div><div id="po-aisetup">${aiSetupHTML('settings')}</div></div>
-    <div class="set-sect"><div class="po-label">Ce que l’IA propose</div>
+  /* 1.43 : la correction pendant la frappe tourne sur l'appareil, sans IA, pour tous ; AlixoAI (en ligne, Alixo+) relit à la demande */
+  if (k === 'ia') { const o = aiOpt(); const plus = isPlus(); return `<div class="set-sect"><div class="po-label">Correction pendant la frappe <span class="set-tag">Sur l’appareil · gratuite</span></div>
       <div class="set-checks" id="set-ai">
-        <label><input type="checkbox" role="switch" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Analyse automatique pendant la frappe</b><small>À chaque fin de phrase (point, Entrée), après une pause de frappe ou en quittant le paragraphe, les phrases nouvelles partent en une seule requête ; les propositions apparaissent sous le paragraphe, Tab pour accepter, Échap pour ignorer. Sinon, seulement à la demande (✨ ou F7).</small></span></label>
-        <label><input type="checkbox" role="switch" data-ai="fix" ${o.fix ? 'checked' : ''}><span><b>Corriger l’orthographe et la grammaire</b><small>Accords, conjugaison, ponctuation… selon le niveau choisi ci-dessous.</small></span></label>
-        <label><input type="checkbox" role="switch" data-ai="autofix" ${o.autofix ? 'checked' : ''}><span><b>Corriger seul les fautes de frappe et les fautes mineures (sans Tab)</b><small>Lettres inversées, lettre manquante ou doublée, accent oublié — repérées à l’espace ou plus tard par l’IA : quand la correction ne change qu’un mot d’une lettre, elle s’applique d’elle-même (le mot est surligné un instant, Ctrl+Z pour revenir) et le mot est appris : la prochaine fois, il est corrigé à l’espace, sans requête. Les autres fautes restent proposées sous le paragraphe, Tab pour accepter.</small></span></label>
-        <label><input type="checkbox" role="switch" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors corrigé dans sa langue. Décoché : il est laissé tel quel. Dans tous les cas, un mot ou une citation en langue étrangère au milieu d’un texte français n’est jamais « corrigé ».</small></span></label>
-        <label><input type="checkbox" role="switch" data-ai="style" ${o.style ? 'checked' : ''}><span><b>Proposer une mise en forme</b><small>Repère les définitions, titres, arrêts, exemples, points à retenir… et propose l’encadré ou le titre adapté.</small></span></label>
-        <label><input type="checkbox" role="switch" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens (règle « Reformulation : … »).</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Correction automatique pendant la frappe</b><small>Alixo relit vos phrases sur l’appareil, sans rien envoyer : fautes de frappe, accents oubliés, homophones sûrs (« il à » → « il a », « ils on » → « ils ont »)… Proposition sous le paragraphe : Tab pour accepter, Échap pour ignorer. Les mots inconnus sont soulignés (clic droit : suggestions).</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="fix" ${o.fix ? 'checked' : ''}><span><b>Proposer les corrections sous le paragraphe</b><small>Décoché : seulement le soulignement du correcteur orthographique et la relecture à la demande (✨ ou F7).</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="autofix" ${o.autofix ? 'checked' : ''}><span><b>Corriger d’office les fautes de frappe simples</b><small>Lettres inversées, lettre doublée, accent oublié : quand la correction ne change qu’un mot d’une lettre, elle s’applique d’elle-même (le mot est surligné un instant, Ctrl+Z pour revenir) et le mot est appris. Les autres fautes restent proposées sous le paragraphe.</small></span></label>
       </div></div>
+    <div class="set-sect"><div class="po-label">AlixoAI en ligne <span class="set-tag">Alixo+</span></div>
+      ${plus ? `<div id="po-aisetup">${aiSetupHTML('settings')}</div>
+      <div class="set-checks" id="set-ai2">
+        <label><input type="checkbox" role="switch" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations (F7)</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens.</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue (F7)</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors relu dans sa langue. Décoché : il est laissé tel quel.</small></span></label>
+      </div>` : `<div class="plus-lock">${PLUS_ICO.ia}<div><b>AlixoAI relit tout le cours, propose la mise en forme, crée des quiz et des fiches de révision</b><span>Relecture approfondie (✨ ou F7), encadrés et titres, reformulations, Quiz IA et fiches de révision (F8) depuis vos séances, présentations et tableurs. ${aiPrivacyHTML()}</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div>`}</div>
     <div class="set-sect"><div class="po-label">Niveau de correction</div>
       <div class="set-tiles" id="set-ailevel">${AI_LEVELS.map(([v, l, h]) => `<button type="button" class="set-tile ${o.level === v ? 'on' : ''}" data-level="${v}"><b>${l}</b><span>${h}</span></button>`).join('')}</div>
-      <div class="po-hint">Les abréviations juridiques et médicales, sigles, formules et mots latins ne sont jamais « corrigés ». Ces réglages suivent votre compte.${aiLastStatus ? `<br>Dernière analyse automatique — ${esc(aiLastStatus)}` : ''}</div></div>
-    <div class="set-sect"><div class="po-label">Économie de requêtes</div>
+      <div class="po-hint">Les abréviations juridiques et médicales, sigles, formules et mots latins ne sont jamais « corrigés ». « Strict » ajoute pendant la frappe l’espace avant ; : ! ?. Ces réglages suivent votre compte.${aiLastStatus ? `<br>Dernière relecture automatique — ${esc(aiLastStatus)}` : ''}</div></div>
+    <div class="set-sect"><div class="po-label">Mémoire de la correction</div>
       <div class="po-hint" style="margin:0 0 8px">${esc(aiStatsText(AlixoCorr.stats()))}</div>
-      <div class="po-row" style="gap:8px; flex-wrap:wrap"><button class="cta ghost small" id="set-aiforget" type="button" title="Oublie les mots appris des corrections et les mots que vous avez demandé à ne plus corriger">Oublier les mots appris et ignorés</button><button class="cta ghost small" id="set-aicache" type="button" title="Les phrases déjà relues seront analysées à nouveau à la prochaine occasion">Vider la mémoire des phrases</button></div></div>`; }
+      <div class="po-row" style="gap:8px; flex-wrap:wrap"><button class="cta ghost small" id="set-aiforget" type="button" title="Oublie les mots appris des corrections et les mots que vous avez demandé à ne plus corriger">Oublier les mots appris et ignorés</button><button class="cta ghost small" id="set-aicache" type="button" title="Les phrases déjà relues par AlixoAI le seront à nouveau à la prochaine demande">Vider la mémoire des phrases</button></div></div>`; }
   if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">${appName()} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
       <div class="po-row" style="gap:8px; margin-top:12px; flex-wrap:wrap">
         <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION) ? '<button id="set-wn" class="cta ghost small" type="button">Revoir la présentation</button>' : ''}
@@ -3075,7 +3150,7 @@ function bindSettingsSection(k, root) {
   if (k === 'plus' && window.AlixoBusiness) { const bb = root.querySelector('#biz-buy'); if (bb) bb.addEventListener('click', async e => { const url = await startCheckout('business', e.currentTarget); if (url) openExternalUrl(url); }); }
   if (k === 'compte') {
     const stor = root.querySelector('#po-storage');
-    if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
+    if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); bindStorageCard(stor); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
     const wk = root.querySelector('#po-weekly');
     if (wk) wk.addEventListener('click', () => { closeSettings(); if (window.AlixoStats) AlixoStats.open(true); });
     const pseudoOk = root.querySelector('#po-pseudo-ok');
@@ -3149,7 +3224,7 @@ function bindSettingsSection(k, root) {
     });
     return;
   }
-  if (k === 'plus' || (k === 'ia' && !isPlus())) {
+  if (k === 'plus') {
     bindPlusCta(root, null);
     bindSubscription(root);
     bindActivation(root);
@@ -3157,8 +3232,11 @@ function bindSettingsSection(k, root) {
     return;
   }
   if (k === 'ia') {
-    bindAiSetup(root.querySelector('#po-aisetup'), 'settings');
-    root.querySelector('#set-ai').addEventListener('change', e => { const key = e.target.dataset.ai; if (!key) return; aiOpt(); state.settings.ai[key] = e.target.checked; save(); if (key === 'auto' && !e.target.checked) dismissSug(); const t = root.querySelector('.ai-styletoggle'); if (t && key === 'auto') t.checked = e.target.checked; });
+    if (isPlus()) bindAiSetup(root.querySelector('#po-aisetup'), 'settings');
+    else { bindPlusCta(root, null); const more = root.querySelector('#set-plusmore'); if (more) more.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); }
+    const onAiOpt = e => { const key = e.target.dataset.ai; if (!key) return; aiOpt(); state.settings.ai[key] = e.target.checked; save(); if ((key === 'auto' || key === 'fix') && !e.target.checked) dismissSug(); };
+    root.querySelector('#set-ai').addEventListener('change', onAiOpt);
+    const ai2 = root.querySelector('#set-ai2'); if (ai2) ai2.addEventListener('change', onAiOpt);
     root.querySelector('#set-ailevel').addEventListener('click', e => { const b = e.target.closest('[data-level]'); if (!b) return; aiOpt(); state.settings.ai.level = b.dataset.level; save(); root.querySelectorAll('#set-ailevel .set-tile').forEach(t => t.classList.toggle('on', t === b)); });
     const fg = root.querySelector('#set-aiforget'); if (fg) fg.addEventListener('click', () => { AlixoCorr.forget(); toast('Mots appris et ignorés oubliés'); });
     const cc = root.querySelector('#set-aicache'); if (cc) cc.addEventListener('click', () => { AlixoCorr.clearCache(); toast('Mémoire des phrases vidée'); });
@@ -3422,8 +3500,8 @@ const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
 /* 1.38 : alignement d'un champ de bloc (fiche d'arrêt, fiche, cartes) — b.fal = { <data-f> : 'center' | 'right' | 'justify' } */
 const falStyle = (b, k) => (b && b.fal && b.fal[k] ? ` style="text-align:${b.fal[k]}"` : '');
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
-const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc'];
-const BLOCK_PROPS = ['text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans'];
+const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc', 'docref'];   // 1.43 : + 'docref' (bloc « Document »)
+const BLOCK_PROPS = ['text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans', 'ref', 'kind'];
 /* « atomes » non éditables dans le texte : références d'articles, items LiSA, résultats de calcul, liens, rangs */
 const ATOM_SEL = '.refart, .calc-res, .lnk, .rtag';
 const ATOM_RE = /<img|refart|calc-res|class="lnk"|rtag/;
@@ -3537,6 +3615,9 @@ function imgStyle(b) {
 }
 
 /* ---------------- rendu d'un bloc ---------------- */
+/* 1.43 : bloc « Document » (voir docRefInfo) — noms des types et cadenas de la carte « non partagé » */
+const DREF_KINDS = { cours: 'Séance', slides: 'Présentation', sheet: 'Tableur', board: 'Planche', quiz: 'Quiz' };
+const DREF_LOCK_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>';
 const MV_HANDLE = `<span class="mv-handle" contenteditable="false" title="Glisser pour déplacer">⋮⋮</span>`;
 function blockHTML(b, numMap) {
   switch (b.type) {
@@ -3549,7 +3630,7 @@ function blockHTML(b, numMap) {
     }
     case 'quote':
       /* citation + ligne « auteur / source » (champ à part, jamais vide à l'export) */
-      return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div></div>`;
+      return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
     case 'callout': {
       const c = CALLOUTS[b.ct] || CALLOUTS.retenir;
       const style = c.color ? ` style="--cc-light:${c.color}; --cc-dark:${c.dark || c.color}"` : '';
@@ -3619,6 +3700,18 @@ function blockHTML(b, numMap) {
           <span class="tt-sep"></span><button data-tocd="rename" title="Changer l’intitulé">Intitulé…</button>
           <button data-tocd="del" class="danger" title="Retirer la table des matières">Supprimer</button>
         </div></div></div>`;
+    }
+    case 'docref': {   // 1.43 : bloc « Document » — carte vers un autre document Alixo, un clic l'ouvre
+      if ('title' in b) delete b.title;   // plus aucun titre figé dans le bloc (il fuyait vers les lecteurs d'un partage)
+      const r = docRefInfo(b);
+      const ico = r.st === 'locked' ? DREF_LOCK_ICON : docIcon({ kind: r.kind });
+      const meta = r.st === 'ok' ? docRefMeta(r.d, r.shared) : r.st === 'locked' ? 'Son propriétaire ne vous l’a pas partagé' : (r.local ? `« ${r.local} » · supprimé ou plus accessible` : 'Supprimé ou plus accessible');
+      const tip = r.st === 'ok' ? `Ouvrir « ${r.title} »` : r.st === 'locked' ? 'Ce document ne vous est pas partagé' : 'Ce document n’existe plus (supprimé, ou venu d’un autre compte)';
+      return `<div class="block docref ${r.st}" data-id="${b.id}" contenteditable="false" title="${readOnly ? '' : 'Appui long ou clic droit : changer de document, retirer'}">${MV_HANDLE}
+        <div class="dref-card"><button type="button" class="dref-open" data-dref="open" title="${esc(tip)}"${r.st === 'ok' ? '' : ' aria-disabled="true"'}>
+          <span class="dref-ico">${ico}</span><span class="dref-txt"><b class="dref-title">${esc(r.title)}</b><small class="dref-meta">${esc(meta)}</small></span>
+          <span class="dref-go" aria-hidden="true">${r.st === 'ok' ? '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>' : ''}</span></button>
+        <div class="dref-tools"><button type="button" data-dref="pick">${r.st === 'ok' ? 'Changer de document…' : 'Choisir un autre document…'}</button><button type="button" data-dref="del" class="danger">Retirer</button></div></div></div>`;
     }
     case 'pb':   // 1.23 : saut de page (le texte qui suit commence sur une nouvelle page, à l'écran comme dans le PDF)
       return `<div class="block pb" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="pb-line">Saut de page</div></div>`;
@@ -3945,7 +4038,7 @@ function markCurrent() {
 /* ---------------- lecture de l'écran → modèle ---------------- */
 function blockElType(el) {
   const c = el.classList;
-  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc']) if (c.contains(t)) return t;
+  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc', 'docref']) if (c.contains(t)) return t;
   return 'p';
 }
 const levelOfEl = el => { const m = el.className.match(/\bl([1-6])\b/); return m ? +m[1] : 1; };
@@ -6714,7 +6807,7 @@ const SLASH_ITEMS = [
   { id: 'graphmenu', icon: 'chart-line', name: 'Graphique économique…', sub: 'Offre/demande, IS-LM, coûts…', kw: 'graphique courbe economie', spec: 'economie' },
   { id: 'g-plot', icon: 'wave', name: 'Traceur de fonctions', sub: 'Qd = 100 − 2P → tracé + intersection', kw: 'tracer fonction courbe' },
   { sect: 'Mise en page' },
-  { id: 'table', ico: '▦', name: 'Tableau', sub: '3 lignes × 3 colonnes, modifiable', kw: 'tableau table grille colonnes lignes' },
+  { id: 'table', ico: '▦', name: 'Tableau', sub: 'Choisissez sa taille dans un quadrillage, modifiable ensuite', kw: 'tableau table grille colonnes lignes' },
   { id: 'image', icon: 'camera', name: 'Image', sub: 'Photo, schéma, capture — recadrable, déplaçable', kw: 'image photo schema capture illustration figure' },
   { id: 'phoneimg', icon: 'smartphone', name: 'Photo depuis le téléphone', sub: 'QR code à scanner : la photo prise apparaît ici', kw: 'telephone portable smartphone qr code photo scanner mobile image envoyer' },
   { id: 'draw', icon: 'pen-line', name: 'Dessin', sub: 'Formes, flèches, zones de texte, main levée', kw: 'dessin dessiner schema forme fleche croquis rectangle cercle texte' },
@@ -6725,6 +6818,7 @@ const SLASH_ITEMS = [
   { id: 'hr', ico: '—', name: 'Séparateur', sub: 'Trait horizontal — ou tapez « -- » puis Entrée', kw: 'separateur ligne trait horizontal hr divider barre' },
   { id: 'pb', ico: '⤓', name: 'Saut de page', sub: 'Ce qui suit commence sur une nouvelle page (à l’écran et dans le PDF)', kw: 'saut page nouvelle page break pagebreak feuille suivante' },
   { id: 'toc', icon: 'list', name: 'Table des matières', sub: 'Les titres de la séance, numérotés et cliquables — mise à jour toute seule, reprise dans le PDF et Word', kw: 'table des matieres sommaire toc plan index titres' },
+  { id: 'docref', icon: 'file-text', name: 'Document', sub: 'Carte vers un autre document Alixo (séance, présentation, tableur…) — un clic l’ouvre', kw: 'document lien renvoi reference autre seance cours presentation tableur planche quiz ouvrir carte' },
   { sect: 'Symboles', spec: 'sym' },
   ...AlixoMed.SYMBOLS.map(([k, s]) => ({ id: 'sym-' + k, ico: s, name: s + '  ' + k, kw: k + ' symbole grec lettre', spec: 'sym', inline: true, sym: s }))
 ];
@@ -6905,7 +6999,14 @@ function applySlash(sid) {
   if (sid === 'score') { restore(); openScoreChooser(bid, inlineCtx); return; }
   if (sid === 'mcalc') { restore(); openCalcChooser(bid, inlineCtx); return; }
   if (sid === 'timer') { const nb = transform({ type: 'timer', mode: 'down', secs: 300, label: '' }); selectObj(nb.id); openTimerBlockPopover(nb.id); return; }
-  if (sid === 'table') { const nb = transform({ type: 'table', rows: [['', '', ''], ['', '', ''], ['', '', '']], head: true }); focusTableCell(nb.id, 0, 0); toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes'); return; }
+  if (sid === 'table') {   // 1.43 : on choisit d'abord la taille dans un quadrillage (fini le 3 × 3 imposé)
+    restore();
+    openTableSizePicker(anchorForBlock(bid), (R, C) => {
+      const nb = insertObjectSmart({ type: 'table', rows: emptyTableRows(R, C), head: true }, bid, inlineCtx);
+      focusTableCell(nb.id, 0, 0); toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes');
+    }, () => { if (getBlock(bid)) restore(); });
+    return;
+  }
   if (sid === 'tree') { const nb = transform({ type: 'tree', root: { t: '', k: [{ t: '', k: [] }, { t: '', k: [] }] } }); focusBlock(nb.id, 'start'); setTimeout(() => treeFocus(nb.id, ''), 30); toast('Arbre — Entrée : nouveau frère, Tab : nouvel enfant'); return; }
   if (sid === 'cards') { const nb = transform({ type: 'cards', cards: [{ t: '', x: '' }, { t: '', x: '' }, { t: '', x: '' }] }); focusBlock(nb.id, 'start', 'f:t0'); toast('Cartes — Entrée : du titre au texte, Tab : carte suivante, « ＋ carte » pour en ajouter'); return; }
   if (sid === 'toc') {
@@ -6916,6 +7017,7 @@ function applySlash(sid) {
     toast('Table des matières — elle suit les titres du cours ; « Niveaux » pour la limiter');
     return;
   }
+  if (sid === 'docref') { restore(); openDocRefPicker(bid, inlineCtx); return; }   // 1.43
   if (sid === 'hr' || sid === 'pb') {
     const nb = transform({ type: sid });
     const d = doc(); const i = blockIndex(nb.id); const next = d.blocks[i + 1];
@@ -8467,10 +8569,12 @@ $('#toolbar').addEventListener('click', e => {
     editingFormula[nb.id] = true; renderBlocks(nb.id); openMathPanel();
   }
   if (act === 'graph') openGraphChooser(bid);
-  if (act === 'table') {
-    const nb = insertSpecial({ type: 'table', rows: [['', '', ''], ['', '', ''], ['', '', '']], head: true });
-    focusTableCell(nb.id, 0, 0);
-    toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes');
+  if (act === 'table') {   // 1.43 : même quadrillage que le menu « / », posé sous le bouton
+    openTableSizePicker(r, (R, C) => {
+      const nb = insertObjectSmart({ type: 'table', rows: emptyTableRows(R, C), head: true }, getBlock(bid) ? bid : currentBlockId(), null);
+      focusTableCell(nb.id, 0, 0);
+      toast('Tableau — Tab pour passer de case en case, boutons au-dessus pour lignes et colonnes');
+    }, () => { if (getBlock(bid)) focusBlock(bid); });
   }
   if (act === 'image') pickImages();
   if (act === 'phone') openPhoneImage(bid);
@@ -8493,41 +8597,90 @@ function insertDrawing() {
 }
 
 /* ============================================================
-   Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37)
-   1.37 : plus de serveur, de clé ni de choix de modèle. L'IA d'Alixo est AlixoAI (js/alixoai.js, moteur js/ailocal.js) :
-   elle se prépare toute seule au premier démarrage qui suit l'installation ou une mise à jour, choisit d'elle-même la
-   taille adaptée à l'appareil, et optimise chaque demande (consignes courtes, réponses en lignes, lecture progressive,
-   conversation suivie). Paramètres › IA ne garde qu'un interrupteur (Désactiver / Réactiver) et les réglages de ce que
-   l'IA propose. L'ancienne configuration (alixo.ai.config : serveur, modèle, clé) n'est plus lue.
+   Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37 ; 1.43 : en ligne)
+   1.43 : le modèle ne tourne plus sur l'appareil (WebGPU saturait la carte graphique et faisait planter Alixo). La
+   correction pendant la frappe se fait sur l'appareil, sans IA, pour tous les comptes (js/grammaire.js, js/corr.js) ;
+   la relecture approfondie (F7), la mise en forme, le Quiz IA et les fiches passent par AlixoAI en ligne
+   (js/alixoai.js → js/alixocloud.js → serveur ai/), avec Alixo+. Paramètres › IA : état, interrupteur, envoi en ligne.
    ============================================================ */
 function aiCfg() { return AlixoCorr.getConfig(); }
-/* AlixoAI est active et l'appareil sait la faire tourner */
+/* AlixoAI est active et joignable (en ligne, compte connecté, quota du jour non atteint) */
 function aiReady() { return AlixoCorr.configured(); }
 let aiState = null;   // { items: [{ n, id, avant, apres, regle, done }], label }
 
 function aiCorrectable(b) { return TEXT_TYPES.includes(b.type) || isFiche(b) || b.type === 'table' || b.type === 'cards'; }
+
+/* mention affichée partout où AlixoAI envoie du texte (Paramètres › IA, panneau, fenêtre d'information, Quiz IA) */
+const AI_PRIVACY = 'Pour la relecture F7, la mise en forme, les quiz et les fiches, le texte concerné est envoyé à AlixoAI (serveur d’Alixo hébergé par Cloudflare) ; il n’est pas conservé ni utilisé pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil.';
+const AI_PRIVACY_URL = 'https://alixoapp.com/confidentialite.html#alixoai';
+const aiPrivacyHTML = () => `${esc(AI_PRIVACY)} <a class="ai-more" href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus</a>`;
+/* textes d'état : ceux d'erreur viennent d'une seule source, AlixoCloudAI.MSG (js/alixocloud.js) */
+function aiStateText(st) {
+  const M = (window.AlixoCloudAI && AlixoCloudAI.MSG) || {};
+  if (st === 'ready') return 'AlixoAI est prête · relecture F7, mise en forme, quiz et fiches';
+  if (st === 'off') return 'AlixoAI est désactivée sur cet appareil.';
+  if (st === 'unavailable') { const c = window.AlixoCloudAI ? AlixoCloudAI.status().state : 'unconfigured'; return (c === 'unconfigured' ? M.unconfigured : M.unreachable) || 'AlixoAI ne répond pas pour le moment.'; }
+  return M[st] || M.unreachable || 'AlixoAI ne répond pas pour le moment.';
+}
+/* message à afficher quand AlixoAI ne peut pas répondre tout de suite (F7, mise en forme) */
+function aiNotReadyText() { const A = window.AlixoAI; return aiStateText(A ? A.state() : 'unavailable'); }
+
+/* 1.43 : AlixoAI passe en ligne — fenêtre d'information unique (par appareil et par compte) avant le premier envoi de
+   F7, « Corriger » ou de la mise en forme (le Quiz IA et la fiche ont leur mention avant « Générer »).
+   Ce n'est pas un consentement (la base légale reste le contrat Alixo+) : une information loyale avant le changement. */
+const AI_NOTICE_LS = () => 'alixo.ai.notice143' + (window.AlixoAuth ? AlixoAuth.storageSuffix() : '');
+function aiNoticeSeen() { try { return localStorage.getItem(AI_NOTICE_LS()) === '1'; } catch { return true; } }
+function aiNoticeMark() { try { localStorage.setItem(AI_NOTICE_LS(), '1'); } catch { /* */ } }
+/* texte de la revue juridique ; sa première phrase (« AlixoAI fonctionne désormais en ligne. ») sert de titre */
+const AI_NOTICE_TEXT = 'Pour la relecture F7, la mise en forme, les quiz et les fiches, le texte concerné est envoyé au serveur d’AlixoAI, hébergé par Cloudflare, qui le traite sans le conserver ni l’utiliser pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil.';
+/* → Promise<boolean> : true = l'envoi peut partir */
+function aiNoticeGate() {
+  if (aiNoticeSeen()) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let done = false; const end = v => { if (done) return; done = true; resolve(v); };
+    openDialog({ id: 'ainotice', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'AlixoAI fonctionne désormais en ligne',
+      body: `<p class="ai-notice-txt">${esc(AI_NOTICE_TEXT)}</p><p class="ai-notice-more"><a href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus sur le traitement de vos données</a></p>`,
+      foot: '<button class="cta ghost" id="ainotice-off" type="button">Désactiver AlixoAI</button><button class="cta" id="ainotice-go" type="button">Continuer</button>',
+      onMount: (card, close) => {
+        card.querySelector('#ainotice-go').addEventListener('click', () => { aiNoticeMark(); end(true); close(); });
+        card.querySelector('#ainotice-off').addEventListener('click', () => { aiNoticeMark(); if (window.AlixoAI) AlixoAI.setEnabled(false); toast('AlixoAI désactivée — la correction pendant la frappe continue'); end(false); close(); });
+        setTimeout(() => { const b = card.querySelector('#ainotice-go'); if (b) b.focus(); }, 30);
+      },
+      onClose: () => end(false) });
+  });
+}
+/* 1.43 : AlixoAI était désactivée sur cet appareil avant le passage en ligne : elle le reste ; un message unique propose
+   de la réactiver en connaissance de cause (jamais de réactivation d'office). */
+const AI_OFFNOTICE_LS = 'alixo.ai.offnotice143';
+let aiLastKey = 0;
+document.addEventListener('keydown', () => { aiLastKey = Date.now(); }, { capture: true, passive: true });
+function aiOffNotice(tries) {
+  try { if (localStorage.getItem('alixo.ai.off') !== '1' || localStorage.getItem(AI_OFFNOTICE_LS) === '1') return; } catch { return; }
+  if (ALIXO_PANE) return;
+  /* jamais par-dessus une autre fenêtre ni pendant la frappe : plus tard (au plus une quarantaine de tentatives) */
+  const busy = $('.dlgov') || $('#obov') || $('#wnov') || ($('#authov') && !$('#authov').hidden) || Date.now() - aiLastKey < 5000 || !$('#popover').hidden;
+  if (busy) { if ((tries || 0) < 40) setTimeout(() => aiOffNotice((tries || 0) + 1), 15000); return; }
+  try { localStorage.setItem(AI_OFFNOTICE_LS, '1'); } catch { /* */ }
+  openDialog({ id: 'aioffnotice', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'AlixoAI fonctionne désormais en ligne',
+    body: `<p class="ai-notice-txt">${aiPrivacyHTML()}</p><p class="ai-notice-txt"><b>Elle reste désactivée sur cet appareil.</b></p>`,
+    foot: '<button class="cta ghost" id="aioff-keep" type="button">Laisser désactivée</button><button class="cta" id="aioff-on" type="button">Activer</button>',
+    onMount: (card, close) => {
+      card.querySelector('#aioff-keep').addEventListener('click', close);
+      card.querySelector('#aioff-on').addEventListener('click', () => { if (window.AlixoAI) AlixoAI.setEnabled(true); aiNoticeMark(); toast('AlixoAI activée'); close(); });
+    } });
+}
 
 /* ---------------- Paramètres › IA et panneau : l'état d'AlixoAI, un interrupteur ---------------- */
 /* mode 'panel' (panneau IA) ou 'settings' (bloc compact dans les Paramètres) */
 function aiSetupHTML(mode) {
   const A = window.AlixoAI;
   const st = A ? A.state() : 'unavailable';
-  const reason = A ? A.available().reason : 'Le moteur d’AlixoAI n’est pas chargé.';
-  const ready = aiReady();
-  const status = st === 'off' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI est désactivée sur cet appareil.</div>`
-    : st === 'unavailable' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI n’est pas disponible ici.</div>`
-      : st === 'error' ? `<div class="ai-keystate"><span class="ai-dot"></span>AlixoAI n’a pas pu démarrer.</div>`
-        : st === 'preparing' ? `<div class="ai-keystate ok"><span class="ai-dot"></span>AlixoAI se prépare…</div>`
-          : `<div class="ai-keystate ok"><span class="ai-dot"></span>AlixoAI est ${st === 'ready' ? 'prête' : 'active'} · correction, mise en forme, quiz et fiches</div>`;
-  return `${status}
-    ${st === 'unavailable' ? `<div class="ai-nogpu">${esc(reason)}</div>` : ''}
-    ${st === 'error' ? `<div class="ai-nogpu">${esc((window.AlixoLocalAI && AlixoLocalAI.status().error) || '')}</div>` : ''}
+  return `<div class="ai-keystate ${st === 'ready' ? 'ok' : ''}"><span class="ai-dot"></span>${esc(aiStateText(st))}</div>
     <div class="po-row ai-keybtns">
-      ${st === 'off' ? `<button class="pobtn ai-keyon" type="button" ${A && A.available().ok ? '' : 'disabled'}>Réactiver</button>` : `${st === 'error' ? '<button class="pobtn ai-keytest" type="button">Réessayer</button>' : ''}<button class="cta ghost small ai-keyremove" type="button" ${st === 'unavailable' ? 'disabled' : ''}>Désactiver</button>`}
+      ${st === 'off' ? '<button class="pobtn ai-keyon" type="button">Activer AlixoAI</button>' : `${st === 'signedout' ? '<button class="pobtn ai-login" type="button">Se connecter</button>' : ''}${st === 'unavailable' ? '<button class="pobtn ai-keytest" type="button">Réessayer</button>' : ''}<button class="cta ghost small ai-keyremove" type="button">Désactiver AlixoAI</button>`}
     </div>
     <div class="ai-keymsg" aria-live="polite"></div>
-    ${ready && mode === 'panel' ? `<label class="ai-toggle"><input type="checkbox" class="ai-styletoggle" ${aiStyleOn() ? 'checked' : ''}> Analyse automatique pendant la frappe : les fautes d’orthographe / grammaire et la mise en forme (définitions, titres, encadrés…) sont proposées sous le paragraphe, sans rien demander — <b>Tab</b> pour accepter</label>` : ''}
-    <div class="po-hint">AlixoAI est intégrée à Alixo : rien à installer, rien à configurer, aucun compte chez un tiers. Vos notes ne sont envoyées à aucun service d’IA extérieur.</div>`;
+    ${mode === 'panel' ? '' : `<div class="ai-privacy">${aiPrivacyHTML()}</div>`}`;
 }
 function bindAiSetup(root, mode) {
   if (!root) return;
@@ -8535,73 +8688,61 @@ function bindAiSetup(root, mode) {
   const msg = root.querySelector('.ai-keymsg');
   const setMsg = (t, cls) => { if (msg) { msg.textContent = t; msg.className = 'ai-keymsg ' + (cls || ''); } };
   const rerender = () => { if (!root.isConnected) return; root.innerHTML = aiSetupHTML(mode); bindAiSetup(root, mode); };
-  const st = root.querySelector('.ai-styletoggle');
-  if (st) st.addEventListener('change', e => { aiOpt(); state.settings.ai.auto = e.target.checked; save(); if (!e.target.checked) dismissSug(); toast(e.target.checked ? 'Analyse automatique activée' : 'Analyse automatique désactivée'); });
   const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai', onEv); return; } const d = e.detail || {}; const shown = root.dataset.aiState || ''; if (d.state !== shown) { root.dataset.aiState = d.state; rerender(); } };
+  if (!root.dataset.aiBound) { root.dataset.aiBound = '1'; document.addEventListener('alixo-ai', onEv); }
   root.dataset.aiState = A.state();
-  document.addEventListener('alixo-ai', onEv);
   const onBtn = root.querySelector('.ai-keyon');
-  if (onBtn) onBtn.addEventListener('click', () => { A.setEnabled(true); toast('AlixoAI réactivée'); aiAutoInstall(300); rerender(); });
+  if (onBtn) onBtn.addEventListener('click', () => { A.setEnabled(true); aiNoticeMark(); toast('AlixoAI activée'); rerender(); });
+  const login = root.querySelector('.ai-login');
+  if (login) login.addEventListener('click', () => { closeSettings(); if (window.AlixoAuth && AlixoAuth.openAuthOverlay) AlixoAuth.openAuthOverlay(); });
   const retry = root.querySelector('.ai-keytest');
-  if (retry) retry.addEventListener('click', async () => { retry.disabled = true; setMsg('AlixoAI se prépare…', ''); const r = await aiTestConfig(); if (r.ok) { setMsg('AlixoAI prête ✓', 'ok'); setTimeout(rerender, 600); } else { setMsg(r.error, 'err'); retry.disabled = false; } });
+  if (retry) retry.addEventListener('click', async () => { retry.disabled = true; setMsg('Connexion à AlixoAI…', ''); const r = await aiTestConfig(); if (r.ok) { setMsg('AlixoAI répond ✓', 'ok'); setTimeout(rerender, 600); } else { setMsg(r.error, 'err'); retry.disabled = false; } });
   const rm = root.querySelector('.ai-keyremove');
-  if (rm) rm.addEventListener('click', async () => { A.setEnabled(false); if (window.AlixoLocalAI) await AlixoLocalAI.unload(); toast('AlixoAI désactivée sur cet appareil'); rerender(); });
+  if (rm) rm.addEventListener('click', () => { A.setEnabled(false); toast('AlixoAI désactivée — la correction pendant la frappe continue'); rerender(); });
 }
-/* appel minimal pour vérifier qu'AlixoAI répond (quelques jetons) */
+/* appel minimal pour vérifier qu'AlixoAI répond (le serveur vérifie le compte, sans appeler le modèle ; hors quota) */
 async function aiTestConfig() {
   try { return await window.AlixoAI.run('ping'); } catch (e) { return { ok: false, error: e && e.message || String(e) }; }
 }
+/* AlixoAI ne peut pas répondre tout de suite (hors ligne, compte, quota, désactivée) : le panneau le dit, sans bloquer */
+function aiShowNotReady() {
+  openRightPanel('#aipanel'); showAiSetup();
+  if (window.AlixoAI && AlixoAI.state() !== 'off') toast(aiNotReadyText());
+}
 function showAiSetup() {
   const body = $('#ai-body');
-  const A = window.AlixoAI; const st = A ? A.state() : 'unavailable';
-  const title = st === 'off' ? 'AlixoAI est désactivée sur cet appareil' : st === 'unavailable' ? 'AlixoAI n’est pas disponible ici' : 'AlixoAI';
-  body.innerHTML = `<div class="ai-setup"><div class="ai-setuptitle">${title}</div>${aiSetupHTML('panel')}</div>`;
+  body.innerHTML = `<div class="ai-setup"><div class="ai-setuptitle">AlixoAI</div>${aiSetupHTML('panel')}<div class="ai-privacy">${aiPrivacyHTML()}</div></div>`;
   bindAiSetup(body.querySelector('.ai-setup'), 'panel');
 }
-/* 1.37 : AlixoAI se prépare toute seule, en silence, au premier démarrage qui suit l'installation ou une mise à jour
-   (téléchargement une seule fois, puis chargement à chaque ouverture, puis une micro-requête d'échauffement) : la
-   première demande de l'étudiant part sans attendre. « Désactiver » (Paramètres › IA) l'arrête. Les fonctions qui
-   l'utilisent (F7, F8, frappe) restent réservées à Alixo+ ; la préparation, elle, n'attend pas l'abonnement. */
-let aiAutoTm = 0;
-/* 1.36.4 : la page précédente s'est terminée brutalement pendant que l'IA tournait (mémoire graphique épuisée, pilote
-   planté) : AlixoAI passe à une taille plus légère avant de recharger quoi que ce soit ; déjà au plus léger → désactivée
-   sur cet appareil, la cloche l'explique, Paramètres › IA la réactive. */
-function aiAfterCrash(L) {
-  const bad = L.crashed && L.crashed(); if (!bad || !L.MODELS[bad]) return;
-  const A = window.AlixoAI; if (!A || !A.enabled()) return;
-  const lighter = L.downgrade ? L.downgrade(bad) : '';
-  if (lighter) {
-    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'AlixoAI allégée', text: 'Alixo s’est fermé brutalement pendant qu’AlixoAI travaillait, sans doute faute de mémoire. AlixoAI tourne désormais en version plus légère sur cet appareil.' });
-  } else {
-    A.setEnabled(false);
-    if (window.AlixoNotify) AlixoNotify.push({ id: 'ai_crash_' + Date.now(), kind: 'key', title: 'AlixoAI désactivée sur cet appareil', text: 'Alixo s’est fermé brutalement pendant qu’AlixoAI travaillait, même en version la plus légère. Elle est désactivée sur cet appareil : Paramètres › IA pour la réactiver.' });
-  }
+/* 1.43 : ménage unique des restes de l'ancien moteur sur l'appareil (jusqu'à 2,4 Go de poids du modèle) : Cache API
+   webllm/* et tvmjs, bases IndexedDB webllm/*, dossier OPFS tvmjs-opfs-store, réglages alixo.ai.live / f32 / cap.
+   Une seule fois (alixo.ai.purged) ; silencieux, jamais d'erreur. */
+async function purgeWebLLM() {
+  try { if (localStorage.getItem('alixo.ai.purged') === '1') return; } catch { return; }
+  const OLD = /^(webllm|tvmjs)/;
+  try { if (window.caches) for (const k of await caches.keys()) if (OLD.test(k)) await caches.delete(k); } catch { /* Cache API absente */ }
+  try { if (window.indexedDB && indexedDB.databases) for (const d of await indexedDB.databases()) if (d && d.name && OLD.test(d.name)) indexedDB.deleteDatabase(d.name); } catch { /* */ }
+  try { if (navigator.storage && navigator.storage.getDirectory) { const root = await navigator.storage.getDirectory(); await root.removeEntry('tvmjs-opfs-store', { recursive: true }).catch(() => {}); } } catch { /* OPFS absent */ }
+  /* « alixo.ai.off » n'est JAMAIS levé ici : on ne distingue pas un arrêt choisi d'un arrêt posé après un plantage, et
+     AlixoAI envoie désormais du texte en ligne → elle reste désactivée ; aiOffNotice() propose de la réactiver, une fois */
+  try { for (const k of ['alixo.ai.live', 'alixo.ai.f32', 'alixo.ai.cap']) localStorage.removeItem(k); localStorage.setItem('alixo.ai.purged', '1'); } catch { /* */ }
 }
-function aiAutoInstall(delay) {
-  if (aiAutoTm) return;
-  aiAutoTm = setTimeout(async () => {
-    aiAutoTm = 0;
-    const L = window.AlixoLocalAI; const A = window.AlixoAI; if (!L || !A) return;
-    aiAfterCrash(L);
-    if (!A.enabled() || !L.support().ok) return;
-    if (L.status().state !== 'idle') return;
-    try { if (navigator.connection && navigator.connection.saveData) return; } catch { /* API absente */ }
-    await A.warm();
-  }, delay || 0);
-}
-/* 1.37 : AlixoAI se prépare en silence. La petite barre en bas à droite n'apparaît que lorsqu'une demande de l'étudiant
-   (F7, F8, fiche) attend : « AlixoAI se prépare… » si le moteur charge encore, « AlixoAI rédige… » pendant la réponse. */
+/* petite barre en bas à droite pendant une demande de l'étudiant (F7, mise en forme) : libellé selon la tâche, Annuler */
+const AI_TASK_LABEL = { correct: 'AlixoAI relit…', style: 'AlixoAI met en forme…', quiz: 'AlixoAI prépare le quiz…', sheet: 'AlixoAI prépare la fiche…', ping: 'Connexion à AlixoAI…' };
 (() => {
-  let bar = null, hideTm = null;
-  document.addEventListener('alixo-ai-local', e => {
+  let bar = null;
+  document.addEventListener('alixo-ai', e => {
     const s = e.detail || {};
-    if (!bar) { bar = document.createElement('div'); bar.id = 'ai-loadbar'; bar.setAttribute('role', 'status'); bar.innerHTML = '<span class="ai-lbico">✨</span><span class="ai-lbtext"></span><i class="ai-lbbar"><b></b></i>'; document.body.appendChild(bar); }
-    clearTimeout(hideTm);
-    const waiting = s.waiting || 0;
-    if (!waiting) { bar.hidden = true; return; }
-    if (s.state === 'loading') { bar.hidden = false; bar.querySelector('.ai-lbtext').textContent = 'AlixoAI se prépare…'; bar.querySelector('.ai-lbbar b').style.width = Math.round((s.progress || 0) * 100) + '%'; bar.querySelector('.ai-lbbar').classList.toggle('indet', !s.progress); return; }
-    if (s.busy) { bar.hidden = false; bar.querySelector('.ai-lbbar').classList.remove('indet'); bar.querySelector('.ai-lbtext').textContent = `AlixoAI rédige${s.gen ? ` · ${Math.round(s.gen * 0.7)} mots` : '…'}`; bar.querySelector('.ai-lbbar b').style.width = s.gen ? Math.min(95, 10 + s.gen / 12) + '%' : '5%'; return; }
-    bar.hidden = true;
+    if (!s.waiting) { if (bar) bar.hidden = true; return; }
+    if (!bar) {
+      bar = document.createElement('div'); bar.id = 'ai-loadbar';
+      bar.innerHTML = '<span class="ai-lbico" aria-hidden="true">✨</span><span class="ai-lbtext" role="status"></span><i class="ai-lbbar indet" aria-hidden="true"><b></b></i><button type="button" class="ai-lbcancel" aria-label="Annuler la demande">Annuler</button>';
+      bar.querySelector('.ai-lbcancel').addEventListener('click', () => { if (window.AlixoCloudAI && AlixoCloudAI.cancelVisible) AlixoCloudAI.cancelVisible(); });
+      document.body.appendChild(bar);
+    }
+    const t = bar.querySelector('.ai-lbtext'); const label = AI_TASK_LABEL[s.task] || 'AlixoAI travaille…';
+    if (t.textContent !== label) t.textContent = label;
+    bar.hidden = false;
   });
 })();
 
@@ -8609,7 +8750,7 @@ async function runAiCorrection(o) {
   const d = doc(); if (!d) return;
   const second = !!(o && o.second && aiState && aiState.payload);
   if (!requirePlus('ia')) return;
-  if (!aiReady()) { openRightPanel('#aipanel'); showAiSetup(); return; }
+  if (!aiReady()) { aiShowNotReady(); return; }
   // portée : blocs sélectionnés → bloc courant (si le curseur y est) → tout le cours
   const selNative = getSelection();
   let targets = selNative.rangeCount && !selNative.isCollapsed && blocksEl.contains(selNative.anchorNode) ? selectionBlocks() : (objSel ? [getBlock(objSel)].filter(Boolean) : []);
@@ -8627,6 +8768,7 @@ async function runAiCorrection(o) {
   payload = payload.filter(x => { const l = detectLang(x.text); if (l && l !== 'fr' && !aiOpt().multilang) { skipped.push(x); return false; } x.lang = l; return true; });
   if (skipped.length) toast(`${skipped.length} bloc${skipped.length > 1 ? 's' : ''} dans une autre langue laissé${skipped.length > 1 ? 's' : ''} tel${skipped.length > 1 ? 's' : ''} quel${skipped.length > 1 ? 's' : ''} (Paramètres › IA › autres langues)`);
   if (!payload.length) { toast('Rien à corriger dans cette sélection'); return; }
+  if (!(await aiNoticeGate())) return;
   openRightPanel('#aipanel');
   $('#ai-body').innerHTML = `<div class="ai-empty">Analyse en cours (${esc(label)})…</div>`;
   try {
@@ -8658,7 +8800,8 @@ function renderAiPanel() {
   if (!st) {
     body.innerHTML = `<div class="ai-empty">Cliquez sur « Corriger » (barre d’outils ou F7) pour analyser le bloc courant, la sélection ou tout le cours.</div>
       <div class="ai-foot"><button class="cta small" id="ai-run" type="button">Corriger tout le cours</button> <button class="cta ghost small" id="ai-style" type="button" title="Repérer les définitions, titres, arrêts, exemples… à mettre en forme">Suggérer une mise en forme</button></div>
-      <div class="ai-empty" style="padding-top:4px">Pendant la frappe, l’analyse est automatique : dès qu’une faute ou une mise en forme (définition, titre, encadré…) est repérée, la proposition apparaît sous le paragraphe, <b>Tab</b> pour l’accepter, Échap pour l’ignorer. Ces boutons analysent tout le cours d’un coup.</div>`;
+      <div class="ai-empty" style="padding-top:4px">Pendant la frappe, Alixo relit vos phrases sur l’appareil : dès qu’une faute est repérée, la proposition apparaît sous le paragraphe, <b>Tab</b> pour l’accepter, Échap pour l’ignorer. Ces boutons font relire tout le cours par AlixoAI.</div>
+      <div class="ai-privacy">${aiPrivacyHTML()}</div>`;
     body.querySelector('#ai-run').addEventListener('click', () => { clearBlockSel(); document.activeElement && document.activeElement.blur(); runAiCorrection(); });
     const cs = AlixoCorr.stats();
     if (cs.req || cs.cached || cs.local) body.insertAdjacentHTML('beforeend', `<div class="ai-empty ai-stats">${aiStatsText(cs)}</div>`);
@@ -8870,7 +9013,7 @@ function caretTouches(b, avant, at) {
    ============================================================ */
 const aiAutoType = b => !!b && (TEXT_TYPES.includes(b.type) || b.type === 'cards');
 let aiLastStatus = '';   // dernière analyse automatique (Paramètres › IA) : « ok », « aucune faute », ou l'erreur rencontrée
-const aiLiveOn = () => isPlus() && !!aiReady() && aiStyleOn();
+const aiLiveOn = () => aiStyleOn() && aiOpt().fix;   // 1.43 : sur l'appareil, sans IA, pour tous les comptes
 const aiStamp = () => new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
 /* texte d'un bloc pour le moteur (null : bloc non analysable ou dans une autre langue, réglage « autres langues » décoché) */
 function corrInfo(blockId) {
@@ -8942,35 +9085,25 @@ function corrStyle(blockId, st) {
 /* après une correction appliquée : les phrases du bloc qui n'ont plus rien en attente sont mémorisées comme propres,
    pour ne pas repartir vers l'API à la prochaine pause de frappe */
 function corrMarkClean(b) {
-  if (!b) return;
-  const info = corrInfo(b.id); if (!info) return;
-  const o = aiOpt(); const ctx = { level: o.level, lang: info.lang };
-  const pend = aiSug && aiSug.id === b.id ? aiSug.fixes : [];
-  for (const sn of AlixoCorr.sentences(info.text)) {
-    if (!AlixoCorr.worth(sn.text)) continue;
-    if (pend.some(f => f.at >= sn.s && f.at < sn.e)) continue;
-    const k = AlixoCorr.keyOf(sn.text, ctx);
-    if (AlixoCorr.cacheGet(k) === undefined) AlixoCorr.cacheSet(k, []);
-  }
+  /* 1.43 : plus rien à mémoriser — la relecture pendant la frappe est locale et ne coûte rien ; la mémoire des phrases
+     reste réservée à ce qu'AlixoAI a relu (F7), pour qu'une phrase « propre » localement soit quand même relue par F7 */
+  void b;
 }
 AlixoCorr.init({
   enabled: aiLiveOn,
-  ctx: () => ({ level: aiOpt().level }),
+  ctx: () => ({ level: aiOpt().level, rephrase: !!aiOpt().rephrase }),
   text: corrInfo,
   caretIn: corrCaretIn,
   onResult: corrDeliver,
-  onStyle: corrStyle,
   onError: err => { aiLastStatus = `${aiStamp()} : échec — ${err && err.message || err}`; console.warn('IA (analyse automatique) :', err); }
 });
-/* à la sortie d'un bloc : tout le bloc (phrases non encore relues) + mise en forme si c'est un paragraphe */
+/* à la sortie d'un bloc : tout le bloc est relu sur l'appareil (1.43 : plus de mise en forme automatique en ligne ;
+   elle reste disponible à la demande, panneau IA › Mise en forme) */
 function aiAutoConsider(b) {
   if (!aiAutoType(b) || !aiLiveOn()) return;
-  const o = aiOpt();
-  const style = o.style && b.type === 'p' && !aiSeen.has(styleKey(b)) && blockPlain(b).trim().length >= 60;
-  if (!o.fix && !style) return;
-  AlixoCorr.left(b.id, { style });
+  AlixoCorr.left(b.id);
 }
-/* pendant la frappe : pause de 2,5 s → les phrases nouvelles ou modifiées partent (groupées) */
+/* pendant la frappe : courte pause → les phrases nouvelles ou modifiées sont relues sur l'appareil */
 function aiAutoTyping(b) { if (aiAutoType(b) && aiLiveOn() && aiOpt().fix) AlixoCorr.typed(b.id); }
 /* fin de phrase (. ! ? Entrée) : les phrases terminées partent sans attendre la pause */
 function corrSentenceDone(field) {
@@ -8985,7 +9118,7 @@ async function aiStyleAnalyze(blocks) {
 /* Paramètres › IA : ce que le moteur a économisé */
 function aiStatsText(c) {
   const since = c.since ? new Date(c.since).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }) : '';
-  const parts = [`${c.req} requête${c.req > 1 ? 's' : ''} envoyée${c.req > 1 ? 's' : ''}`, `${c.sent} phrase${c.sent > 1 ? 's' : ''} analysée${c.sent > 1 ? 's' : ''}`, `${c.cached} servie${c.cached > 1 ? 's' : ''} par la mémoire`, `${c.local} faute${c.local > 1 ? 's' : ''} de frappe corrigée${c.local > 1 ? 's' : ''} sans requête`];
+  const parts = [`${c.req} demande${c.req > 1 ? 's' : ''} à AlixoAI`, `${c.sent} phrase${c.sent > 1 ? 's' : ''} relue${c.sent > 1 ? 's' : ''}`, `${c.cached} servie${c.cached > 1 ? 's' : ''} par la mémoire`, `${c.local} faute${c.local > 1 ? 's' : ''} de frappe corrigée${c.local > 1 ? 's' : ''} à l’espace`];
   return `Depuis le ${since} : ${parts.join(' · ')}${c.tokIn ? ` · ${(c.tokIn + (c.tokOut || 0)).toLocaleString('fr-FR')} jetons` : ''}. Mémoire : ${c.cacheSize} phrases, ${c.learned} mot${c.learned > 1 ? 's' : ''} appris, ${c.ignored} ignoré${c.ignored > 1 ? 's' : ''}.`;
 }
 /* applique une proposition de mise en forme à un bloc (sans touch/render) */
@@ -9113,9 +9246,10 @@ blocksEl.addEventListener('mousedown', e => { if (e.target.closest('.ai-sug')) e
 async function runAiStyle() {
   const d = doc(); if (!d) return;
   if (!requirePlus('ia')) return;
-  if (!aiReady()) { openRightPanel('#aipanel'); showAiSetup(); return; }
+  if (!aiReady()) { aiShowNotReady(); return; }
   const payload = d.blocks.filter(b => b.type === 'p').map(b => ({ id: b.id, text: blockPlain(b).trim() })).filter(x => x.text.length >= 12).slice(0, 80);
   if (!payload.length) { toast('Aucun paragraphe à analyser'); return; }
+  if (!(await aiNoticeGate())) return;
   openRightPanel('#aipanel');
   $('#ai-body').innerHTML = `<div class="ai-empty">Analyse de la mise en forme (${payload.length} paragraphe${payload.length > 1 ? 's' : ''})…</div>`;
   try {
@@ -9154,6 +9288,7 @@ function blockPlain(b) {
   if (b.type === 'timer') return b.label || 'Minuteur';
   if (b.type === 'hr' || b.type === 'pb') return '';
   if (b.type === 'toc') return b.title || 'Table des matières';
+  if (b.type === 'docref') return docRefInfo(b).title;   // 1.43
   if (b.type === 'cards') return cardsOf(b).map(c => stripTags(c.t) + (c.x ? ' — ' + stripTags(c.x) : '')).join('\n');
   if (b.type === 'tree') return treePlain(b.root);
   if (b.type === 'table') return (b.rows || []).map(r => r.map(c => stripTags(c)).join(' | ')).join('\n');
@@ -9890,6 +10025,177 @@ blocksEl.addEventListener('change', e => {
   b.vals[i] = t.tagName === 'SELECT' ? (t.value === '' ? null : +t.value) : !!t.checked;
   touch(); refreshScore(bl, b);
 });
+/* ---------------- 1.43 : bloc « Document » — lien vers un autre document Alixo ----------------
+   b = { type: 'docref', ref: <id du document>, kind: 'cours' | 'slides' | 'sheet' | 'board' | 'quiz' } — jamais de titre :
+   le bloc voyage avec le cours (partage, copie, export .alx) et le titre d'un document privé ne doit pas le suivre.
+   Le titre réel est relu à chaque affichage. Repli si la cible a disparu : « Document introuvable », avec le dernier
+   titre connu seulement sur l'appareil du propriétaire (localStorage par compte, alixo.docref.titles). Un lecteur de
+   partage sans accès à la cible voit « Document non partagé ». */
+const DREF_TITLES_LS = () => 'alixo.docref.titles' + (window.AlixoAuth ? AlixoAuth.storageSuffix() : '');
+function drefTitles() { try { const o = JSON.parse(localStorage.getItem(DREF_TITLES_LS()) || '{}'); return o && typeof o === 'object' && !Array.isArray(o) ? o : {}; } catch { return {}; } }
+function drefRemember(ref, title) {
+  if (!ref || ALIXO_PANE) return;
+  const m = drefTitles(); const t = String(title || 'Sans titre').slice(0, 200);
+  if (m[ref] === t) return;
+  delete m[ref]; m[ref] = t;
+  const keys = Object.keys(m); for (let i = 0; i < keys.length - 300; i++) delete m[keys[i]];   // les 300 derniers
+  try { localStorage.setItem(DREF_TITLES_LS(), JSON.stringify(m)); } catch { /* stockage plein */ }
+}
+function docRefInfo(b) {
+  const t = b && b.ref ? findDoc(b.ref) : null;
+  if (t) {
+    const shared = !state.docs.some(x => x.id === t.id);
+    if (!shared) drefRemember(t.id, t.titre);   // seulement mes documents, seulement sur cet appareil
+    return { st: 'ok', d: t, title: t.titre || 'Sans titre', kind: t.kind || 'cours', shared };
+  }
+  if (isSharedDoc(currentDocId)) return { st: 'locked', title: 'Document non partagé', kind: '' };
+  const local = b && b.ref ? drefTitles()[b.ref] || '' : '';
+  return { st: 'missing', title: 'Document introuvable', local, kind: (b && DREF_KINDS[b.kind] ? b.kind : 'cours') };
+}
+function docRefMeta(d, shared) {
+  const where = shared ? 'Partagé avec vous' : (folderPath(d.folderId).map(f => f.nom).join(' › ') || 'Mes cours');
+  return [DREF_KINDS[d.kind] || 'Séance', where, d.updatedAt ? 'modifié le ' + fmtDate(d.updatedAt) : ''].filter(Boolean).join(' · ');
+}
+/* choix du document : recherche (titre, dossier), documents les plus récents en tête ; ↑ ↓ puis Entrée.
+   replaceId : bloc « Document » existant dont on change la cible (« Changer de document… ») */
+function openDocRefPicker(bid, inlineCtx, replaceId) {
+  const here = currentDocId;
+  const all = state.docs.filter(d => d.id !== here && !isLocalOnly(d) && d.folderId !== LOCAL_FOLDER_ID)
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  let list = [], sel = 0;
+  showPopover(`<h4>${replaceId ? 'Changer de document' : 'Insérer un document'}</h4>
+    <div class="po-row"><input id="po-dref-q" type="search" placeholder="Rechercher un document…" autocomplete="off" spellcheck="false" aria-label="Rechercher un document" aria-controls="po-dref-list"></div>
+    <div class="po-list po-dref" id="po-dref-list" role="listbox" aria-label="Documents"></div>
+    <div class="po-hint">Ajoute une carte qui ouvre ce document. Les personnes avec qui vous partagez ce cours devront aussi avoir accès au document.</div>`,
+    anchorForBlock(replaceId || bid || currentBlockId()), pop => {
+      const inp = pop.querySelector('#po-dref-q'), box = pop.querySelector('#po-dref-list');
+      const render = () => {
+        const q = norm(inp.value.trim());
+        list = all.filter(d => !q || norm((d.titre || '') + ' ' + folderPath(d.folderId).map(f => f.nom).join(' ') + ' ' + (DREF_KINDS[d.kind] || '')).includes(q)).slice(0, 60);
+        sel = Math.max(0, Math.min(sel, list.length - 1));
+        box.innerHTML = list.map((d, i) => `<button type="button" role="option" id="po-dref-${i}" data-i="${i}" class="${i === sel ? 'sel' : ''}" aria-selected="${i === sel}">${docIcon(d)}<span class="dref-po-nm"><b>${esc(d.titre || 'Sans titre')}</b><small>${esc(docRefMeta(d, false))}</small></span></button>`).join('')
+          || `<div class="po-empty">${all.length ? 'Aucun document ne correspond.' : 'Aucun autre document dans votre bibliothèque.'}</div>`;
+        if (list.length) inp.setAttribute('aria-activedescendant', 'po-dref-' + sel); else inp.removeAttribute('aria-activedescendant');
+      };
+      const move = k => { if (!list.length) return; sel = Math.max(0, Math.min(list.length - 1, sel + k)); box.querySelectorAll('[data-i]').forEach(x => { const on = +x.dataset.i === sel; x.classList.toggle('sel', on); x.setAttribute('aria-selected', on); }); inp.setAttribute('aria-activedescendant', 'po-dref-' + sel); const c = box.querySelector('.sel'); if (c) c.scrollIntoView({ block: 'nearest' }); };
+      const pick = i => {
+        const d = list[i]; if (!d) return;
+        hidePopover();
+        const spec = { type: 'docref', ref: d.id, kind: d.kind || 'cours' };
+        drefRemember(d.id, d.titre);
+        const old = replaceId ? getBlock(replaceId) : null;
+        let nb;
+        if (old) { resetBlock(old, spec); touch(); renderBlocks('__none'); selectObj(old.id); nb = old; }
+        else nb = insertObjectSmart(spec, bid, inlineCtx);
+        // comme la table des matières : toujours un paragraphe après la carte, pour continuer à écrire
+        const dd = doc(); const at = blockIndex(nb.id);
+        if (dd && at >= 0 && !dd.blocks[at + 1]) { dd.blocks.splice(at + 1, 0, { id: uid(), type: 'p', text: '', day: todayKey() }); touch(); renderBlocks('__none'); selectObj(nb.id); }
+        if (!old) toast(`Document « ${d.titre || 'Sans titre'} » lié — un clic sur la carte l’ouvre`);
+      };
+      inp.addEventListener('input', () => { sel = 0; render(); });
+      inp.addEventListener('keydown', e => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); move(1); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); move(-1); }
+        else if (e.key === 'Enter') { e.preventDefault(); e.stopPropagation(); pick(sel); }
+      });
+      box.addEventListener('click', e => { const x = e.target.closest('[data-i]'); if (x) pick(+x.dataset.i); });
+      render();
+      inp.focus(); setTimeout(() => { if (inp.isConnected && document.activeElement !== inp) inp.focus(); }, 30);
+    });
+}
+blocksEl.addEventListener('click', e => {
+  const bl = e.target.closest('#blocks > .block.docref'); if (!bl) return;
+  e.preventDefault();
+  const b = getBlock(bl.dataset.id); if (!b || b.type !== 'docref') return;
+  const k = e.target.closest('[data-dref]');
+  if (!k) { selectObj(b.id); return; }
+  const a = k.dataset.dref;
+  if (a === 'open') {
+    const r = docRefInfo(b);
+    if (r.st === 'ok') openDoc(b.ref);
+    else { selectObj(b.id); toast(r.st === 'locked' ? 'Ce document ne vous est pas partagé' : 'Ce document a été supprimé ou n’est plus accessible.'); }
+    return;
+  }
+  if (readOnly) return;
+  if (a === 'pick') openDocRefPicker(b.id, null, b.id);
+  else if (a === 'del') deleteObj(b.id);
+});
+/* appui long (tactile) ou clic droit sur la carte : « Changer de document… / Retirer » — au doigt, le premier toucher
+   ouvre le document, ce menu donne l'accès aux outils sans passer par la sélection */
+blocksEl.addEventListener('contextmenu', e => {
+  const bl = e.target.closest('#blocks > .block.docref'); if (!bl || readOnly) return;
+  const b = getBlock(bl.dataset.id); if (!b || b.type !== 'docref') return;
+  e.preventDefault();
+  const r = docRefInfo(b);
+  const menu = $('#ctxmenu');
+  menu.innerHTML = `<div class="cm-title">${esc(r.st === 'ok' ? r.title : 'Document')}</div>
+    ${r.st === 'ok' ? `<button data-cm="drefopen">${CM_ICO.open}Ouvrir</button>` : ''}
+    <button data-cm="drefpick">${CM_ICO.pen}${r.st === 'ok' ? 'Changer de document…' : 'Choisir un autre document…'}</button>
+    <button data-cm="drefdel" class="danger">${CM_ICO.trash}Retirer</button>`;
+  menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.dref = b.id;
+  placeCtxMenu(menu, e.clientX, e.clientY);
+});
+$('#ctxmenu').addEventListener('click', e => {
+  const btn = e.target.closest('[data-cm]'); if (!btn) return;
+  const menu = $('#ctxmenu'); const id = menu.dataset.dref; if (!id) return;
+  if (!/^dref/.test(btn.dataset.cm)) return;
+  menu.dataset.dref = ''; closeCtxMenu();
+  const b = getBlock(id); if (!b) return;
+  if (btn.dataset.cm === 'drefopen') openDoc(b.ref);
+  else if (btn.dataset.cm === 'drefpick') openDocRefPicker(b.id, null, b.id);
+  else if (btn.dataset.cm === 'drefdel') deleteObj(b.id);
+});
+
+/* 1.43 : taille d'un nouveau tableau, façon Google Docs — un quadrillage qu'on « remplit » depuis le coin
+   haut-gauche : vers la droite = plus de colonnes, vers le bas = plus de lignes, libellé « colonnes × lignes » ;
+   clic = tableau créé à cette taille. Clavier : flèches, Entrée pour insérer, Échap pour fermer ;
+   tactile : on glisse le doigt sur la grille, le tableau est créé quand on le lève. */
+const TSP_COLS = 10, TSP_ROWS = 8;
+function emptyTableRows(R, C) { return Array.from({ length: R }, () => Array(C).fill('')); }
+function openTableSizePicker(rect, onPick, onCancel) {
+  let R = 3, C = 3, down = false;   // à l'ouverture, Entrée crée un tableau 3 × 3
+  /* au doigt : 6 × 6 cases de 44 px (cible tactile minimale) au lieu de 10 × 8 cases de 22 px */
+  let coarse = false; try { coarse = matchMedia('(pointer: coarse)').matches; } catch { /* */ }
+  const COLS = coarse ? 6 : TSP_COLS, ROWS = coarse ? 6 : TSP_ROWS;
+  const rowsHtml = Array.from({ length: ROWS }, (_, r) => `<div role="row" class="tsp-row">${Array.from({ length: COLS }, (_, c) =>
+    `<div role="gridcell" class="tsp-cell" id="tsp-${r + 1}-${c + 1}" data-r="${r + 1}" data-c="${c + 1}"></div>`).join('')}</div>`).join('');
+  showPopover(`<h4>Insérer un tableau</h4>
+    <div class="tsp-grid" role="grid" tabindex="0" aria-label="Taille du tableau : flèches pour choisir, Entrée pour insérer" style="--cols:${COLS}">${rowsHtml}</div>
+    <div class="tsp-foot"><b class="tsp-lbl" aria-hidden="true"></b></div>
+    <div class="tsp-help">Lignes et colonnes s’ajoutent ensuite depuis le tableau.</div>
+    <span class="tsp-live" aria-live="polite"></span>`,
+    rect, pop => {
+      const grid = pop.querySelector('.tsp-grid'), lbl = pop.querySelector('.tsp-lbl'), live = pop.querySelector('.tsp-live');
+      const cells = [...grid.querySelectorAll('.tsp-cell')];
+      const paint = () => {
+        for (const x of cells) { const on = +x.dataset.r <= R && +x.dataset.c <= C; x.classList.toggle('on', on); x.setAttribute('aria-selected', on ? 'true' : 'false'); }
+        lbl.textContent = `${C} colonne${C > 1 ? 's' : ''} × ${R} ligne${R > 1 ? 's' : ''}`;
+        live.textContent = `${C} colonne${C > 1 ? 's' : ''}, ${R} ligne${R > 1 ? 's' : ''}`;
+        grid.setAttribute('aria-activedescendant', `tsp-${R}-${C}`);
+      };
+      const pick = () => { const r = R, c = C; hidePopover(); onPick(r, c); };
+      // la case sous le pointeur (au doigt, la cible du pointermove reste la case touchée en premier : on relit la position)
+      const at = e => { const el = document.elementFromPoint(e.clientX, e.clientY); return el && el.closest && grid.contains(el) ? el.closest('.tsp-cell') : null; };
+      const track = e => { const x = at(e); if (!x) return false; const r = +x.dataset.r, c = +x.dataset.c; if (r !== R || c !== C) { R = r; C = c; paint(); } return true; };
+      grid.addEventListener('pointerdown', e => { down = true; track(e); if (e.pointerType !== 'mouse') e.preventDefault(); });
+      grid.addEventListener('pointermove', track);
+      grid.addEventListener('pointerup', e => { if (!down) return; down = false; if (track(e)) pick(); });
+      grid.addEventListener('pointercancel', () => { down = false; });
+      grid.addEventListener('keydown', e => {
+        const k = e.key;
+        if (k === 'ArrowRight') C = Math.min(COLS, C + 1);
+        else if (k === 'ArrowLeft') C = Math.max(1, C - 1);
+        else if (k === 'ArrowDown') R = Math.min(ROWS, R + 1);
+        else if (k === 'ArrowUp') R = Math.max(1, R - 1);
+        else if (k === 'Enter' || k === ' ') { e.preventDefault(); e.stopPropagation(); pick(); return; }
+        else if (k === 'Escape') { e.preventDefault(); e.stopPropagation(); hidePopover(); if (onCancel) onCancel(); return; }
+        else return;
+        e.preventDefault(); e.stopPropagation(); paint();
+      });
+      paint();
+      grid.focus({ preventScroll: true }); setTimeout(() => { if (grid.isConnected) grid.focus({ preventScroll: true }); }, 30);
+    });
+}
 function openScoreChooser(bid, inlineCtx) {
   const entries = Object.entries(AlixoMed.SCORES);
   showPopover(`<h4>Score clinique</h4><div class="po-list po-scores">${entries.map(([k, s]) => `<button data-sk="${k}"><b>${esc(s.name)}</b><span class="sm-sub">${esc(s.sub || '')}</span></button>`).join('')}</div>`,
@@ -10172,7 +10478,8 @@ function openCitePopover(bid) {
     });
 }
 blocksEl.addEventListener('contextmenu', e => {
-  const q = e.target.closest('#blocks > .block.quote'); if (!q || e.target.closest('a')) return;
+  // 1.43 : clic droit dans le texte de la citation → menu du correcteur orthographique (suggestions) ; le menu « Citation » reste sur la ligne de l'auteur
+  const q = e.target.closest('#blocks > .block.quote'); if (!q || e.target.closest('a') || e.target.closest('.btxt')) return;
   const b = getBlock(q.dataset.id); if (!b) return;
   e.preventDefault();
   const menu = $('#ctxmenu');
@@ -10181,6 +10488,13 @@ blocksEl.addEventListener('contextmenu', e => {
     <button data-cm="qpara">${CM_ICO.open}Transformer en paragraphe</button>`;
   menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.quote = b.id;
   placeCtxMenu(menu, e.clientX, e.clientY);
+});
+/* 1.43 : accès visible à « Auteur / source… » quand la ligne de l'auteur est vide (le menu n'est que sur cette ligne) */
+blocksEl.addEventListener('mousedown', e => { if (e.target.closest('.q-src')) e.preventDefault(); });
+blocksEl.addEventListener('click', e => {
+  const k = e.target.closest('#blocks > .block.quote > .q-src'); if (!k || readOnly) return;
+  e.preventDefault(); e.stopPropagation();
+  const id = k.closest('.block').dataset.id; if (getBlock(id)) openCitePopover(id);
 });
 $('#ctxmenu').addEventListener('click', e => {
   const btn = e.target.closest('[data-cm]'); if (!btn) return;
@@ -10849,9 +11163,10 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Des Paramètres redessinés, plus sobres et lisibles, l’export Excel des résultats de quiz, des raccourcis clavier rangés par catégorie et une barre d’outils centrée.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Une correction des fautes qui marche partout, sans faire ramer l’ordinateur, AlixoAI en ligne, un bloc Document, le tableau dessiné au quadrillage et des widgets propres à chaque appareil.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
-  setTimeout(() => { if (window.AlixoLocalAI) aiAfterCrash(window.AlixoLocalAI); }, 4000);   // 1.41 : plus de préparation au démarrage (le modèle se charge à la première demande) ; seulement le contrôle après une fermeture brutale
+  setTimeout(purgeWebLLM, 4000);   // 1.43 : ménage unique des restes de l'ancien moteur sur l'appareil (poids du modèle, réglages)
+  setTimeout(aiOffNotice, 6000);   // 1.43 : AlixoAI désactivée avant le passage en ligne → elle le reste, message unique
 }, 1400);

@@ -247,7 +247,8 @@ window.AlixoAIQuiz = (() => {
     if (s.step === 'gen') animateGen(s);
   }
   const stage = s => s.root.querySelector('.aq-stage');
-  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>AlixoAI n’est pas disponible.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Réactiver).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settingsLink()}</div>`;
+  /* 1.43 : AlixoAI est en ligne — hors ligne, sans compte ou quota du jour atteint, on le dit simplement */
+  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>AlixoAI n’est pas disponible pour le moment.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Activer).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settingsLink()}</div>`;
   const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
   const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
   const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;
@@ -265,7 +266,7 @@ window.AlixoAIQuiz = (() => {
       </div>` : `<div class="aq-rows"><div class="aq-row"><label>Contenu</label><p class="aq-hint">La fiche reprend tout le document : un résumé, trois à sept parties avec leurs points clés et définitions, « À retenir », et les pièges à éviter. Vous pourrez l’insérer à la fin de la séance, en faire une nouvelle séance, la copier ou l’imprimer.</p></div></div>`}
       <div class="aq-foot">
         <button type="button" class="aq-go" data-aq="go">${ICON}<span>Générer ${quiz ? `${opts.n} question${opts.n > 1 ? 's' : ''}` : 'la fiche'}</span>${I.arrow}</button>
-        <span class="aq-note">AlixoAI construit le quiz uniquement à partir de ce document ; rien n’est conservé.${s.cut ? ' Document très long : seul le début est lu.' : ''}</span>
+        <span class="aq-note">AlixoAI construit ${quiz ? 'le quiz' : 'la fiche'} uniquement à partir de ce document : le texte est envoyé à AlixoAI (serveur d’Alixo hébergé par Cloudflare) ; il n’est pas conservé ni utilisé pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a>${s.cut ? ' Document très long : seul le début est lu.' : ''}</span>
       </div>
     </div>`;
   }

@@ -1,30 +1,27 @@
 /* ============================================================
-   Alixo — moteur de correction (1.22 ; 1.37 : AlixoAI)
-   Trois étages, du moins cher au plus cher :
-   1. local, instantané : fautes de frappe reconnues à l'espace (liste fermée, mots appris, lexique de 24 000 mots :
-      lettres inversées, lettre doublée, accent oublié) ;
-   2. mémoire : chaque phrase déjà analysée (même texte, même niveau) n'est jamais réanalysée ;
-   3. AlixoAI (js/alixoai.js) : seulement les phrases nouvelles ou modifiées, groupées en une requête compacte, au plus
-      une requête toutes les 3 s pendant la frappe.
-   1.37 : plus aucun serveur ni fournisseur extérieur. L'IA d'Alixo est AlixoAI, intégrée à l'application : les consignes,
-   les formats de réponse et les budgets vivent dans js/alixoai.js ; ce fichier garde la découpe en phrases, la mémoire,
-   la file de frappe et la mise en place des corrections. La « configuration » se réduit à un interrupteur (AlixoAI.setEnabled).
-   Chargé avant app.js (dépend de window.ALIXO_LEXIQUE, js/lexique.js, et de window.AlixoAI). app.js fournit l'accès aux
-   blocs et à l'écran via AlixoCorr.init({...}) et branche les événements de frappe.
+   Alixo — moteur de correction (1.22 ; 1.37 : AlixoAI ; 1.43 : correction pendant la frappe sans IA)
+   Pendant la frappe, tout se passe sur l'appareil, sans IA ni carte graphique, pour tous les comptes :
+   1. fautes de frappe reconnues à l'espace (liste fermée, mots appris, lexique de 24 000 mots : lettres inversées,
+      lettre doublée, accent oublié) ;
+   2. grammaire sûre (js/grammaire.js : il à → il a, ils on → ils ont, si il → s'il…) sur les phrases nouvelles ou
+      modifiées ; une phrase déjà relue par AlixoAI (mémoire, F7) ressort telle quelle ;
+   (le soulignement orthographique est celui du navigateur / de la version PC : correcteur natif, dictionnaire français).
+   À la demande (F7, Alixo+) : AlixoAI en ligne (js/alixoai.js → js/alixocloud.js) relit le texte, phrase par phrase,
+   en requêtes groupées ; ses réponses sont mémorisées (une phrase relue n'est jamais renvoyée).
+   Chargé avant app.js (dépend de window.ALIXO_LEXIQUE, js/lexique.js, window.AlixoGrammar et window.AlixoAI). app.js
+   fournit l'accès aux blocs et à l'écran via AlixoCorr.init({...}) et branche les événements de frappe.
    ============================================================ */
 'use strict';
 
 window.AlixoCorr = (() => {
   /* ---------------- réglages ---------------- */
   const AI = () => window.AlixoAI || null;
-  const LOCAL = () => window.AlixoLocalAI || null;
-  const MIN_GAP = 3000;            // ms entre deux requêtes « en direct » (facturation à l'usage : on limite le nombre d'appels)
-  const PAUSE_MS = 2500;           // pause de frappe avant d'envoyer les phrases en cours
+  const GRAMMAR = () => window.AlixoGrammar || null;
+  const PAUSE_MS = 1500;           // pause de frappe avant de relire les phrases en cours
   const SENTENCE_MS = 700;         // délai après une fin de phrase (. ! ? Entrée)
   const LEAVE_MS = 250;            // délai après la sortie d'un bloc
-  /* 1.37 : taille des lots (caractères par requête) donnée par AlixoAI selon la taille du modèle choisie pour l'appareil */
-  const maxBatchLive = () => (AI() ? AI().budget().live : 1000);
-  const maxBatchFull = () => (AI() ? AI().budget().full : 2600);
+  /* taille des lots de F7 (caractères par requête), donnée par AlixoAI */
+  const maxBatchFull = () => (AI() ? AI().budget().full : 6000);
   const MIN_WORDS = 3;             // une phrase plus courte n'est pas envoyée
   const CACHE_MAX = 4000;          // phrases mémorisées
   const LS = { learned: 'alixo.corr.learned', ignored: 'alixo.corr.ignored', cache: 'alixo.corr.cache', stats: 'alixo.corr.stats' };
@@ -177,22 +174,21 @@ window.AlixoCorr = (() => {
   }
   function clearCache() { cache = {}; persist(); }
 
-  /* ---------------- AlixoAI : disponibilité et interrupteur (1.37) ----------------
-     Plus de serveur, de clé ni de choix de modèle : getConfig() / setConfig() ne servent plus qu'à l'interrupteur
-     { off } (« Désactiver » dans Paramètres › IA), gardé pour les appelants historiques (cloudconfig.js, tests). */
-  function getConfig() { const A = AI(); return { provider: 'alixoai', endpoint: 'local', model: A ? A.tier() : 'equilibre', key: '', on: !!(A && A.ready()), off: !!(A && !A.enabled()) }; }
+  /* ---------------- AlixoAI : disponibilité et interrupteur (1.37 ; 1.43 : en ligne) ----------------
+     getConfig() / setConfig() ne servent qu'à l'interrupteur { off } (« Désactiver » dans Paramètres › IA), gardé pour
+     les appelants historiques (cloudconfig.js, tests). */
+  function getConfig() { const A = AI(); return { provider: 'alixoai', endpoint: 'en-ligne', model: 'AlixoAI', key: '', on: !!(A && A.ready()), off: !!(A && !A.enabled()) }; }
   function setConfig(c) { const A = AI(); if (!A) return; if (c && typeof c === 'object' && 'off' in c) A.setEnabled(!c.off); }
-  /* prêt = AlixoAI est active et l'appareil sait la faire tourner (elle se prépare toute seule, à la demande si besoin) */
+  /* prêt = AlixoAI est active et joignable (en ligne, compte connecté, quota du jour non atteint) */
   function configured() { const A = AI(); return !!A && A.enabled() && A.available().ok; }
-  const isLocal = () => true;
+  const isLocal = () => false;
   const isLocalUrl = u => { try { const h = new URL(u).hostname; return /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.local$/.test(h); } catch { return false; } };
-  /* appel brut (vérification, tests) : AlixoAI répond à une consigne libre */
-  async function call(cfg, { system, user, maxTokens = 256, timeoutMs = 60000, temperature = 0, background = false } = {}) {
-    const L = LOCAL(); const A = AI();
-    if (!L || !A) return { ok: false, status: 0, error: 'Le moteur d’AlixoAI n’est pas chargé.' };
+  /* appel brut (vérification, tests) : AlixoAI répond à une consigne libre (tâche « correct » : plafonds du serveur) */
+  async function call(cfg, { system, user, maxTokens = 256, timeoutMs = 60000, temperature = 0 } = {}) {
+    const A = AI(); const C = window.AlixoCloudAI;
+    if (!A || !C) return { ok: false, status: 0, error: 'AlixoAI n’est pas chargée.' };
     if (!configured() && !(cfg && cfg.force)) return { ok: false, status: 0, error: A.enabled() ? A.available().reason : 'AlixoAI est désactivée (Paramètres › IA › Réactiver).' };
-    try { await L.load(L.recommend()); } catch (e) { return { ok: false, status: 0, error: e.message }; }
-    return L.chat({ system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 60000), key: L.recommend(), background });
+    return C.chat({ task: 'correct', system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 60000) });
   }
   const LANG_NAMES = { fr: 'français', en: 'anglais', es: 'espagnol', de: 'allemand', it: 'italien', pt: 'portugais' };
   const KINDS = { f: 'frappe', o: 'orthographe', g: 'grammaire', t: 'typographie', r: 'reformulation' };
@@ -269,7 +265,7 @@ window.AlixoCorr = (() => {
     const withStyle = styleBlocks && Object.keys(styleBlocks).length > 0;
     const chars = items.reduce((n, it) => n + it.text.length + 4, 0);
     let r;
-    try { r = await AI().run('correct', { mode, items: items.map(it => ({ text: it.text })), ctx, styleBlocks: withStyle ? styleBlocks : null }, { background: mode === 'live' }); }
+    try { r = await AI().run('correct', { mode, items: items.map(it => ({ text: it.text })), ctx, styleBlocks: withStyle ? styleBlocks : null }); }
     catch (e) { stats.req++; stats.chars += chars; stats.sent += items.length; persist(); throw e; }
     stats.req++; stats.chars += chars; stats.sent += items.length;
     stats.tokIn = (stats.tokIn || 0) + (r.tokIn || 0); stats.tokOut = (stats.tokOut || 0) + (r.tokOut || 0); persist();
@@ -280,18 +276,19 @@ window.AlixoCorr = (() => {
     return { results, styles };
   }
 
-  /* ---------------- étage 3, en direct : file d'attente, regroupement, cadence ---------------- */
-  let opts = {};               // fourni par app.js : ctx(), text(blockId) → { text, lang, type } | null, onResult, onStyle, onError, caretIn(blockId, s, e)
-  const pending = new Map();   // blockId → { keys: Map(key → { text }), style: bool }
-  const inflight = new Set();  // clés en cours d'envoi
+  /* ---------------- pendant la frappe : file d'attente, grammaire sur l'appareil (1.43) ----------------
+     Plus d'IA ici : les phrases nouvelles ou modifiées passent par js/grammaire.js (quelques millisecondes), sans
+     requête ni carte graphique. Les phrases déjà relues par AlixoAI (F7) ressortent de la mémoire telles quelles. */
+  let opts = {};               // fourni par app.js : ctx(), text(blockId) → { text, lang, type } | null, onResult, onError, caretIn(blockId, s, e)
+  const pending = new Map();   // blockId → { keys: Map(key → { text }), lang }
   const timers = new Map();    // blockId → timer
-  let runTm = null, busy = false, lastReq = 0, backoffUntil = 0;
+  let runTm = null;
 
   function init(o) { opts = Object.assign({}, opts, o); }
   const ctxOf = () => (opts.ctx ? opts.ctx() : {}) || {};
 
   /* prépare les phrases d'un bloc : celles en mémoire sont rendues tout de suite, les autres mises en file */
-  function collect(blockId, { style = false, all = false } = {}) {
+  function collect(blockId, { all = false } = {}) {
     const info = opts.text ? opts.text(blockId) : null;
     if (!info || !info.text) return;
     const ctx = Object.assign({}, ctxOf(), { lang: info.lang || 'fr' });
@@ -301,18 +298,16 @@ window.AlixoCorr = (() => {
     for (let i = 0; i < sents.length; i++) {
       const sn = sents[i];
       if (!worth(sn.text)) continue;
-      // la phrase qui porte encore le curseur (dernier mot en cours) attend la fin de phrase ou la pause : on ne l'envoie qu'avec « all »
+      // la phrase qui porte encore le curseur (dernier mot en cours) attend la fin de phrase ou la pause : on ne la relit qu'avec « all »
       if (!all && opts.caretIn && opts.caretIn(blockId, sn.s, sn.e) && !/[.!?…]["»”')\]]*$/.test(sn.text)) continue;
       const key = keyOf(sn.text, ctx);
       const hit = cacheGet(key);
       if (hit !== undefined) { stats.cached++; fromCache.push({ key, text: sn.text, fixes: hit.map(x => ({ avant: x[0], apres: x[1], kind: KINDS[x[2]] || 'orthographe', regle: x[3] || '', at: sn.text.indexOf(x[0]) })).filter(f => f.at >= 0) }); continue; }
-      if (inflight.has(key)) continue;
-      if (!entry) { entry = { keys: new Map(), style: false, lang: ctx.lang }; pending.set(blockId, entry); }
+      if (!entry) { entry = { keys: new Map(), lang: ctx.lang }; pending.set(blockId, entry); }
       entry.keys.set(key, { text: sn.text });
     }
-    if (style) { if (!entry) { entry = { keys: new Map(), style: false, lang: ctx.lang }; pending.set(blockId, entry); } entry.style = true; }
     if (fromCache.length && opts.onResult) opts.onResult(blockId, fromCache, { cached: true });
-    if (entry && !entry.keys.size && !entry.style) pending.delete(blockId);
+    if (entry && !entry.keys.size) pending.delete(blockId);
     if (pending.size) schedule();
   }
   function arm(blockId, ms, o) {
@@ -322,62 +317,35 @@ window.AlixoCorr = (() => {
   /* appels d'app.js */
   function typed(blockId) { if (!enabled()) return; arm(blockId, PAUSE_MS, { all: true }); }                           // pause de frappe : tout, même la phrase en cours
   function sentenceDone(blockId) { if (!enabled()) return; arm(blockId, SENTENCE_MS, { all: false }); }                 // fin de phrase : les phrases terminées
-  function left(blockId, { style = false } = {}) { if (!enabled()) return; arm(blockId, LEAVE_MS, { all: true, style }); }   // sortie du bloc : tout + mise en forme
+  function left(blockId) { if (!enabled()) return; arm(blockId, LEAVE_MS, { all: true }); }                             // sortie du bloc : tout
   function drop(blockId) { clearTimeout(timers.get(blockId)); timers.delete(blockId); pending.delete(blockId); }
   const enabled = () => !!(opts.enabled ? opts.enabled() : true);
 
-  function schedule() {
-    if (busy || runTm) return;
-    const wait = Math.max(MIN_GAP - (Date.now() - lastReq), backoffUntil - Date.now(), 0);
-    runTm = setTimeout(run, wait + 10);
-  }
-  async function run() {
+  function schedule() { if (!runTm) runTm = setTimeout(run, 0); }
+  /* relit les phrases en file avec la grammaire sur l'appareil (seulement en français : les règles sont françaises) */
+  function run() {
     runTm = null;
-    if (busy || !pending.size) return;
-    if (!enabled() || !configured()) { pending.clear(); return; }
-    // 1.36.4 : sur l'appareil, la frappe n'attend ni ne déclenche un chargement du modèle (installation automatique à part),
-    // et ne s'empile pas derrière une réponse en cours : on repasse un peu plus tard
-    { const L = LOCAL(); const s = L && L.status(); if (!s || s.state !== 'ready' || s.busy) { backoffUntil = Date.now() + 5000; schedule(); return; } }
-    // lot : phrases de tous les blocs en attente, dans la limite de taille ; paragraphes à classer en plus
-    const items = []; const styleBlocks = {}; const styleTags = {}; let chars = 0; let tag = 65;
-    for (const [blockId, entry] of pending) {
-      if (chars > maxBatchLive()) break;
-      const start = items.length;
-      for (const [key, v] of entry.keys) {
-        if (chars > maxBatchLive()) break;
-        items.push({ key, text: v.text, blockId, lang: entry.lang }); inflight.add(key); chars += v.text.length + 4;
-        entry.keys.delete(key);
-      }
-      if (entry.style && items.length > start) {
-        const t = String.fromCharCode(tag++); styleBlocks[t] = items.slice(start).map((_, i) => start + i); styleTags[t] = blockId; entry.style = false;
-      }
-      if (!entry.keys.size && !entry.style) pending.delete(blockId);
+    if (!pending.size) return;
+    if (!enabled()) { pending.clear(); return; }
+    const G = GRAMMAR();
+    const level = ctxOf().level || 'standard';
+    for (const [blockId, entry] of [...pending]) {
+      pending.delete(blockId);
+      if (!G || (entry.lang && entry.lang !== 'fr')) continue;
+      const list = [];
+      try {
+        for (const [key, v] of entry.keys) {
+          stats.sent++; stats.chars += v.text.length;
+          const fixes = G.check(v.text, { level }).filter(f => !ignored.has(String(f.avant).toLowerCase()));
+          list.push({ key, text: v.text, fixes });
+        }
+      } catch (err) { if (opts.onError) opts.onError(err); continue; }
+      persist();
+      if (list.length && opts.onResult) opts.onResult(blockId, list, { cached: false, local: true });
     }
-    if (!items.length) { if (pending.size) schedule(); return; }
-    busy = true; lastReq = Date.now();
-    const ctx = Object.assign({}, ctxOf(), { lang: items[0].lang || 'fr' });
-    try {
-      const { results, styles } = await request('live', items, ctx, styleBlocks);
-      const byBlock = new Map();
-      for (const r of results) {
-        cacheSet(r.item.key, compact(r.fixes)); inflight.delete(r.item.key);
-        if (!byBlock.has(r.item.blockId)) byBlock.set(r.item.blockId, []);
-        byBlock.get(r.item.blockId).push({ key: r.item.key, text: r.item.text, fixes: r.fixes });
-      }
-      for (const [blockId, list] of byBlock) if (opts.onResult) opts.onResult(blockId, list, { cached: false });
-      for (const [t, blockId] of Object.entries(styleTags)) if (opts.onStyle) opts.onStyle(blockId, styles[t] || null);
-    } catch (err) {
-      for (const it of items) inflight.delete(it.key);
-      if (err && err.status === 429) backoffUntil = Date.now() + 60000;
-      else if (err && err.status === 0) backoffUntil = Date.now() + 20000;
-      // 499 (1.36.4) : requête d'arrière-plan interrompue par une demande de l'utilisateur — pas une panne, pas de pause
-      if (opts.onError) opts.onError(err);
-    }
-    busy = false;
-    if (pending.size) schedule();
   }
 
-  /* ---------------- étage 3, à la demande (F7) : tout un cours ---------------- */
+  /* ---------------- AlixoAI en ligne, à la demande (F7) : tout un cours ---------------- */
   /* blocks : [{ id, text, lang }] → [{ id, avant, apres, regle, kind, at }] ; second = seconde lecture (ignore la mémoire) */
   async function analyzeBlocks(blocks, { onProgress, second = false, already = [] } = {}) {
     const base = ctxOf();
@@ -422,7 +390,7 @@ window.AlixoCorr = (() => {
   const note = k => { stats[k] = (stats[k] || 0) + 1; persist(); };
 
   return {
-    init, typed, sentenceDone, left, drop, pending: () => pending.size + inflight.size,
+    init, typed, sentenceDone, left, drop, pending: () => pending.size,
     localFix, learn, ignore, isIgnored, forget, known,
     sentences, worth, sureTypo, levenshtein, locate, align,
     analyzeBlocks, request, call,

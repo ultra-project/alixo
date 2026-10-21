@@ -16,7 +16,7 @@
        title: 'Un <em>quiz</em> refondu',     // HTML léger autorisé : <em> = mot en couleur, <br>
        text: 'Une phrase…',                   // paragraphe (facultatif)
        bullets: ['<b>Thèmes</b> : …', '…'],   // puces (facultatif, 2 à 4)
-       art: 'cards' | 'chart' | 'board' | 'quiz' | 'text' | 'palette' | 'list' | { icon: '🎯' } | { svg: '<svg…>' } | { image: 'url' },
+       art: 'cards' | 'chart' | 'board' | 'quiz' | 'text' | 'palette' | 'list' | 'spell' | 'grid' | 'storage' | { icon: '🎯' } | { svg: '<svg…>' } | { image: 'url' },
        accent: '#33658a', accent2: '#b3762a', // couleurs des halos et de l'accent (facultatif)
        dur: 6000 }                            // durée en ms avant le passage automatique (défaut 6000 ; intro 4500 ; outro 7000)
    ============================================================ */
@@ -62,6 +62,12 @@ window.AlixoWhatsNew = (() => {
       case 'quiz': return `<div class="wn-art quiz">${frame('<div class="qq"></div>' + ['A', 'B', 'C', 'D'].map((l, i) => `<div class="qa ${i === 2 ? 'ok' : ''}" style="--i:${i}">${l}</div>`).join(''))}</div>`;
       case 'text': return `<div class="wn-art text"><div class="in">${lines(['t', 's', 'm', 's', 'x', 's', 'm'], 7)}</div></div>`;
       case 'palette': return `<div class="wn-art palette">${frame(['#33658a', '#b3762a', '#2e8b6a', '#8a4b9c', '#c04343', '#3d6bb5', '#1f2a37', '#d3a05e'].map((c, i) => `<div class="sw" style="--i:${i}; background:${c}"></div>`).join(''))}</div>`;
+      case 'spell': return `<div class="wn-art text spell"><div class="in">${lines(['t', 's', 'm'], 3)}<div class="sp"><s></s><span class="w">il à</span><s></s></div><div class="fx"><b>il a</b><kbd>Tab</kbd></div>${lines(['s', 'x'], 2)}</div></div>`;
+      case 'grid': return `<div class="wn-art grid">${frame(`<div class="gg">${Array.from({ length: 48 }, (_, k) => { const r = Math.floor(k / 8), c = k % 8; return `<div class="gc ${r < 4 && c < 5 ? 'on' : ''}" style="--i:${Math.max(r, c)}"></div>`; }).join('')}</div><div class="gl">5 colonnes × 4 lignes</div>`)}</div>`;
+      case 'storage': {
+        const seg = [['#33658a', 32], ['#b3762a', 20], ['#2e8b6a', 14], ['#8a4b9c', 10], ['#c04343', 7]];
+        return `<div class="wn-art storage">${frame(`<div class="tb"><span></span><span></span><span class="nw">Chapitre 3<i></i></span></div><div class="sb">${seg.map(([c, w], i) => `<b style="--i:${i}; width:${w}%; background:${c}"></b>`).join('')}</div><div class="lg">${seg.slice(0, 4).map(([c], i) => `<div style="--i:${i}"><i style="background:${c}"></i><s></s></div>`).join('')}</div><div class="bg">${seg.slice(0, 2).map(([c], i) => `<div style="--i:${i}"><i style="background:${c}"></i><s></s><u></u></div>`).join('')}</div>`)}</div>`;
+      }
       case 'list': return `<div class="wn-art list">${frame([1, 1, 1, 0].map((on, i) => `<div class="ck ${on ? 'on' : ''}" style="--i:${i}"><i></i><s></s></div>`).join(''))}</div>`;
       default: return `<div class="wn-art">${frame(lines(['t', 's', 'm', 's', 'x'], 5))}</div>`;
     }
@@ -155,6 +161,10 @@ window.AlixoWhatsNew = (() => {
       setTimeout(() => old.remove(), 500);
     }
     card.insertBefore(el, card.querySelector('.wn-ctrl'));
+    // halos de fond, progression et bouton principal prennent les couleurs de la scène en cours
+    const sc = cur.scenes[i];
+    if (sc.accent) card.style.setProperty('--wn-acc', sc.accent); else card.style.removeProperty('--wn-acc');
+    if (sc.accent2) card.style.setProperty('--wn-acc2', sc.accent2); else card.style.removeProperty('--wn-acc2');
     cur.i = i;
     const dur = defaultDur(cur.scenes[i]);
     cur.ov.querySelectorAll('.wn-prog span').forEach((s, k) => {

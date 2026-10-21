@@ -11,6 +11,7 @@
                             le serveur de paiement Stripe (1.30, by: 'stripe') ;
                             config/public.plusPrice / plusUrl / plusNote : l'offre affichée dans l'application ;
                             config/public.billingApi : adresse du serveur de paiement (billing/)
+                            config/public.aiApi : adresse du serveur d'AlixoAI (ai/, 1.43 ; défaut https://ai.alixoapp.com)
    - billing/{uid}        → état de l'abonnement Stripe (1.30), écrit par le serveur, lu par le titulaire
    Règles Firestore : voir SETUP-COMPTES.md § 6 (panneau admin).
    Chargé APRÈS app.js, notify.js. Sans compte : inactif.
@@ -51,6 +52,7 @@ window.AlixoCloud = (() => {
     if (window.AlixoApp && AlixoApp.setPlusOffer) AlixoApp.setPlusOffer({ price: d.plusPrice || '', url: d.plusUrl || '', note: d.plusNote || '' });
     pubConf = { businessUrl: typeof d.businessUrl === 'string' && /^https:\/\//.test(d.businessUrl) ? d.businessUrl : '' };   // 1.33 : adresse du tableau de bord Alixo Business
     setBillingApi(d.billingApi || DEFAULT_BILLING_API);   // 1.30 : adresse du serveur de paiement (Stripe), réglable depuis le panneau admin
+    setAiApi(d.aiApi || DEFAULT_AI_API);                  // 1.43 : adresse du serveur d'AlixoAI (ai/), réglable de même
     if (d.latestVersion && window.AlixoApp && cmpVer(d.latestVersion, AlixoApp.version) > 0 && !(window.alixoDesktop && alixoDesktop.onUpdate)) {
       notify({ id: 'latest_' + d.latestVersion, kind: 'update', title: `Alixo ${d.latestVersion} est disponible`, text: d.latestNote || 'Téléchargez la nouvelle version depuis la page d’Alixo.', action: { type: 'url', url: d.downloadUrl || 'https://alixoapp.com/versions/' } });
     }
@@ -177,6 +179,23 @@ window.AlixoCloud = (() => {
     resume: async () => bapi('/api/resume', { idToken: await idToken() })
   };
   setBillingApi(DEFAULT_BILLING_API);
+
+  /* ---------------- AlixoAI en ligne (1.43) ----------------
+     Le serveur d'IA (dossier ai/, Worker « alixo-ai ») reçoit le texte des demandes F7, mise en forme, quiz et fiche avec
+     le jeton Firebase du compte dans l'en-tête Authorization. Adresse : firebase-config.js (ALIXO_AI.api), sinon
+     https://ai.alixoapp.com, remplaçable par config/public.aiApi. Hôtes en liste blanche (AlixoCloudAI.clean : le jeton du
+     compte y part) ; expression ancrée en repli. */
+  const DEFAULT_AI_API = String(window.ALIXO_AI && window.ALIXO_AI.api || 'https://ai.alixoapp.com').replace(/\/+$/, '');
+  let aiApi = '';
+  function setAiApi(url) {
+    const raw = String(url || '').trim().replace(/\/+$/, '');
+    const u = window.AlixoCloudAI && AlixoCloudAI.clean ? AlixoCloudAI.clean(raw)
+      : (/^https:\/\/(ai\.alixoapp\.com|alixo-ai\.[a-z0-9-]+\.workers\.dev)$/.test(raw) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(raw) ? raw : '');
+    if (!u) return;
+    aiApi = u;
+    if (window.AlixoCloudAI) AlixoCloudAI.configure({ api: u, getToken: idToken });
+  }
+  setAiApi(DEFAULT_AI_API);
   db.collection('billing').doc(uid).onSnapshot(snap => {
     if (window.AlixoApp && AlixoApp.setBilling) AlixoApp.setBilling(snap.exists ? snap.data() : null);
   }, err => { if (!permErr(err)) console.error('Cloud (abonnement) :', err); });
@@ -204,6 +223,13 @@ window.AlixoCloud = (() => {
      nombre de séances, activité en cours (bibliothèque / rédaction / inactif). Aucun contenu de cours. */
   const HEART_MS = 60000, IDLE_MS = 5 * 60000;
   let lastInput = Date.now(), lastBeat = 0, ended = false;
+  /* 1.43 (minimisation) : lancé caché à l'ouverture de la session (PC, Mac), Alixo ne signale aucune présence tant que
+     l'utilisateur ne s'est pas servi de la fenêtre (focus, clic, touche) : l'administrateur ne doit pas voir quand
+     l'ordinateur est allumé. `quiet` reste vrai jusqu'à la première interaction. */
+  let quiet = false;
+  const desk = window.alixoDesktop;
+  const startupCheck = desk && typeof desk.startedHidden === 'function' ? Promise.resolve().then(() => desk.startedHidden()).then(v => v === true).catch(() => false) : Promise.resolve(false);
+  const wake = () => { if (!quiet) return; quiet = false; lastInput = Date.now(); beat(); };
   const activity = () => {
     if (Date.now() - lastInput > IDLE_MS) return 'idle';
     if (document.hidden) return 'background';
@@ -218,7 +244,7 @@ window.AlixoCloud = (() => {
     AlixoApp.storageUsage().then(u => { storageStats = { docs: u.docs + u.meta, imgs: u.imgs, files: u.filesCloud, nDocs: u.nDocs, nFiles: u.nFiles, total: u.docs + u.meta + u.imgs + u.filesCloud, at: Date.now() }; storageAt = Date.now(); }).catch(() => {}).finally(() => { storageBusy = false; });
   }
   function beat(extra) {
-    if (ended) return;
+    if (ended || quiet) return;
     lastBeat = Date.now();
     refreshStorage();
     try {
@@ -238,11 +264,13 @@ window.AlixoCloud = (() => {
     const key = String(entry.via || 'checkout').replace(/[^a-z0-9-]/gi, '') + '_' + at;
     try { return profRef.set({ plusConsent: entry, plusConsents: { [key]: entry } }, { merge: true }); } catch { return Promise.resolve(); }
   }
-  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true, capture: true }));
-  beat();
+  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); if (quiet) wake(); }, { passive: true, capture: true }));
+  window.addEventListener('focus', wake);
+  quiet = true;   // rien avant de savoir comment Alixo a démarré
+  startupCheck.then(hidden => { if (hidden && !document.hasFocus()) return; quiet = false; beat(); });
   setInterval(() => { if (!document.hidden || Date.now() - lastBeat > 3 * HEART_MS) beat(); }, HEART_MS);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) { lastInput = Date.now(); beat(); } });
-  const bye = () => { if (ended) return; ended = true; try { profRef.set({ online: false, activity: 'offline', lastSeen: Date.now() }, { merge: true }).catch(() => {}); } catch { /* ignoré */ } };
+  const bye = () => { if (ended) return; ended = true; if (quiet) return; try { profRef.set({ online: false, activity: 'offline', lastSeen: Date.now() }, { merge: true }).catch(() => {}); } catch { /* ignoré */ } };
   window.addEventListener('pagehide', bye);
   window.addEventListener('beforeunload', bye);
 
@@ -275,5 +303,5 @@ window.AlixoCloud = (() => {
     return { ok: true, msg: until ? `Alixo+ activé jusqu’au ${new Date(until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Alixo+ activé sans limite de durée' };
   }
 
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, ai: { api: () => aiApi, idToken }, publicConfig: () => pubConf };
 })();

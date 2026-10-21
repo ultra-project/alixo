@@ -473,6 +473,12 @@
           }
           pdf.y += 8; break;
         }
+        case 'docref': {   // 1.43 : bloc « Document » → « Document Alixo : titre » (titre caché si la cible n'est pas partagée)
+          const r = typeof docRefInfo === 'function' ? docRefInfo(b) : { title: 'Document' };
+          pdf.y += 3; pdf.ensure(16);
+          layoutRuns(pdf, [{ text: 'Document Alixo : ', b: true, color: ACCENT }, { text: r.title }], { size: 10.5, x: pdf.M, width: pdf.cw });
+          pdf.y += 6; break;
+        }
         case 'hr':
           pdf.y += 9; pdf.ensure(12);
           pdf.rect(pdf.M + pdf.cw * 0.1, pdf.y, pdf.cw * 0.8, 0.8, HAIR);
@@ -800,6 +806,11 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
           body += para(runXml({ text: b.title || 'Table des matières', b: true }), '<w:spacing w:before="120" w:after="80"/>');
           for (const h of d.blocks.filter(x => x.type === 'h' && (+x.level || 1) <= depth)) body += para(runXml({ text: (numMap[h.id] || '') + '  ', b: true, color: ACCENT }) + runXml({ text: stripTags(h.text || '') }), `<w:ind w:left="${((+h.level || 1) - 1) * 360}"/><w:spacing w:after="40"/>`);
           body += para('', '<w:spacing w:after="160"/>');
+          break;
+        }
+        case 'docref': {   // 1.43 : bloc « Document » → un paragraphe « Document Alixo : titre »
+          const r = typeof docRefInfo === 'function' ? docRefInfo(b) : { title: 'Document' };
+          body += para(runXml({ text: 'Document Alixo : ', b: true, color: ACCENT }) + runXml({ text: r.title }), '<w:spacing w:before="80" w:after="160"/>');
           break;
         }
         case 'pb': body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; break;   // 1.23 : saut de page

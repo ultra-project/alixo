@@ -1,84 +1,78 @@
 /* ============================================================
-   AlixoAI — l'intelligence artificielle d'Alixo (1.37)
+   AlixoAI — l'intelligence artificielle d'Alixo (1.37 ; 1.43 : en ligne)
    ------------------------------------------------------------
-   Couche unique entre les fonctions de l'application (correction, mise en forme, quiz, fiche de révision) et le
-   moteur de langue (js/ailocal.js). Elle ne laisse rien configurer : elle choisit d'elle-même la taille de modèle
-   adaptée à l'appareil, se prépare en silence au démarrage, et optimise chaque demande pour que la réponse arrive
-   vite — même sur un portable modeste :
+   Couche unique entre les fonctions de l'application (correction approfondie F7, mise en forme, quiz, fiche de
+   révision) et le serveur d'IA d'Alixo (js/alixocloud.js → dossier ai/). 1.43 : le modèle ne tourne plus sur l'appareil
+   (la carte graphique saturait et Alixo plantait) ; la correction pendant la frappe, elle, reste sur l'appareil, sans IA
+   (js/grammaire.js, js/corr.js). Rien à configurer ; chaque demande reste optimisée pour que la réponse arrive vite :
    - consignes courtes, écrites pour un petit modèle, avec un exemple plutôt qu'une liste de règles ;
    - formats de réponse en lignes (pas de JSON bavard) : deux à trois fois moins de texte à produire ;
    - lecture progressive : chaque question de quiz, chaque partie de fiche est livrée dès qu'elle est complète
      (le quiz commence après la première question, le reste s'écrit pendant que l'étudiant répond) ;
    - extraits ciblés : le document est découpé en passages, chaque question part d'un passage précis, courts lots ;
    - conversation suivie : les lots d'un même quiz s'enchaînent dans la même conversation — le moteur ne relit pas
-     la consigne à chaque lot (cache des clés-valeurs) ;
-   - budgets (taille des extraits, nombre de questions par lot, longueur de réponse) ajustés à la taille du modèle
-     et au contexte (frappe en arrière-plan, demande explicite).
+     la consigne à chaque lot ;
+   - budgets (taille des extraits, nombre de questions par lot, longueur de réponse) bornés par les plafonds du serveur.
    API (window.AlixoAI) :
-     available()                 { ok, reason } — l'appareil sait-il faire tourner AlixoAI ?
+     available()                 { ok, reason } — AlixoAI en ligne est-elle joignable (connexion, compte) ?
      enabled() / setEnabled(b)   AlixoAI est actif (réglage « Désactiver » des Paramètres)
-     ready()                     prête à répondre tout de suite (modèle chargé)
-     state()                     'off' | 'unavailable' | 'idle' | 'preparing' | 'ready' | 'error'
-     warm()                      prépare AlixoAI en silence (installation puis chargement, puis une micro-requête)
-     tier()                      'leger' | 'equilibre' | 'complet' (taille choisie pour l'appareil)
+     ready()                     prête à répondre (en ligne, compte connecté, quota du jour non atteint)
+     state()                     'off' | 'ready' | 'offline' | 'signedout' | 'limit' | 'unavailable'
+     tier()                      'en-ligne' (gardé pour les appelants historiques)
      run(task, payload, opts)    → Promise<résultat> ; tâches : 'ping', 'correct', 'style', 'quiz', 'sheet'
                                   opts : { onItem(item, i), onProgress(k, n), onText(text), background, token }
      cancel(token)               annule les requêtes portant ce jeton
      passages(text, n, size)     découpe un texte en n passages répartis (exposé pour les tests)
      parse.*                     analyseurs des formats de réponse (exposés pour les tests)
-   Événement document « alixo-ai » (detail = { state, busy, waiting }) à chaque changement visible.
+   Événement document « alixo-ai » (detail = { state, busy, waiting, task }) à chaque changement visible.
    ============================================================ */
 'use strict';
 
 window.AlixoAI = (() => {
-  const L = () => window.AlixoLocalAI || null;
+  const L = () => window.AlixoCloudAI || null;
   const OFF_LS = 'alixo.ai.off';   // '1' : AlixoAI désactivée sur cet appareil
 
-  /* ---------------- budgets par taille de modèle ----------------
+  /* ---------------- budgets (1.43 : un seul jeu, en ligne) ----------------
      chunk = caractères par passage (quiz) ; batch = questions par lot ; first = questions du premier lot (la première
      question doit arriver vite) ; sheet = caractères du document pour une fiche ; live / full = caractères par lot
-     de correction (frappe / F7) ; style = paragraphes par lot de mise en forme. */
+     de correction (gardé pour corr.js / F7) ; style = paragraphes par lot de mise en forme ; sheetTokens = longueur de
+     la fiche. Plafonds du serveur (ai/src/tasks.js) : 24 000 caractères par demande, réponse de 1 400 à 2 200 jetons. */
   const BUDGETS = {
-    leger:     { chunk: 320, batch: 3, first: 2, sheet: 3200, live: 700,  full: 1800, style: 8,  sheetTokens: 900 },
-    equilibre: { chunk: 440, batch: 3, first: 2, sheet: 4800, live: 1000, full: 2600, style: 10, sheetTokens: 1100 },
-    complet:   { chunk: 560, batch: 4, first: 2, sheet: 7000, live: 1200, full: 3200, style: 14, sheetTokens: 1400 }
+    'en-ligne': { chunk: 900, batch: 5, first: 2, sheet: 16000, live: 2000, full: 6000, style: 20, sheetTokens: 2200 }
   };
-  function tier() { const l = L(); if (!l) return 'equilibre'; const s = l.status(); return (s.state === 'ready' || s.state === 'loading') && s.key ? s.key : l.recommend(); }
-  const budget = () => BUDGETS[tier()] || BUDGETS.equilibre;
+  function tier() { return 'en-ligne'; }
+  const budget = () => BUDGETS['en-ligne'];
 
   /* ---------------- état ---------------- */
   let off = false; try { off = localStorage.getItem(OFF_LS) === '1'; } catch { /* stockage indisponible */ }
   function enabled() { return !off; }
   function setEnabled(b) { off = !b; try { if (b) localStorage.removeItem(OFF_LS); else localStorage.setItem(OFF_LS, '1'); } catch { /* */ } emit(); }
-  function available() { const l = L(); if (!l) return { ok: false, reason: 'Le moteur d’AlixoAI n’est pas chargé.' }; return l.support(); }
-  function ready() { const l = L(); return !!l && enabled() && l.status().state === 'ready'; }
+  /* état du client en ligne → état d'AlixoAI ; « unreachable » : le serveur n'a pas répondu (pas encore ouvert ?) —
+     on retente à chaque demande, l'état affiché le signale */
+  /* textes : une seule source, AlixoCloudAI.MSG (js/alixocloud.js) */
+  const M = k => { const l = L(); return (l && l.MSG && l.MSG[k]) || 'AlixoAI ne répond pas pour le moment. Réessayez dans quelques minutes.'; };
+  const REASONS = {
+    get offline() { return M('offline'); },
+    get signedout() { return M('signedout'); },
+    get limit() { return M('limit'); },
+    get unavailable() { return M('unreachable'); },
+    get unconfigured() { return M('unconfigured'); }
+  };
+  function cloud() { const l = L(); return l ? l.status() : { state: 'unconfigured', busy: false, waiting: 0, unreachable: false }; }
+  function available() {
+    const s = cloud();
+    if (s.state === 'ready') return { ok: true, reason: '' };
+    return { ok: false, reason: REASONS[s.state] || REASONS.unavailable };
+  }
+  function ready() { return enabled() && cloud().state === 'ready'; }
   function state() {
     if (off) return 'off';
-    const a = available(); if (!a.ok) return 'unavailable';
-    const s = L().status();
-    return s.state === 'ready' ? 'ready' : s.state === 'loading' ? 'preparing' : s.state === 'error' ? 'error' : 'idle';
+    const s = cloud();
+    if (s.state === 'ready') return s.unreachable ? 'unavailable' : 'ready';
+    return s.state === 'unconfigured' ? 'unavailable' : s.state;
   }
-  function emit() { try { const s = L() ? L().status() : {}; document.dispatchEvent(new CustomEvent('alixo-ai', { detail: { state: state(), busy: !!s.busy, waiting: s.waiting || 0 } })); } catch { /* */ } }
-  document.addEventListener('alixo-ai-local', emit);
-
-  /* préparation silencieuse : installation (une fois) puis chargement, puis une micro-requête qui compile les programmes
-     graphiques — la première vraie demande part ainsi sans attendre. Ne fait rien si AlixoAI est désactivée ou
-     indisponible ; ne jamais lever d'erreur (appelée au démarrage). */
-  let warming = null;
-  function warm() {
-    if (warming) return warming;
-    warming = (async () => {
-      try {
-        const l = L(); if (!l || off || !l.support().ok) return false;
-        const p = await l.probe(); if (!p.ok) return false;
-        await l.load(l.recommend());
-        await l.chat({ system: 'Réponds « ok ».', user: 'ok', maxTokens: 4, timeoutMs: 60000, background: true });
-        return true;
-      } catch (e) { console.warn('AlixoAI (préparation) :', e && e.message || e); return false; }
-      finally { warming = null; }
-    })();
-    return warming;
-  }
+  function emit() { try { const s = cloud(); document.dispatchEvent(new CustomEvent('alixo-ai', { detail: { state: state(), busy: !!s.busy, waiting: s.waiting || 0, task: s.task || '' } })); } catch { /* */ } }
+  document.addEventListener('alixo-ai-cloud', emit);
 
   /* ---------------- texte : passages ---------------- */
   const norm = t => String(t || '').replace(/\r/g, '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
@@ -291,18 +285,17 @@ R: résumé en deux phrases
   /* ---------------- exécution ---------------- */
   let seq = 0;
   async function engineChat(o) {
-    const l = L(); if (!l) return { ok: false, status: 0, error: 'Le moteur d’AlixoAI n’est pas chargé.' };
-    if (off) return { ok: false, status: 0, error: 'AlixoAI est désactivée (Paramètres › IA › Réactiver).' };
-    const a = l.support(); if (!a.ok) return { ok: false, status: 0, error: a.reason };
-    // le chargement du modèle est fait par chat() lui-même : la demande est déjà en file, la barre « AlixoAI se prépare… » peut s'afficher
-    return l.chat(Object.assign({ key: l.recommend() }, o));
+    const l = L(); if (!l) return { ok: false, status: 0, error: REASONS.unavailable };
+    if (off) return { ok: false, status: 0, error: M('off') };
+    return l.chat(o);   // ne lève jamais : { ok: false, status, error } en cas d'échec (hors ligne, compte, quota…)
   }
   async function run(task, payload, opts) {
     opts = opts || {}; payload = payload || {};
     const token = opts.token || ('ai' + (++seq));
     const b = budget();
     if (task === 'ping') {
-      const r = await engineChat({ system: 'Réponds « ok ».', user: 'ok', maxTokens: 4, timeoutMs: 60000, token });
+      /* le serveur répond lui-même au ping (jeton vérifié, modèle jamais appelé) : un message minimal suffit */
+      const r = await engineChat({ task: 'ping', messages: [{ role: 'user', content: 'ok' }], maxTokens: 1, timeoutMs: 30000, token });
       return r.ok ? { ok: true } : { ok: false, error: r.error };
     }
     if (task === 'correct') return runCorrect(payload, opts, token, b);
@@ -323,7 +316,7 @@ R: résumé en deux phrases
     const ctx = p.ctx || {};
     if (ctx.already && ctx.already.length) user = `Déjà relevé (ne le répète pas) :\n${ctx.already.map(a => `« ${a.avant} » → « ${a.apres} »`).join('\n')}\n\nRelis chaque phrase une seconde fois, plus attentivement.\n\n${user}`;
     const maxTokens = Math.max(96, Math.min(p.mode === 'live' ? 700 : 1600, 60 + Math.round(user.length / 3)));
-    const r = await engineChat({ system: correctSystem(p.mode || 'full', ctx, withStyle), user, maxTokens, temperature: 0, timeoutMs: p.mode === 'live' ? 60000 : 120000, background: !!opts.background, token });
+    const r = await engineChat({ task: 'correct', system: correctSystem(p.mode || 'full', ctx, withStyle), user, maxTokens, temperature: 0, timeoutMs: p.mode === 'live' ? 60000 : 120000, token });
     if (!r.ok) throw fail(r);
     return Object.assign(parse.correct(r.raw), { tokIn: r.tokIn, tokOut: r.tokOut, model: r.model });
   }
@@ -333,7 +326,7 @@ R: résumé en deux phrases
     for (let i = 0; i < blocks.length; i += b.style) {
       const lot = blocks.slice(i, i + b.style);
       const user = lot.map(x => `[${x.id}]\n${shortenTo(x.text, 900)}`).join('\n\n');
-      const r = await engineChat({ system: STYLE_SYSTEM, user, maxTokens: 40 + lot.length * 30, temperature: 0, timeoutMs: 120000, token });
+      const r = await engineChat({ task: 'style', system: STYLE_SYSTEM, user, maxTokens: 40 + lot.length * 30, temperature: 0, timeoutMs: 120000, token });
       if (!r.ok) { if (out.length) break; throw fail(r); }
       const ids = new Set(lot.map(x => String(x.id)));
       for (const it of parse.style(r.raw)) if (ids.has(it.id)) { out.push(it); if (opts.onItem) opts.onItem(it, out.length - 1); }
@@ -374,19 +367,18 @@ R: résumé en deux phrases
           if (opts.onProgress) { try { opts.onProgress(all.length, n); } catch { /* */ } }
         }
       };
-      const r = await engineChat({ messages: msgs, maxTokens: 40 + k * (ctx.kind === 'qcm' || ctx.kind === 'mix' ? 150 : 90), temperature: 0.3, timeoutMs: 180000, token, quiet: true, onToken: t => deliver(t, false) });
+      const r = await engineChat({ task: 'quiz', messages: msgs, maxTokens: 40 + k * (ctx.kind === 'qcm' || ctx.kind === 'mix' ? 150 : 90), temperature: 0.3, timeoutMs: 180000, token, quiet: true, onToken: t => deliver(t, false) });
       if (!r.ok) { lastErr = r.error; if (r.status === 499) throw fail(r); if (all.length) break; throw fail(r); }
       const before = all.length;
       deliver(r.raw, true);
       tokIn += r.tokIn || 0; tokOut += r.tokOut || 0; model = r.model || model;
       if (all.length === before) { if (all.length) break; throw new Error('AlixoAI n’a pas renvoyé de question lisible — réessayez.'); }
       qn += k;
-      // conversation suivie : la consigne et les lots précédents restent en mémoire du moteur (pas de relecture)
+      // conversation suivie : la consigne et les lots précédents accompagnent le lot suivant (questions différentes)
       if (r.finish === 'stop') messages.push({ role: 'user', content: user }, { role: 'assistant', content: r.raw });
       else { messages.length = 1; }
-      /* 1.41 : mémoire de conversation plafonnée (4 096 jetons) : au-delà d'environ 7 000 caractères, on repart de la seule
-         consigne — sans quoi les longs quiz dépassaient la mémoire et la carte graphique relisait tout à chaque lot */
-      if (messages.reduce((n, m) => n + m.content.length, 0) > 7000) messages.length = 1;
+      /* 1.43 : conversation plafonnée à 20 000 caractères (le serveur accepte 24 000 par demande, 12 messages) */
+      if (messages.reduce((n, m) => n + m.content.length, 0) > 20000 || messages.length > 9) messages.length = 1;
       if (opts.cancelled && opts.cancelled()) break;
     }
     if (!all.length) throw new Error(lastErr || 'AlixoAI n’a pas renvoyé de question — réessayez.');
@@ -397,7 +389,7 @@ R: résumé en deux phrases
     const text = shortenTo(p.text, b.sheet);
     const user = `Titre du cours : ${p.title || 'Sans titre'}\n\n${text}`;
     let delivered = 0;
-    const r = await engineChat({ system: SHEET_SYSTEM, user, maxTokens: b.sheetTokens, temperature: 0.2, timeoutMs: 240000, token, quiet: true, onToken: t => {
+    const r = await engineChat({ task: 'sheet', system: SHEET_SYSTEM, user, maxTokens: b.sheetTokens, temperature: 0.2, timeoutMs: 240000, token, quiet: true, onToken: t => {
       if (!opts.onItem) return;
       const f = parse.sheet(t, false);
       const done = f.parties.filter(x => x !== f.open);
@@ -412,5 +404,5 @@ R: résumé en deux phrases
   function cancel(token) { const l = L(); if (l && l.cancel) l.cancel(token); }
   const newToken = () => 'ai' + (++seq);
 
-  return { available, enabled, setEnabled, ready, state, warm, tier, budget, run, cancel, newToken, passages, parse, BUDGETS };
+  return { available, enabled, setEnabled, ready, state, tier, budget, run, cancel, newToken, passages, parse, BUDGETS };
 })();

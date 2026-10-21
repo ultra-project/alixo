@@ -62,6 +62,7 @@ window.AlixoBlockPicker = (() => {
     if (id === 'cards') return ctxTop() + `<div class="bp-cards">${[0, 1, 2].map(k => `<div style="--d:${.2 + k * .25}s"><b></b>${L(80, .5 + k * .25)}${L(60, .6 + k * .25)}</div>`).join('')}</div>`;
     if (id === 'hr') return ctxTop() + `<div class="bp-hr"></div>` + L(80, 1) + L(60, 1.1);
     if (id === 'toc') return `<div class="bp-toc"><b>Table des matières</b>${[['I.', 72, 0], ['A.', 58, 1], ['B.', 50, 1], ['II.', 66, 0], ['A.', 54, 1]].map(([n, w, lv], k) => `<div class="bp-tocl lv${lv}" style="--d:${.25 + k * .22}s"><span>${n}</span>${L(w, .3 + k * .22)}</div>`).join('')}</div>`;
+    if (id === 'docref') return ctxTop() + `<div class="bp-dref"><span class="bp-dref-ico">${AlixoIcons.svg('file-text')}</span><span class="bp-dref-txt"><b>Chapitre 2 — Les contrats</b><small>Séance · Droit civil</small></span><span class="bp-dref-go">›</span><i class="bp-dref-ptr"></i></div>` + L(80, 1.2) + L(56, 1.35);   // 1.43 : bloc « Document »
     if (id === 'pb') return `<div class="bp-pb"><div>${L(80)}${L(60)}</div><span>nouvelle page</span><div>${L(70, .8)}${L(50, .9)}</div></div>`;
     if (id === 'score' || id === 'mcalc') return `<div class="bp-score"><div class="bp-sh"><b>${id === 'score' ? 'Glasgow' : 'IMC'}</b></div>${[0, 1, 2].map(k => `<div class="bp-sr" style="--d:${.2 + k * .3}s"><em></em><span class="bp-pill ${k === 1 ? 'on' : ''}"></span></div>`).join('')}<div class="bp-res" style="--d:1.3s">= <b>${id === 'score' ? '13 / 15' : '22,4'}</b></div></div>`;
     if (it.inline) return `<div class="bp-inline">${L(30, 0, 'ctx inl')}<span class="bp-chip" style="--d:.4s">${id === 'refart' ? 'art. 1240 C. civ.' : id === 'item' ? 'Item 221' : id === 'rangA' ? 'Rang A' : id === 'rangB' ? 'Rang B' : esc(it.sym || it.name)}</span>${L(36, 0, 'ctx inl')}</div>` + L(84, 0, 'ctx') + L(66, 0, 'ctx');
@@ -140,9 +141,11 @@ window.AlixoBlockPicker = (() => {
       if (e.target === ov || e.target.closest('.set-x')) { close(); return; }
       const b = e.target.closest('.bp-item'); if (b) pick(+b.dataset.i);
     });
+    /* 1.43 : la liste peut avoir été redessinée (recherche) pendant le délai de survol : on ignore une ligne disparue,
+       sinon la sélection pointait au-delà de la liste filtrée (aperçu vide, aucune ligne en surbrillance) */
     ov.querySelector('.bp-list').addEventListener('mouseover', e => {
       const b = e.target.closest('.bp-item'); if (!b || +b.dataset.i === sel) return;
-      clearTimeout(hoverTm); hoverTm = setTimeout(() => { if (!ov) return; sel = +b.dataset.i; ov.querySelectorAll('.bp-item').forEach(x => x.classList.toggle('sel', x === b)); showPreview(); }, 90);
+      clearTimeout(hoverTm); hoverTm = setTimeout(() => { if (!ov || !b.isConnected) return; sel = +b.dataset.i; ov.querySelectorAll('.bp-item').forEach(x => x.classList.toggle('sel', x === b)); showPreview(); }, 90);
     });
     render();
     setTimeout(() => input.focus(), 0);

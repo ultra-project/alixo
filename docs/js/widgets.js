@@ -4,9 +4,14 @@
      les options générales (toujours au-dessus, lancement avec Windows, zone de notification, opacité) ;
    - les données envoyées aux widgets (version PC : fenêtres flottantes créées par main.js ; aperçu : iframe) ;
    - les actions reçues des widgets (cocher une tâche, lancer le minuteur, rouvrir une séance…).
-   state.settings.widgets = { on, top, login, tray, opacity, items: [{ id, k, x, y, opts }] } — x, y : fractions
-   (0 → 1) de la zone de travail de l'écran, pour que la disposition suive le compte d'un écran à l'autre.
-   state.settings.widgetNote : le texte du pense-bête. Chargé APRÈS app.js, todo.js et stats.js.
+   Disposition : { on, top, tray, opacity, items: [{ id, k, x, y, opts }] } — x, y : fractions (0 → 1) de la zone de
+   travail de l'écran.
+   1.43 : la disposition est propre à chaque appareil (localStorage « alixo.widgets » + compte), elle ne part plus dans
+   le nuage : la régler sur un PC ne déplace plus les widgets d'un autre PC (écrans de tailles différentes). L'ancien
+   state.settings.widgets (synchronisé) est recopié une seule fois au premier lancement, puis ignoré ; il n'est pas effacé
+   du nuage, car un PC encore en 1.42 le lit toujours. Le lancement à l'ouverture de session ne dépend plus de la
+   disposition : c'est l'état du système qui fait foi (main.js › login-item:get / login-item:set).
+   state.settings.widgetNote : le texte du pense-bête (contenu : il reste synchronisé). Chargé APRÈS app.js, todo.js et stats.js.
    ============================================================ */
 'use strict';
 
@@ -19,22 +24,46 @@ window.AlixoWidgets = (() => {
   let publishTm = 0, lastLayoutJson = '';
   const EXAM_RE = /partiel|examen|exam\b|contr[ôo]le|concours|galop|oral|soutenance|\bDS\b|\bCC\b|rattrapage|colle/i;
 
-  function cfg() {
-    const s = state.settings;
-    if (!s.widgets || typeof s.widgets !== 'object') s.widgets = { on: false, top: false, login: false, tray: true, opacity: 100, items: [] };
-    if (!Array.isArray(s.widgets.items)) s.widgets.items = [];
-    if (typeof s.widgets.opacity !== 'number') s.widgets.opacity = 100;
-    if (typeof s.widgets.tray !== 'boolean') s.widgets.tray = true;
-    return s.widgets;
+  /* 1.43 : disposition propre à l'appareil, sur le modèle de TABS_LS (app.js) : une clé par compte connecté */
+  const WD_LS = 'alixo.widgets' + (window.AlixoAuth ? AlixoAuth.storageSuffix() : '');
+  let local = null;
+  function readLocal() {
+    try { const v = JSON.parse(localStorage.getItem(WD_LS)); return v && typeof v === 'object' && !Array.isArray(v) ? v : null; } catch { return null; }
   }
+  function persist() {
+    try { localStorage.setItem(WD_LS, JSON.stringify(cfg())); } catch { /* stockage indisponible */ }
+  }
+  /* 1.43 : migration, synchrone au chargement (avant la première lecture du nuage, qui est asynchrone) : sans clé locale,
+     l'appareil reprend la disposition qu'il avait jusqu'ici (state.settings.widgets). Rien n'est retiré des réglages. */
+  function migrate() {
+    local = readLocal();
+    if (local) return;
+    const old = state && state.settings && state.settings.widgets;
+    let copy = null;
+    if (old && typeof old === 'object') { try { copy = JSON.parse(JSON.stringify(old)); } catch { copy = null; } }
+    local = copy && typeof copy === 'object' && !Array.isArray(copy) ? copy : {};
+    delete local.login;   /* l'ouverture de session suit désormais l'état du système */
+    persist();
+  }
+  function cfg() {
+    if (!local || typeof local !== 'object') local = { on: false, top: false, tray: true, opacity: 100, items: [] };
+    if (typeof local.on !== 'boolean') local.on = !!local.on;
+    if (typeof local.top !== 'boolean') local.top = !!local.top;
+    if (!Array.isArray(local.items)) local.items = [];
+    if (typeof local.opacity !== 'number') local.opacity = 100;
+    if (typeof local.tray !== 'boolean') local.tray = true;
+    return local;
+  }
+  migrate();
   const active = () => isPlus() && cfg().on && cfg().items.length > 0;
-  const stamp = () => { save(); };
+  /* 1.43 : enregistrement local seulement — ne touche plus state.settings ni settingsAt (rien ne part dans le nuage) */
+  const stamp = () => { persist(); };
 
   /* ---------------- disposition → version PC ---------------- */
   function layout() {
     const c = cfg();
     const items = isPlus() ? c.items.map(it => { const d = kindOf(it.k); return d ? { id: it.id, k: it.k, x: +it.x || 0, y: +it.y || 0, w: d.w, h: d.h, name: d.name } : null; }).filter(Boolean) : [];
-    return { on: !!(c.on && isPlus()), top: !!c.top, login: !!c.login, tray: c.tray !== false, items };
+    return { on: !!(c.on && isPlus()), top: !!c.top, tray: c.tray !== false, items };
   }
   function sync(force) {
     const d = desk(); if (!d) return;
@@ -148,7 +177,7 @@ window.AlixoWidgets = (() => {
     const t = a.type;
     if (t === 'todo-toggle' && window.AlixoTodo) { AlixoTodo.toggle(String(a.id)); return; }
     if (t === 'todo-add' && window.AlixoTodo) { const txt = String(a.text || '').trim(); if (txt) { AlixoTodo.addTask(txt, null, a.today ? todayKey() : '', 0); toast('Tâche ajoutée depuis le widget'); } return; }
-    if (t === 'note') { state.settings.widgetNote = String(a.text || '').slice(0, 2000); stamp(); return; }
+    if (t === 'note') { state.settings.widgetNote = String(a.text || '').slice(0, 2000); save(); return; }   /* contenu : synchronisé */
     if (t === 'timer') {
       if (a.op === 'set') setCountdown(Math.max(10, Math.min(36000, +a.secs || 0)), tp.cd.label);
       else if (a.op === 'start') { if (!tp.cd.on) startCountdown(); }
@@ -182,18 +211,73 @@ window.AlixoWidgets = (() => {
   const ICO_PLUS = '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';
   let selected = null;  /* id du widget sélectionné dans le faux bureau (options) */
 
+  /* ---------------- 1.43 : lancement à l'ouverture de la session (PC Windows et Mac) ---------------- */
+  const LOGIN_ASKED_LS = 'alixo.loginAsked';   /* par appareil, sans suffixe de compte */
+  const loginApi = () => (window.alixoDesktop && alixoDesktop.loginItem ? alixoDesktop.loginItem : null);
+  const loginSupported = () => !!loginApi() && (alixoDesktop.platform === 'win32' || alixoDesktop.platform === 'darwin');
+  function loginState() {
+    const api = loginApi(); if (!api || !loginSupported()) return Promise.resolve({ supported: false, on: false });
+    return api.get().then(r => (r && typeof r === 'object' ? r : { supported: false, on: false })).catch(() => ({ supported: false, on: false }));
+  }
+  function setLogin(on) {
+    const api = loginApi(); if (!api || !loginSupported()) return Promise.resolve({ ok: false });
+    return api.set(!!on).catch(() => ({ ok: false }));
+  }
+  function markLoginAsked() { try { localStorage.setItem(LOGIN_ASKED_LS, '1'); } catch { /* stockage indisponible */ } }
+  /* textes propres au système : Windows (barre des tâches, zone de notification) ou Mac (Dock, barre des menus) */
+  const isMac = () => !!(window.alixoDesktop && alixoDesktop.platform === 'darwin');
+  const TXT = {
+    get reduced() { return isMac() ? 'sans widget, Alixo s’ouvre réduit dans le Dock' : 'sans widget, Alixo s’ouvre réduit dans la barre des tâches'; },
+    get tray() { return isMac() ? 'la barre des menus' : 'la zone de notification'; },
+    get trayClick() { return isMac() ? 'Clic sur l’icône de la barre des menus pour rouvrir Alixo ou le quitter.' : 'Clic sur l’icône pour rouvrir, clic droit pour quitter.'; },
+    get findDesk() { return isMac() ? 'F11 ou Mission Control pour les retrouver' : 'raccourci Windows + D pour les retrouver'; }
+  };
+  /* rappel unique (premier lancement de la 1.43), si le lancement au démarrage n'est pas activé ; jamais par-dessus la
+     connexion, le questionnaire de bienvenue, les nouveautés ou une autre fenêtre ; rien si l'installateur a déjà posé la question */
+  function maybeAskLogin(tries) {
+    if (window.ALIXO_PANE || !loginSupported()) return;
+    try { if (localStorage.getItem(LOGIN_ASKED_LS)) return; } catch { return; }
+    const authov = $('#authov');
+    if ((authov && !authov.hidden) || $('#obov') || $('#suspov') || $('#updov') || $('#wnov') || $('.dlgov') || document.hidden) {
+      if ((tries || 0) < 40) setTimeout(() => maybeAskLogin((tries || 0) + 1), 5000);
+      return;
+    }
+    loginState().then(info => {
+      if (!info || !info.supported) return;
+      if (info.on || info.installerAsked) { markLoginAsked(); return; }
+      /* seulement pour un compte Alixo+ qui a posé des widgets : pour les autres, l'intérêt est nul et la question
+         reviendra plus tard (rien n'est marqué comme demandé) */
+      if (!(isPlus() && cfg().items.length > 0)) return;
+      markLoginAsked();
+      openDialog({
+        id: 'loginask', cls: 'wd-logindlg', eyebrow: 'Démarrage', title: 'Lancer Alixo à l’ouverture de la session ?',
+        sub: 'Vos widgets de bureau apparaîtraient d’eux-mêmes dès que vous allumez l’ordinateur.',
+        body: `<p class="wd-loginbody">Alixo démarrerait en arrière-plan : avec des widgets, seuls les widgets s’affichent ; ${TXT.reduced}. Ce réglage ne concerne que cet ordinateur et se modifie à tout moment dans Paramètres › Widgets.</p>`,
+        foot: `<button class="cta ghost" type="button" data-dlg-close>Non merci</button><button class="cta" type="button" id="loginask-yes">Lancer au démarrage</button>`,
+        onMount: (card, close) => {
+          card.querySelector('#loginask-yes').addEventListener('click', async () => {
+            const r = await setLogin(true); close();
+            toast(r && r.ok && r.on ? 'Alixo se lancera à l’ouverture de la session' : 'Impossible d’activer le lancement au démarrage');
+          });
+        }
+      });
+    });
+  }
+
   function settingsHTML() {
     const c = cfg(); const plus = isPlus(); const d = !!desk();
     const ratio = screen.h / screen.w;
-    return `<div class="set-sect wd-sect ${plus ? '' : 'wd-locked'}">
+    /* 1.43 : le lancement au démarrage est gratuit → en tête de section, hors de la zone grisée des comptes sans Alixo+ */
+    return `${loginSupported() ? `<div class="set-sect wd-startup"><div class="po-label">Démarrage</div><div class="set-checks"><label><input type="checkbox" role="switch" id="wd-login" disabled><span><b>Lancer Alixo à l’ouverture de la session</b><small id="wd-loginhint">Alixo démarre en arrière-plan : avec des widgets, seuls les widgets apparaissent sur le bureau ; ${TXT.reduced}. Réglage propre à cet ordinateur.</small></span></label></div></div>` : ''}
+    <div class="set-sect wd-sect ${plus ? '' : 'wd-locked'}">
       ${plus ? '' : `<div class="wd-cta"><div><b>Les widgets de bureau font partie d’Alixo+</b><small>Tâches, agenda, minuteur, compte à rebours avant le partiel, bilan de la semaine, question de quiz… posés sur le bureau de votre ordinateur, toujours à jour.</small></div><button class="cta plus-cta" type="button" id="wd-plus">Passer à Alixo+</button></div>`}
       <div class="po-row wd-top">
-        ${d ? `<label class="wd-switch"><input type="checkbox" id="wd-on" ${c.on ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Afficher les widgets sur le bureau</b><small>Les fenêtres se posent sur le bureau de cet ordinateur, aux emplacements choisis ci-dessous. Alixo continue de tourner dans la zone de notification pour les tenir à jour.</small></span></label>`
-          : `<div class="po-hint wd-webhint">Les widgets s’affichent avec l’application <b>Windows</b> ou <b>Mac</b> (<a href="https://alixoapp.com/telecharger/windows/" target="_blank" rel="noopener">télécharger</a>). La disposition que vous préparez ici suit votre compte : elle sera reprise sur l’ordinateur.</div>`}
+        ${d ? `<label class="wd-switch"><input type="checkbox" id="wd-on" ${c.on ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Afficher les widgets sur le bureau</b><small>Les fenêtres se posent sur le bureau de cet ordinateur, aux emplacements choisis ci-dessous. Alixo continue de tourner dans ${TXT.tray} pour les tenir à jour.</small></span></label>`
+          : `<div class="po-hint wd-webhint">Les widgets s’affichent avec l’application <b>Windows</b> ou <b>Mac</b> (<a href="https://alixoapp.com/telecharger/windows/" target="_blank" rel="noopener">télécharger</a>). La disposition est propre à chaque appareil : celle préparée ici reste dans ce navigateur, l’application de l’ordinateur a la sienne.</div>`}
       </div>
       <div class="wd-layout"><div class="wd-left">
       <div class="po-label">Votre bureau <span class="wd-screen">${screen.w} × ${screen.h}</span></div>
-      <div class="po-hint" style="margin:0 0 8px">Glissez un widget du catalogue sur le bureau, déplacez-le, cliquez-le pour ses options, « × » pour le retirer. L’emplacement est enregistré avec le compte.</div>
+      <div class="po-hint" style="margin:0 0 8px">Glissez un widget du catalogue sur le bureau, déplacez-le, cliquez-le pour ses options, « × » pour le retirer. La disposition est propre à cet appareil : vos autres ordinateurs gardent la leur.</div>
       <div class="wd-deskwrap"><div class="wd-desk" id="wd-desk" style="--ratio:${ratio.toFixed(4)}" ${plus ? '' : 'data-locked="1"'}></div><div class="wd-taskbar"><i></i><i></i><i></i><i></i><b>${new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</b></div></div>
       <div class="po-label" style="margin-top:14px">Catalogue</div>
       <div class="wd-cat" id="wd-cat">${CAT().map(w => {
@@ -205,9 +289,8 @@ window.AlixoWidgets = (() => {
     </div>
     <div class="set-sect"><div class="po-label">Options</div>
       <div class="set-checks">
-        <label><input type="checkbox" data-wd="top" ${c.top ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Toujours au-dessus des autres fenêtres</b><small>Sinon, les widgets restent posés sur le bureau et passent derrière les fenêtres ouvertes (raccourci Windows + D pour les retrouver).</small></span></label>
-        <label><input type="checkbox" data-wd="tray" ${c.tray !== false ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Garder Alixo dans la zone de notification</b><small>Fermer la fenêtre principale ne quitte pas Alixo : les widgets restent à jour. Clic sur l’icône pour rouvrir, clic droit pour quitter.</small></span></label>
-        <label><input type="checkbox" data-wd="login" ${c.login ? 'checked' : ''} ${plus || !d ? '' : 'disabled'} ${d ? '' : 'disabled'}><span><b>Lancer Alixo à l’ouverture de la session</b><small>Alixo démarre réduit, les widgets apparaissent directement sur le bureau.${d ? '' : ' (version PC)'}</small></span></label>
+        <label><input type="checkbox" data-wd="top" ${c.top ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Toujours au-dessus des autres fenêtres</b><small>Sinon, les widgets restent posés sur le bureau et passent derrière les fenêtres ouvertes (${TXT.findDesk}).</small></span></label>
+        <label><input type="checkbox" data-wd="tray" ${c.tray !== false ? 'checked' : ''} ${plus ? '' : 'disabled'}><span><b>Garder Alixo dans ${TXT.tray}</b><small>Fermer la fenêtre principale ne quitte pas Alixo : les widgets restent à jour. ${TXT.trayClick}</small></span></label>
       </div>
       <div class="po-row wd-opacity"><label for="wd-opacity"><b>Opacité</b> <span id="wd-opval">${c.opacity} %</span></label><input type="range" id="wd-opacity" min="40" max="100" step="5" value="${c.opacity}" ${plus ? '' : 'disabled'}></div>
       <div class="po-row" style="gap:8px; margin-top:10px"><button type="button" class="cta ghost small" id="wd-reset" ${plus ? '' : 'disabled'}>Retirer tous les widgets</button></div>
@@ -289,6 +372,25 @@ window.AlixoWidgets = (() => {
     const plusBtn = root.querySelector('#wd-plus'); if (plusBtn) plusBtn.addEventListener('click', () => openPlusDialog('widgets'));
     const on = root.querySelector('#wd-on'); if (on) on.addEventListener('change', () => { if (!requirePlus('widgets')) { on.checked = false; return; } c.on = on.checked; stamp(); sync(); if (on.checked && !c.items.length) toast('Ajoutez un widget depuis le catalogue'); });
     root.querySelectorAll('[data-wd]').forEach(cb => cb.addEventListener('change', () => { c[cb.dataset.wd] = cb.checked; stamp(); sync(true); }));
+    /* 1.43 : ouverture de session — l'interrupteur reflète l'état du système, relu à chaque affichage */
+    const lg = root.querySelector('#wd-login');
+    if (lg) {
+      loginState().then(info => {
+        if (!lg.isConnected) return;
+        lg.checked = !!(info && info.on); lg.disabled = !(info && info.supported);
+        const h = root.querySelector('#wd-loginhint');
+        if (h && info && info.blocked) h.insertAdjacentHTML('beforeend', ' <b>Désactivé dans le Gestionnaire des tâches de Windows (onglet « Démarrage ») : réactivez-le là-bas.</b>');
+      });
+      lg.addEventListener('change', async () => {
+        const want = lg.checked; lg.disabled = true;
+        const r = await setLogin(want);
+        lg.disabled = false;
+        if (!r || !r.ok) { lg.checked = !want; toast('Impossible de modifier le lancement au démarrage'); return; }
+        lg.checked = !!r.on;
+        markLoginAsked();
+        toast(r.on ? 'Alixo se lancera à l’ouverture de la session' : 'Alixo ne se lancera plus à l’ouverture de la session');
+      });
+    }
     const op = root.querySelector('#wd-opacity');
     if (op) { op.addEventListener('input', () => { c.opacity = +op.value; root.querySelector('#wd-opval').textContent = c.opacity + ' %'; publish(); }); op.addEventListener('change', () => stamp()); }
     const reset = root.querySelector('#wd-reset'); if (reset) reset.addEventListener('click', () => { if (!c.items.length) return; c.items = []; selected = null; stamp(); sync(); renderDesk(); renderCatCounts(); toast('Widgets retirés du bureau'); });
@@ -385,8 +487,9 @@ window.AlixoWidgets = (() => {
     d0.screen().then(s => { if (s && s.w && s.h) screen = { w: s.w, h: s.h }; }).catch(() => {});
     setTimeout(() => sync(true), 400);
     setInterval(() => { if (active()) publish(); }, 30000);
+    if (!window.ALIXO_PANE) setTimeout(() => maybeAskLogin(0), 6000);
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => publish());
 
-  return { settingsHTML, bindSettings, sync, publish, onSave, handleAction, snapshot, addWidget, removeWidget, openPreview, cfg, get active() { return active(); } };
+  return { settingsHTML, bindSettings, sync, publish, onSave, handleAction, snapshot, addWidget, removeWidget, openPreview, cfg, storageKey: WD_LS, loginState, setLogin, maybeAskLogin, get active() { return active(); } };
 })();

@@ -29,6 +29,10 @@
   --ok: #2e8b6a; --warn: #b3762a; --danger: #c04343;
   --c-demand: #b0483f; --c-supply: #2f7d68; --c-third: #3d6bb5;
 
+  /* 1.43 : catégories du stockage (Paramètres › Compte) */
+  --stor-cours: #33658a; --stor-slides: #c4703f; --stor-sheet: #2e8b6a; --stor-board: #7a5cb8;
+  --stor-quiz: #c24d7c; --stor-imgs: #2f8fae; --stor-files: #b3892a; --stor-meta: #9198a1;
+
   --r: 8px;
 }
 
@@ -43,6 +47,8 @@ html[data-theme="dark"] {
   --paper: #1f1f1f;
   --tint-soft: color-mix(in srgb, var(--tint) 20%, transparent);
   --c-demand: #d8756b; --c-supply: #52ab90; --c-third: #6d95d8;
+  --stor-cours: #6fa3cc; --stor-slides: #e0915f; --stor-sheet: #52ab90; --stor-board: #a58ad8;
+  --stor-quiz: #e07ba5; --stor-imgs: #5fbcd8; --stor-files: #d6ae55; --stor-meta: #80868b;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -831,6 +837,7 @@ mark, .hl { background: color-mix(in srgb, #e9c46a 55%, transparent); border-rad
   box-shadow: 0 4px 16px rgba(0, 0, 0, .2);
   display: flex; align-items: center; gap: 14px; max-width: min(560px, calc(100vw - 48px));
 }
+#toast.toast-top { bottom: auto; top: 72px; }
 #toast .toast-act {
   flex: none; color: inherit; font-weight: 700; font-size: 12.5px;
   padding: 4px 10px; border-radius: 6px;
@@ -1906,6 +1913,15 @@ body.draw-dragging, body.draw-dragging * { user-select: none !important; }
 .block.quote.cur .qcite:empty::before, .block.quote:hover .qcite:empty::before, .block.quote.cur .qcite:has(> br:only-child)::before, .block.quote:hover .qcite:has(> br:only-child)::before { opacity: .55; }
 .block.quote .qcite:not(:empty):not(:has(> br:only-child)) { color: var(--ink-2); }
 body.printing .block.quote .qcite:empty, body.printing .block.quote .qcite:has(> br:only-child) { display: none; }
+/* 1.43 : ligne de l'auteur vide → bouton « Auteur / source… » (survol, curseur dans la citation, clavier ; au doigt dès que la citation est active) */
+.block.quote { position: relative; }
+.block.quote .q-src { display: none; position: absolute; right: 6px; bottom: 2px; padding: 2px 9px; border-radius: 6px; font: 600 12px var(--font-ui); color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+.block.quote .q-src:hover { background: var(--hover); color: var(--ink); }
+.block.quote .q-src:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--tint-soft); border-color: var(--tint); }
+.block.quote:is(.cur, :hover, :focus-within):has(> .qcite:empty, > .qcite > br:only-child) .q-src { display: inline-flex; }
+@media (pointer: coarse) { .block.quote .q-src { min-height: 40px; align-items: center; padding: 6px 12px; } }
+body.readonly .block.quote .q-src, body.printing .block.quote .q-src { display: none !important; }
+@media print { .block.quote .q-src { display: none !important; } }
 
 /* encadrés avec couleur propre (Santé) */
 .block.callout[style*="--cc-light"] { --cc: var(--cc-light); }
@@ -3972,6 +3988,12 @@ body.printing-quiz #toast, body.printing-quiz #print-summary, body.printing-quiz
 /* ============================================================
    1.31 — Paramètres › Widgets : faux bureau, catalogue, options (js/widgets.js)
    ============================================================ */
+/* 1.43 : rappel de démarrage — explication en texte courant (contraste suffisant), fenêtre d'information AlixoAI */
+.wd-loginbody, .ai-notice-txt { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0 0 10px; }
+.ai-notice-more { font-size: 13px; margin: 0; }
+.ai-more { white-space: nowrap; }
+#ai-loadbar .ai-lbcancel { flex: none; margin-left: 4px; padding: 3px 10px; border-radius: 6px; font: 600 12px var(--font-ui); color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
+#ai-loadbar .ai-lbcancel:hover { background: var(--hover); color: var(--ink); }
 .wd-cta { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1.5px solid #d9a441; border-radius: 10px; background: color-mix(in srgb, #d9a441 10%, var(--bg)); margin-bottom: 14px; max-width: 500px; }
 .wd-cta > div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
 .wd-cta b { font-size: 13.5px; color: var(--ink); }
@@ -4547,6 +4569,10 @@ body.pane #toolbar { padding-left: 8px; }
 #ai-loadbar .ai-lbtext { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #ai-loadbar .ai-lbbar { width: 90px; height: 6px; border-radius: 999px; background: var(--hover); overflow: hidden; flex: none; }
 #ai-loadbar .ai-lbbar b { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--tint), var(--ok)); transition: width .35s ease; }
+#ai-loadbar .ai-lbbar.indet b { width: 35%; animation: ai-indet 1.2s ease-in-out infinite; }
+/* 1.43 : Paramètres › IA — étiquette de section (« Sur l’appareil · gratuite », « Alixo+ »), mention d'envoi en ligne */
+.set-tag { display: inline-block; vertical-align: 1px; margin-left: 6px; font-size: 10.5px; font-weight: 600; padding: 1px 8px; border-radius: 999px; background: var(--hover); color: var(--ink-2); white-space: nowrap; }
+.ai-privacy { font-size: 12px; line-height: 1.5; color: var(--ink-2); margin: 8px 0 0; padding: 8px 10px; border-left: 3px solid var(--tint); background: var(--bg); border-radius: 0 6px 6px 0; }
 
 /* ============================================================
    1.40 — renommer un onglet sur place, bouton ⤓ des tableurs / planches / quiz,
@@ -4751,3 +4777,148 @@ html[data-theme="dark"] #setov :is(.pobtn:not(.danger), .cta:not(.ghost):not(.pl
   #setov .set-body { padding: 4px 18px 24px; }
   .set-kgroups { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   1.43 : choix de la taille d'un tableau (quadrillage façon Google Docs)
+   ============================================================ */
+#popover:has(.tsp-grid) { width: auto; }
+.tsp-grid {
+  display: grid; grid-template-columns: repeat(var(--cols), 22px); gap: 4px;
+  padding: 2px; border-radius: 6px; outline: none; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.tsp-grid:focus-visible { box-shadow: 0 0 0 3px var(--tint-soft); }
+.tsp-row { display: contents; }
+.tsp-cell {
+  width: 22px; height: 22px; border-radius: 4px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--bg);
+  transition: background-color .08s ease, border-color .08s ease;
+}
+.tsp-cell.on { background: color-mix(in srgb, var(--tint) 24%, var(--surface)); border-color: var(--tint); }
+.tsp-row:first-child .tsp-cell.on { background: color-mix(in srgb, var(--tint) 42%, var(--surface)); }
+html[data-theme="dark"] .tsp-cell.on { background: color-mix(in srgb, var(--tint) 50%, var(--surface)); border-color: color-mix(in srgb, var(--tint) 55%, var(--ink)); }
+html[data-theme="dark"] .tsp-row:first-child .tsp-cell.on { background: color-mix(in srgb, var(--tint) 75%, var(--surface)); }
+.tsp-foot { display: flex; align-items: baseline; gap: 8px; margin-top: 10px; }
+.tsp-lbl { font-size: 15px; font-weight: 650; font-variant-numeric: tabular-nums; color: var(--ink); }
+.tsp-help { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; max-width: 290px; }
+/* sombre : les cases vides se distinguent du fond */
+html[data-theme="dark"] .tsp-cell:not(.on) { border-color: color-mix(in srgb, var(--ink-3) 60%, transparent); background: color-mix(in srgb, var(--ink-3) 10%, var(--bg)); }
+.tsp-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+@media (pointer: coarse) {
+  .tsp-grid { grid-template-columns: repeat(var(--cols), 44px); gap: 4px; }
+  .tsp-cell { width: 44px; height: 44px; border-radius: 6px; }
+}
+
+/* ============================================================
+   1.43 : bloc « Document » — carte vers un autre document Alixo
+   ============================================================ */
+.block.docref { margin: 8px 0; padding: 2px 0; cursor: default; user-select: none; -webkit-user-select: none; }
+.block.docref ::selection { background: transparent; }
+.block.docref.objsel { outline: none; }
+.dref-card { position: relative; }
+.dref-open {
+  display: flex; align-items: center; gap: 12px; width: 100%; min-height: 56px; padding: 10px 14px; text-align: left;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--paper, var(--surface));
+  font-family: var(--font-ui); color: var(--ink); transition: border-color .12s ease, background-color .12s ease, box-shadow .12s ease;
+}
+.dref-open:hover { border-color: color-mix(in srgb, var(--tint) 55%, var(--border)); background: color-mix(in srgb, var(--tint) 5%, var(--paper, var(--surface))); }
+.dref-open:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--tint-soft); border-color: var(--tint); }
+.dref-ico { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: var(--tint-soft); color: var(--tint); }
+.dref-ico .dicon { width: 20px; height: 20px; }
+.dref-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dref-title { font-size: 14.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dref-meta { font-size: 12px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dref-go { flex: none; color: var(--ink-3); display: grid; place-items: center; }
+.dref-go svg { width: 18px; height: 18px; }
+.dref-open:hover .dref-go { color: var(--tint); }
+.block.docref.objsel .dref-open { border-color: var(--tint); box-shadow: 0 0 0 3px var(--tint-soft); }
+.block.docref:not(.ok) .dref-open { cursor: default; border-style: dashed; background: var(--bg); }
+.block.docref:not(.ok) .dref-ico { background: var(--hover); color: var(--ink-3); }
+.block.docref:not(.ok) .dref-title { color: var(--ink-2); }
+.block.docref.missing .dref-title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--ink-3) 60%, transparent); }
+/* outils posés dans la carte, à droite (survol, sélection, ou cible absente) : pas de saut de mise en page */
+.dref-tools { display: none; gap: 4px; position: absolute; top: 50%; right: 44px; transform: translateY(-50%); font-family: var(--font-ui); }
+.block.docref:not(.ok) .dref-tools { right: 14px; }
+.block.docref:is(:hover, :focus-within, .objsel, :not(.ok)) .dref-txt { padding-right: 240px; }
+.dref-tools button { padding: 3px 9px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--bg); color: var(--ink-2); border: 1px solid var(--border); }
+.dref-tools button:hover { background: var(--hover); color: var(--ink); }
+.dref-tools button.danger { color: var(--danger); }
+/* outils : au survol, au clavier (Tab depuis la carte : :focus-within), une fois sélectionné, ou cible introuvable */
+.block.docref:is(:hover, :focus-within, .objsel, :not(.ok)) .dref-tools { display: flex; }
+body.readonly .dref-tools { display: none !important; }
+body.readonly .block.docref .dref-txt { padding-right: 0; }
+@media (max-width: 640px) {   /* écran étroit : les outils passent sous la carte */
+  .dref-tools { position: static; transform: none; margin-top: 6px; }
+  .block.docref:is(:hover, :focus-within, .objsel, :not(.ok)) .dref-txt { padding-right: 0; }
+}
+/* au doigt : pas de survol, et le premier toucher ouvre le document → outils toujours visibles, sous la carte */
+@media (pointer: coarse) {
+  .dref-open { min-height: 60px; }
+  .block.docref .dref-tools { display: flex; position: static; transform: none; margin-top: 6px; }
+  .block.docref .dref-txt, .block.docref:is(:hover, :focus-within, .objsel, :not(.ok)) .dref-txt { padding-right: 0; }
+  .dref-tools button { min-height: 44px; padding: 8px 14px; font-size: 13px; }
+}
+@media print {
+  .dref-tools, .dref-go { display: none !important; }
+  .dref-open { background: none !important; box-shadow: none !important; break-inside: avoid; }
+}
+/* choix du document (pop-over) */
+#popover:has(.po-dref) { width: 380px; }
+#popover .po-dref { max-height: 300px; overflow-y: auto; margin-top: 8px; display: flex; flex-direction: column; gap: 1px; }
+#popover .po-dref button { display: flex; align-items: center; gap: 10px; padding: 7px 10px; }
+#popover .po-dref button.sel { background: var(--tint-soft); }
+#popover .po-dref .dicon { width: 18px; height: 18px; flex: none; color: var(--ink-3); }
+#popover .po-dref button.sel .dicon { color: var(--tint); }
+.dref-po-nm { min-width: 0; display: flex; flex-direction: column; }
+.dref-po-nm b { font-weight: 600; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dref-po-nm small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#popover .po-empty { padding: 14px 6px; font-size: 12.5px; color: var(--ink-3); text-align: center; }
+/* aperçu dans la bibliothèque des blocs */
+.bp-dref { position: relative; display: flex; align-items: center; gap: 10px; padding: 9px 11px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); font-family: var(--font-ui); animation: bpin .4s both; animation-delay: .25s; }
+.bp-dref-ico { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 7px; background: var(--tint-soft); color: var(--tc); flex: none; }
+.bp-dref-ico svg { width: 16px; height: 16px; }
+.bp-dref-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.bp-dref-txt b { font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bp-dref-txt small { font-size: 9.5px; color: var(--ink-3); }
+.bp-dref-go { color: var(--ink-3); font-size: 16px; }
+.bp-dref-ptr { position: absolute; right: 26px; bottom: -8px; width: 12px; height: 12px; border-radius: 50%; background: color-mix(in srgb, var(--tc) 35%, transparent); border: 2px solid var(--tc); animation: bpdrefclick 1.6s 1s both; }
+@keyframes bpdrefclick { 0% { opacity: 0; transform: translate(18px, 14px); } 55% { opacity: 1; transform: none; } 70% { transform: scale(.75); } 100% { opacity: 1; transform: none; } }
+
+/* ============================================================
+   1.43 : stockage façon Apple (Paramètres › Compte) — « X Mo sur 3 Go », barre segmentée,
+   légende en pastilles, plus gros éléments cliquables. Couleurs : jetons --stor-* (clair et sombre).
+   ============================================================ */
+.stor { font-size: 12.5px; color: var(--ink-2); }
+.stor-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px 16px; flex-wrap: wrap; }
+.stor-used { display: flex; align-items: baseline; gap: 6px; }
+.stor-used b { font-size: 22px; font-weight: 700; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stor-used span { font-size: 14px; color: var(--ink-2); font-weight: 500; }
+.stor-free { font-size: 12.5px; color: var(--ink-3); display: inline-flex; align-items: center; gap: 6px; }
+.stor-head.warn .stor-used b, .stor-head.warn .stor-free { color: var(--warn); }
+.stor-where { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.stor-bar {
+  display: flex; gap: 2px; height: 14px; margin: 12px 0 10px; padding: 0; overflow: hidden;
+  border-radius: 7px; background: color-mix(in srgb, var(--ink-3) 18%, transparent);
+}
+.stor-seg { flex: 0 0 auto; width: max(5px, var(--w)); height: 100%; background: var(--c); }
+/* presque plein / plein (compte gratuit) : alerte écrite, pas seulement la couleur */
+.stor-alert { margin: -4px 0 10px; font-size: 12.5px; font-weight: 600; color: var(--warn); }
+.stor-legend { display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.stor-key { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink-2); }
+.stor-key i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
+.stor-key b { font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+.stor-empty { font-size: 12px; color: var(--ink-3); }
+.stor-top { margin-top: 16px; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.stor-top-h { padding: 9px 14px 7px; font-size: 11.5px; font-weight: 650; color: var(--ink-3); text-transform: uppercase; letter-spacing: .04em; background: color-mix(in srgb, var(--ink-3) 7%, transparent); }
+.stor-list { display: flex; flex-direction: column; }
+.stor-item { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 8px 14px; text-align: left; border-top: 1px solid var(--border); font-family: var(--font-ui); }
+.stor-item:hover { background: var(--hover); }
+.stor-item:focus-visible { outline: none; background: var(--tint-soft); }
+.stor-item-ico { flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: color-mix(in srgb, var(--ink-3) 12%, transparent); color: var(--ink-2); }
+.stor-item-ico .dicon { width: 17px; height: 17px; }
+.stor-item .stor-item-ico { background: color-mix(in srgb, var(--c) 15%, transparent); color: var(--c); }
+.stor-item-nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.stor-item-nm b { font-size: 13px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stor-item-nm small { font-size: 11.5px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stor-item-sz { flex: none; font-size: 12.5px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.stor-item::after { content: "›"; flex: none; color: var(--ink-3); font-size: 17px; line-height: 1; margin-left: -4px; }
+.stor-foot { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; margin-top: 12px; font-size: 12px; color: var(--ink-3); }

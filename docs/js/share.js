@@ -830,7 +830,7 @@ window.AlixoShare = (() => {
     const d = docById(id); if (!d) return;
     const copy = JSON.parse(JSON.stringify(d));
     copy.id = uid_(); copy.titre = (d.titre || 'Sans titre') + ' (copie)'; copy.folderId = null; copy.createdAt = copy.updatedAt = now(); copy.pinned = false;
-    (copy.blocks || []).forEach(b => { b.id = uid_(); });
+    (copy.blocks || []).forEach(b => { b.id = uid_(); if (b.type === 'docref') delete b.title; });   // 1.43 : jamais de titre figé
     state.docs.push(copy); save(); toast('Copie ajoutée à « Mes cours »');
   }
   const uid_ = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
