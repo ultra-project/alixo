@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-21T10:36:15.745Z",
- "version": "1.41.1",
- "date": "2026-10-20T10:57:42Z",
- "notes": "Nouveautés 1.41.1 — Correction : mise à jour automatique bloquée par un fichier verrouillé\n\n\n- **La mise à jour automatique ne s’arrête plus sur « Le fichier téléchargé est verrouillé par Windows ou l’antivirus (EPERM … rename) ».** L’installateur de la version précédente (toujours nommé `Alixo-Setup.exe`) pouvait rester verrouillé dans le dossier de téléchargement des mises à jour, ou l’antivirus analysait le nouveau fichier plus d’une minute : Alixo essayait alors de le remplacer et échouait aussitôt. Désormais, si l’ancien fichier ne peut pas être effacé, la mise à jour se télécharge **dans un dossier neuf**, et en cas d’échec Alixo **réessaie tout seul trois fois** (après 20 s, 1 min et 3 min), chaque fois dans un dossier neuf ; les dossiers de ces essais sont effacés au démarrage suivant. Côté technique : `main.js` › `setupAutoUpdate`.\n- **Si vous êtes bloqué sur la 1.40 ou la 1.41.0** : téléchargez une fois **Alixo-Setup.exe** depuis alixoapp.com et installez-le par-dessus (vos cours sont conservés) ; les mises à jour suivantes repasseront toutes seules.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.41.1",
+ "generatedAt": "2026-10-21T10:44:31.749Z",
+ "version": "1.42.0",
+ "date": "2026-10-21T10:44:10Z",
+ "notes": "Nouveautés 1.42.0 — Paramètres redessinés, export Excel des résultats de quiz, raccourcis rangés\n\n\n- **Les Paramètres font peau neuve.** Plus sobres et plus lisibles, en thème clair comme en sombre : des surfaces plates, de fins séparateurs entre les réglages et de vrais **interrupteurs** à la place des grandes cases en forme de carte. Le dégradé orange d’Alixo+ disparaît : le badge et le bouton **Alixo+** sont désormais d’une couleur unie.\n- **« Se déconnecter » change de place.** Le bouton est maintenant **en bas à gauche de la colonne des Paramètres**, juste au-dessus du numéro de version, au lieu d’être perdu au milieu des réglages.\n- **Les raccourcis clavier sont rangés par catégorie.** Dans **Paramètres › À propos**, ils sont regroupés en **Partout, Séances, Présentations, Tableurs, Quiz et Planches**, avec une touche par case : on trouve tout de suite celui qu’on cherche.\n- **Les résultats de quiz s’exportent en Excel.** Dans la fenêtre **Résultats** d’un quiz, bouton **« Excel »** : un classeur `.xlsx` déjà mis en forme, avec le **logo d’Alixo**, un en-tête à ses couleurs, des lignes alternées, une **barre de réussite**, l’en-tête figé et les **filtres** prêts à l’emploi. Deux feuilles : **Participants** (rang, score, bonnes réponses, temps moyen) et **Par question** (taux de réussite de chaque question). Le **CSV** reste disponible (bouton plus discret) et il est désormais protégé contre les formules piégées qu’un participant glisserait dans son nom. Côté technique : `app/js/xlsx.js`, `app/js/quiz.js`.\n- **La barre d’outils des séances reste centrée sur grand écran** : plus de grand vide à droite. Sur un petit écran, elle défile toujours.\n- **Corrections** : en présentation de quiz, le **graphique des résultats ne chevauche plus la question** ; dans la présentation des nouveautés, le **logo d’Alixo est au-dessus du numéro de version**.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.42.0",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Setup.exe",
-   "size": 79346237
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.42.0/Alixo-Setup.exe",
+   "size": 79356311
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Portable.exe",
-   "size": 78542765
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.42.0/Alixo-Portable.exe",
+   "size": 78552839
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-Mac.dmg",
-   "size": 189864848
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.42.0/Alixo-Mac.dmg",
+   "size": 189851060
   },
   "macZip": {
-   "name": "Alixo-1.41.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.41.1/Alixo-1.41.1-mac.zip",
-   "size": 183105284
+   "name": "Alixo-1.42.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.42.0/Alixo-1.42.0-mac.zip",
+   "size": 183117583
   }
  },
  "history": [
+  {
+   "version": "1.42.0",
+   "date": "2026-10-21T10:44:10Z",
+   "notes": "Nouveautés 1.42.0 — Paramètres redessinés, export Excel des résultats de quiz, raccourcis rangés\n\n\n- **Les Paramètres font peau neuve.** Plus sobres et plus lisibles, en thème clair comme en sombre : des surfaces plates, de fins séparateurs entre les réglages et de vrais **interrupteurs** à la place des grandes cases en forme de carte. Le dégradé orange d’Alixo+ disparaît : le badge et le bouton **Alixo+** sont désormais d’une couleur unie.\n- **« Se déconnecter » change de place.** Le bouton est maintenant **en bas à gauche de la colonne des Paramètres**, juste au-dessus du numéro de version, au lieu d’être perdu au milieu des réglages.\n- **Les raccourcis clavier sont rangés par catégorie.** Dans **Paramètres › À propos**, ils sont regroupés en **Partout, Séances, Présentations, Tableurs, Quiz et Planches**, avec une touche par case : on trouve tout de suite celui qu’on cherche.\n- **Les résultats de quiz s’exportent en Excel.** Dans la fenêtre **Résultats** d’un quiz, bouton **« Excel »** : un classeur `.xlsx` déjà mis en forme, avec le **logo d’Alixo**, un en-tête à ses couleurs, des lignes alternées, une **barre de réussite**, l’en-tête figé et les **filtres** prêts à l’emploi. Deux feuilles : **Participants** (rang, score, bonnes réponses, temps moyen) et **Par question** (taux de réussite de chaque question). Le **CSV** reste disponible (bouton plus discret) et il est désormais protégé contre les formules piégées qu’un participant glisserait dans son nom. Côté technique : `app/js/xlsx.js`, `app/js/quiz.js`.\n- **La barre d’outils des séances reste centrée sur grand écran** : plus de grand vide à droite. Sur un petit écran, elle défile toujours.\n- **Corrections** : en présentation de quiz, le **graphique des résultats ne chevauche plus la question** ; dans la présentation des nouveautés, le **logo d’Alixo est au-dessus du numéro de version**.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.42.0"
+  },
   {
    "version": "1.41.1",
    "date": "2026-10-20T10:57:42Z",
@@ -220,11 +225,6 @@
    "version": "1.20.0",
    "date": "2026-09-28T19:13:58Z",
    "notes": "Nouveautés 1.20.0 — bloc Arbre, export Word depuis le bouton, IA plus fiable, menu « / » par usage\n\n\n- **Nouveau bloc « Arbre »** (menu « / » › Arbre) : une arborescence racine → branches → feuilles, dessinée de haut en bas avec ses connecteurs, pour un plan, un arbre de décision, un organigramme ou une généalogie. Chaque nœud se tape directement ; Entrée ajoute un frère, Tab un enfant, Retour arrière sur un nœud vide le supprime, et des boutons apparaissent au survol. Exporté en plan indenté dans le PDF et le Word.\n- **Export au format choisi** : le bouton ⤓ de la barre du haut respecte maintenant le format des Paramètres › Export (PDF, Word .docx ou page web) ; avant, il exportait toujours en PDF et le réglage ne servait qu'aux archives .zip. Ctrl+P reste l'export PDF.\n- **Correction par IA plus fiable** : quand une analyse automatique échouait (hors ligne, quota, modèle indisponible), le paragraphe restait marqué comme déjà relu et n'était plus jamais analysé, d'où une IA qui semblait ne plus rien corriger. Il redevient analysable, l'appel est réessayé, et Paramètres › Intelligence artificielle affiche le résultat de la dernière analyse automatique. Les **cartes** sont maintenant analysées pendant la frappe, comme les paragraphes.\n- **Menu « / » trié par usage** : les blocs que vous insérez le plus souvent apparaissent dans une section « Les plus utilisés » en tête du menu, et remontent en premier dans les résultats quand vous tapez.\n- **Bouton clair / sombre** : le soleil de la barre du haut est désormais une option (Paramètres › Apparence › « Bouton clair / sombre dans la barre du haut »), masquée par défaut ; le thème se choisit dans les Paramètres."
-  },
-  {
-   "version": "1.19.1",
-   "date": "2026-09-24T08:26:42Z",
-   "notes": "Nouveautés 1.19.1 — correctif de la barre d'onglets\n\n\n- Avec peu d'onglets ouverts, les onglets s'étiraient sur toute la largeur de la barre (1.19.0) ; ils reprennent leur largeur normale et ne se serrent que lorsqu'ils ne tiennent plus sur la ligne."
   }
  ]
 }
