@@ -4,7 +4,8 @@
    Les prestataires contactés reçoivent l'adresse IP du visiteur : c'est dit dans la note de la page et dans
    la politique de confidentialité (rubrique « Sur le site alixoapp.com »).
    Les services tiers sont toujours désignés par leur nom Alixo (jamais par leur fournisseur).
-   Adresses : app/firebase-config.js (authDomain, projectId), Firestore config/public (billingApi, aiApi),
+   AlixoAI n'a pas de carte : depuis la version 1.44, elle fonctionne sur l'ordinateur de l'utilisateur (aucun serveur d'IA).
+   Adresses : app/firebase-config.js (authDomain, projectId), Firestore config/public (billingApi),
    mail/cloudflare/wrangler.toml (ALIXO_MAIL_PUBLIC_URL), package.json (dépôt des versions).
    ============================================================ */
 (function () {
@@ -21,11 +22,11 @@
   var CONFIG_DOC = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/config/public';
   var MAIL_URL = 'https://mail.alixoapp.com';
   var RELEASES = 'https://api.github.com/repos/ultra-project/alixo/releases/latest';
-  /* Adresses de repli du paiement et de l'IA, si config/public n'est pas lisible sans compte (règles Firestore).
-     Vide : carte « Non vérifiable ». Une adresse de repli peut désigner un service pas encore ouvert
-     (ai.alixoapp.com : adresse prévue d'AlixoAI) : si elle ne répond pas, la carte affiche « Non vérifiable »
-     plutôt que « Injoignable », pour ne pas annoncer la panne d'un service qui n'est peut-être pas en service. */
-  var FALLBACK = { billingApi: '', aiApi: 'https://ai.alixoapp.com' };
+  /* Adresse de repli du paiement, si config/public n'est pas lisible sans compte (règles Firestore).
+     Vide : carte « Non vérifiable ». Une adresse de repli peut désigner un service pas encore ouvert :
+     si elle ne répond pas, la carte affiche « Non vérifiable » plutôt que « Injoignable », pour ne pas
+     annoncer la panne d'un service qui n'est peut-être pas en service. */
+  var FALLBACK = { billingApi: '' };
 
   var LABELS = { pending: 'Vérification…', ok: 'Opérationnel', slow: 'Lent', down: 'Injoignable', unknown: 'Non vérifiable' };
 
@@ -94,7 +95,7 @@
   function onConfig(doc) {
     var f = (doc && doc.fields) || {};
     var str = function (k) { return f[k] && typeof f[k].stringValue === 'string' ? f[k].stringValue : ''; };
-    config = { billingApi: safeHttps(str('billingApi')), aiApi: safeHttps(str('aiApi')) };
+    config = { billingApi: safeHttps(str('billingApi')) };
   }
   function getConfig() { return configWait || Promise.resolve(); }
 
@@ -116,7 +117,7 @@
       run: function () {
         /* 200 (document lisible) ou 401/403/404 (accès refusé sans compte) : le service répond */
         configWait = httpCheck(CONFIG_DOC, { cache: 'no-store' }, [401, 403, 404], function (res) {
-          if (res.status !== 200) { config = config || { billingApi: '', aiApi: '' }; return; }
+          if (res.status !== 200) { config = config || { billingApi: '' }; return; }
           return res.json().then(onConfig, function () {});
         });
         return configWait;
@@ -127,8 +128,6 @@
           return res.json().then(function (j) { if (!j || j.ok !== true) { out.state = 'down'; out.detail = 'Le service répond mais signale un problème.'; } }, function () {});
         });
       } },
-    { id: 'ai', name: 'AlixoAI', desc: 'Relecture approfondie, mise en forme, quiz et fiches de révision (Alixo+).', needs: 'aiApi',
-      run: function (base) { return httpCheck(base + '/health', { cache: 'no-store' }); } },
     { id: 'mail', name: 'Alixo Mail', desc: 'Messagerie @alixoapp.com.',
       run: function () { return reach(MAIL_URL + '/healthz'); } },
     { id: 'releases', name: 'Alixo Mises à jour', desc: 'Publication des nouvelles versions et mise à jour automatique.', throttle: RELEASES_PERIOD,
@@ -289,7 +288,7 @@
     running = true; lastAll = Date.now();
     if (btnAll) btnAll.disabled = true;
     var db = SERVICES.filter(function (s) { return s.id === 'database'; })[0];
-    /* la base de données d'abord (elle fournit les adresses du paiement et de l'IA), le reste en parallèle */
+    /* la base de données d'abord (elle fournit l'adresse du paiement), le reste en parallèle */
     var first = check(db, manual);
     var all = SERVICES.filter(function (s) { return s !== db; }).map(function (s) { return check(s, manual); });
     Promise.all([first].concat(all)).then(function () {
