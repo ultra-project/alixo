@@ -235,6 +235,7 @@ window.AlixoAIQuiz = (() => {
   /* ---------------- rendu de la session ---------------- */
   function render(s) {
     const ready = typeof AlixoCorr !== 'undefined' && AlixoCorr.configured();
+    s.aiKey = ready ? 'ok' : (window.AlixoAI ? AlixoAI.state() : 'web');
     const inner = !ready ? noAiHTML() : s.nWords < 30 ? emptyHTML(s)
       : s.step === 'gen' ? genHTML(s) : s.step === 'play' ? '' : s.step === 'result' ? resultHTML(s) : s.step === 'sheet' ? sheetHTML(s) : s.step === 'error' ? errorHTML(s) : formHTML(s);
     s.root.innerHTML = `<header class="aq-head">
@@ -247,8 +248,17 @@ window.AlixoAIQuiz = (() => {
     if (s.step === 'gen') animateGen(s);
   }
   const stage = s => s.root.querySelector('.aq-stage');
-  /* 1.43 : AlixoAI est en ligne — hors ligne, sans compte ou quota du jour atteint, on le dit simplement */
-  const noAiHTML = () => `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>AlixoAI n’est pas disponible pour le moment.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Activer).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settingsLink()}</div>`;
+  /* 1.44 : AlixoAI tourne sur l'ordinateur — modèle à installer (bouton vers la fenêtre d'installation), version web
+     (lien vers l'application), désactivée ou en pause : on le dit simplement */
+  function noAiHTML() {
+    const st = window.AlixoAI ? AlixoAI.state() : 'web';
+    const E = window.AlixoEngine;
+    if (st === 'web') return `<div class="aq-empty"><div class="aq-eico">${ICON}</div><b>${esc(E ? E.MSG.web : 'AlixoAI fonctionne dans l’application Alixo pour Windows et Mac.')}</b><p>Le quiz et la fiche sont préparés par AlixoAI directement sur l’ordinateur, sans rien envoyer à un service d’IA et sans limite d’utilisation.</p><a class="aq-btn primary" href="${E ? E.DOWNLOAD_URL : 'https://alixoapp.com/index.html?site#telecharger'}" target="_blank" rel="noopener"><span>Télécharger l’application Alixo</span>${I.arrow}</a></div>`;
+    const es = E ? E.status() : {}; const ep = (es.profiles || {})[es.profile] || {};
+    const size = ep.approxBytes ? ` (${(ep.approxBytes / 1e9).toFixed(1).replace('.', ',')} Go)` : '';
+    if (st === 'nomodel' || st === 'downloading') return `<div class="aq-empty"><div class="aq-eico">${ICON}</div><b>${st === 'downloading' ? 'AlixoAI est en cours de téléchargement.' : 'AlixoAI n’est pas encore installée sur cet ordinateur.'}</b><p>${st === 'downloading' ? 'Le quiz sera disponible dès la fin du téléchargement (Paramètres › IA pour suivre la progression).' : 'Un seul téléchargement suffit : ensuite, tout se passe sur l’ordinateur, sans rien envoyer à un service d’IA et sans limite d’utilisation.'}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="install">${ICON}<span>${st === 'downloading' ? 'Voir le téléchargement' : 'Installer AlixoAI' + size}</span></button>${settingsLink()}</div></div>`;
+    return `<div class="aq-empty"><div class="aq-eico">${I.gear}</div><b>AlixoAI n’est pas disponible pour le moment.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Activer).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settingsLink()}</div>`;
+  }
   const emptyHTML = s => `<div class="aq-empty"><div class="aq-eico">${docIco(s.d)}</div><b>Le document est presque vide.</b><p>Écrivez d’abord quelques paragraphes (une trentaine de mots au moins) : le quiz et la fiche sont construits uniquement à partir de ce que contient ${s.d.kind === 'slides' ? 'la présentation' : s.d.kind === 'sheet' ? 'le tableur' : 'la séance'}.</p><button type="button" class="aq-btn ghost" data-aq="backdoc">${I.back}<span>Revenir au document</span></button></div>`;
   const errorHTML = s => `<div class="aq-empty aq-err"><div class="aq-eico ko">✕</div><b>Ça n’a pas marché.</b><p>${esc(s.error || '')}</p><div class="aq-actions"><button type="button" class="aq-btn primary" data-aq="back">${I.replay}<span>Réessayer</span></button>${/configur|Paramètres/i.test(s.error || '') ? settingsLink() : ''}</div></div>`;
   const pill = (name, k, lab, on, extra, hint) => `<button type="button" class="aq-pill ${on ? 'on' : ''}" data-seg="${name}" data-v="${esc(k)}" title="${esc(hint || '')}">${extra || ''}<span>${lab}</span></button>`;
@@ -266,7 +276,7 @@ window.AlixoAIQuiz = (() => {
       </div>` : `<div class="aq-rows"><div class="aq-row"><label>Contenu</label><p class="aq-hint">La fiche reprend tout le document : un résumé, trois à sept parties avec leurs points clés et définitions, « À retenir », et les pièges à éviter. Vous pourrez l’insérer à la fin de la séance, en faire une nouvelle séance, la copier ou l’imprimer.</p></div></div>`}
       <div class="aq-foot">
         <button type="button" class="aq-go" data-aq="go">${ICON}<span>Générer ${quiz ? `${opts.n} question${opts.n > 1 ? 's' : ''}` : 'la fiche'}</span>${I.arrow}</button>
-        <span class="aq-note">AlixoAI construit ${quiz ? 'le quiz' : 'la fiche'} uniquement à partir de ce document : le texte est envoyé à AlixoAI (serveur d’Alixo hébergé par Cloudflare) ; il n’est pas conservé ni utilisé pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a>${s.cut ? ' Document très long : seul le début est lu.' : ''}</span>
+        <span class="aq-note">AlixoAI construit ${quiz ? 'le quiz' : 'la fiche'} uniquement à partir de ce document, directement sur cet ordinateur : AlixoAI n’envoie rien à un service d’IA. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a>${s.cut ? ' Document très long : seul le début est lu.' : ''}</span>
       </div>
     </div>`;
   }
@@ -372,6 +382,7 @@ window.AlixoAIQuiz = (() => {
     const a = b.dataset.aq;
     if (a === 'backdoc') { if (typeof openDoc === 'function' && findDoc(s.d.id)) openDoc(s.d.id); else if (AlixoApp.showLibrary) AlixoApp.showLibrary(); return; }
     if (a === 'settings') { if (typeof openSettings === 'function') openSettings('ia'); return; }
+    if (a === 'install') { if (typeof openAiModelDialog === 'function') openAiModelDialog(); return; }
     if (a === 'back') { s.step = 'form'; s.play = null; render(s); return; }
     if (a === 'cancel') { cancelGen(s); return; }
     if (a === 'go') { generate(s); return; }
@@ -592,6 +603,16 @@ window.AlixoAIQuiz = (() => {
   if (window.AlixoApp && AlixoApp.tabs) ensureView();
 
   const buttonHTML = (attr, cls = '') => `<button type="button" ${attr} class="${cls}" title="Quiz IA et fiche de révision : QCM, vrai / faux, réponses courtes ou fiche de révision générés par l’IA à partir de ce document (Alixo+)">${ICON}<span>Quiz IA</span></button>`;
+
+  /* 1.44 : AlixoAI vient d'être installée (ou s'arrête) pendant que l'onglet est ouvert : l'écran d'attente se met à jour */
+  document.addEventListener('alixo-ai', e => {
+    const s = cur; if (!s || !s.root || !s.root.isConnected) return;
+    const ok = typeof AlixoCorr !== 'undefined' && AlixoCorr.configured();
+    const key = ok ? 'ok' : (e.detail || {}).state;
+    if (s.aiKey === key) return;
+    s.aiKey = key;
+    if (s.step === 'form' || s.step === 'error') render(s);
+  });
 
   return { open, docText, shorten, toQuestion, sheetBlocks, buttonHTML, ICON, KINDS, LEVELS, COUNTS, get opts() { return opts; }, get current() { return cur; }, get sessions() { return sessions; } };
 })();

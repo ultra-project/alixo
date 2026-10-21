@@ -27,11 +27,6 @@ window.ALIXO_APPLE_CONFIG = null;
    Offre Alixo+ › Serveur de paiement), sinon l'ancien lien de paiement manuel. */
 window.ALIXO_BILLING = { api: "" };
 
-/* AlixoAI en ligne (1.43) : adresse du serveur d'IA (dossier ai/, Worker Cloudflare « alixo-ai » — voir ai/README.md).
-   Relecture F7, mise en forme, Quiz IA et fiches ; la correction pendant la frappe reste sur l'appareil.
-   Vide : https://ai.alixoapp.com (route du Worker) ; config/public.aiApi (Firestore) peut la remplacer. HTTPS obligatoire. */
-window.ALIXO_AI = { api: "" };
-
 /* E-mails d'invitation d'Alixo Share (facultatif — voir SETUP-COMPTES.md § 3 ter).
    Sans réglage : Alixo ouvre un brouillon prêt à envoyer (Gmail ou messagerie de l'ordinateur).
    Envoi automatique : { webhook: "https://script.google.com/macros/s/…/exec", key: "…" } (Google Apps Script)

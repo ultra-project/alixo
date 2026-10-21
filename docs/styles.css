@@ -1454,6 +1454,20 @@ body.printing .cards-tools { display: none !important; }
 .ai-keymsg.ok { color: var(--ok); font-weight: 600; }
 .ai-keymsg.err { color: var(--danger); }
 .ai-keymsg:empty { display: none; }
+.ai-keymsg.warn { color: var(--warn); }
+/* 1.44 : AlixoAI sur l'ordinateur — téléchargement du modèle, profils, moteur */
+.ai-dl { height: 8px; border-radius: 999px; background: var(--hover); overflow: hidden; margin: 10px 0 4px; }
+.ai-dl i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--tint), var(--ok)); transition: width .3s ease; }
+.ai-dlinfo { font-size: 12px; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+.ai-profiles, .ai-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 6px; }
+.ai-profiles .set-tile .set-tag { margin-left: 6px; vertical-align: 1px; }
+.set-tile:disabled { opacity: .55; cursor: default; }
+.set-tile:disabled:hover { border-color: var(--border); }
+.ai-keybtns a.pobtn { text-decoration: none; display: inline-block; }
+.ai-keybtns { flex-wrap: wrap; }
+.ai-nowrap { white-space: nowrap; }
+.ai-privacy a, .ai-notice-more a, .ai-notice-txt a { color: color-mix(in srgb, var(--tint) 70%, var(--ink)); }
+.ai-profiles .set-tile:focus-visible, .ai-modes .set-tile:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
 
 /* impression : fonds opaques (les transparences sortaient en noir dans certains PDF) */
 @media print {
@@ -3991,6 +4005,7 @@ body.printing-quiz #toast, body.printing-quiz #print-summary, body.printing-quiz
 /* 1.43 : rappel de démarrage — explication en texte courant (contraste suffisant), fenêtre d'information AlixoAI */
 .wd-loginbody, .ai-notice-txt { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0 0 10px; }
 .ai-notice-more { font-size: 13px; margin: 0; }
+.ai-profiles-dlg + .ai-notice-more, .ai-dlinfo ~ .ai-notice-more, .po-hint + .ai-notice-more { margin-top: 12px; }
 .ai-more { white-space: nowrap; }
 #ai-loadbar .ai-lbcancel { flex: none; margin-left: 4px; padding: 3px 10px; border-radius: 6px; font: 600 12px var(--font-ui); color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
 #ai-loadbar .ai-lbcancel:hover { background: var(--hover); color: var(--ink); }

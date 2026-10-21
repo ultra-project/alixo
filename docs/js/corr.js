@@ -6,8 +6,8 @@
    2. grammaire sûre (js/grammaire.js : il à → il a, ils on → ils ont, si il → s'il…) sur les phrases nouvelles ou
       modifiées ; une phrase déjà relue par AlixoAI (mémoire, F7) ressort telle quelle ;
    (le soulignement orthographique est celui du navigateur / de la version PC : correcteur natif, dictionnaire français).
-   À la demande (F7, Alixo+) : AlixoAI en ligne (js/alixoai.js → js/alixocloud.js) relit le texte, phrase par phrase,
-   en requêtes groupées ; ses réponses sont mémorisées (une phrase relue n'est jamais renvoyée).
+   À la demande (F7, Alixo+) : AlixoAI (1.44 : sur l'ordinateur, js/alixoai.js → js/aiengine.js) relit le texte, phrase
+   par phrase, en requêtes groupées ; ses réponses sont mémorisées (une phrase relue n'est jamais redemandée).
    Chargé avant app.js (dépend de window.ALIXO_LEXIQUE, js/lexique.js, window.AlixoGrammar et window.AlixoAI). app.js
    fournit l'accès aux blocs et à l'écran via AlixoCorr.init({...}) et branche les événements de frappe.
    ============================================================ */
@@ -174,18 +174,18 @@ window.AlixoCorr = (() => {
   }
   function clearCache() { cache = {}; persist(); }
 
-  /* ---------------- AlixoAI : disponibilité et interrupteur (1.37 ; 1.43 : en ligne) ----------------
+  /* ---------------- AlixoAI : disponibilité et interrupteur (1.37 ; 1.44 : sur l'ordinateur) ----------------
      getConfig() / setConfig() ne servent qu'à l'interrupteur { off } (« Désactiver » dans Paramètres › IA), gardé pour
      les appelants historiques (cloudconfig.js, tests). */
-  function getConfig() { const A = AI(); return { provider: 'alixoai', endpoint: 'en-ligne', model: 'AlixoAI', key: '', on: !!(A && A.ready()), off: !!(A && !A.enabled()) }; }
+  function getConfig() { const A = AI(); return { provider: 'alixoai', endpoint: 'local', model: 'AlixoAI', key: '', on: !!(A && A.ready()), off: !!(A && !A.enabled()) }; }
   function setConfig(c) { const A = AI(); if (!A) return; if (c && typeof c === 'object' && 'off' in c) A.setEnabled(!c.off); }
-  /* prêt = AlixoAI est active et joignable (en ligne, compte connecté, quota du jour non atteint) */
+  /* prêt = AlixoAI est active et peut répondre (modèle installé sur l'ordinateur, moteur en marche ou prêt à démarrer) */
   function configured() { const A = AI(); return !!A && A.enabled() && A.available().ok; }
   const isLocal = () => false;
   const isLocalUrl = u => { try { const h = new URL(u).hostname; return /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?$|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(h) || /\.local$/.test(h); } catch { return false; } };
-  /* appel brut (vérification, tests) : AlixoAI répond à une consigne libre (tâche « correct » : plafonds du serveur) */
+  /* appel brut (vérification, tests) : AlixoAI répond à une consigne libre (tâche « correct ») */
   async function call(cfg, { system, user, maxTokens = 256, timeoutMs = 60000, temperature = 0 } = {}) {
-    const A = AI(); const C = window.AlixoCloudAI;
+    const A = AI(); const C = window.AlixoEngine;
     if (!A || !C) return { ok: false, status: 0, error: 'AlixoAI n’est pas chargée.' };
     if (!configured() && !(cfg && cfg.force)) return { ok: false, status: 0, error: A.enabled() ? A.available().reason : 'AlixoAI est désactivée (Paramètres › IA › Réactiver).' };
     return C.chat({ task: 'correct', system, user, maxTokens, temperature, timeoutMs: Math.max(timeoutMs, 60000) });
@@ -345,7 +345,7 @@ window.AlixoCorr = (() => {
     }
   }
 
-  /* ---------------- AlixoAI en ligne, à la demande (F7) : tout un cours ---------------- */
+  /* ---------------- AlixoAI (sur l’ordinateur), à la demande (F7) : tout un cours ---------------- */
   /* blocks : [{ id, text, lang }] → [{ id, avant, apres, regle, kind, at }] ; second = seconde lecture (ignore la mémoire) */
   async function analyzeBlocks(blocks, { onProgress, second = false, already = [] } = {}) {
     const base = ctxOf();

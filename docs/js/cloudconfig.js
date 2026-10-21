@@ -11,7 +11,8 @@
                             le serveur de paiement Stripe (1.30, by: 'stripe') ;
                             config/public.plusPrice / plusUrl / plusNote : l'offre affichée dans l'application ;
                             config/public.billingApi : adresse du serveur de paiement (billing/)
-                            config/public.aiApi : adresse du serveur d'AlixoAI (ai/, 1.43 ; défaut https://ai.alixoapp.com)
+                            (config/public.aiApi, adresse de l'ancien serveur d'AlixoAI en ligne de la 1.43 : ignoré
+                            depuis la 1.44, AlixoAI tourne sur l'ordinateur)
    - billing/{uid}        → état de l'abonnement Stripe (1.30), écrit par le serveur, lu par le titulaire
    Règles Firestore : voir SETUP-COMPTES.md § 6 (panneau admin).
    Chargé APRÈS app.js, notify.js. Sans compte : inactif.
@@ -52,7 +53,6 @@ window.AlixoCloud = (() => {
     if (window.AlixoApp && AlixoApp.setPlusOffer) AlixoApp.setPlusOffer({ price: d.plusPrice || '', url: d.plusUrl || '', note: d.plusNote || '' });
     pubConf = { businessUrl: typeof d.businessUrl === 'string' && /^https:\/\//.test(d.businessUrl) ? d.businessUrl : '' };   // 1.33 : adresse du tableau de bord Alixo Business
     setBillingApi(d.billingApi || DEFAULT_BILLING_API);   // 1.30 : adresse du serveur de paiement (Stripe), réglable depuis le panneau admin
-    setAiApi(d.aiApi || DEFAULT_AI_API);                  // 1.43 : adresse du serveur d'AlixoAI (ai/), réglable de même
     if (d.latestVersion && window.AlixoApp && cmpVer(d.latestVersion, AlixoApp.version) > 0 && !(window.alixoDesktop && alixoDesktop.onUpdate)) {
       notify({ id: 'latest_' + d.latestVersion, kind: 'update', title: `Alixo ${d.latestVersion} est disponible`, text: d.latestNote || 'Téléchargez la nouvelle version depuis la page d’Alixo.', action: { type: 'url', url: d.downloadUrl || 'https://alixoapp.com/versions/' } });
     }
@@ -180,22 +180,6 @@ window.AlixoCloud = (() => {
   };
   setBillingApi(DEFAULT_BILLING_API);
 
-  /* ---------------- AlixoAI en ligne (1.43) ----------------
-     Le serveur d'IA (dossier ai/, Worker « alixo-ai ») reçoit le texte des demandes F7, mise en forme, quiz et fiche avec
-     le jeton Firebase du compte dans l'en-tête Authorization. Adresse : firebase-config.js (ALIXO_AI.api), sinon
-     https://ai.alixoapp.com, remplaçable par config/public.aiApi. Hôtes en liste blanche (AlixoCloudAI.clean : le jeton du
-     compte y part) ; expression ancrée en repli. */
-  const DEFAULT_AI_API = String(window.ALIXO_AI && window.ALIXO_AI.api || 'https://ai.alixoapp.com').replace(/\/+$/, '');
-  let aiApi = '';
-  function setAiApi(url) {
-    const raw = String(url || '').trim().replace(/\/+$/, '');
-    const u = window.AlixoCloudAI && AlixoCloudAI.clean ? AlixoCloudAI.clean(raw)
-      : (/^https:\/\/(ai\.alixoapp\.com|alixo-ai\.[a-z0-9-]+\.workers\.dev)$/.test(raw) || /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(raw) ? raw : '');
-    if (!u) return;
-    aiApi = u;
-    if (window.AlixoCloudAI) AlixoCloudAI.configure({ api: u, getToken: idToken });
-  }
-  setAiApi(DEFAULT_AI_API);
   db.collection('billing').doc(uid).onSnapshot(snap => {
     if (window.AlixoApp && AlixoApp.setBilling) AlixoApp.setBilling(snap.exists ? snap.data() : null);
   }, err => { if (!permErr(err)) console.error('Cloud (abonnement) :', err); });
@@ -303,5 +287,5 @@ window.AlixoCloud = (() => {
     return { ok: true, msg: until ? `Alixo+ activé jusqu’au ${new Date(until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Alixo+ activé sans limite de durée' };
   }
 
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, ai: { api: () => aiApi, idToken }, publicConfig: () => pubConf };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf };
 })();

@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.43.0';
+const ALIXO_VERSION = '1.44.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -2261,7 +2261,7 @@ const PLUS_ICO = {
 const PLUS_FEATURES = [
   { k: 'stockage', name: 'Plus de 3 Go de stockage', free: '3 Go', plus: 'Au-delà de 3 Go', text: 'Fichiers, images et cours au-delà de la limite de 3 Go du compte gratuit.' },
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
-  { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI relit tout le cours (F7), propose la mise en forme et des reformulations.' },
+  { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI, sur votre ordinateur et sans limite, relit tout le cours (F7), propose la mise en forme et des reformulations.' },
   { k: 'quizia', name: 'Quiz IA et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : QCM, vrai / faux et réponses courtes corrigés sur place, ou une fiche de révision (résumé, points clés, définitions, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
@@ -2338,6 +2338,7 @@ function setPlan(info) {
   applyTheme();
   refreshPlusUi();
   const ov = $('#setov'); if (ov && !ov.hidden) renderSettingsBody();
+  if (planActive(planInfo)) setTimeout(aiLocalNotice144, 1500);   // 1.44 : information des abonnés Alixo+
   if (isPlus() !== was) {
     if (isPlus()) { closeDialog('plusov'); toast('Alixo+ est activé sur votre compte — merci !'); }
     else toast('Alixo+ a pris fin sur ce compte : retour aux fonctions gratuites');
@@ -3112,16 +3113,16 @@ function settingsSectionHTML(k) {
     <div class="set-sect"><div class="po-label">Ce que change Alixo+</div>${plusTableHTML('')}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div></div>
     ${window.AlixoBusiness && !(AlixoBusiness.enabled && AlixoBusiness.active()) ? `<div class="set-sect"><div class="po-label">Pour une entreprise</div>${AlixoBusiness.offerHTML()}<div class="po-hint">Le détail (équipe, licences, modérateurs) est dans Paramètres › Entreprise.</div></div>` : ''}`;
-  /* 1.43 : la correction pendant la frappe tourne sur l'appareil, sans IA, pour tous ; AlixoAI (en ligne, Alixo+) relit à la demande */
+  /* 1.43 : la correction pendant la frappe tourne sur l'appareil, sans IA, pour tous ; AlixoAI (1.44 : sur l'ordinateur, Alixo+) relit à la demande */
   if (k === 'ia') { const o = aiOpt(); const plus = isPlus(); return `<div class="set-sect"><div class="po-label">Correction pendant la frappe <span class="set-tag">Sur l’appareil · gratuite</span></div>
       <div class="set-checks" id="set-ai">
         <label><input type="checkbox" role="switch" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Correction automatique pendant la frappe</b><small>Alixo relit vos phrases sur l’appareil, sans rien envoyer : fautes de frappe, accents oubliés, homophones sûrs (« il à » → « il a », « ils on » → « ils ont »)… Proposition sous le paragraphe : Tab pour accepter, Échap pour ignorer. Les mots inconnus sont soulignés (clic droit : suggestions).</small></span></label>
         <label><input type="checkbox" role="switch" data-ai="fix" ${o.fix ? 'checked' : ''}><span><b>Proposer les corrections sous le paragraphe</b><small>Décoché : seulement le soulignement du correcteur orthographique et la relecture à la demande (✨ ou F7).</small></span></label>
         <label><input type="checkbox" role="switch" data-ai="autofix" ${o.autofix ? 'checked' : ''}><span><b>Corriger d’office les fautes de frappe simples</b><small>Lettres inversées, lettre doublée, accent oublié : quand la correction ne change qu’un mot d’une lettre, elle s’applique d’elle-même (le mot est surligné un instant, Ctrl+Z pour revenir) et le mot est appris. Les autres fautes restent proposées sous le paragraphe.</small></span></label>
       </div></div>
-    <div class="set-sect"><div class="po-label">AlixoAI en ligne <span class="set-tag">Alixo+</span></div>
+    <div class="set-sect"><div class="po-label">AlixoAI${aiIsWeb() ? '' : ' sur cet ordinateur'} <span class="set-tag">Alixo+</span></div>
       ${plus ? `<div id="po-aisetup">${aiSetupHTML('settings')}</div>
-      <div class="set-checks" id="set-ai2">
+      <div class="set-checks" id="set-ai2" ${aiIsWeb() ? 'hidden' : ''}>
         <label><input type="checkbox" role="switch" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations (F7)</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens.</small></span></label>
         <label><input type="checkbox" role="switch" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue (F7)</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors relu dans sa langue. Décoché : il est laissé tel quel.</small></span></label>
       </div>` : `<div class="plus-lock">${PLUS_ICO.ia}<div><b>AlixoAI relit tout le cours, propose la mise en forme, crée des quiz et des fiches de révision</b><span>Relecture approfondie (✨ ou F7), encadrés et titres, reformulations, Quiz IA et fiches de révision (F8) depuis vos séances, présentations et tableurs. ${aiPrivacyHTML()}</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div>`}</div>
@@ -8597,125 +8598,324 @@ function insertDrawing() {
 }
 
 /* ============================================================
-   Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37 ; 1.43 : en ligne)
-   1.43 : le modèle ne tourne plus sur l'appareil (WebGPU saturait la carte graphique et faisait planter Alixo). La
-   correction pendant la frappe se fait sur l'appareil, sans IA, pour tous les comptes (js/grammaire.js, js/corr.js) ;
-   la relecture approfondie (F7), la mise en forme, le Quiz IA et les fiches passent par AlixoAI en ligne
-   (js/alixoai.js → js/alixocloud.js → serveur ai/), avec Alixo+. Paramètres › IA : état, interrupteur, envoi en ligne.
+   Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37 ; 1.44 : sur l'ordinateur)
+   La correction pendant la frappe se fait sur l'appareil, sans IA, pour tous les comptes (js/grammaire.js, js/corr.js).
+   La relecture approfondie (F7), la mise en forme, le Quiz IA et les fiches passent par AlixoAI, avec Alixo+ :
+   1.44 : le modèle tourne sur l'ordinateur (version PC Windows / Mac : js/alixoai.js → js/aiengine.js →
+   engine/llm-host.js, processus séparé), rien n'est envoyé en ligne, aucune limite d'utilisation. Il est téléchargé une
+   fois, avec l'accord de l'utilisateur (fenêtre « Installer AlixoAI »). Sur le web : message et lien vers l'application.
+   Paramètres › IA : état, profil (Standard / Léger), téléchargement, mode carte graphique / processeur, interrupteur.
    ============================================================ */
 function aiCfg() { return AlixoCorr.getConfig(); }
-/* AlixoAI est active et joignable (en ligne, compte connecté, quota du jour non atteint) */
+/* AlixoAI est active et peut répondre (modèle installé sur l'ordinateur) */
 function aiReady() { return AlixoCorr.configured(); }
 let aiState = null;   // { items: [{ n, id, avant, apres, regle, done }], label }
 
 function aiCorrectable(b) { return TEXT_TYPES.includes(b.type) || isFiche(b) || b.type === 'table' || b.type === 'cards'; }
 
-/* mention affichée partout où AlixoAI envoie du texte (Paramètres › IA, panneau, fenêtre d'information, Quiz IA) */
-const AI_PRIVACY = 'Pour la relecture F7, la mise en forme, les quiz et les fiches, le texte concerné est envoyé à AlixoAI (serveur d’Alixo hébergé par Cloudflare) ; il n’est pas conservé ni utilisé pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil.';
+/* mention affichée partout où AlixoAI est proposée (Paramètres › IA, panneau, Quiz IA) */
+const AI_PRIVACY = 'AlixoAI fonctionne entièrement sur cet ordinateur : elle n’envoie vos cours à aucun service d’IA et il n’y a aucune limite d’utilisation. Seul le modèle d’IA est téléchargé, une fois.';
+const AI_HF_PRIVACY_URL = 'https://huggingface.co/privacy';
+/* Paramètres › IA ouverts : leurs messages suffisent (pas de toast en double) */
+const aiSettingsOpen = () => { const ov = $('#setov'); return !!(ov && !ov.hidden && ov.querySelector('#po-aisetup')); };
+const aiToast = (msg, opts) => { if (!aiSettingsOpen()) toast(msg, opts); };
 const AI_PRIVACY_URL = 'https://alixoapp.com/confidentialite.html#alixoai';
-const aiPrivacyHTML = () => `${esc(AI_PRIVACY)} <a class="ai-more" href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus</a>`;
-/* textes d'état : ceux d'erreur viennent d'une seule source, AlixoCloudAI.MSG (js/alixocloud.js) */
+const AI_LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
+const aiEngine = () => window.AlixoEngine || null;
+const aiEng = () => (aiEngine() ? aiEngine().status() : { state: 'web', profiles: {} });
+const aiIsWeb = () => !aiEngine() || !aiEngine().local();
+const aiPrivacyHTML = () => aiIsWeb()
+  ? `${esc(aiMsg('web'))} <a class="ai-more" href="${aiEngine() ? aiEngine().DOWNLOAD_URL : 'https://alixoapp.com/index.html?site#telecharger'}" target="_blank" rel="noopener">Télécharger l’application Alixo</a>`
+  : `${esc(AI_PRIVACY)} <a class="ai-more" href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus</a>`;
+/* textes : une seule source, AlixoEngine.MSG (js/aiengine.js) */
+const aiMsg = k => { const E = aiEngine(); return (E && E.MSG && E.MSG[k]) || 'AlixoAI ne répond pas pour le moment. Réessayez.'; };
+const aiGo = n => (n / 1e9).toFixed(1).replace('.', ',') + ' Go';
+const aiPct = d => (d && d.total ? Math.min(100, Math.floor(d.received * 100 / d.total)) : 0);
 function aiStateText(st) {
-  const M = (window.AlixoCloudAI && AlixoCloudAI.MSG) || {};
-  if (st === 'ready') return 'AlixoAI est prête · relecture F7, mise en forme, quiz et fiches';
+  const s = aiEng();
+  if (st === 'ready') return 'AlixoAI est prête · relecture F7, mise en forme, quiz et fiches, sur cet ordinateur';
+  if (st === 'busy') return 'AlixoAI travaille…';
+  if (st === 'loading') return aiMsg('loading');
   if (st === 'off') return 'AlixoAI est désactivée sur cet appareil.';
-  if (st === 'unavailable') { const c = window.AlixoCloudAI ? AlixoCloudAI.status().state : 'unconfigured'; return (c === 'unconfigured' ? M.unconfigured : M.unreachable) || 'AlixoAI ne répond pas pour le moment.'; }
-  return M[st] || M.unreachable || 'AlixoAI ne répond pas pour le moment.';
+  if (st === 'web') return aiMsg('web');
+  if (st === 'nomodel') return 'AlixoAI n’est pas encore installée sur cet ordinateur.';
+  if (st === 'downloading') { const d = s.download; return d ? `Téléchargement d’AlixoAI : ${aiPct(d)} % (${aiGo(d.received)} sur ${aiGo(d.total)})` : aiMsg('downloading'); }
+  return s.error || aiMsg('unavailable');
 }
 /* message à afficher quand AlixoAI ne peut pas répondre tout de suite (F7, mise en forme) */
 function aiNotReadyText() { const A = window.AlixoAI; return aiStateText(A ? A.state() : 'unavailable'); }
 
-/* 1.43 : AlixoAI passe en ligne — fenêtre d'information unique (par appareil et par compte) avant le premier envoi de
-   F7, « Corriger » ou de la mise en forme (le Quiz IA et la fiche ont leur mention avant « Générer »).
-   Ce n'est pas un consentement (la base légale reste le contrat Alixo+) : une information loyale avant le changement. */
-const AI_NOTICE_LS = () => 'alixo.ai.notice143' + (window.AlixoAuth ? AlixoAuth.storageSuffix() : '');
-function aiNoticeSeen() { try { return localStorage.getItem(AI_NOTICE_LS()) === '1'; } catch { return true; } }
-function aiNoticeMark() { try { localStorage.setItem(AI_NOTICE_LS(), '1'); } catch { /* */ } }
-/* texte de la revue juridique ; sa première phrase (« AlixoAI fonctionne désormais en ligne. ») sert de titre */
-const AI_NOTICE_TEXT = 'Pour la relecture F7, la mise en forme, les quiz et les fiches, le texte concerné est envoyé au serveur d’AlixoAI, hébergé par Cloudflare, qui le traite sans le conserver ni l’utiliser pour entraîner un modèle. La correction pendant la frappe reste sur l’appareil.';
-/* → Promise<boolean> : true = l'envoi peut partir */
-function aiNoticeGate() {
-  if (aiNoticeSeen()) return Promise.resolve(true);
-  return new Promise(resolve => {
-    let done = false; const end = v => { if (done) return; done = true; resolve(v); };
-    openDialog({ id: 'ainotice', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'AlixoAI fonctionne désormais en ligne',
-      body: `<p class="ai-notice-txt">${esc(AI_NOTICE_TEXT)}</p><p class="ai-notice-more"><a href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus sur le traitement de vos données</a></p>`,
-      foot: '<button class="cta ghost" id="ainotice-off" type="button">Désactiver AlixoAI</button><button class="cta" id="ainotice-go" type="button">Continuer</button>',
-      onMount: (card, close) => {
-        card.querySelector('#ainotice-go').addEventListener('click', () => { aiNoticeMark(); end(true); close(); });
-        card.querySelector('#ainotice-off').addEventListener('click', () => { aiNoticeMark(); if (window.AlixoAI) AlixoAI.setEnabled(false); toast('AlixoAI désactivée — la correction pendant la frappe continue'); end(false); close(); });
-        setTimeout(() => { const b = card.querySelector('#ainotice-go'); if (b) b.focus(); }, 30);
-      },
-      onClose: () => end(false) });
+/* ---------------- fenêtre unique « Installer AlixoAI » : accord explicite avant le téléchargement du modèle ----------------
+   Taille, nom et licence du modèle (Qwen3, Apache 2.0), source (Hugging Face, qui reçoit l'adresse IP), choix du profil ;
+   puis la progression. Rien n'est téléchargé avant « Télécharger ». */
+function aiProfileTiles(s, cls) {
+  const order = ['standard', 'leger'];
+  return `<div class="set-tiles ai-profiles ${cls || ''}" role="radiogroup" aria-label="Profil d’AlixoAI">${order.filter(k => s.profiles && s.profiles[k]).map(k => {
+    const p = s.profiles[k]; const on = s.profile === k;
+    const hint = k === 'standard' ? 'Meilleures réponses · conseillé à partir de 12 Go de mémoire vive (RAM)' : 'Plus rapide et plus sobre · pour les ordinateurs à moins de 12 Go de mémoire vive (RAM)';
+    return `<button type="button" class="set-tile ${on ? 'on' : ''}" data-profile="${k}" role="radio" aria-checked="${on}" tabindex="${on ? 0 : -1}"><b>${esc(p.label)}${s.recommended === k ? ' <span class="set-tag">Conseillé ici</span>' : ''}</b><span>${esc(p.name)} · <span class="ai-nowrap">${p.installed ? 'installé (' + aiGo(p.bytes) + ')' : '≈ ' + aiGo(p.approxBytes)}</span></span><span>${hint}</span></button>`;
+  }).join('')}</div>`;
+}
+/* temps restant, d'après le débit mesuré (jamais annoncé sans mesure) */
+function aiEta(d) {
+  if (!d || !(d.bps > 0) || !(d.total > d.received)) return '';
+  const sec = (d.total - d.received) / d.bps;
+  if (sec < 60) return 'moins d’une minute restante';
+  const min = Math.round(sec / 60);
+  if (min < 60) return `environ ${min} min restante${min > 1 ? 's' : ''}`;
+  const h = Math.floor(min / 60), m = min % 60;
+  return `environ ${h} h${m ? ' ' + String(m).padStart(2, '0') : ''} restantes`;
+}
+const aiDlInfo = d => (d ? [`${aiPct(d)} %`, `${aiGo(d.received)} sur ${aiGo(d.total)}`, d.bps > 0 ? `${(d.bps / 1e6).toFixed(1).replace('.', ',')} Mo/s` : '', aiEta(d)].filter(Boolean).join(' · ') : 'Vérification du fichier…');
+function aiDlHTML(s) {
+  const d = s.download;
+  return `<div class="ai-dl" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${aiPct(d)}" aria-label="Téléchargement d’AlixoAI"><i style="width:${aiPct(d)}%"></i></div>
+    <div class="ai-dlinfo">${esc(aiDlInfo(d))}</div>`;
+}
+/* avance la barre de téléchargement sans tout redessiner */
+function aiDlUpdate(root) {
+  const s = aiEng(); const bar = root.querySelector('.ai-dl'); if (!bar || !s.download) return;
+  bar.querySelector('i').style.width = aiPct(s.download) + '%'; bar.setAttribute('aria-valuenow', aiPct(s.download));
+  const info = root.querySelector('.ai-dlinfo'); if (info) info.textContent = aiDlInfo(s.download);
+}
+/* `preset` : profil présélectionné (choisi dans Paramètres › IA) ; il ne devient le profil actif qu'une fois installé */
+function openAiModelDialog(preset) {
+  const E = aiEngine();
+  if (!E || !E.local()) { aiToast(aiMsg('web')); return; }
+  const profs = aiEng().profiles || {};
+  let profile = (preset && profs[preset]) ? preset : (aiEng().download && aiEng().download.profile) || aiEng().profile || aiEng().recommended || 'leger';
+  let phase = '';   // '' (choix) | 'dl' | 'done' | 'err'
+  let errText = '';
+  const body = () => {
+    const s = aiEng(); const p = (s.profiles || {})[profile] || {};
+    const total = s.totalMem ? ` (${Math.round(s.totalMem / 1073741824)} Go de mémoire sur cet ordinateur)` : '';
+    if (s.state === 'downloading' && phase !== 'err') phase = 'dl';
+    return `<p class="ai-notice-txt">AlixoAI relit vos cours (F7), propose la mise en forme et prépare quiz et fiches de révision <b>directement sur cet ordinateur</b>&nbsp;: AlixoAI n’envoie vos textes à aucun service en ligne et il n’y a aucune limite d’utilisation.</p>
+      <p class="ai-notice-txt">Pour cela, Alixo télécharge <b>une seule fois</b> le modèle d’IA <b>${esc(p.name || 'Qwen3')}</b> (≈ ${aiGo(p.approxBytes || 0)}), publié par l’équipe Qwen d’Alibaba Cloud sous licence libre Apache 2.0, depuis le site Hugging Face (Hugging Face, Inc., États-Unis), qui reçoit à cette occasion l’adresse IP de l’ordinateur et la traite selon sa propre politique de confidentialité. Le fichier est vérifié avant d’être utilisé.</p>
+      ${phase === 'dl' || phase === 'done' ? '' : `<div class="po-label" style="margin-top:6px">Profil${esc(total)}</div>${aiProfileTiles(Object.assign({}, s, { profile }), 'ai-profiles-dlg')}`}
+      ${phase === 'dl' ? aiDlHTML(s) + '<p class="po-hint">Vous pouvez fermer cette fenêtre : le téléchargement continue (Paramètres › IA).</p>' : ''}${phase === 'dl' && s.state !== 'downloading' && (s.profiles[s.profile] || {}).installed ? `<p class="po-hint">En attendant, AlixoAI continue avec le profil ${esc((s.profiles[s.profile] || {}).label || '')}.</p>` : ''}
+      ${phase === 'done' ? '<div class="ai-keystate ok"><span class="ai-dot"></span>AlixoAI est installée et prête. Appuyez sur F7 pour relire le cours.</div>' : ''}
+      ${phase === 'err' ? `<div class="ai-keymsg err" role="alert">${esc(errText)}</div>` : ''}
+      <p class="ai-notice-more"><a href="${AI_LICENSE_URL}" target="_blank" rel="noopener">Licence Apache 2.0</a> · <a href="${AI_PRIVACY_URL}" target="_blank" rel="noopener">En savoir plus sur vos données</a> · <a href="${AI_HF_PRIVACY_URL}" target="_blank" rel="noopener">Confidentialité chez Hugging Face</a></p>`;
+  };
+  const foot = () => phase === 'dl' ? '<button class="cta ghost" id="aidl-stop" type="button">Annuler le téléchargement</button><button class="cta" data-dlg-close type="button">Fermer</button>'
+    : phase === 'done' ? '<button class="cta" data-dlg-close type="button">Fermer</button>'
+      : `<button class="cta ghost" data-dlg-close type="button">Plus tard</button><button class="cta" id="aidl-go" type="button">${phase === 'err' ? 'Réessayer' : `Installer AlixoAI (${aiGo(((aiEng().profiles || {})[profile] || {}).approxBytes || 0)})`}</button>`;
+  const ov = openDialog({ id: 'aimodel', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'Installer AlixoAI sur cet ordinateur', body: body(), foot: foot(),
+    onMount: card => {
+      const render = () => { if (!card.isConnected) return; card.querySelector('.dlg-body').innerHTML = body(); card.querySelector('.dlg-foot').innerHTML = foot(); bind(); };
+      const bind = () => {
+        card.querySelectorAll('[data-profile]').forEach(b => b.addEventListener('click', () => { profile = b.dataset.profile; render(); const f = card.querySelector(`[data-profile="${profile}"]`); if (f) f.focus(); }));
+        aiRadioKeys(card);
+        const go = card.querySelector('#aidl-go');
+        if (go) {
+          go.addEventListener('click', async () => {
+            phase = 'dl'; errText = ''; render();
+            const r = await E.download(profile);
+            if (r && r.ok) { phase = 'done'; aiInstalledToast(); }
+            else if (r && r.code === 'cancelled') phase = '';
+            else { phase = 'err'; errText = (r && r.error) || 'Le téléchargement a échoué. Réessayez.'; }
+            render();
+          });
+          setTimeout(() => { if (go.isConnected) go.focus(); }, 30);
+        }
+        const stop = card.querySelector('#aidl-stop');
+        if (stop) stop.addEventListener('click', () => { E.cancelDownload(); });
+      };
+      bind();
+      const onEv = () => { if (!card.isConnected) { document.removeEventListener('alixo-ai-engine', onEv); return; } if (phase === 'dl') aiDlUpdate(card); };
+      document.addEventListener('alixo-ai-engine', onEv);
+    } });
+  return ov;
+}
+let aiInstalledShown = 0;
+function aiInstalledToast() { if (Date.now() - aiInstalledShown < 3000) return; aiInstalledShown = Date.now(); toast('AlixoAI est installée sur cet ordinateur — F7 pour relire le cours, F8 pour un quiz'); }
+/* moteur arrêté : repli sur le processeur, ou pause après deux arrêts (js/aiengine.js) */
+document.addEventListener('alixo-ai-crash', e => { const d = e.detail || {}; if (d.unavailable) aiToast(aiMsg('unavailable'), { duration: 9000 }); else if (d.fallback === 'cpu') aiToast(aiMsg('cpu'), { duration: 9000 }); });
+/* groupes de tuiles (role="radiogroup") : un seul arrêt de tabulation par groupe (la tuile choisie), flèches ←/→ (et ↑/↓)
+   pour passer d'une tuile à l'autre, Espace ou Entrée pour choisir (le choix peut ouvrir l'installation : jamais d'office) */
+function aiRadioKeys(root) {
+  root.querySelectorAll('.set-tiles[role="radiogroup"]').forEach(g => {
+    const items = [...g.querySelectorAll('[role="radio"]')];
+    if (!items.length) return;
+    const usable = items.filter(b => !b.disabled);
+    if (!usable.some(b => b.tabIndex === 0)) { const c = usable.find(b => b.getAttribute('aria-checked') === 'true') || usable[0]; if (c) c.tabIndex = 0; }
+    if (g.dataset.keys) return; g.dataset.keys = '1';
+    g.addEventListener('keydown', e => {
+      const dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : e.key === 'Home' ? -99 : e.key === 'End' ? 99 : 0;
+      if (!dir) return;
+      const list = [...g.querySelectorAll('[role="radio"]')].filter(b => !b.disabled);
+      if (!list.length) return;
+      e.preventDefault();
+      const i = list.indexOf(document.activeElement);
+      const next = dir === -99 ? list[0] : dir === 99 ? list[list.length - 1] : list[(Math.max(0, i) + dir + list.length) % list.length];
+      list.forEach(b => { b.tabIndex = b === next ? 0 : -1; });
+      next.focus();
+    });
   });
 }
-/* 1.43 : AlixoAI était désactivée sur cet appareil avant le passage en ligne : elle le reste ; un message unique propose
-   de la réactiver en connaissance de cause (jamais de réactivation d'office). */
-const AI_OFFNOTICE_LS = 'alixo.ai.offnotice143';
+
+/* 1.44 : AlixoAI était désactivée sur cet appareil : elle le reste ; un message unique (version PC) explique qu'elle
+   fonctionne désormais sur l'ordinateur et propose de la réactiver (jamais de réactivation d'office). */
+const AI_OFFNOTICE_LS = 'alixo.ai.offnotice144';
 let aiLastKey = 0;
 document.addEventListener('keydown', () => { aiLastKey = Date.now(); }, { capture: true, passive: true });
 function aiOffNotice(tries) {
   try { if (localStorage.getItem('alixo.ai.off') !== '1' || localStorage.getItem(AI_OFFNOTICE_LS) === '1') return; } catch { return; }
-  if (ALIXO_PANE) return;
+  if (ALIXO_PANE || aiIsWeb()) return;
   /* jamais par-dessus une autre fenêtre ni pendant la frappe : plus tard (au plus une quarantaine de tentatives) */
   const busy = $('.dlgov') || $('#obov') || $('#wnov') || ($('#authov') && !$('#authov').hidden) || Date.now() - aiLastKey < 5000 || !$('#popover').hidden;
   if (busy) { if ((tries || 0) < 40) setTimeout(() => aiOffNotice((tries || 0) + 1), 15000); return; }
   try { localStorage.setItem(AI_OFFNOTICE_LS, '1'); } catch { /* */ }
-  openDialog({ id: 'aioffnotice', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'AlixoAI fonctionne désormais en ligne',
-    body: `<p class="ai-notice-txt">${aiPrivacyHTML()}</p><p class="ai-notice-txt"><b>Elle reste désactivée sur cet appareil.</b></p>`,
+  const s = aiEng();
+  const needModel = !Object.values(s.profiles || {}).some(p => p.installed);
+  openDialog({ id: 'aioffnotice', cls: 'ai-notice-dlg', eyebrow: 'AlixoAI', title: 'AlixoAI peut maintenant fonctionner sur votre ordinateur',
+    body: `<p class="ai-notice-txt">${aiPrivacyHTML()}</p>${needModel ? '<p class="ai-notice-txt">Pour l’activer, Alixo téléchargera une seule fois le modèle d’IA (1,1 à 2,5 Go).</p>' : ''}<p class="ai-notice-txt"><b>Elle reste désactivée sur cet appareil.</b></p>`,
     foot: '<button class="cta ghost" id="aioff-keep" type="button">Laisser désactivée</button><button class="cta" id="aioff-on" type="button">Activer</button>',
     onMount: (card, close) => {
       card.querySelector('#aioff-keep').addEventListener('click', close);
-      card.querySelector('#aioff-on').addEventListener('click', () => { if (window.AlixoAI) AlixoAI.setEnabled(true); aiNoticeMark(); toast('AlixoAI activée'); close(); });
+      card.querySelector('#aioff-on').addEventListener('click', () => {
+        if (window.AlixoAI) AlixoAI.setEnabled(true);
+        close();
+        /* pas encore de modèle : la fenêtre d'installation (taille, accord) plutôt qu'un « activée » qui ne marcherait pas */
+        if (window.AlixoAI && (AlixoAI.state() === 'nomodel' || AlixoAI.state() === 'downloading')) openAiModelDialog();
+        else toast('AlixoAI activée');
+      });
     } });
 }
 
-/* ---------------- Paramètres › IA et panneau : l'état d'AlixoAI, un interrupteur ---------------- */
-/* mode 'panel' (panneau IA) ou 'settings' (bloc compact dans les Paramètres) */
+/* 1.44 : information des abonnés Alixo+ (comptes avec un abonnement en cours, pas la version locale ni une version
+   personnalisée) : AlixoAI ne fonctionne plus que dans l'application pour Windows et Mac. Complète l'e-mail envoyé aux
+   abonnés (support durable) ; une seule fois par compte, même si la liste des notifications est effacée. */
+const AI144_FIRST = (() => { try { let t = +localStorage.getItem('alixo.v144.first'); if (!t) { t = Date.now(); localStorage.setItem('alixo.v144.first', String(t)); } return t; } catch { return Date.now(); } })();
+function aiLocalNotice144() {
+  if (ALIXO_PANE || !window.AlixoNotify || !planActive(planInfo)) return;
+  /* abonnement souscrit après le passage de cet appareil à la 1.44 : souscrit en connaissance de cause, rien à annoncer */
+  if (planInfo.since && planInfo.since > AI144_FIRST) return;
+  const k = 'alixo.ai.notif144' + (window.AlixoAuth && AlixoAuth.storageSuffix ? AlixoAuth.storageSuffix() : '');
+  try { if (localStorage.getItem(k) === '1') return; } catch { return; }
+  const n = AlixoNotify.push({ id: 'ai_local_144', kind: 'key', title: 'AlixoAI change avec la version 1.44',
+    text: 'La relecture approfondie (F7), la mise en forme, le Quiz IA et les fiches fonctionnent désormais uniquement dans l’application pour Windows et Mac, entièrement sur votre ordinateur, sans limite. Elles ne sont plus proposées dans la version web ni sur téléphone. Si vous ne pouvez plus les utiliser, vous pouvez demander dans les 30 jours la résolution de votre abonnement Alixo+ et le remboursement de la période restante.',
+    action: { type: 'url', url: 'https://alixoapp.com/contact.html' } });
+  if (n || AlixoNotify.list().some(x => x.id === 'ai_local_144')) { try { localStorage.setItem(k, '1'); } catch { /* */ } }
+}
+
+/* ---------------- Paramètres › IA et panneau : état, installation, profil, mode, interrupteur ---------------- */
+/* mode 'panel' (panneau IA) ou 'settings' (Paramètres) */
 function aiSetupHTML(mode) {
   const A = window.AlixoAI;
-  const st = A ? A.state() : 'unavailable';
-  return `<div class="ai-keystate ${st === 'ready' ? 'ok' : ''}"><span class="ai-dot"></span>${esc(aiStateText(st))}</div>
-    <div class="po-row ai-keybtns">
-      ${st === 'off' ? '<button class="pobtn ai-keyon" type="button">Activer AlixoAI</button>' : `${st === 'signedout' ? '<button class="pobtn ai-login" type="button">Se connecter</button>' : ''}${st === 'unavailable' ? '<button class="pobtn ai-keytest" type="button">Réessayer</button>' : ''}<button class="cta ghost small ai-keyremove" type="button">Désactiver AlixoAI</button>`}
-    </div>
-    <div class="ai-keymsg" aria-live="polite"></div>
-    ${mode === 'panel' ? '' : `<div class="ai-privacy">${aiPrivacyHTML()}</div>`}`;
+  const st = A ? A.state() : 'web';
+  const s = aiEng();
+  const ok = st === 'ready' || st === 'busy' || st === 'loading';
+  const state = `<div class="ai-keystate ${ok ? 'ok' : ''}"><span class="ai-dot"></span>${esc(aiStateText(st))}</div>`;
+  if (st === 'web') return `${state}<div class="po-row ai-keybtns"><a class="pobtn" href="${aiEngine() ? aiEngine().DOWNLOAD_URL : 'https://alixoapp.com/index.html?site#telecharger'}" target="_blank" rel="noopener">Télécharger l’application Alixo</a></div>`;
+  if (st === 'off') return `${state}<div class="po-row ai-keybtns"><button class="pobtn ai-keyon" type="button">Activer AlixoAI</button></div><div class="ai-keymsg" aria-live="polite"></div>${mode === 'panel' ? '' : `<div class="ai-privacy">${aiPrivacyHTML()}</div>`}`;
+  const cur = (s.profiles || {})[s.profile] || {};
+  const btns = [];
+  if (st === 'nomodel') btns.push(`<button class="pobtn ai-install" type="button">Installer AlixoAI (${aiGo(cur.approxBytes || 0)})</button>`);
+  if (s.download) btns.push('<button class="cta ghost small ai-dlstop" type="button">Annuler le téléchargement</button>');
+  if (st === 'unavailable') btns.push('<button class="pobtn ai-keytest" type="button">Réessayer</button>');
+  if (mode === 'panel' && st !== 'nomodel' && st !== 'downloading') btns.push('<button class="cta ghost small ai-tosettings" type="button">Réglages d’AlixoAI</button>');
+  /* rien d'installé : pas de « Désactiver » à côté de « Installer » (deux actions opposées) */
+  if (st !== 'nomodel' && st !== 'downloading') btns.push('<button class="cta ghost small ai-keyremove" type="button">Désactiver AlixoAI</button>');
+  /* téléchargement en cours (aussi celui d'un autre profil, pendant qu'AlixoAI reste utilisable) */
+  const dlOther = s.download && st !== 'downloading' ? `<div class="po-hint">Téléchargement du modèle ${esc(((s.profiles || {})[s.download.profile] || {}).label || '')} : AlixoAI l’utilisera dès qu’il sera installé.</div>` : '';
+  const dl = s.download ? dlOther + aiDlHTML(s) : (s.downloadError ? `<div class="ai-keymsg err" role="alert">${esc(s.downloadError)}</div>` : '');
+  if (mode === 'panel') return `${state}${dl}<div class="po-row ai-keybtns">${btns.join('')}</div><div class="ai-keymsg" aria-live="polite"></div>`;
+  const loaded = s.backend !== null && s.backend !== undefined && (st === 'ready' || st === 'busy');
+  /* « Carte graphique » choisie mais le moteur tourne sur le processeur (carte écartée au chargement) : on le dit */
+  const gpuMiss = !s.autoCpu && loaded && s.mode === 'gpu' && s.gpuCapable && s.tier === 'cpu';
+  const gpuRetry = '<div class="po-row ai-keybtns"><button class="cta ghost small ai-gpuretry" type="button">Réessayer avec la carte graphique</button></div>';
+  const gpuNote = s.autoCpu ? `<div class="ai-keymsg warn">${esc(s.notice === 'sentinel' ? 'Le dernier lancement d’AlixoAI sur la carte graphique n’a pas abouti : elle tourne sur le processeur, plus lentement.' : 'La carte graphique s’est arrêtée pendant une réponse : AlixoAI tourne maintenant sur le processeur, plus lentement mais sans risque.')}</div>${gpuRetry}`
+    : gpuMiss ? `<div class="ai-keymsg warn">La carte graphique n’a pas pu être utilisée : AlixoAI tourne sur le processeur, plus lentement.</div>${gpuRetry}` : '';
+  const engineLine = loaded ? `<div class="po-hint">Moteur : ${s.tier === 'gpu' ? `carte graphique${s.devices && s.devices.length ? ' (' + esc(s.devices.join(', ')) + ')' : ''}` : `processeur${s.mode !== 'cpu' && s.rejected ? ` (carte graphique écartée : ${esc(s.rejected)})` : ''}`}</div>` : '';
+  const anyInstalled = Object.values(s.profiles || {}).filter(p => p.installed);
+  const cpuSel = s.mode === 'cpu' || !s.gpuCapable;   // Mac Intel : pas d'accélération graphique
+  return `${state}${dl}<div class="po-row ai-keybtns">${btns.join('')}</div><div class="ai-keymsg" aria-live="polite"></div>
+    <div class="po-label" style="margin-top:14px">Profil</div>${aiProfileTiles(s)}
+    <div class="po-label" style="margin-top:14px">Moteur</div>
+    <div class="set-tiles ai-modes" role="radiogroup" aria-label="Moteur d’AlixoAI">
+      <button type="button" class="set-tile ${!cpuSel ? 'on' : ''}" data-mode="gpu" role="radio" aria-checked="${!cpuSel}" tabindex="${!cpuSel ? 0 : -1}" ${s.gpuCapable ? '' : 'disabled'}><b>Carte graphique</b><span>${s.gpuCapable ? 'Plus rapide. Si la carte graphique ne suit pas, AlixoAI passe d’elle-même au processeur.' : 'Indisponible sur cet ordinateur : AlixoAI utilise le processeur.'}</span></button>
+      <button type="button" class="set-tile ${cpuSel ? 'on' : ''}" data-mode="cpu" role="radio" aria-checked="${cpuSel}" tabindex="${cpuSel ? 0 : -1}"><b>Processeur</b><span>Nettement plus lent, mais n’utilise jamais la carte graphique.</span></button>
+    </div>${gpuNote}${engineLine}
+    ${anyInstalled.length ? `<div class="po-row ai-keybtns" style="margin-top:10px">${anyInstalled.map(p => `<button class="cta ghost small ai-rmmodel" data-profile="${p.id}" type="button">Supprimer le modèle ${esc(p.label)} (${aiGo(p.bytes)})</button>`).join('')}</div>` : ''}
+    <div class="ai-privacy">${aiPrivacyHTML()} · Modèle Qwen3 (Alibaba Cloud), <a href="${AI_LICENSE_URL}" target="_blank" rel="noopener">licence Apache 2.0</a>.</div>`;
 }
 function bindAiSetup(root, mode) {
   if (!root) return;
   const A = window.AlixoAI; if (!A) return;
-  const msg = root.querySelector('.ai-keymsg');
+  const E = aiEngine();
+  const msg = root.querySelector('.ai-keymsg:not(.err):not(.warn)');
   const setMsg = (t, cls) => { if (msg) { msg.textContent = t; msg.className = 'ai-keymsg ' + (cls || ''); } };
-  const rerender = () => { if (!root.isConnected) return; root.innerHTML = aiSetupHTML(mode); bindAiSetup(root, mode); };
-  const onEv = e => { if (!root.isConnected) { document.removeEventListener('alixo-ai', onEv); return; } const d = e.detail || {}; const shown = root.dataset.aiState || ''; if (d.state !== shown) { root.dataset.aiState = d.state; rerender(); } };
-  if (!root.dataset.aiBound) { root.dataset.aiBound = '1'; document.addEventListener('alixo-ai', onEv); }
-  root.dataset.aiState = A.state();
-  const onBtn = root.querySelector('.ai-keyon');
-  if (onBtn) onBtn.addEventListener('click', () => { A.setEnabled(true); aiNoticeMark(); toast('AlixoAI activée'); rerender(); });
-  const login = root.querySelector('.ai-login');
-  if (login) login.addEventListener('click', () => { closeSettings(); if (window.AlixoAuth && AlixoAuth.openAuthOverlay) AlixoAuth.openAuthOverlay(); });
-  const retry = root.querySelector('.ai-keytest');
-  if (retry) retry.addEventListener('click', async () => { retry.disabled = true; setMsg('Connexion à AlixoAI…', ''); const r = await aiTestConfig(); if (r.ok) { setMsg('AlixoAI répond ✓', 'ok'); setTimeout(rerender, 600); } else { setMsg(r.error, 'err'); retry.disabled = false; } });
-  const rm = root.querySelector('.ai-keyremove');
-  if (rm) rm.addEventListener('click', () => { A.setEnabled(false); toast('AlixoAI désactivée — la correction pendant la frappe continue'); rerender(); });
+  /* nouvel affichage : le focus clavier revient sur la même tuile ou le même bouton */
+  const rerender = () => {
+    if (!root.isConnected) return;
+    const a = document.activeElement; let key = '';
+    if (a && root.contains(a)) {
+      const cls = [...a.classList].find(c => c.startsWith('ai-'));
+      key = a.dataset.mode ? `[data-mode="${a.dataset.mode}"]` : a.dataset.profile ? (cls === 'ai-rmmodel' ? `.ai-rmmodel[data-profile="${a.dataset.profile}"]` : `.ai-profiles [data-profile="${a.dataset.profile}"]`) : cls ? '.' + cls : '';
+    }
+    root.innerHTML = aiSetupHTML(mode); bindAiSetup(root, mode);
+    if (key) { const f = root.querySelector(key); if (f) f.focus(); }
+  };
+  /* nouvel affichage quand l'état change ; pendant le téléchargement, seule la barre avance */
+  const sig = () => { const s = aiEng(); return [A.state(), s.profile, s.mode, s.autoCpu, s.backend, Object.values(s.profiles || {}).map(p => p.installed).join(), s.downloadError, s.download ? s.download.profile : '', s.tier, s.rejected].join('|'); };
+  const onEv = () => {
+    if (!root.isConnected) { document.removeEventListener('alixo-ai-engine', onEv); document.removeEventListener('alixo-ai', onEv); return; }
+    if (root.dataset.aiSig !== sig()) { root.dataset.aiSig = sig(); rerender(); return; }
+    aiDlUpdate(root);
+    const ks = root.querySelector('.ai-keystate'); if (ks && A.state() === 'downloading') ks.lastChild.textContent = aiStateText('downloading');
+  };
+  if (!root.dataset.aiBound) { root.dataset.aiBound = '1'; document.addEventListener('alixo-ai-engine', onEv); document.addEventListener('alixo-ai', onEv); }
+  root.dataset.aiSig = sig();
+  aiRadioKeys(root);
+  /* le toast d'il y a un instant (même message que l'état affiché ici) n'est pas répété par-dessus les Paramètres */
+  if (mode === 'settings') { const t = $('#toast'); if (t && !t.hidden && t.textContent === aiStateText(A.state())) t.hidden = true; }
+  const on = (sel, fn) => root.querySelectorAll(sel).forEach(b => b.addEventListener('click', fn));
+  on('.ai-keyon', () => { A.setEnabled(true); toast('AlixoAI activée'); rerender(); });
+  on('.ai-keyremove', () => { A.setEnabled(false); toast('AlixoAI désactivée — la correction pendant la frappe continue'); rerender(); });
+  on('.ai-install', () => openAiModelDialog());
+  on('.ai-dlstop', () => { if (E) E.cancelDownload(); });
+  on('.ai-tosettings', () => openSettings('ia'));
+  on('.ai-keytest', async e => { const b = e.currentTarget; b.disabled = true; if (E) await E.retry(); setMsg('Démarrage d’AlixoAI…', ''); const r = await aiTestConfig(); if (r.ok) { setMsg('AlixoAI répond ✓', 'ok'); setTimeout(rerender, 600); } else { setMsg(r.error, 'err'); b.disabled = false; } });
+  on('.ai-gpuretry', async () => { if (E) await E.setPrefs({ mode: 'gpu' }); toast('AlixoAI réessaiera la carte graphique à la prochaine demande'); rerender(); });
+  on('[data-mode]', async e => { const m = e.currentTarget.dataset.mode; if (E) await E.setPrefs({ mode: m }); toast(m === 'cpu' ? 'AlixoAI utilisera le processeur' : 'AlixoAI utilisera la carte graphique'); rerender(); });
+  /* profil non installé : la fenêtre d'installation, profil présélectionné ; le profil actif ne change qu'une fois le
+     modèle installé (« Plus tard » ou un échec laissent AlixoAI telle quelle) */
+  on('.ai-profiles [data-profile]', async e => {
+    const p = e.currentTarget.dataset.profile; if (!E) return;
+    const s = aiEng();
+    if (!(s.profiles[p] || {}).installed) { openAiModelDialog(p); return; }
+    await E.setPrefs({ profile: p });
+    toast(`Profil ${s.profiles[p].label} : AlixoAI l’utilisera à la prochaine demande`);
+    rerender();
+  });
+  on('.ai-rmmodel', async e => {
+    const p = e.currentTarget.dataset.profile; const s = aiEng(); const info = (s.profiles || {})[p] || {};
+    if (!confirm(`Supprimer le modèle ${info.label || ''} d’AlixoAI (${aiGo(info.bytes || 0)}) de cet ordinateur ? Il faudra le télécharger de nouveau pour utiliser AlixoAI.`)) return;
+    if (E) await E.remove(p);
+    toast('Modèle supprimé — ' + aiGo(info.bytes || 0) + ' libérés'); rerender();
+  });
 }
-/* appel minimal pour vérifier qu'AlixoAI répond (le serveur vérifie le compte, sans appeler le modèle ; hors quota) */
+/* essai minimal d'AlixoAI (un jeton, sur l'ordinateur ; charge le modèle si besoin) */
 async function aiTestConfig() {
   try { return await window.AlixoAI.run('ping'); } catch (e) { return { ok: false, error: e && e.message || String(e) }; }
 }
-/* AlixoAI ne peut pas répondre tout de suite (hors ligne, compte, quota, désactivée) : le panneau le dit, sans bloquer */
+/* AlixoAI ne peut pas répondre tout de suite : modèle à installer (fenêtre d'installation), web, désactivée, en pause */
 function aiShowNotReady() {
+  const st = window.AlixoAI ? AlixoAI.state() : 'web';
+  if (st === 'nomodel' || st === 'downloading') { openAiModelDialog(); return; }
   openRightPanel('#aipanel'); showAiSetup();
-  if (window.AlixoAI && AlixoAI.state() !== 'off') toast(aiNotReadyText());
+  /* le panneau affiche déjà le message (web : lien vers l'application) : pas de toast en double */
+  if (st !== 'off' && st !== 'web') aiToast(aiNotReadyText());
 }
 function showAiSetup() {
   const body = $('#ai-body');
   body.innerHTML = `<div class="ai-setup"><div class="ai-setuptitle">AlixoAI</div>${aiSetupHTML('panel')}<div class="ai-privacy">${aiPrivacyHTML()}</div></div>`;
   bindAiSetup(body.querySelector('.ai-setup'), 'panel');
 }
-/* 1.43 : ménage unique des restes de l'ancien moteur sur l'appareil (jusqu'à 2,4 Go de poids du modèle) : Cache API
-   webllm/* et tvmjs, bases IndexedDB webllm/*, dossier OPFS tvmjs-opfs-store, réglages alixo.ai.live / f32 / cap.
+/* 1.43 : ménage unique des restes de l'ancien moteur dans la page (1.36-1.42, jusqu'à 2,4 Go de poids du modèle) : Cache
+   API webllm/* et tvmjs, bases IndexedDB webllm/*, dossier OPFS tvmjs-opfs-store, réglages alixo.ai.live / f32 / cap.
    Une seule fois (alixo.ai.purged) ; silencieux, jamais d'erreur. */
 async function purgeWebLLM() {
   try { if (localStorage.getItem('alixo.ai.purged') === '1') return; } catch { return; }
@@ -8723,24 +8923,28 @@ async function purgeWebLLM() {
   try { if (window.caches) for (const k of await caches.keys()) if (OLD.test(k)) await caches.delete(k); } catch { /* Cache API absente */ }
   try { if (window.indexedDB && indexedDB.databases) for (const d of await indexedDB.databases()) if (d && d.name && OLD.test(d.name)) indexedDB.deleteDatabase(d.name); } catch { /* */ }
   try { if (navigator.storage && navigator.storage.getDirectory) { const root = await navigator.storage.getDirectory(); await root.removeEntry('tvmjs-opfs-store', { recursive: true }).catch(() => {}); } } catch { /* OPFS absent */ }
-  /* « alixo.ai.off » n'est JAMAIS levé ici : on ne distingue pas un arrêt choisi d'un arrêt posé après un plantage, et
-     AlixoAI envoie désormais du texte en ligne → elle reste désactivée ; aiOffNotice() propose de la réactiver, une fois */
+  /* « alixo.ai.off » n'est JAMAIS levé ici : on ne distingue pas un arrêt choisi d'un arrêt posé après un plantage ;
+     aiOffNotice() propose de la réactiver, une fois */
   try { for (const k of ['alixo.ai.live', 'alixo.ai.f32', 'alixo.ai.cap']) localStorage.removeItem(k); localStorage.setItem('alixo.ai.purged', '1'); } catch { /* */ }
 }
 /* petite barre en bas à droite pendant une demande de l'étudiant (F7, mise en forme) : libellé selon la tâche, Annuler */
-const AI_TASK_LABEL = { correct: 'AlixoAI relit…', style: 'AlixoAI met en forme…', quiz: 'AlixoAI prépare le quiz…', sheet: 'AlixoAI prépare la fiche…', ping: 'Connexion à AlixoAI…' };
+const AI_TASK_LABEL = { correct: 'AlixoAI relit…', style: 'AlixoAI met en forme…', quiz: 'AlixoAI prépare le quiz…', sheet: 'AlixoAI prépare la fiche…', ping: 'AlixoAI se prépare…' };
 (() => {
-  let bar = null;
+  let bar = null; let prev = '';
   document.addEventListener('alixo-ai', e => {
     const s = e.detail || {};
+    if (prev === 'downloading' && s.state === 'ready') aiInstalledToast();
+    prev = s.state;
     if (!s.waiting) { if (bar) bar.hidden = true; return; }
     if (!bar) {
       bar = document.createElement('div'); bar.id = 'ai-loadbar';
       bar.innerHTML = '<span class="ai-lbico" aria-hidden="true">✨</span><span class="ai-lbtext" role="status"></span><i class="ai-lbbar indet" aria-hidden="true"><b></b></i><button type="button" class="ai-lbcancel" aria-label="Annuler la demande">Annuler</button>';
-      bar.querySelector('.ai-lbcancel').addEventListener('click', () => { if (window.AlixoCloudAI && AlixoCloudAI.cancelVisible) AlixoCloudAI.cancelVisible(); });
+      bar.querySelector('.ai-lbcancel').addEventListener('click', () => { if (aiEngine()) aiEngine().cancelVisible(); });
       document.body.appendChild(bar);
     }
-    const t = bar.querySelector('.ai-lbtext'); const label = AI_TASK_LABEL[s.task] || 'AlixoAI travaille…';
+    /* processeur : une réponse peut prendre une ou deux minutes, on le dit (pas de durée chiffrée sans mesure) */
+    const slow = aiEng().tier === 'cpu' ? ' — sur le processeur, cela peut prendre une ou deux minutes' : '';
+    const t = bar.querySelector('.ai-lbtext'); const label = (s.state === 'loading' ? 'AlixoAI se prépare…' : (AI_TASK_LABEL[s.task] || 'AlixoAI travaille…')) + slow;
     if (t.textContent !== label) t.textContent = label;
     bar.hidden = false;
   });
@@ -8768,7 +8972,6 @@ async function runAiCorrection(o) {
   payload = payload.filter(x => { const l = detectLang(x.text); if (l && l !== 'fr' && !aiOpt().multilang) { skipped.push(x); return false; } x.lang = l; return true; });
   if (skipped.length) toast(`${skipped.length} bloc${skipped.length > 1 ? 's' : ''} dans une autre langue laissé${skipped.length > 1 ? 's' : ''} tel${skipped.length > 1 ? 's' : ''} quel${skipped.length > 1 ? 's' : ''} (Paramètres › IA › autres langues)`);
   if (!payload.length) { toast('Rien à corriger dans cette sélection'); return; }
-  if (!(await aiNoticeGate())) return;
   openRightPanel('#aipanel');
   $('#ai-body').innerHTML = `<div class="ai-empty">Analyse en cours (${esc(label)})…</div>`;
   try {
@@ -9249,7 +9452,6 @@ async function runAiStyle() {
   if (!aiReady()) { aiShowNotReady(); return; }
   const payload = d.blocks.filter(b => b.type === 'p').map(b => ({ id: b.id, text: blockPlain(b).trim() })).filter(x => x.text.length >= 12).slice(0, 80);
   if (!payload.length) { toast('Aucun paragraphe à analyser'); return; }
-  if (!(await aiNoticeGate())) return;
   openRightPanel('#aipanel');
   $('#ai-body').innerHTML = `<div class="ai-empty">Analyse de la mise en forme (${payload.length} paragraphe${payload.length > 1 ? 's' : ''})…</div>`;
   try {
@@ -11163,10 +11365,11 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Une correction des fautes qui marche partout, sans faire ramer l’ordinateur, AlixoAI en ligne, un bloc Document, le tableau dessiné au quadrillage et des widgets propres à chaque appareil.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'AlixoAI fonctionne désormais entièrement sur votre ordinateur, sans limite et sans rien envoyer — à installer une fois dans Paramètres › IA.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
   setTimeout(purgeWebLLM, 4000);   // 1.43 : ménage unique des restes de l'ancien moteur sur l'appareil (poids du modèle, réglages)
-  setTimeout(aiOffNotice, 6000);   // 1.43 : AlixoAI désactivée avant le passage en ligne → elle le reste, message unique
+  setTimeout(aiOffNotice, 6000);   // 1.44 : AlixoAI désactivée sur cet appareil → elle le reste, message unique (version PC)
+  setTimeout(aiLocalNotice144, 2500);   // 1.44 : information des abonnés Alixo+ (une fois par compte)
 }, 1400);
