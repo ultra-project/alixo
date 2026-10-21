@@ -2,6 +2,7 @@
 <!-- Pages publiques seulement : ni mentions légales, ni contact (données obligatoires protégées), ni application, ni piège (F-08). -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://alixoapp.com/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://alixoapp.com/tarifs.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://alixoapp.com/documentation.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
   <url><loc>https://alixoapp.com/versions/</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
   <url><loc>https://alixoapp.com/telecharger/windows/</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
