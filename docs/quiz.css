@@ -56,6 +56,7 @@
 
 /* ---- question et widget ---- */
 .qp-body { flex: 1; display: flex; flex-direction: column; justify-content: flex-start; min-height: 0; }
+.qz-play > .qp-body { flex: 1 0 auto; }   /* s'allonge (l'écran défile) plutôt que de se comprimer sous son contenu */
 /* centrage vertical sans débordement vers le haut : deux ressorts qui se replient quand le contenu dépasse */
 .qp-body::before, .qp-body::after { content: ""; flex: 1 1 0; min-height: 0; }
 .qp-q { font-size: clamp(20px, 3vw, 34px); font-weight: 750; line-height: 1.25; text-align: center; margin: clamp(8px, 2.6vh, 26px) auto; max-width: 1100px; letter-spacing: -.012em; overflow-wrap: anywhere; }
@@ -169,6 +170,14 @@
 /* ---- révélation (présentateur) ---- */
 .qp-reveal { display: grid; grid-template-columns: 1fr 300px; gap: 24px; max-width: 1240px; width: 100%; margin: 0 auto; align-items: start; }
 .qp-rleft .qp-q { margin-top: 6px; }
+/* révélation : question et propositions plus compactes pour laisser la place au graphique */
+.qp-reveal .qp-q { font-size: clamp(18px, 2.4vw, 30px); margin: 4px auto 12px; }
+.qz-play .qp-reveal .qp-opt { min-height: clamp(44px, 6.5vh, 76px); font-size: clamp(14px, 1.5vw, 20px); padding: 8px 14px; }
+.qp-reveal .qp-shape { width: 36px; height: 36px; font-size: 17px; }
+.qz-play .qp-reveal .qp-opt.ok { padding-right: 52px; }   /* le texte ne passe pas sous la coche ✓ */
+/* écart minimal garanti entre le bloc du dessus (question, propositions, bonne réponse) et le graphique, quel que soit le type */
+.qp-rleft > :is(.qp-bars, .qp-hist, .qp-cloud, .qp-hemi, .qp-hstitle) { margin-top: 24px; }
+.qp-rleft > .qp-hstitle + .qp-holestats { margin-top: 8px; }
 .qp-rright { background: var(--qp-surface); border: 1px solid var(--qp-border); border-radius: var(--qp-r); padding: 14px 16px; }
 .qp-ltitle { font-size: 12.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--qp-ink2); font-weight: 700; margin-bottom: 8px; }
 .qp-lead { list-style: none; margin: 0; padding: 0; counter-reset: lead; }
@@ -183,13 +192,15 @@
 .qp-lead li.none { color: var(--qp-ink2); font-size: 13px; }
 .qp-fastest { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--qp-border); font-size: 13px; color: var(--qp-ink2); }
 .qp-fastest b { color: var(--qp-ink); }
-.qp-bars { display: flex; justify-content: center; align-items: flex-end; gap: 14px; height: 170px; margin: 18px auto 0; max-width: 760px; }
-.qp-bar { position: relative; flex: 1; max-width: 110px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
-.qp-bfill { width: 100%; border-radius: 4px 4px 0 0; background: var(--oc); opacity: .5; transition: height .5s ease-out; min-height: 3px; }
+.qp-bars { display: flex; justify-content: center; align-items: flex-end; gap: 14px; height: clamp(160px, 30vh, 320px); margin: 24px auto 0; max-width: 760px; }
+/* chaque colonne réserve en haut la place de l'étiquette (padding-top) et en bas celle de la lettre (padding-bottom) :
+   la hauteur en % de la barre se calcule sur la zone restante, l'étiquette suit le haut de sa barre et ne déborde jamais au-dessus du graphique */
+.qp-bar { position: relative; flex: 1; max-width: 110px; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; padding: 38px 0 40px; }   /* 38 px : étiquette jusqu'à 26 px × 1,1 + 6 px */
+.qp-bfill { flex: none; width: 100%; border-radius: 4px 4px 0 0; background: var(--oc); opacity: .5; transition: height .5s ease-out; min-height: 3px; }
 .qp-bar.ok .qp-bfill { opacity: 1; }
-.qp-bar b { position: absolute; top: -28px; font-size: 18px; font-variant-numeric: tabular-nums; }
-.qp-bar b small { font-size: 11px; font-weight: 600; color: var(--qp-ink2); margin-left: 3px; }
-.qp-bar .qp-bsh { margin-top: 6px; width: 30px; height: 30px; border-radius: 8px; background: var(--oc); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; opacity: .55; }
+.qp-bar b { order: -1; flex: none; margin-bottom: 6px; font-size: clamp(18px, 1.6vw, 26px); line-height: 1.1; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.qp-bar b small { font-size: clamp(12px, 1.1vw, 16px); font-weight: 600; color: var(--qp-ink2); margin-left: 3px; }
+.qp-bar .qp-bsh { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); width: 30px; height: 30px; border-radius: 8px; background: var(--oc); color: #fff; display: grid; place-items: center; font-weight: 800; font-size: 14px; opacity: .55; }
 .qp-bar.ok .qp-bsh { opacity: 1; outline: 2px solid var(--qp-ink); outline-offset: 2px; }
 .qp-stat { text-align: center; margin-top: 14px; font-size: 18px; font-weight: 650; }
 .qp-stat small { display: block; font-size: 13px; font-weight: 500; color: var(--qp-ink2); margin-top: 2px; }
@@ -202,12 +213,18 @@
 .qp-cloud span { font-weight: 750; font-size: calc(15px + var(--k, 0) * 30px); color: var(--cc, var(--qp-accent)); animation: qppop .35s ease-out; }
 .qp-cloud span small { font-size: 11px; font-weight: 600; color: var(--qp-ink2); margin-left: 4px; vertical-align: middle; }
 /* histogramme d'échelle ou de nombres */
-.qp-hist { display: flex; align-items: flex-end; justify-content: center; gap: 6px; height: 140px; margin: 16px auto 0; max-width: 760px; }
-.qp-hist > div { flex: 1; max-width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; }
-.qp-hist i { display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--qp-accent); opacity: .75; min-height: 3px; }
+.qp-hist { display: flex; align-items: flex-end; justify-content: center; gap: 6px; height: clamp(140px, 22vh, 210px); margin: 24px auto 0; max-width: 760px; }
+/* même principe que .qp-bar : place réservée pour le nombre (haut) et la valeur (bas) */
+.qp-hist > div { flex: 1; max-width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; position: relative; padding: 24px 0 22px; }
+.qp-hist i { flex: none; display: block; width: 100%; border-radius: 4px 4px 0 0; background: var(--qp-accent); opacity: .75; min-height: 3px; }
 .qp-hist > div.ok i { opacity: 1; background: var(--qp-ok); }
-.qp-hist b { position: absolute; top: -22px; font-size: 14px; font-variant-numeric: tabular-nums; }
-.qp-hist small { margin-top: 5px; font-size: 12px; color: var(--qp-ink2); }
+.qp-hist b { order: -1; flex: none; margin-bottom: 4px; font-size: 14px; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.qp-hist small { position: absolute; bottom: 0; left: 0; right: 0; text-align: center; font-size: 13px; line-height: 18px; color: var(--qp-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* petite fenêtre (vidéoprojecteur en 1280 × 720) : graphiques plus bas */
+@media (max-height: 760px) {
+  .qp-bars { height: 190px; }
+  .qp-hist { height: 140px; }
+}
 
 /* ---- fin ---- */
 .qp-end { text-align: center; max-width: 900px; margin: 10px auto 0; width: 100%; }
@@ -596,7 +613,7 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 .qp-hemi.mini { max-width: 330px; margin: 0; }
 .qp-page .qp-hemi { max-width: 100%; }
 .qp-hemi.mini .qp-hleg { gap: 5px; margin-top: 6px; } .qp-hemi.mini .qp-hl { font-size: 12px; padding: 4px 9px 6px; box-shadow: none; } .qp-hemi.mini .qp-hverdict { font-size: 12px; margin-top: 6px; }
-.qp-reveal.vote .qp-rleft .qp-hemi { margin-top: 0; }
+.qp-reveal.vote .qp-rleft .qp-hemi { margin-top: 22px; max-width: min(640px, max(300px, calc((100vh - 420px) * 1.7))); }
 .qp-device.small { padding: 12px 0 0; font-size: 15px; }
 .qp-voteopts .qp-opt { min-height: clamp(56px, 8vh, 96px); }
 .qp-page .qp-hemi { margin-top: 0; }
@@ -705,6 +722,7 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 .qz-play-scope[data-qth="papier"]::after { inset: 5px; }
 [data-qth="papier"] .qp-q { font-weight: 700; font-size: clamp(24px, 3.4vw, 42px); letter-spacing: -.005em; line-height: 1.15; }
 [data-qth="papier"] .qp-q.big { font-size: clamp(30px, 4.4vw, 56px); }
+[data-qth="papier"] .qp-reveal .qp-q { font-size: clamp(20px, 2.6vw, 32px); }
 [data-qth="papier"] .qp-q::after { content: ""; display: block; width: 72px; height: 3px; margin: .45em auto 0; background: var(--qp-accent); }
 [data-qth="papier"] .qp-opt { border-width: 1px !important; border-color: rgba(28, 26, 22, .28) !important; font-weight: 500 !important; }
 [data-qth="papier"] .qp-opt::before { width: 0 !important; }
@@ -925,3 +943,12 @@ html[data-theme="dark"] #view-quiz { --qz-p: #e0a23c; --qz-i: #9aa3b2; --qz-sh: 
 .qz-qdetail.qz-hmini { --qp-bg: var(--surface); --qp-surface: var(--paper); --qp-border: var(--border); --qp-ink: var(--ink); --qp-ink2: var(--ink-2); --qp-accent: var(--tint); --qp-font: var(--font-ui); background: transparent; display: block; }
 /* l'aperçu se redessine pendant la frappe : pas d'animations d'apparition (elles clignoteraient) */
 #view-quiz .qz-pv :is(.qp-opt, .qp-q, .qp-ctext, .qp-hole, .qp-seat circle), .qz-look .qz-lprev :is(.qp-opt, .qp-q) { animation: none !important; }
+/* résultats : export Excel (principal, teinte d'Alixo) à côté du CSV (discret, styles.css) */
+.qz-rxls { height: 26px; padding: 0 10px 0 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
+  color: color-mix(in srgb, var(--tint) 80%, var(--ink)); background: color-mix(in srgb, var(--tint) 11%, transparent); }
+html[data-theme="dark"] .qz-rxls { color: color-mix(in srgb, var(--tint) 55%, #fff); background: color-mix(in srgb, var(--tint) 22%, transparent); }
+html[data-theme="dark"] .qz-rxls:hover { background: color-mix(in srgb, var(--tint) 32%, transparent); }
+.qz-rxls:hover { background: color-mix(in srgb, var(--tint) 18%, transparent); }
+.qz-rxls:focus-visible, .qz-rcsv:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.qz-rxls svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.qz-rxls.busy { opacity: .6; cursor: progress; }

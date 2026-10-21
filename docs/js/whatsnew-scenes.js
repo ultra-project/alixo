@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.41.1 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.42.0 (ou nouveautes.html?v=1.37.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.42.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Plus <em>sobre</em>, plus pratique', text: 'Des Paramètres redessinés, l’export Excel des résultats de quiz et une barre d’outils centrée.', dur: 5000 },
+    { title: 'Des Paramètres <em>redessinés</em>', text: 'Plus sobres et plus lisibles, en thème clair comme en sombre.',
+      bullets: ['<b>Interrupteurs</b> à la place des grandes cases', '<b>Surfaces plates</b> et fins séparateurs', '<b>Alixo+</b> : un badge et un bouton unis'],
+      art: 'palette', accent: '#3d6bb5', accent2: '#8a4b9c', dur: 7500 },
+    { title: 'Les résultats en <em>Excel</em>', text: 'Fenêtre Résultats d’un quiz, bouton « Excel » : un classeur déjà mis en forme.',
+      bullets: ['<b>Aux couleurs d’Alixo</b> : logo, en-tête, lignes alternées', '<b>Deux feuilles</b> : Participants et Par question', '<b>Filtres</b> et en-tête figé, prêts à l’emploi', '<b>CSV</b> toujours là, protégé des formules piégées'],
+      art: { svg: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><path d="M3 14h18"/><path d="M9 4v16"/></svg>' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 8500 },
+    { title: 'Tout à <em>portée</em> de main', text: 'Des raccourcis bien rangés, une barre d’outils centrée, une déconnexion facile à trouver.',
+      bullets: ['<b>Raccourcis</b> par catégorie : Paramètres › À propos', '<b>Barre d’outils</b> centrée sur grand écran', '<b>Se déconnecter</b> : en bas de la colonne des Paramètres'],
+      art: 'cards', accent: '#b3762a', accent2: '#3d6bb5', dur: 8000 },
+    { kicker: 'Corrections', title: 'Deux <em>corrections</em>', text: 'De petits défauts d’affichage en moins.',
+      bullets: ['<b>Quiz en présentation</b> : le graphique ne cache plus la question', '<b>Présentation des nouveautés</b> : le logo au-dessus de la version'],
+      art: 'list', accent: '#c04343', accent2: '#33658a', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.41.1', {
   scenes: [
@@ -49,25 +68,6 @@ AlixoWhatsNew.register('1.41.0', {
     { title: 'Plus de <em>place</em> à l’écran', text: 'Comme dans Word, la barre de titre disparaît ; Réduire, Agrandir et Fermer restent.',
       bullets: ['<b>Déplacer</b> : saisir la barre d’Alixo', '<b>Télécharger</b> : plus de format surligné', '<b>Fichier Alixo</b> avec l’icône de son type'],
       art: 'cards', accent: '#33658a', accent2: '#c04343', dur: 7000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.40.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Plus <em>vite</em>, au quotidien', text: 'Photos depuis le téléphone, articles de loi en un geste, et des petits gains de temps partout.', dur: 5000 },
-    { title: 'La photo du <em>téléphone</em>, dans la séance', text: 'Scannez le QR code, prenez la photo : elle apparaît aussitôt dans votre document.',
-      bullets: ['<b>Bouton téléphone</b> de la barre d’outils, ou « / » › Photo depuis le téléphone', '<b>Prendre une photo</b> ou choisir dans la galerie, sans application', '<b>À l’endroit du curseur</b>, puis à la suite des précédentes'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 9.5h1.2l.8-1.2h2l.8 1.2h1.2v4.5h-6Z"/><circle cx="12" cy="11.6" r="1.1"/></svg>' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8500 },
-    { title: 'Les articles de loi, en <em>un geste</em>', text: 'Tapez « art. 1240 c. civ. » puis une espace : le lien Légifrance se crée tout seul.',
-      bullets: ['<b>Noms complets</b>, articles L. / R., alinéas, plusieurs articles d’un coup', '<b>Bouton §</b> : le dernier code est retenu, tapez juste le numéro', '<b>Récents</b> réinsérés d’un clic ; 25 codes et textes reconnus'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v18M7 21h10M5 7h14"/><path d="m5 7-3 7a3 3 0 0 0 6 0Z"/><path d="m19 7-3 7a3 3 0 0 0 6 0Z"/></svg>' }, accent: '#b3762a', accent2: '#8a4b9c', dur: 8500 },
-    { title: 'Police <em>11</em> et enregistrement en icône', text: 'Le texte des séances passe en police 11, comme dans Word ; la barre d’outils compte en points.',
-      bullets: ['<b>Orange qui tourne</b> : enregistrement en cours', '<b>Nuage vert coché</b> : c’est enregistré', '<b>L’heure</b> reste dans l’infobulle'],
-      art: 'text', accent: '#2e8b6a', accent2: '#f08a24', dur: 7500 },
-    { title: 'Télécharger et <em>renommer</em> plus vite', text: 'La même petite fenêtre partout, et les onglets se renomment sur place.',
-      bullets: ['<b>Ordre fixe</b> : fichier Alixo, PDF, Word, page web', '<b>Tableurs, planches, quiz</b> : un seul bouton Télécharger', '<b>Double-clic</b> sur un onglet, une feuille : renommer'],
-      art: 'list', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

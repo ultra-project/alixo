@@ -44,6 +44,7 @@ window.AlixoQuiz = (() => {
     image: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 9"/></svg>',
     sound: '<svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>',
     mute: '<svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>',
+    xls: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18M9 4v16"/></svg>',
     csv: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>'
   };
   /* icônes des nouveaux types (palette, en-tête de l'éditeur) */
@@ -183,7 +184,7 @@ window.AlixoQuiz = (() => {
       ${readOnly ? '' : `<button data-qz="look" title="Apparence : thème ou couleurs personnalisées, musique de fond, sons"><span class="qz-swatch" style="background:${th.bg};border-color:${th.accent}"><i style="background:${th.accent}"></i></span><span class="bd-lbl">Apparence</span></button><span class="bd-sep"></span>`}
       <button data-qz="test" class="qz-primary" title="Jouer le quiz sur cet appareil (F5) : chronomètre, points, résultat enregistré">${I.play}<span class="bd-lbl">Tester</span></button>
       <button data-qz="live" class="qz-live" title="Présenter en direct : code et QR code à l'écran, les participants répondent sur leur téléphone (alixoapp.com/quiz)">${I.cast}<span class="bd-lbl">Présenter en direct</span></button>
-      <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
+      <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
       <span class="bd-sep"></span>
       <button data-qz="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (questions et réponses) (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
     </div>`;
@@ -980,8 +981,10 @@ window.AlixoQuiz = (() => {
     const pct = c => (st.n ? Math.round(c / st.n * 100) : 0);
     if (q.t === 'vote') return C.hemicycleHTML(live.pub, st.counts || {}, { final: true, anim: false });
     if (q.t === 'cloze' && st.holes) return clozeStatsHTML(st);
-    if ((q.t === 'mcq' || q.t === 'poll') && st.counts) return `<div class="qp-bars">${(live.pub.opts || []).map((o, i) => { const c = st.counts[o.id] || 0; const ok = q.t === 'mcq' && (q.ans || []).includes(o.id); return `<div class="qp-bar${ok ? ' ok' : ''}" style="--oc:var(--qp-c${i % 6})"><span class="qp-bfill" style="height:${st.n ? Math.max(3, pct(c)) : 3}%"></span><b>${c}<small>${pct(c)} %</small></b><span class="qp-bsh">${C.letter(i)}</span></div>`; }).join('')}</div>`;
-    if (q.t === 'tf' && st.counts) return `<div class="qp-bars n2">${[['true', 'V', 'var(--qp-c2)'], ['false', 'F', 'var(--qp-c1)']].map(([k, l, c]) => `<div class="qp-bar${String(q.ans) === k ? ' ok' : ''}" style="--oc:${c}"><span class="qp-bfill" style="height:${st.n ? Math.max(3, pct(st.counts[k] || 0)) : 3}%"></span><b>${st.counts[k] || 0}<small>${pct(st.counts[k] || 0)} %</small></b><span class="qp-bsh">${l}</span></div>`).join('')}</div>`;
+    /* hauteur des barres rapportée à la plus haute (le pourcentage affiché reste celui du total) */
+    const hOf = (c, mx) => (st.n && mx ? Math.max(3, Math.round(c / mx * 100)) : 3);
+    if ((q.t === 'mcq' || q.t === 'poll') && st.counts) { const mx = Math.max(1, ...(live.pub.opts || []).map(o => st.counts[o.id] || 0)); return `<div class="qp-bars">${(live.pub.opts || []).map((o, i) => { const c = st.counts[o.id] || 0; const ok = q.t === 'mcq' && (q.ans || []).includes(o.id); return `<div class="qp-bar${ok ? ' ok' : ''}" style="--oc:var(--qp-c${i % 6})"><span class="qp-bfill" style="height:${hOf(c, mx)}%"></span><b>${c}<small>${pct(c)} %</small></b><span class="qp-bsh">${C.letter(i)}</span></div>`; }).join('')}</div>`; }
+    if (q.t === 'tf' && st.counts) { const mx = Math.max(1, st.counts.true || 0, st.counts.false || 0); return `<div class="qp-bars n2">${[['true', 'V', 'var(--qp-c2)'], ['false', 'F', 'var(--qp-c1)']].map(([k, l, c]) => `<div class="qp-bar${String(q.ans) === k ? ' ok' : ''}" style="--oc:${c}"><span class="qp-bfill" style="height:${hOf(st.counts[k] || 0, mx)}%"></span><b>${st.counts[k] || 0}<small>${pct(st.counts[k] || 0)} %</small></b><span class="qp-bsh">${l}</span></div>`).join('')}</div>`; }
     if (q.t === 'order' || q.t === 'match') return `<div class="qp-stat">${st.ok || 0} sur ${st.n} ont trouvé<small>${pct(st.ok || 0)} % de réussite</small></div>`;
     if (q.t === 'slider' || q.t === 'numeric' || q.t === 'scale') {
       const entries = Object.entries(st.counts || {}).map(([v, c]) => [+v, c]).sort((a, b) => a[0] - b[0]);
@@ -1060,7 +1063,7 @@ window.AlixoQuiz = (() => {
   }
 
   /* ============================================================
-     Résultats enregistrés : scores, statistiques par question et par participant, export CSV
+     Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV
      ============================================================ */
   const median = arr => { if (!arr.length) return 0; const s = arr.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
   function liveResultHTML(dd, r) {
@@ -1092,42 +1095,106 @@ window.AlixoQuiz = (() => {
     return `<div class="qz-kpis"><div class="qz-kpi"><b>${fmtPts(r.score)}</b><small>points</small></div><div class="qz-kpi"><b>${r.ok} / ${r.n}</b><small>bonnes réponses</small></div><div class="qz-kpi"><b>${r.n ? Math.round(r.ok / r.n * 100) : 0} %</b><small>réussite</small></div><div class="qz-kpi"><b>${fmtSec(r.meanEl)}</b><small>temps moyen</small></div></div>
       <div class="qz-rans">${qs.map((q, i) => { const a = r.answers && r.answers[q.id]; if (!a) return ''; const un = !C.isScored(q); return `<span class="${un ? '' : a.ok ? 'ok' : 'ko'}" title="${esc(qText(q))}">${i + 1}. ${q.t === 'info' ? 'page' : esc(C.answerText(Object.assign({}, q, { rkey: null }), a.v))}${a.el ? ` <small>${fmtSec(a.el)}</small>` : ''}</span>`; }).join('')}</div>`;
   }
-  function csvOf(dd, r) {
-    const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
-    const lines = [];
+  /* tableaux de résultats, valeurs typées : servent au CSV (csvOf) et au classeur Excel (xlsxOf).
+     Colonnes : label (CSV), xlabel (Excel, si l'unité est portée par le format), type 'text'|'int'|'pct'|'sec'|'num'.
+     'pct' = fraction (0,75), 'sec' = secondes ; une cellule peut être { v, s: 'ok'|'ko'|'bold' } (mise en forme Excel). */
+  function resultTables(dd, r) {
+    const sec = ms => ms != null && Number.isFinite(+ms) ? +ms / 1000 : '';
+    const T = [];
     if (r.mode === 'live') {
-      lines.push(['Rang', 'Pseudo', 'Score', 'Bonnes réponses', 'Réponses', 'Temps moyen (s)'].map(q).join(';'));
-      for (const p of (r.players || [])) lines.push([p.rank, p.name, p.score, p.ok ?? '', p.answered ?? '', p.meanEl != null ? (p.meanEl / 1000).toFixed(1).replace('.', ',') : ''].map(q).join(';'));
+      const players = r.players || [];
+      const best = players.length ? Math.max(...players.map(p => +p.score || 0)) : 0;
+      const POD = { 1: 'gold', 2: 'silver', 3: 'bronze' };
+      T.push({ name: 'Participants', note: players.length ? `Classement final · meilleur score : ${fmtPts(best)} pts` : 'Classement final', dataBar: 2,
+        columns: [{ label: 'Rang', type: 'int', width: 8 }, { label: 'Pseudo', type: 'text', width: 28 }, { label: 'Score', type: 'int', width: 14 }, { label: 'Bonnes réponses', type: 'int', width: 17 }, { label: 'Réponses', type: 'int', width: 12 }, { label: 'Temps moyen (s)', xlabel: 'Temps moyen', type: 'sec', width: 15 }],
+        rows: players.map(p => [POD[+p.rank] ? { v: p.rank, s: POD[+p.rank] } : p.rank, p.name, p.score, p.ok ?? '', p.answered ?? '', sec(p.meanEl)]) });
       if (Array.isArray(r.qstats) && r.qstats.length) {
-        lines.push('', ['N°', 'Question', 'Type', 'Réponses', 'Bonnes', 'Réussite (%)', 'Temps moyen (s)'].map(q).join(';'));
+        const rows = [], rowStyles = [];
         r.qstats.forEach((s, i) => {
-          lines.push([i + 1, s.text, C.TYPES[s.t] ? C.TYPES[s.t].name : s.t, s.n, s.ok, s.t === 'cloze' && s.frac != null ? Math.round(s.frac * 100) : s.n && C.isScored({ t: s.t }) ? Math.round(s.ok / s.n * 100) : '', s.meanEl != null ? (s.meanEl / 1000).toFixed(1).replace('.', ',') : ''].map(q).join(';'));
-          if (s.t === 'cloze' && Array.isArray(s.holes)) s.holes.forEach((h, k) => lines.push(['', `Trou ${k + 1} : ${h.ans}`, '', h.n, h.ok, h.n ? Math.round(h.ok / h.n * 100) : '', ''].map(q).join(';')));
-          if (s.t === 'vote' && s.counts) (s.opts || []).forEach(o => lines.push(['', `Vote : ${o.text}`, '', s.counts[o.id] || 0, '', s.n ? Math.round((s.counts[o.id] || 0) / s.n * 100) : '', ''].map(q).join(';')));
+          const scored = C.isScored({ t: s.t });   // vote, sondage, avis : ni « bonnes » ni réussite
+          rows.push([i + 1, s.text, C.TYPES[s.t] ? C.TYPES[s.t].name : s.t, s.n, scored ? s.ok : '', s.t === 'cloze' && s.frac != null ? +s.frac : s.n && scored ? (s.ok || 0) / s.n : '', sec(s.meanEl)]); rowStyles.push(null);
+          if (s.t === 'cloze' && Array.isArray(s.holes)) s.holes.forEach((h, k) => { rows.push(['', `Trou ${k + 1} : ${h.ans}`, '', h.n, h.ok, h.n ? h.ok / h.n : '', '']); rowStyles.push('sub'); });
+          if (s.t === 'vote' && s.counts) (s.opts || []).forEach(o => { const c = s.counts[o.id] || 0; rows.push(['', `Vote : ${o.text}${s.n ? ` (${Math.round(c / s.n * 100)}\u00a0%)` : ''}`, '', c, '', '', '']); rowStyles.push('sub'); });
         });
+        T.push({ name: 'Par question', note: 'Réussite par question (sous-lignes : détail des trous et des votes)', dataBar: 5, rows, rowStyles,
+          columns: [{ label: 'N°', type: 'int', width: 8 }, { label: 'Question', type: 'text', width: 52, wrap: true }, { label: 'Type', type: 'text', width: 18 }, { label: 'Réponses', type: 'int', width: 12 }, { label: 'Bonnes', type: 'int', width: 11 }, { label: 'Réussite (%)', xlabel: 'Réussite', type: 'pct', width: 13 }, { label: 'Temps moyen (s)', xlabel: 'Temps moyen', type: 'sec', width: 15 }] });
       }
     } else {
-      lines.push(['N°', 'Question', 'Réponse', 'Juste', 'Points', 'Temps (s)'].map(q).join(';'));
-      qsOf(dd).forEach((x, i) => { const a = r.answers && r.answers[x.id]; if (a) lines.push([i + 1, qText(x), C.answerText(Object.assign({}, x, { rkey: null }), a.v), a.ok ? 'oui' : (C.isScored(x) ? 'non' : ''), a.pts, a.el != null ? (a.el / 1000).toFixed(1).replace('.', ',') : ''].map(q).join(';')); });
+      const rows = [];
+      qsOf(dd).forEach((q, i) => { const a = r.answers && r.answers[q.id]; if (a) { const sc = C.isScored(q); rows.push([i + 1, qText(q), C.answerText(Object.assign({}, q, { rkey: null }), a.v), a.ok ? { v: 'oui', s: 'ok' } : (sc ? { v: 'non', s: 'ko' } : ''), sc ? a.pts : '', sec(a.el)]); } });
+      T.push({ name: 'Réponses', note: `${fmtPts(r.score)} points · ${r.ok} / ${r.n} bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''}`, rows,
+        columns: [{ label: 'N°', type: 'int', width: 8 }, { label: 'Question', type: 'text', width: 48, wrap: true }, { label: 'Réponse', type: 'text', width: 34, wrap: true }, { label: 'Juste', type: 'text', width: 9, align: 'center' }, { label: 'Points', type: 'int', width: 11 }, { label: 'Temps (s)', xlabel: 'Temps', type: 'sec', width: 12 }] });
     }
-    return '﻿' + lines.join('\r\n');
+    return T;
   }
+  /* CSV (séparateur ;, BOM UTF-8) : les cellules texte commençant par = + - @ (y compris après des espaces, et leurs variantes
+     pleine chasse), ou par une tabulation ou un retour, sont préfixées
+     d'une apostrophe pour qu'un tableur ne les exécute pas comme formules (pseudos et questions sont saisis par des tiers) */
+  function csvOf(dd, r) {
+    const q = s => '"' + String(s ?? '').replace(/"/g, '""') + '"';
+    const val = (v, c) => {
+      if (v && typeof v === 'object') v = v.v;
+      if (v == null || v === '') return '';
+      if (c.type === 'sec' && typeof v === 'number') return v.toFixed(1).replace('.', ',');
+      if (c.type === 'pct' && typeof v === 'number') return Math.round(v * 100);
+      if (typeof v === 'string' && (/^[\s\u00a0\u3000]*[=+\-@\uff1d\uff0b\uff0d\uff20]/.test(v) || /^[\t\r\n]/.test(v))) return "'" + v;
+      return v;
+    };
+    return '﻿' + resultTables(dd, r).map(t => [t.columns.map(c => q(c.label)).join(';')].concat(t.rows.map(row => t.columns.map((c, i) => q(val(row[i], c))).join(';'))).join('\r\n')).join('\r\n\r\n');
+  }
+  async function xlsxOf(dd, r) {
+    if (!window.AlixoXlsx) throw new Error('module Excel indisponible');
+    const when = new Date(r.at).toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const np = (r.players || []).length, nq = r.questions || r.n || 0;
+    const sub = r.mode === 'live'
+      ? `Quiz — Résultats en direct · ${when} · ${np} participant${np > 1 ? 's' : ''} · ${nq} question${nq > 1 ? 's' : ''}`
+      : `Quiz — Résultats du test · ${when}`;
+    const title = dd.titre || 'Quiz';
+    const logo = await AlixoXlsx.loadLogo('logo.png').catch(() => null);
+    return AlixoXlsx.build({ title: title + ' — résultats', subtitle: sub, logo,
+      sheets: resultTables(dd, r).map(t => Object.assign({}, t, { title, subtitle: sub, columns: t.columns.map(c => Object.assign({}, c, { label: c.xlabel || c.label })) })) });
+  }
+  /* enregistrement commun : boîte « Enregistrer » d'Electron (+ « Ouvrir »), sinon téléchargement du navigateur */
+  async function saveBytes(name, bytes, mime, filters, label) {
+    const desk = window.alixoDesktop;
+    if (desk && desk.saveFile) {
+      const res = await desk.saveFile({ name, data: bytes, filters });
+      if (res && res.ok) toast(`${label} enregistré : ${res.path.split(/[\\/]/).pop()}`, { action: 'Ouvrir', onAction: () => desk.openPath && desk.openPath(res.path) });
+      else if (res && res.error) toast('Enregistrement impossible : ' + res.error);
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([bytes], { type: mime }));
+    const a = document.createElement('a'); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+  /* titre coupé à 80 caractères AVANT le suffixe : la date et l'extension restent toujours présentes */
+  const resultFileName = (dd, r) => safeFileName(String(dd.titre || 'Quiz').trim().slice(0, 80).trim() + ' - résultats ' + new Date(r.at).toLocaleDateString('fr-FR').replace(/\//g, '-'));
   function downloadCSV(dd, r) {
-    const name = safeFileName((dd.titre || 'Quiz') + ' - résultats ' + new Date(r.at).toLocaleDateString('fr-FR').replace(/\//g, '-')) + '.csv';
-    const blob = new Blob([csvOf(dd, r)], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    return saveBytes(resultFileName(dd, r) + '.csv', new TextEncoder().encode(csvOf(dd, r)), 'text/csv;charset=utf-8', [{ name: 'CSV', extensions: ['csv'] }], 'CSV');
+  }
+  let xlsxBusy = false;
+  async function downloadXLSX(dd, r, btn) {
+    if (xlsxBusy) return;
+    xlsxBusy = true;
+    const label = btn ? btn.innerHTML : '';
+    if (btn) { btn.disabled = true; btn.classList.add('busy'); btn.setAttribute('aria-busy', 'true'); btn.innerHTML = `${I.xls}Création…`; }
+    try {
+      const bytes = await xlsxOf(dd, r);
+      await saveBytes(resultFileName(dd, r) + '.xlsx', bytes, window.AlixoXlsx.MIME, [{ name: 'Classeur Excel', extensions: ['xlsx'] }], 'Classeur Excel');
+    } catch (e) { console.error('Export Excel des résultats :', e); toast('Impossible de créer le classeur Excel. Réessayez ou utilisez l’export CSV.'); }
+    finally { xlsxBusy = false; if (btn) { btn.disabled = false; btn.classList.remove('busy'); btn.removeAttribute('aria-busy'); btn.innerHTML = label; } }
   }
   function openResults() {
     const dd = d(); if (!dd) return;
     const rs = resOf(dd).slice().sort((a, b) => b.at - a.at);
     const when = ts => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const body = rs.length ? `<div class="qz-results">${rs.map((r, i) => `<div class="qz-res${i === 0 ? ' open' : ''}" data-res="${r.id}"><div class="qz-rhead" data-toggle>${r.mode === 'live' ? `<b>En direct</b> · ${when(r.at)} · ${(r.players || []).length} participant${(r.players || []).length > 1 ? 's' : ''} · ${r.questions || r.n} question${(r.questions || r.n) > 1 ? 's' : ''}` : `<b>Test</b> · ${when(r.at)} · <b>${fmtPts(r.score)} pts</b> · ${r.ok} / ${r.n} bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''}`}<span class="qz-ract"><button type="button" class="qz-rcsv" data-rcsv title="Télécharger en CSV (tableur)">${I.csv}CSV</button>${readOnly ? '' : `<button type="button" class="qz-rdel" data-rdel title="Supprimer">${I.trash}</button>`}</span></div><div class="qz-rbody">${r.mode === 'live' ? liveResultHTML(dd, r) : testResultHTML(dd, r)}</div></div>`).join('')}</div>`
+    const body = rs.length ? `<div class="qz-results">${rs.map((r, i) => `<div class="qz-res${i === 0 ? ' open' : ''}" data-res="${r.id}"><div class="qz-rhead" data-toggle>${r.mode === 'live' ? `<b>En direct</b> · ${when(r.at)} · ${(r.players || []).length} participant${(r.players || []).length > 1 ? 's' : ''} · ${r.questions || r.n} question${(r.questions || r.n) > 1 ? 's' : ''}` : `<b>Test</b> · ${when(r.at)} · <b>${fmtPts(r.score)} pts</b> · ${r.ok} / ${r.n} bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''}`}<span class="qz-ract"><button type="button" class="qz-rxls" data-rxls title="Télécharger le classeur Excel (.xlsx) mis en forme">${I.xls}Excel</button><button type="button" class="qz-rcsv" data-rcsv title="Télécharger en CSV (texte brut, pour tout tableur)">${I.csv}CSV</button>${readOnly ? '' : `<button type="button" class="qz-rdel" data-rdel title="Supprimer">${I.trash}</button>`}</span></div><div class="qz-rbody">${r.mode === 'live' ? liveResultHTML(dd, r) : testResultHTML(dd, r)}</div></div>`).join('')}</div>`
       : `<div class="qz-lempty" style="padding:30px 10px; text-align:center">Aucun résultat pour l’instant : <b>Tester</b> joue le quiz sur cet appareil, <b>Présenter en direct</b> le fait jouer à un groupe. Les scores et statistiques s’enregistrent ici.</div>`;
     openDialog({ id: 'qz-resdlg', cls: 'wide', eyebrow: 'Quiz', title: 'Résultats', sub: esc(dd.titre || 'Sans titre'), body, onMount: card => {
       card.addEventListener('click', e => {
         const box = e.target.closest('.qz-res'); if (!box) return;
         const r = resOf(dd).find(x => x.id === box.dataset.res); if (!r) return;
+        if (e.target.closest('[data-rxls]')) { downloadXLSX(dd, r, e.target.closest('[data-rxls]')); return; }
         if (e.target.closest('[data-rcsv]')) { downloadCSV(dd, r); return; }
         if (e.target.closest('[data-rdel]')) {
           if (readOnly) return;

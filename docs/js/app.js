@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.41.1';
+const ALIXO_VERSION = '1.42.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -2120,7 +2120,6 @@ function accountSectionHTML() {
           </div>
           <div class="acc-btns">
             <button id="po-editprofil" class="cta ghost small" type="button">Modifier mon profil</button>
-            <button id="po-logout" class="cta ghost small" type="button">Se déconnecter</button>
           </div>
         </div>
         <div class="acc-facts">
@@ -2627,7 +2626,8 @@ const SET_ICO = {
   apropos: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
   plus: PLUS_ICO.star,
   widgets: PLUS_ICO.widgets,
-  business: '<svg viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 8h2M7 12h2M7 16h2M17 13h1M17 17h1"/></svg>'
+  business: '<svg viewBox="0 0 24 24"><path d="M4 21V5a1 1 0 0 1 1-1h8a1 1 0 0 1 1 1v16"/><path d="M14 9h5a1 1 0 0 1 1 1v11"/><path d="M2 21h20"/><path d="M7 8h2M7 12h2M7 16h2M17 13h1M17 17h1"/></svg>',
+  logout: '<svg viewBox="0 0 24 24"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3"/><path d="M10 16l-4-4 4-4M6 12h10"/></svg>'
 };
 /* thèmes de l'application : base clair / sombre + jeux de couleurs (voir styles.css, html[data-skin]) */
 const APP_THEMES = [
@@ -2715,21 +2715,30 @@ const SET_CATS = [
   { k: 'compte', name: 'Compte', sub: 'Connexion, profil, stockage, pseudo Alixo Share' },
   { k: 'plus', name: 'Alixo+', sub: 'Votre formule, clé d’activation' },
   { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fond d’écran des documents' },
-  { k: 'ecriture', name: 'Écriture', sub: 'Raccourcis de frappe et remplacements automatiques' },
+  { k: 'ecriture', name: 'Écriture', sub: 'Police, plan du cours et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction orthographique et mise en forme par IA' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
   { k: 'business', name: 'Entreprise', sub: 'Alixo Business : votre entreprise, tableau de bord en ligne, messagerie' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
 ];
 let settingsCat = 'compte';
-const SHORTCUTS = [
-  ['Ctrl + K', 'Recherche universelle'], ['Ctrl + P', 'Exporter en PDF'], ['Ctrl + W', 'Fermer l’onglet'], ['Ctrl + Tab', 'Onglet suivant'],
-  ['Alt + ←', 'Retour à la bibliothèque'], ['Ctrl + Maj + A', 'Agenda'], ['Ctrl + Maj + K', 'Tâches'], ['Ctrl + Maj + D', 'Dictionnaire'],
-  ['Ctrl + Maj + T', 'Chronomètre'], ['/', 'Insérer un bloc (ligne vide)'], ['F7', 'Correction par IA'], ['F8', 'Quiz IA / fiche de révision'], ['Ctrl + molette, Ctrl + / −, Ctrl 0', 'Zoom du document (séance, présentation, tableur)'], ['Ctrl + Alt + 1…6', 'Niveau de titre (selon le plan)'],
-  ['F5', 'Présenter (présentation)'], ['Suppr', 'Supprimer le bloc sélectionné (présentation)'],
-  ['F2', 'Modifier la cellule (tableur)'], ['Ctrl + flèches', 'Bord de la zone remplie (tableur)'],
-  ['F5', 'Tester le quiz'], ['Ctrl + molette', 'Zoom (planche)'], ['Espace + glisser', 'Déplacer la vue (planche)'], ['Ctrl + D', 'Dupliquer la sélection (planche)'], ['N / T / F', 'Post-it, texte, flèche (planche)']
+/* 1.42 : raccourcis par catégorie — chaque raccourci = combinaisons alternatives, chaque combinaison = touches */
+const SHORTCUT_GROUPS = [
+  { name: 'Partout', keys: [
+    [[['Ctrl', 'K']], 'Recherche universelle'], [[['Ctrl', 'P']], 'Exporter en PDF'], [[['Ctrl', 'W']], 'Fermer l’onglet'], [[['Ctrl', 'Tab']], 'Onglet suivant'],
+    [[['Alt', '←']], 'Retour à la bibliothèque'], [[['Ctrl', 'Maj', 'A']], 'Agenda'], [[['Ctrl', 'Maj', 'K']], 'Tâches'], [[['Ctrl', 'Maj', 'D']], 'Dictionnaire'], [[['Ctrl', 'Maj', 'T']], 'Chronomètre']] },
+  { name: 'Séances', keys: [
+    [[['/']], 'Insérer un bloc (ligne vide)'], [[['F7']], 'Correction par IA'], [[['F8']], 'Quiz IA / fiche de révision'], [[['Ctrl', 'Alt', '1…6']], 'Niveau de titre (selon le plan)'],
+    [[['Ctrl', '~molette']], 'Zoom (aussi présentations, tableurs)'], [[['Ctrl', '+'], ['Ctrl', '−']], 'Zoom avant / arrière'], [[['Ctrl', '0']], 'Zoom à 100 %']] },
+  { name: 'Présentations', keys: [[[['F5']], 'Présenter'], [[['Suppr']], 'Supprimer le bloc sélectionné']] },
+  { name: 'Tableurs', keys: [[[['F2']], 'Modifier la cellule'], [[['Ctrl', '~flèches']], 'Bord de la zone remplie']] },
+  { name: 'Quiz', keys: [[[['F5']], 'Tester le quiz']] },
+  { name: 'Planches', keys: [
+    [[['Ctrl', '~molette']], 'Zoom'], [[['Espace', '~glisser']], 'Déplacer la vue'], [[['Ctrl', 'D']], 'Dupliquer la sélection'],
+    [[['N']], 'Post-it'], [[['T']], 'Texte'], [[['F']], 'Flèche']] }
 ];
+/* « ~ » devant un nom : geste (molette, glisser…), pas une touche — affiché sans cadre de touche */
+const keysHTML = alts => alts.map(combo => combo.map(k => (k[0] === '~' ? `<span class="k-gesture">${esc(k.slice(1))}</span>` : `<kbd>${esc(k)}</kbd>`)).join('<span class="k-plus">+</span>')).join('<span class="k-or">ou</span>');
 
 /* ---------------- Paramètres › Écriture › Plan du cours (1.24) : pyramide des niveaux ---------------- */
 function planRowsHTML(lv) {
@@ -2846,7 +2855,7 @@ function settingsSectionHTML(k) {
       <div class="set-tiles set-tiles4" id="set-theme">
         ${APP_THEMES.map(t => `<button type="button" class="set-tile ${theme === t.k ? 'on' : ''} ${themeLocked(t.k) ? 'locked' : ''}" data-theme="${t.k}"><span class="set-tile-prev set-skin ${t.k === 'auto' ? 'th-auto' : ''}" style="--p0:${t.c[0]};--p1:${t.c[1]};--p2:${t.c[2]};--p3:${t.c[3]}"><i></i><i></i><i></i><em></em></span><b>${t.name}${themeLocked(t.k) ? plusBadge() : ''}</b><span>${t.sub}</span></button>`).join('')}
       </div>${isPlus() ? '' : `<div class="po-hint">Clair, sombre et automatique sont gratuits ; les autres thèmes font partie d’<b>Alixo+</b> (Paramètres › Alixo+).</div>`}
-      <div class="set-checks" id="set-themebtn" style="margin-top:12px"><label><input type="checkbox" data-set="showThemeBtn" ${state.settings.showThemeBtn ? 'checked' : ''}><span><b>Bouton clair / sombre dans la barre du haut</b><small>Le soleil à droite de la barre, pour basculer d’un clic entre le thème clair et le thème sombre.</small></span></label></div></div>
+      <div class="set-checks" id="set-themebtn" style="margin-top:12px"><label><input type="checkbox" role="switch" data-set="showThemeBtn" ${state.settings.showThemeBtn ? 'checked' : ''}><span><b>Bouton clair / sombre dans la barre du haut</b><small>Le soleil à droite de la barre, pour basculer d’un clic entre le thème clair et le thème sombre.</small></span></label></div></div>
     <div class="set-sect"><div class="po-label">Affichage de la bibliothèque</div>
       <div class="set-tiles" id="set-view">
         ${[['grid', 'Grille', 'Cartes des dossiers et séances'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
@@ -2861,20 +2870,20 @@ function settingsSectionHTML(k) {
         <label class="set-inline">Titres <select id="set-fonthead">${[{ k: '', name: 'Comme le texte' }].concat(DOC_FONTS.slice(1)).map(f => `<option value="${f.k}" ${(state.settings.docFontHead || '') === f.k ? 'selected' : ''} ${f.k && fontLocked(f.k) ? 'disabled' : ''}>${esc(f.name)}${f.k && fontLocked(f.k) ? ' (Alixo+)' : ''}</option>`).join('')}</select></label>
         <label class="set-inline">Taille <select id="set-fontsize">${DOC_SIZES.map(([v, l]) => `<option value="${v}" ${(state.settings.docSize || 'm') === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
       </div>
-      <div class="set-checks" style="margin-top:12px"><label><input type="checkbox" id="set-pageview" ${state.settings.pageView !== false ? 'checked' : ''}><span><b>Feuille découpée en pages A4</b><small>Le cours s’affiche page par page, exactement comme dans le PDF (Ctrl+P) ; le bloc « Saut de page » du menu / force le passage à la page suivante. Décoché : une seule feuille continue.</small></span></label></div></div>
+      <div class="set-checks" style="margin-top:12px"><label><input type="checkbox" role="switch" id="set-pageview" ${state.settings.pageView !== false ? 'checked' : ''}><span><b>Feuille découpée en pages A4</b><small>Le cours s’affiche page par page, exactement comme dans le PDF (Ctrl+P) ; le bloc « Saut de page » du menu / force le passage à la page suivante. Décoché : une seule feuille continue.</small></span></label></div></div>
     <div class="set-sect"><div class="po-label">Mode du plan</div>
       <div class="po-hint" style="margin:0 0 10px">Pour toutes les séances ; chaque séance peut avoir le sien (bouton Niveau de plan de la barre d’outils › « Plan de cette séance… »).</div>
       ${planModeTilesHTML('set-planmode', planModeGlobal(), '')}</div>
     <div class="set-sect"><div class="po-label">Plan du cours</div>
       <div class="po-hint" style="margin:0 0 10px">Les niveaux de titres, du plus général (en haut de la pyramide) au plus fin. <b>Glissez un niveau</b> pour le monter ou le descendre (ou ▲ ▼), ajoutez-en (Chapitre, Titre, §…), choisissez sa numérotation. Les <b>mots déclencheurs</b> transforment une ligne qui commence par l’un d’eux en titre de ce niveau : avec « Chapitre » sur le niveau placé au-dessus de « Section », taper « Chapitre 1 : Le contrat » crée un chapitre — comme « I. », « A. », « 1. » et « a. » le font déjà. Tab / Maj+Tab change le niveau d’un titre ; Ctrl+Alt+1…6 le fixe.</div>
       <div id="set-plan" class="plan-pyr">${planRowsHTML()}</div>
-      <div class="po-row" style="gap:8px; margin-top:10px; flex-wrap:wrap"><button id="set-planadd" class="cta ghost small" type="button" ${planDepth() >= PLAN_MAX ? 'disabled' : ''}>＋ Ajouter un niveau</button><button id="set-planreset" class="cta ghost small" type="button">Plan par défaut (I. A. 1. a.)</button></div></div>
+      <div class="po-row" style="gap:8px; margin-top:10px; flex-wrap:wrap"><button id="set-planadd" class="cta ghost small" type="button" ${planDepth() >= PLAN_MAX ? 'disabled' : ''}>Ajouter un niveau</button><button id="set-planreset" class="cta ghost small" type="button">Plan par défaut (I. A. 1. a.)</button></div></div>
     <div class="set-sect"><div class="po-label">Fautes de frappe</div>
-      <div class="set-checks"><label><input type="checkbox" id="set-autotypo" ${state.settings.autoTypo !== false ? 'checked' : ''}><span><b>Corriger seul les fautes de frappe courantes</b><small>« qaund » → « quand », « aevc » → « avec », « etre » → « être », « contart » → « contrat »… dès que vous tapez un espace ou une ponctuation, sans Internet ni IA : liste de fautes courantes, lexique de 24 000 mots (lettres inversées, lettre doublée, accent oublié — jamais un mot ambigu) et mots appris des corrections précédentes. Retour arrière juste après garde le mot tel que vous l’avez tapé (et il n’est plus corrigé). Les textes dans une autre langue ne sont pas touchés.</small></span></label></div></div>
+      <div class="set-checks"><label><input type="checkbox" role="switch" id="set-autotypo" ${state.settings.autoTypo !== false ? 'checked' : ''}><span><b>Corriger seul les fautes de frappe courantes</b><small>« qaund » → « quand », « aevc » → « avec », « etre » → « être », « contart » → « contrat »… dès que vous tapez un espace ou une ponctuation, sans Internet ni IA : liste de fautes courantes, lexique de 24 000 mots (lettres inversées, lettre doublée, accent oublié — jamais un mot ambigu) et mots appris des corrections précédentes. Retour arrière juste après garde le mot tel que vous l’avez tapé (et il n’est plus corrigé). Les textes dans une autre langue ne sont pas touchés.</small></span></label></div></div>
     <div class="set-sect"><div class="po-label">Raccourcis de frappe</div>
       <div class="po-hint" style="margin:0 0 8px">Tape l’abréviation puis un espace : elle est remplacée par le texte complet (« tkt » → « t’inquiète »).</div>
       <div id="po-snips">${snippetRowsHTML()}</div>
-      <button id="po-snipadd" class="cta ghost small">＋ Ajouter un raccourci</button></div>
+      <button id="po-snipadd" class="cta ghost small">Ajouter un raccourci</button></div>
     <div class="set-sect"><div class="po-label">Remplacements automatiques</div>
       <div class="po-hint" style="margin:0">Les symboles « >= », « +/- », « -> » sont mis en forme pour tout le monde. Avec une spécialité Santé dans le profil, la notation médicale (Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L), les abréviations et les blocs Santé du menu « / » sont activés automatiquement${healthMode() ? ' <b>(actif)</b>' : ''}. Les blocs proposés dépendent des spécialités choisies : Compte › Modifier mon profil.</div></div>`;
   if (k === 'ia' && !isPlus()) return `<div class="set-sect"><div class="plus-lock">${PLUS_ICO.ia}<div><b>La correction, la mise en forme, les quiz et les fiches de révision par IA font partie d’Alixo+</b><span>Fautes d’orthographe et de grammaire, propositions d’encadrés et de titres, reformulations : pendant la frappe ou à la demande (✨ ou F7) ; quiz (QCM, vrai / faux, réponses courtes) et fiches de révision générés depuis vos séances, présentations et tableurs (F8), par AlixoAI, l’intelligence artificielle intégrée à Alixo : rien à installer, rien à configurer.</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div></div>`;
@@ -2887,12 +2896,12 @@ function settingsSectionHTML(k) {
   if (k === 'ia') { const o = aiOpt(); return `<div class="set-sect"><div class="po-label">AlixoAI — l’intelligence artificielle d’Alixo</div><div id="po-aisetup">${aiSetupHTML('settings')}</div></div>
     <div class="set-sect"><div class="po-label">Ce que l’IA propose</div>
       <div class="set-checks" id="set-ai">
-        <label><input type="checkbox" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Analyse automatique pendant la frappe</b><small>À chaque fin de phrase (point, Entrée), après une pause de frappe ou en quittant le paragraphe, les phrases nouvelles partent en une seule requête ; les propositions apparaissent sous le paragraphe, Tab pour accepter, Échap pour ignorer. Sinon, seulement à la demande (✨ ou F7).</small></span></label>
-        <label><input type="checkbox" data-ai="fix" ${o.fix ? 'checked' : ''}><span><b>Corriger l’orthographe et la grammaire</b><small>Accords, conjugaison, ponctuation… selon le niveau choisi ci-dessous.</small></span></label>
-        <label><input type="checkbox" data-ai="autofix" ${o.autofix ? 'checked' : ''}><span><b>Corriger seul les fautes de frappe et les fautes mineures (sans Tab)</b><small>Lettres inversées, lettre manquante ou doublée, accent oublié — repérées à l’espace ou plus tard par l’IA : quand la correction ne change qu’un mot d’une lettre, elle s’applique d’elle-même (le mot est surligné un instant, Ctrl+Z pour revenir) et le mot est appris : la prochaine fois, il est corrigé à l’espace, sans requête. Les autres fautes restent proposées sous le paragraphe, Tab pour accepter.</small></span></label>
-        <label><input type="checkbox" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors corrigé dans sa langue. Décoché : il est laissé tel quel. Dans tous les cas, un mot ou une citation en langue étrangère au milieu d’un texte français n’est jamais « corrigé ».</small></span></label>
-        <label><input type="checkbox" data-ai="style" ${o.style ? 'checked' : ''}><span><b>Proposer une mise en forme</b><small>Repère les définitions, titres, arrêts, exemples, points à retenir… et propose l’encadré ou le titre adapté.</small></span></label>
-        <label><input type="checkbox" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens (règle « Reformulation : … »).</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="auto" ${o.auto ? 'checked' : ''}><span><b>Analyse automatique pendant la frappe</b><small>À chaque fin de phrase (point, Entrée), après une pause de frappe ou en quittant le paragraphe, les phrases nouvelles partent en une seule requête ; les propositions apparaissent sous le paragraphe, Tab pour accepter, Échap pour ignorer. Sinon, seulement à la demande (✨ ou F7).</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="fix" ${o.fix ? 'checked' : ''}><span><b>Corriger l’orthographe et la grammaire</b><small>Accords, conjugaison, ponctuation… selon le niveau choisi ci-dessous.</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="autofix" ${o.autofix ? 'checked' : ''}><span><b>Corriger seul les fautes de frappe et les fautes mineures (sans Tab)</b><small>Lettres inversées, lettre manquante ou doublée, accent oublié — repérées à l’espace ou plus tard par l’IA : quand la correction ne change qu’un mot d’une lettre, elle s’applique d’elle-même (le mot est surligné un instant, Ctrl+Z pour revenir) et le mot est appris : la prochaine fois, il est corrigé à l’espace, sans requête. Les autres fautes restent proposées sous le paragraphe, Tab pour accepter.</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors corrigé dans sa langue. Décoché : il est laissé tel quel. Dans tous les cas, un mot ou une citation en langue étrangère au milieu d’un texte français n’est jamais « corrigé ».</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="style" ${o.style ? 'checked' : ''}><span><b>Proposer une mise en forme</b><small>Repère les définitions, titres, arrêts, exemples, points à retenir… et propose l’encadré ou le titre adapté.</small></span></label>
+        <label><input type="checkbox" role="switch" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens (règle « Reformulation : … »).</small></span></label>
       </div></div>
     <div class="set-sect"><div class="po-label">Niveau de correction</div>
       <div class="set-tiles" id="set-ailevel">${AI_LEVELS.map(([v, l, h]) => `<button type="button" class="set-tile ${o.level === v ? 'on' : ''}" data-level="${v}"><b>${l}</b><span>${h}</span></button>`).join('')}</div>
@@ -2902,14 +2911,14 @@ function settingsSectionHTML(k) {
       <div class="po-row" style="gap:8px; flex-wrap:wrap"><button class="cta ghost small" id="set-aiforget" type="button" title="Oublie les mots appris des corrections et les mots que vous avez demandé à ne plus corriger">Oublier les mots appris et ignorés</button><button class="cta ghost small" id="set-aicache" type="button" title="Les phrases déjà relues seront analysées à nouveau à la prochaine occasion">Vider la mémoire des phrases</button></div></div>`; }
   if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">${appName()} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
       <div class="po-row" style="gap:8px; margin-top:12px; flex-wrap:wrap">
-        <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION) ? '<button id="set-wn" class="cta ghost small" type="button">▶ Revoir la présentation</button>' : ''}
+        <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION) ? '<button id="set-wn" class="cta ghost small" type="button">Revoir la présentation</button>' : ''}
         ${desk && desk.checkUpdates ? '<button id="set-upd" class="cta ghost small" type="button">Rechercher les mises à jour</button>' : ''}
         <button id="set-other" class="cta ghost small" type="button">${IS_DESKTOP ? 'Ouvrir la version web' : (IS_MAC_BROWSER ? 'Télécharger pour Mac' : 'Télécharger pour Windows')}</button>
         ${IS_DESKTOP ? '' : `<button id="set-other2" class="cta ghost small" type="button">${IS_MAC_BROWSER ? 'Télécharger pour Windows' : 'Télécharger pour Mac'}</button>`}
       </div>
       <div class="po-hint">Version web et version PC sont la même application, mises à jour ensemble : vos cours sont partagés entre les deux dès que vous êtes connecté au même compte (Paramètres › Compte).</div></div>
-    <div class="set-sect"><div class="po-label">Raccourcis clavier</div>
-      <div class="set-keys">${SHORTCUTS.map(([a, b]) => `<div><kbd>${esc(a)}</kbd><span>${esc(b)}</span></div>`).join('')}</div></div>`;
+    <div class="set-sect set-shortcuts"><div class="po-label">Raccourcis clavier</div>
+      <div class="set-kgroups">${SHORTCUT_GROUPS.map(g => `<div class="set-kgroup"><div class="set-ktitle">${esc(g.name)}</div>${g.keys.map(([alts, label]) => `<div class="set-krow"><span>${esc(label)}</span><span class="set-kkeys">${keysHTML(alts)}</span></div>`).join('')}</div>`).join('')}</div></div>`;
   return '';
 }
 
@@ -2922,8 +2931,6 @@ function bindSettingsSection(k, root) {
     if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
     const wk = root.querySelector('#po-weekly');
     if (wk) wk.addEventListener('click', () => { closeSettings(); if (window.AlixoStats) AlixoStats.open(true); });
-    const logout = root.querySelector('#po-logout');
-    if (logout) logout.addEventListener('click', () => { closeSettings(); window.AlixoAuth.signOut(); });
     const pseudoOk = root.querySelector('#po-pseudo-ok');
     if (pseudoOk) { const go = () => { if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPseudo(root.querySelector('#po-pseudo').value); else toast('Connexion requise'); }; pseudoOk.addEventListener('click', go); root.querySelector('#po-pseudo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } }); }
     const editProfil = root.querySelector('#po-editprofil');
@@ -3027,13 +3034,17 @@ function bindSettingsSection(k, root) {
 function renderSettingsBody() {
   const ov = $('#setov'); if (!ov) return;
   const cat = SET_CATS.find(c => c.k === settingsCat) || SET_CATS[0];
-  ov.querySelectorAll('.set-navbtn').forEach(b => b.classList.toggle('on', b.dataset.cat === cat.k));
+  ov.querySelectorAll('.set-navbtn').forEach(b => { const on = b.dataset.cat === cat.k; b.classList.toggle('on', on); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   ov.querySelector('.set-htitle').textContent = cat.name;
   ov.querySelector('.set-hsub').textContent = cat.sub;
   const body = ov.querySelector('#set-body');
   body.innerHTML = settingsSectionHTML(cat.k);
   body.scrollTop = 0;
   bindSettingsSection(cat.k, body);
+  /* interrupteurs : annoncés comme tels, y compris dans les sections fournies par les autres modules (widgets, fond d'écran…) */
+  body.querySelectorAll('.set-checks input[type="checkbox"]').forEach(i => i.setAttribute('role', 'switch'));
+  const lo = ov.querySelector('#set-logout');
+  if (lo) { const A = window.AlixoAuth; lo.hidden = !(A && A.isConfigured && A.account()); }
 }
 function openSettings(cat) {
   if (typeof cat === 'string') settingsCat = cat;
@@ -3045,8 +3056,8 @@ function openSettings(cat) {
     ov.innerHTML = `<div class="set-card" role="dialog" aria-label="Paramètres">
       <aside class="set-nav">
         <div class="set-navtitle">Paramètres</div>
-        ${SET_CATS.map(c => `<button type="button" class="set-navbtn" data-cat="${c.k}">${SET_ICO[c.k]}<span>${c.name}</span></button>`).join('')}
-        <div class="set-navfoot">Alixo ${ALIXO_VERSION}</div>
+        ${SET_CATS.map(c => `<button type="button" class="set-navbtn" data-cat="${c.k}" title="${esc(c.name)}" aria-label="${esc(c.name)}">${SET_ICO[c.k]}<span>${c.name}</span></button>`).join('')}
+        <div class="set-navbottom"><button type="button" class="set-logout" id="set-logout" hidden title="Se déconnecter" aria-label="Se déconnecter">${SET_ICO.logout}<span>Se déconnecter</span></button><div class="set-navfoot" title="Alixo ${ALIXO_VERSION}"><span class="set-vname">Alixo </span>${ALIXO_VERSION}</div></div>
       </aside>
       <div class="set-main">
         <header class="set-head"><div><h2 class="set-htitle"></h2><p class="set-hsub"></p></div><button class="set-x" type="button" title="Fermer (Échap)"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header>
@@ -3055,6 +3066,7 @@ function openSettings(cat) {
     document.body.appendChild(ov);
     ov.addEventListener('click', e => {
       if (e.target === ov || e.target.closest('.set-x')) { closeSettings(); return; }
+      if (e.target.closest('#set-logout')) { closeSettings(); if (window.AlixoAuth) window.AlixoAuth.signOut(); return; }
       const nb = e.target.closest('.set-navbtn');
       if (nb) { settingsCat = nb.dataset.cat; renderSettingsBody(); }
     });
@@ -10688,7 +10700,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Correction : la mise à jour automatique ne bloque plus quand Windows ou l’antivirus verrouille le fichier téléchargé. Et toujours : AlixoAI plus légère, vote d’assemblée, texte à trous, Tâches et bouton Image repensés.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Des Paramètres redessinés, plus sobres et lisibles, l’export Excel des résultats de quiz, des raccourcis clavier rangés par catégorie et une barre d’outils centrée.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

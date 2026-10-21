@@ -449,7 +449,7 @@ window.QuizCore = (() => {
   }
   function hemiVerdict(D) {
     if (!D.total) return 'Chaque vote ajoute un siège à l’hémicycle.';
-    const scale = D.scaled ? ` · 1 siège ≈ ${(Math.round(D.total / D.S * 10) / 10).toLocaleString('fr-FR')} votants` : ' · 1 siège = 1 votant';
+    const scale = D.scaled ? ` · 1 siège ≈ ${(Math.round(D.total / D.S * 10) / 10).toLocaleString('fr-FR')} votants` : ' · 1 siège = 1\u00a0votant';
     if (D.tie) return `<b>Égalité en tête</b> · aucune majorité${scale}`;
     if (D.absolute) return `<b>« ${esc(D.win.text)} »</b> obtient la majorité absolue : ${D.win.n.toLocaleString('fr-FR')} voix sur ${D.total.toLocaleString('fr-FR')}${scale}`;
     return `<b>« ${esc(D.win.text)} »</b> arrive en tête (majorité relative) · il manque ${(D.majV - D.win.n).toLocaleString('fr-FR')} voix pour la majorité absolue${scale}`;
