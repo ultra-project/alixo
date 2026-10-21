@@ -13,9 +13,7 @@
 <meta name="theme-color" content="#33658a">
 <meta name="robots" content="noindex, nofollow, noai, noimageai">
 <meta name="tdm-reservation" content="1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/documentation.css">
@@ -62,7 +60,7 @@
   <div style="position:relative">
     <div class="eyebrow">Mentions légales</div>
     <h1>Qui fait <em>Alixo.</em></h1>
-    <p>Informations légales sur le site alixoapp.com et l’application Alixo. Dernière mise à jour : 10 octobre 2026.</p>
+    <p>Informations légales sur le site alixoapp.com et l’application Alixo. Dernière mise à jour : 21 octobre 2026.</p>
   </div>
 </section>
 
@@ -89,6 +87,7 @@
         <li><strong>Site et application web</strong> : GitHub Pages — GitHub, Inc., 88 Colin P. Kelly Jr. Street, San Francisco, CA 94107, États-Unis (<a href="https://pages.github.com" target="_blank" rel="noopener">pages.github.com</a>).</li>
         <li><strong>Comptes et données synchronisées</strong> : Firebase (Authentication, Cloud Firestore) — Google Ireland Limited, Gordon House, Barrow Street, Dublin 4, Irlande (<a href="https://firebase.google.com" target="_blank" rel="noopener">firebase.google.com</a>).</li>
         <li><strong>Installateurs et mises à jour</strong> : GitHub, Inc. (même adresse).</li>
+        <li><strong>Serveurs de l’application (IA, paiement, messagerie)</strong> : Cloudflare, Inc., 101 Townsend Street, San Francisco, CA 94107, États-Unis (<a href="https://www.cloudflare.com" target="_blank" rel="noopener">cloudflare.com</a>).</li>
       </ul>
     </section>
     <section id="propriete">
@@ -101,8 +100,8 @@
         <li>Electron (licence MIT) et Chromium (licence BSD) pour l’application PC.</li>
         <li>Firebase JavaScript SDK (Apache 2.0) pour les comptes et la synchronisation ; three.js (MIT) pour la galaxie 3D ; JSZip (MIT) pour les archives ; mammoth (BSD) pour la lecture des fichiers Word ; qrcode-generator de Kazuhiko Arase (MIT ; « QR Code » est une marque de DENSO WAVE INCORPORATED) pour les QR codes.</li>
         <li>Lexique de correction (fichier <code>js/lexique.js</code> de l’application) : dérivé des listes de fréquence FrequencyWords de Hermit Dave (OpenSubtitles 2018), licence <a href="https://creativecommons.org/licenses/by-sa/4.0/deed.fr" target="_blank" rel="noopener">CC BY-SA 4.0</a> ; le fichier filtré est mis à disposition sous la même licence.</li>
-        <li>Correction par IA : modèle ouvert Qwen3.8-27B (Alibaba, licence Apache 2.0), exécuté sur le serveur choisi par l’utilisateur ; il n’est ni distribué ni hébergé par Alixo.</li>
-        <li>Polices du site : Inter (SIL Open Font License) et JetBrains Mono (SIL OFL), servies par Google Fonts.</li>
+        <li>AlixoAI : modèle ouvert Mistral Small 3.1 (Mistral AI, licence Apache 2.0), exécuté par Cloudflare Workers AI pour le compte d’Alixo ; il n’est pas distribué avec l’application.</li>
+        <li>Polices du site : Inter (SIL Open Font License 1.1) et JetBrains Mono (SIL OFL 1.1), hébergées sur le site (<a href="/fonts/OFL-Inter.txt">licence d’Inter</a>, <a href="/fonts/OFL-JetBrainsMono.txt">licence de JetBrains Mono</a>).</li>
         <li>Calculatrices TI-83 et fx-92 : services en ligne de leurs éditeurs respectifs, affichés dans l’application.</li>
       </ul>
     </section>
@@ -134,6 +133,7 @@
       <a href="/documentation.html">Documentation</a>
       <a href="https://alixoapp.com/docs/?login">Se connecter</a>
       <a href="/versions/">Versions</a>
+      <a href="/status/">État des services</a>
       <a href="/confidentialite.html">Confidentialité</a>
       <a href="/conditions.html">Conditions</a>
       <a href="/cgv.html">CGV</a>

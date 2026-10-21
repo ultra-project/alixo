@@ -13,9 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alixoapp.com/confidentialite.html">
 <meta name="theme-color" content="#33658a">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/documentation.css">
@@ -73,7 +71,7 @@
       <ul>
         <li>Sans compte, <strong>vos cours ne quittent pas votre appareil</strong> : ils sont enregistrés dans le navigateur ou dans le dossier de l’application. L’application PC contacte seulement GitHub (vérification de mise à jour à chaque démarrage) et, au premier lancement, Google (dictionnaires du correcteur orthographique de Chromium).</li>
         <li>Avec un compte, vos cours, dossiers et fichiers sont <strong>synchronisés dans votre espace privé</strong> (Firebase, Google Cloud), lisibles par vous seul — et par les personnes que vous invitez sur un partage. <strong>Ni l’éditeur ni les administrateurs ne peuvent en lire le contenu</strong> : les règles de la base le leur interdisent.</li>
-        <li>L’intelligence artificielle d’Alixo, <strong>AlixoAI</strong>, est intégrée à l’application : le texte qu’elle analyse (correction, mise en forme, quiz, fiches de révision) <strong>n’est transmis à aucun service d’IA tiers</strong>. Alixo n’utilise plus Google Gemini, Grok (xAI) ni aucun hébergeur de modèle.</li>
+        <li>La correction pendant la frappe fonctionne <strong>sur votre appareil</strong>, sans rien envoyer. Avec Alixo+, quand vous demandez une relecture approfondie (F7), une mise en forme, un quiz ou une fiche, <strong>le texte concerné est envoyé au serveur d’AlixoAI, hébergé par Cloudflare</strong>, qui le traite sans le conserver ; il ne sert à entraîner aucun modèle. Détail à la rubrique <a href="#alixoai">AlixoAI</a>.</li>
         <li>Aucune publicité, aucune revente de données, aucun traqueur sur le site.</li>
       </ul>
     </section>
@@ -84,7 +82,7 @@
     <section id="donnees">
       <h2>Ce qui est enregistré</h2>
       <h3>Sur votre appareil (toujours)</h3>
-      <p>Les cours, dossiers, présentations, tableurs, planches, quiz, fichiers importés et réglages sont enregistrés localement (stockage du navigateur ou profil de l’application PC), de même que le réglage d’AlixoAI (activée ou désactivée sur l’appareil) et le fichier audio que vous choisissez comme musique de quiz. Ce fichier audio n’est jamais synchronisé.</p>
+      <p>Les cours, dossiers, présentations, tableurs, planches, quiz, fichiers importés et réglages sont enregistrés localement (stockage du navigateur ou profil de l’application PC), de même que le réglage d’AlixoAI (activée ou désactivée sur l’appareil), le fichier audio que vous choisissez comme musique de quiz, la disposition des widgets de bureau (propre à chaque appareil depuis la version 1.43) et, sur PC, le choix de lancer Alixo à l’ouverture de la session. Ce fichier audio n’est jamais synchronisé.</p>
       <h3>Avec un compte</h3>
       <ul>
         <li><strong>Identité</strong> : adresse e-mail, prénom ou pseudo, fournisseur de connexion (e-mail et mot de passe, Google ou Apple). Le mot de passe est géré par Firebase Authentication ; Alixo ne le voit jamais. Si vous choisissez un pseudo, il est inscrit dans un annuaire avec votre prénom et votre e-mail, consultable uniquement par une personne qui connaît ce pseudo exactement, afin de vous inviter à un partage ; retirer le pseudo efface cette entrée.</li>
@@ -99,18 +97,27 @@
       <p>Les administrateurs d’Alixo voient les informations de compte ci-dessus (identité, profil, activité, abonnement, messages, accès IA attribué) et les métadonnées des partages (titre, membres, journal des modifications). Ils <strong>ne peuvent pas lire le contenu de vos cours, images ou fichiers</strong>, ni celui des partages : les règles de sécurité de la base le leur interdisent. Chaque action d’administration (suspension, activation d’Alixo+, attribution d’une clé, message, export, consultation de la base) est inscrite dans un journal qui ne peut être ni modifié ni effacé.</p>
       <h3>Quiz en direct (participants sans compte)</h3>
       <p>Pour rejoindre un quiz, un participant ouvre alixoapp.com/quiz, saisit le code de la partie et un pseudo (24 caractères au plus) ; aucun compte n’est demandé. Son pseudo, ses réponses, leurs horodatages et un identifiant aléatoire gardé dans son navigateur sont enregistrés le temps de la partie dans un espace propre à celle-ci, que seul le présentateur peut parcourir. Les participants voient le titre du quiz, le prénom ou pseudo du présentateur (à défaut son adresse e-mail), les questions et leurs images, et le classement par pseudo. Quand le présentateur arrête la présentation, la partie et les fiches des participants sont effacées. Le classement final (pseudos, scores, bonnes réponses, temps moyen) et les statistiques par question sont enregistrés dans le quiz, dans l’espace privé du présentateur, qui peut les supprimer à tout moment (bouton Résultats). Conseil : un pseudo n’a pas besoin d’être votre nom.</p>
-      <h3>AlixoAI (intelligence artificielle)</h3>
-      <p>Depuis la version 1.37, les fonctions d’intelligence artificielle d’Alixo+ (correction, mise en forme, Quiz IA, fiches de révision) sont assurées par <strong>AlixoAI</strong>, intégrée à l’application et exécutée par elle. Le texte analysé — phrase par phrase pour la correction, le document ouvert pour un quiz ou une fiche — <strong>n’est transmis à aucun serveur d’intelligence artificielle</strong>, ni à Alixo ni à un tiers, et n’est pas conservé. AlixoAI s’appuie sur un modèle de langage ouvert (licence Apache 2.0) dont Alixo ne modifie pas l’entraînement avec vos données.</p>
-      <p>Les réglages d’AlixoAI dans les versions antérieures (serveur, modèle, clé d’accès d’un hébergeur comme OpenRouter ou Alibaba Cloud, accès attribué par l’administrateur) ne sont plus lus ni utilisés. Les clés Google (Gemini) et xAI (Grok) des versions encore plus anciennes ne le sont pas davantage ; vous pouvez les révoquer chez ces services.</p>
+      <h3 id="alixoai">AlixoAI (intelligence artificielle)</h3>
+      <p>Depuis la version 1.43, les fonctions d’intelligence artificielle d’Alixo+ (relecture approfondie F7, mise en forme, Quiz IA, fiches de révision) fonctionnent <strong>en ligne</strong>, uniquement à votre demande et avec un compte connecté. Le texte concerné (les phrases à relire, les paragraphes à mettre en forme, le document ouvert ou son début pour un quiz ou une fiche, 24 000 caractères au plus par demande) est envoyé par une connexion chiffrée (HTTPS) au serveur d’AlixoAI. Ce serveur est un programme d’Alixo exécuté chez <strong>Cloudflare</strong> (Cloudflare Workers) ; il fait produire la réponse par un modèle de langage ouvert (Mistral Small 3.1, licence Apache 2.0) sur le service <strong>Cloudflare Workers AI</strong>.</p>
+      <ul>
+        <li><strong>Données transmises</strong> : le texte à traiter et les consignes de l’application ; le jeton de connexion de votre compte, qui contient votre identifiant et votre adresse e-mail et sert à vérifier votre abonnement Alixo+ ; votre adresse IP et les informations techniques de la connexion.</li>
+        <li><strong>Conservation</strong> : ni le texte envoyé ni la réponse ne sont enregistrés par Alixo. Le serveur ne tient pas de journal des demandes : ni le texte, ni la réponse, ni le jeton de connexion n’y sont inscrits. Cloudflare s’engage à ne pas utiliser ces contenus pour entraîner des modèles ni pour améliorer ses services. Seuls sont enregistrés, pour appliquer les limites d’usage, votre identifiant de compte, la date, le nombre de demandes et le nombre de caractères envoyés ce jour-là, supprimés au bout de 35 jours. En cas d’erreur, le serveur peut produire des journaux techniques sans contenu ni identifiant (date, type de demande, type d’erreur), conservés 7 jours au plus.</li>
+        <li><strong>Limites d’usage</strong> : 120 demandes et 400 000 caractères envoyés par jour et par compte ; 24 000 caractères au plus par demande. En cas d’affluence exceptionnelle, AlixoAI peut être momentanément indisponible.</li>
+        <li><strong>Sans envoi</strong> : la correction pendant la frappe (soulignement, fautes de frappe, règles de grammaire) fonctionne sur l’appareil. Dans l’application PC, les dictionnaires du correcteur sont téléchargés depuis les serveurs de Google ; aucun texte n’y est transmis.</li>
+        <li><strong>Désactiver</strong> : Paramètres › IA › Désactiver. Plus aucun texte n’est envoyé depuis cet appareil.</li>
+        <li><strong>Données de tiers</strong> : n’envoyez pas à AlixoAI d’informations permettant d’identifier une autre personne, par exemple un patient dans un cas clinique. Anonymisez vos notes.</li>
+      </ul>
+      <p>Les réglages d’AlixoAI des versions antérieures (serveur, modèle, clés OpenRouter, Alibaba Cloud, Google Gemini ou xAI) ne sont plus lus ni utilisés ; vous pouvez révoquer ces clés chez les services concernés.</p>
       <h3>Sur le site alixoapp.com</h3>
-      <p>Le site est statique : il ne dépose aucun cookie publicitaire ni outil de mesure d’audience. Il mémorise votre thème (clair / sombre) dans le navigateur, lit un petit fichier du site (releases.json) pour afficher la dernière version disponible, et charge les polices depuis Google Fonts. Les vidéos de présentation sont hébergées sur le site.</p>
+      <p>Le site est statique : il ne dépose aucun cookie publicitaire ni outil de mesure d’audience. Il mémorise votre thème (clair / sombre) dans le navigateur et lit un petit fichier du site (releases.json) pour afficher la dernière version disponible. Les polices et les vidéos de présentation sont hébergées sur le site : aucune requête n’est envoyée à Google Fonts.</p>
+      <p>La page État des services (alixoapp.com/status) vérifie les services depuis votre navigateur, qui contacte alors directement Google (Firebase), GitHub et Cloudflare ; ceux-ci reçoivent votre adresse IP. Aucun cookie n’est envoyé ni déposé.</p>
     </section>
     <section id="finalites">
       <h2>Pourquoi, et sur quelle base</h2>
       <ul>
         <li><strong>Fournir le service</strong> (exécution du contrat) : enregistrer, synchroniser et partager vos cours, vous reconnaître à la connexion.</li>
         <li><strong>Assistance et sécurité</strong> (intérêt légitime) : comprendre un problème signalé, repérer un usage abusif, suspendre un compte qui enfreint les <a href="/conditions.html">conditions d’utilisation</a>.</li>
-        <li><strong>AlixoAI</strong> (exécution du contrat Alixo+) : analyse du texte par l’application elle-même, sans transmission à un tiers ; vous pouvez la désactiver dans Paramètres › IA.</li>
+        <li><strong>AlixoAI</strong> (exécution du contrat Alixo+, article 6.1.b du RGPD) : traiter le texte que vous soumettez et vous renvoyer le résultat. <strong>Limites d’usage d’AlixoAI</strong> (intérêt légitime d’Alixo à prévenir les abus et à maîtriser le coût du service, article 6.1.f) : compter les demandes et les caractères par compte et par jour. Vous pouvez désactiver AlixoAI dans Paramètres › IA.</li>
         <li><strong>Quiz en direct</strong> (exécution du service demandé par le présentateur et le participant) : faire fonctionner la partie et en garder le résultat pour le présentateur.</li>
       </ul>
       <p>Vos données ne sont ni vendues, ni louées, ni utilisées pour de la publicité, ni pour entraîner un modèle d’IA par Alixo.</p>
@@ -119,16 +126,15 @@
       <h2>Où et chez qui</h2>
       <ul>
         <li><strong>Firebase / Google Cloud</strong> (authentification, base de données Firestore) : hébergement des comptes et du contenu synchronisé. Google agit comme sous-traitant ; des transferts hors Union européenne peuvent avoir lieu dans le cadre des clauses contractuelles types de Google.</li>
-        <li><strong>AlixoAI</strong> : aucun hébergeur, aucun tiers — l’analyse est faite par l’application. Alixo ne fait appel à aucun service d’IA extérieur.</li>
+        <li><strong>Cloudflare</strong> (Cloudflare, Inc., États-Unis) : exécution des serveurs d’Alixo (AlixoAI, paiement, messagerie), du modèle d’IA (Workers AI) et de la base des compteurs d’usage d’AlixoAI. Cloudflare agit comme sous-traitant, dans le cadre de son accord de traitement des données. Ses centres de données sont répartis dans le monde : le traitement d’une demande peut donc avoir lieu hors de l’Union européenne, notamment aux États-Unis. Ces transferts sont encadrés par la certification de Cloudflare au Data Privacy Framework UE–États-Unis (décision d’adéquation de la Commission du 10 juillet 2023) et, à défaut, par les clauses contractuelles types de la Commission européenne.</li>
         <li><strong>GitHub</strong> : hébergement du site, des installateurs et des mises à jour automatiques (l’application PC vérifie la dernière version au démarrage).</li>
-        <li><strong>Google Fonts</strong> : polices du site vitrine (pas de l’application).</li>
         <li><strong>Stripe</strong> (Stripe Payments Europe Ltd, Irlande) : paiement de l’abonnement Alixo+ (voir <a href="#paiement">Paiement et abonnement Alixo+</a>).</li>
         <li><strong>Resend</strong> : envoi des e-mails liés à l’abonnement, dont le rappel avant reconduction de l’abonnement annuel.</li>
       </ul>
     </section>
     <section id="duree">
       <h2>Combien de temps</h2>
-      <p>Votre contenu est conservé tant que votre compte existe. Les suppressions faites dans l’application sont répercutées dans le nuage (une « pierre tombale » de 90 jours évite qu’un appareil hors ligne ne restaure une séance supprimée). Les données locales restent sur votre appareil jusqu’à ce que vous les effaciez (Paramètres › Compte, désinstallation, effacement des données du navigateur). Les données de paiement et d’abonnement Alixo+ suivent les durées propres indiquées à la rubrique <a href="#paiement">Paiement et abonnement Alixo+</a>.</p>
+      <p>Votre contenu est conservé tant que votre compte existe. Les suppressions faites dans l’application sont répercutées dans le nuage (une « pierre tombale » de 90 jours évite qu’un appareil hors ligne ne restaure une séance supprimée). Les données locales restent sur votre appareil jusqu’à ce que vous les effaciez (Paramètres › Compte, désinstallation, effacement des données du navigateur). Texte envoyé à AlixoAI : non conservé au-delà du traitement de la demande. Compteurs d’usage d’AlixoAI : 35 jours. Les données de paiement et d’abonnement Alixo+ suivent les durées propres indiquées à la rubrique <a href="#paiement">Paiement et abonnement Alixo+</a>.</p>
     </section>
     <section id="paiement">
       <h2>Paiement et abonnement Alixo+</h2>
@@ -172,6 +178,7 @@
       <a href="/documentation.html">Documentation</a>
       <a href="https://alixoapp.com/docs/?login">Se connecter</a>
       <a href="/versions/">Versions</a>
+      <a href="/status/">État des services</a>
       <a href="/confidentialite.html">Confidentialité</a>
       <a href="/conditions.html">Conditions</a>
       <a href="/cgv.html">CGV</a>

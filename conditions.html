@@ -13,9 +13,7 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alixoapp.com/conditions.html">
 <meta name="theme-color" content="#33658a">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <link rel="stylesheet" href="/styles.css">
 <link rel="stylesheet" href="/documentation.css">
@@ -62,7 +60,7 @@
   <div style="position:relative">
     <div class="eyebrow">Conditions d’utilisation</div>
     <h1>Les règles du <em>jeu.</em></h1>
-    <p>Ce que vous pouvez attendre d’Alixo, et ce qu’Alixo attend de vous. Dernière mise à jour : 9 octobre 2026.</p>
+    <p>Ce que vous pouvez attendre d’Alixo, et ce qu’Alixo attend de vous. Dernière mise à jour : 21 octobre 2026.</p>
   </div>
 </section>
 
@@ -103,20 +101,21 @@
     </section>
     <section id="disponibilite">
       <h2>6. Disponibilité et évolutions</h2>
-      <p>Alixo est fourni « en l’état ». Le service peut être interrompu pour maintenance, mise à jour ou en cas d’incident chez un prestataire (Google, GitHub). Les fonctions peuvent évoluer, être ajoutées ou retirées ; une mise à jour peut être rendue obligatoire pour des raisons de sécurité ou de compatibilité, sans jamais vous priver de l’accès à vos cours enregistrés localement ni de leur export. L’application PC se met à jour automatiquement.</p>
+      <p>Alixo est fourni « en l’état ». Le service peut être interrompu pour maintenance, mise à jour ou en cas d’incident chez un prestataire (Google, GitHub, Cloudflare, Stripe). Les fonctions peuvent évoluer, être ajoutées ou retirées ; une mise à jour peut être rendue obligatoire pour des raisons de sécurité ou de compatibilité, sans jamais vous priver de l’accès à vos cours enregistrés localement ni de leur export. L’application PC se met à jour automatiquement.</p>
     </section>
     <section id="ia">
       <h2>7. AlixoAI</h2>
-      <p>La correction, les propositions de mise en forme, le Quiz IA et les fiches de révision reposent sur <strong>AlixoAI</strong>, l’intelligence artificielle intégrée à Alixo, qui s’appuie sur un modèle de langage ouvert (licence Apache 2.0). Elle est exécutée par l’application elle-même : aucun serveur d’IA, aucun hébergeur ni aucun compte tiers n’intervient, et le texte analysé n’est transmis à personne.</p>
+      <p>La relecture approfondie (F7), les propositions de mise en forme, le Quiz IA et les fiches de révision reposent sur <strong>AlixoAI</strong>, l’intelligence artificielle d’Alixo+. Depuis la version 1.43, elle fonctionne <strong>en ligne</strong> : à votre demande, le texte concerné est envoyé au serveur d’AlixoAI (hébergé par Cloudflare), qui le fait traiter par un modèle de langage ouvert (Mistral Small 3.1, licence Apache 2.0) et ne le conserve pas (voir la <a href="/confidentialite.html#alixoai">politique de confidentialité</a>). La correction pendant la frappe fonctionne sur l’appareil, sans IA ni envoi.</p>
       <ul>
-        <li>AlixoAI demande un appareil compatible (navigateur récent ou version PC) ; Paramètres › IA indique si ce n’est pas le cas et permet de la désactiver ou de la réactiver.</li>
+        <li>AlixoAI demande une connexion Internet et un compte Alixo connecté. Son usage est soumis à des limites quotidiennes par compte, précisées dans les <a href="/cgv.html#ia">CGV</a> ; en cas d’affluence exceptionnelle, AlixoAI peut être momentanément indisponible. Paramètres › IA permet de la désactiver ou de la réactiver.</li>
+        <li>N’envoyez pas à AlixoAI de données permettant d’identifier un tiers (patient, client…) : anonymisez vos notes.</li>
         <li>Les corrections peuvent être inexactes. Elles ne s’appliquent jamais sans votre accord, sauf les fautes de frappe évidentes, annulables d’un geste (Ctrl+Z ou Retour arrière). Relisez toujours un texte avant de le rendre.</li>
         <li>Les clés Google (Gemini) et xAI (Grok) des versions antérieures à la 1.28 ne sont plus prises en charge, comme les serveurs d’IA configurés dans les versions antérieures : AlixoAI les remplace, sans rien à configurer.</li>
       </ul>
     </section>
     <section id="propriete">
       <h2>8. Propriété intellectuelle</h2>
-      <p>Alixo (logiciel, interface, logo, textes et vidéos du site) est protégé par le droit d’auteur. Les composants tiers (Electron, Chromium, three.js, JSZip, mammoth, qrcode…) restent soumis à leurs licences respectives, de même que le modèle Qwen3.8-27B (Apache 2.0), qui n’est pas distribué avec Alixo. Toute reproduction ou redistribution du logiciel sans autorisation est interdite, dans les limites prévues par la loi.</p>
+      <p>Alixo (logiciel, interface, logo, textes et vidéos du site) est protégé par le droit d’auteur. Les composants tiers (Electron, Chromium, three.js, JSZip, mammoth, qrcode…) restent soumis à leurs licences respectives, de même que le modèle Mistral Small 3.1 (Mistral AI, licence Apache 2.0), exécuté par Cloudflare Workers AI, qui n’est pas distribué avec Alixo. Toute reproduction ou redistribution du logiciel sans autorisation est interdite, dans les limites prévues par la loi.</p>
     </section>
     <section id="responsabilite">
       <h2>9. Responsabilité</h2>
@@ -149,6 +148,7 @@
       <a href="/documentation.html">Documentation</a>
       <a href="https://alixoapp.com/docs/?login">Se connecter</a>
       <a href="/versions/">Versions</a>
+      <a href="/status/">État des services</a>
       <a href="/confidentialite.html">Confidentialité</a>
       <a href="/conditions.html">Conditions</a>
       <a href="/cgv.html">CGV</a>
