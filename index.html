@@ -15,9 +15,7 @@
 <meta name="theme-color" content="#33658a">
 <!-- Déjà connecté ? Direction l'application (alixoapp.com/docs). « ?site » force l'affichage de cette page. -->
 <script>(function(){try{if(/[?&]site(?=&|=|$)/.test(location.search))return;var app='/docs/';var abs=new URL(app,location.href).href;if(document.referrer&&document.referrer.indexOf(abs)===0)return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(s&&s.uid)location.replace(app);}catch(e){}})();</script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/fonts/fonts.css">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
 <link rel="stylesheet" href="styles.css?v=20261021c">
 <link rel="icon" type="image/png" href="img/logo.png">
@@ -325,7 +323,7 @@
     <div>
       <div class="eyebrow">Intelligence artificielle</div>
       <h2>Voici AlixoAI.<br><em>Prête dès l'ouverture.</em></h2>
-      <p>Plus de serveur, plus de clé, plus de réglage. AlixoAI est l'intelligence artificielle d'Alixo, intégrée à l'application&nbsp;: elle se prépare toute seule, en silence, et répond dès que tu la sollicites. Correction, quiz et fiches de révision&nbsp;: <strong>tes notes ne sont envoyées à aucun service d'IA extérieur</strong>, et aucun compte chez un tiers n'est nécessaire.</p>
+      <p>Plus de clé, plus de réglage. AlixoAI est l'intelligence artificielle d'Alixo+&nbsp;: rien à installer ni à configurer, aucun compte chez un tiers. Correction approfondie, mise en forme, quiz et fiches de révision&nbsp;: à ta demande, <strong>le texte concerné est traité sur le serveur d'AlixoAI (hébergé par Cloudflare)</strong>, sans être conservé ni servir à entraîner un modèle. La correction pendant la frappe, elle, reste sur ton appareil.</p>
       <ul class="ai-points">
         <li>Le Quiz IA commence dès la première question&nbsp;: la suite s'écrit pendant que tu réponds</li>
         <li>Correction <kbd>F7</kbd>, Quiz IA <kbd>F8</kbd>, analyse pendant la frappe, fiches de révision</li>
@@ -492,7 +490,7 @@
         <tr><td>Fiches d'arrêt, fiches Santé guidées</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Graphiques éco manipulables</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Formules tapées en langage naturel</td><td class="me">✓</td><td class="part">Éditeur d'équations</td><td class="part">LaTeX</td></tr>
-        <tr><td>AlixoAI intégrée, sans envoyer tes notes à un tiers</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
+        <tr><td>AlixoAI incluse, sans clé ni compte chez un tiers</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Quiz en direct depuis le cours</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Recherche dans tous les cours et fichiers</td><td class="me">✓</td><td class="part">Fichier par fichier</td><td class="part">✓</td></tr>
         <tr><td>Travail à plusieurs en direct</td><td class="me">✓</td><td class="part">✓</td><td class="part">✓</td></tr>
@@ -684,7 +682,7 @@
     </details>
     <details>
       <summary>L'IA envoie-t-elle mes notes quelque part&nbsp;?</summary>
-      <p>Non. AlixoAI est intégrée à l'application&nbsp;: tes notes ne sont transmises à aucun service d'IA extérieur, et aucun compte chez un tiers n'est nécessaire. Il faut un navigateur récent (Chrome, Edge, Safari 26) ou la version PC d'Alixo&nbsp;; si ton appareil ne le permet pas, l'application te le dit dans Paramètres › IA.</p>
+      <p>Seulement quand tu le demandes. La correction pendant la frappe fonctionne sur ton appareil, sans rien envoyer. Pour la relecture approfondie (<kbd>F7</kbd>), la mise en forme, les quiz et les fiches (Alixo+), le texte concerné est envoyé au serveur d'AlixoAI, hébergé par Cloudflare&nbsp;: il n'est pas conservé et ne sert à entraîner aucun modèle. Il faut une connexion Internet et ton compte Alixo&nbsp;; tu peux désactiver AlixoAI dans Paramètres › IA. <a href="/confidentialite.html#alixoai">En savoir plus</a></p>
     </details>
     <details>
       <summary>Je peux essayer sans rien installer&nbsp;?</summary>

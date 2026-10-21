@@ -62,9 +62,13 @@ html[data-automation="1"] .defi-zone { opacity: .6; }
 .st-banner-sub { font-size: 14px; color: var(--ink-2); }
 .st-banner[data-state="ok"] { --st-c: var(--ok); border-color: color-mix(in srgb, var(--ok) 35%, var(--border)); background: color-mix(in srgb, var(--ok) 7%, var(--surface)); }
 .st-banner[data-state="bad"] { --st-c: var(--c-demand); border-color: color-mix(in srgb, var(--c-demand) 35%, var(--border)); background: color-mix(in srgb, var(--c-demand) 7%, var(--surface)); }
+.st-banner[data-state="warn"] { --st-c: var(--c-ret); border-color: color-mix(in srgb, var(--c-ret) 40%, var(--border)); background: color-mix(in srgb, var(--c-ret) 8%, var(--surface)); }
+.st-banner[data-state="offline"] { --st-c: var(--ink-3); border-style: dashed; background: var(--bg-alt); }
+.st-banner-sub a.st-jump { color: inherit; font-weight: 600; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--st-c) 60%, transparent); text-underline-offset: 2px; }
+.st-banner-sub a.st-jump:hover { color: var(--st-c); }
 .st-banner .btn svg, .st-btn svg { width: 15px; height: 15px; }
 .st-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
-.st-card { --st-c: var(--ink-3); display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); transition: border-color .2s, opacity .2s; }
+.st-card { --st-c: var(--ink-3); scroll-margin-top: 96px; display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--r); background: var(--surface); transition: border-color .2s, opacity .2s; }
 .st-card[data-state="ok"] { --st-c: var(--ok); }
 .st-card[data-state="slow"] { --st-c: var(--c-ret); border-color: color-mix(in srgb, var(--c-ret) 40%, var(--border)); }
 .st-card[data-state="down"] { --st-c: var(--c-demand); border-color: color-mix(in srgb, var(--c-demand) 40%, var(--border)); }
@@ -87,7 +91,9 @@ html[data-automation="1"] .defi-zone { opacity: .6; }
 .st-btn[disabled], .st-banner .btn[disabled] { opacity: .55; cursor: progress; transform: none; }
 .st-card.is-busy .st-btn svg { animation: st-spin .9s linear infinite; }
 @keyframes st-spin { to { transform: rotate(360deg); } }
-.st-note { margin-top: 26px; line-height: 1.6; }
+.sys-main .st-note { margin: 28px 0 0; line-height: 1.6; }   /* plus spécifique que .doc-main p (marge 8 px) */
+.st-card:target, .st-card:focus { outline: 2px solid color-mix(in srgb, var(--st-c) 70%, transparent); outline-offset: 2px; }
+.st-card:focus:not(:focus-visible):not(:target) { outline: none; }
 @media (max-width: 720px) { .st-list { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 640px) {
   .st-layout { padding: 4px 16px 64px; }

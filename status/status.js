@@ -1,6 +1,8 @@
 /* ============================================================
    alixoapp.com/status — état des services d'Alixo, vérifié depuis le navigateur du visiteur.
-   Aucune donnée personnelle, aucun traceur, aucune bibliothèque : de simples requêtes vers les services.
+   Aucun cookie, aucun traceur, aucune bibliothèque : de simples requêtes vers les services (credentials: 'omit').
+   Les prestataires contactés reçoivent l'adresse IP du visiteur : c'est dit dans la note de la page et dans
+   la politique de confidentialité (rubrique « Sur le site alixoapp.com »).
    Les services tiers sont toujours désignés par leur nom Alixo (jamais par leur fournisseur).
    Adresses : app/firebase-config.js (authDomain, projectId), Firestore config/public (billingApi, aiApi),
    mail/cloudflare/wrangler.toml (ALIXO_MAIL_PUBLIC_URL), package.json (dépôt des versions).
@@ -19,9 +21,11 @@
   var CONFIG_DOC = 'https://firestore.googleapis.com/v1/projects/' + PROJECT + '/databases/(default)/documents/config/public';
   var MAIL_URL = 'https://mail.alixoapp.com';
   var RELEASES = 'https://api.github.com/repos/ultra-project/alixo/releases/latest';
-  /* Adresses de repli du paiement et de l'IA, si config/public n'est pas lisible sans compte (règles Firestore) :
-     à renseigner ici (https://…) une fois les services en ligne. Vides : carte « Non vérifiable ». */
-  var FALLBACK = { billingApi: '', aiApi: '' };
+  /* Adresses de repli du paiement et de l'IA, si config/public n'est pas lisible sans compte (règles Firestore).
+     Vide : carte « Non vérifiable ». Une adresse de repli peut désigner un service pas encore ouvert
+     (ai.alixoapp.com : adresse prévue d'AlixoAI) : si elle ne répond pas, la carte affiche « Non vérifiable »
+     plutôt que « Injoignable », pour ne pas annoncer la panne d'un service qui n'est peut-être pas en service. */
+  var FALLBACK = { billingApi: '', aiApi: 'https://ai.alixoapp.com' };
 
   var LABELS = { pending: 'Vérification…', ok: 'Opérationnel', slow: 'Lent', down: 'Injoignable', unknown: 'Non vérifiable' };
 
@@ -67,10 +71,10 @@
   function failure(e) {
     return { state: 'down', ms: null, detail: e && e.kind === 'timeout' ? 'Pas de réponse en ' + (TIMEOUT / 1000) + NB + 'secondes.' : 'Le service n’a pas pu être joint.' };
   }
-  /* Simple joignabilité (réponse opaque, sans détail) */
-  function reach(url) {
+  /* Simple joignabilité (réponse opaque, sans détail). `detail` : texte affiché si le service répond. */
+  function reach(url, detail) {
     return probe(url, { mode: 'no-cors', method: 'GET' }).then(function (r) {
-      return { state: bySpeed(r.ms), ms: r.ms, detail: 'Joignable.' };
+      return { state: bySpeed(r.ms), ms: r.ms, detail: detail == null ? 'Joignable.' : detail };
     }, failure);
   }
   /* Réponse HTTP lisible : le service répond si le statut est dans `okStatus` (ou 2xx) */
@@ -107,7 +111,7 @@
     { id: 'accounts', name: 'Alixo Comptes', desc: 'Création de compte et connexion.',
       run: function () { return reach('https://' + AUTH_DOMAIN + '/__/auth/handler'); } },
     { id: 'google', name: 'Connexion Google', desc: 'Bouton «' + NB + 'Continuer avec Google' + NB + '».',
-      run: function () { return reach('https://accounts.google.com/'); } },
+      run: function () { return reach('https://accounts.google.com/', ''); } },     // le badge « Opérationnel » suffit
     { id: 'database', name: 'Alixo Database', desc: 'Synchronisation des cours, notes et réglages.',
       run: function () {
         /* 200 (document lisible) ou 401/403/404 (accès refusé sans compte) : le service répond */
@@ -123,7 +127,7 @@
           return res.json().then(function (j) { if (!j || j.ok !== true) { out.state = 'down'; out.detail = 'Le service répond mais signale un problème.'; } }, function () {});
         });
       } },
-    { id: 'ai', name: 'Alixo IA', desc: 'Assistant, résumés et quiz générés.', needs: 'aiApi',
+    { id: 'ai', name: 'AlixoAI', desc: 'Relecture approfondie, mise en forme, quiz et fiches de révision (Alixo+).', needs: 'aiApi',
       run: function (base) { return httpCheck(base + '/health', { cache: 'no-store' }); } },
     { id: 'mail', name: 'Alixo Mail', desc: 'Messagerie @alixoapp.com.',
       run: function () { return reach(MAIL_URL + '/healthz'); } },
@@ -164,6 +168,8 @@
 
   SERVICES.forEach(function (s) {
     var card = el('article', 'st-card');
+    card.id = 'st-' + s.id;                     // ancre : le bandeau renvoie vers les cartes en cause (l'ordre ne change jamais)
+    card.tabIndex = -1;
     card.setAttribute('data-state', 'pending');
     card.setAttribute('aria-labelledby', 'st-n-' + s.id);
     var head = el('div', 'st-head');
@@ -205,20 +211,53 @@
     u.detail.hidden = !r.detail;
   }
 
-  function paintBanner() {
-    var pending = 0, bad = 0, unknown = 0;
-    SERVICES.forEach(function (s) {
-      if (!s.result) pending++;
-      else if (s.result.state === 'down' || s.result.state === 'slow') bad++;
-      else if (s.result.state === 'unknown') unknown++;
+  /* Sous-titre du bandeau : groupes « Libellé : service, service. », chaque service étant un lien vers sa carte.
+     Le DOM n'est reconstruit que si le contenu change (la zone est annoncée par les lecteurs d'écran). */
+  var subKey = '';
+  function setSub(parts) {
+    var key = JSON.stringify(parts);
+    if (key === subKey) return;
+    subKey = key;
+    bSub.textContent = '';
+    parts.forEach(function (p, i) {
+      if (i) bSub.appendChild(document.createTextNode(' '));
+      if (typeof p === 'string') { bSub.appendChild(document.createTextNode(p)); return; }
+      bSub.appendChild(document.createTextNode(p.label + NB + ': '));
+      p.items.forEach(function (s, j) {
+        if (j) bSub.appendChild(document.createTextNode(', '));
+        var a = el('a', 'st-jump', s.name); a.href = '#st-' + s.id;
+        bSub.appendChild(a);
+      });
+      bSub.appendChild(document.createTextNode('.'));
     });
+  }
+
+  function paintBanner() {
+    var pending = 0, down = [], slow = [], unknown = [], reached = 0;
+    SERVICES.forEach(function (s) {
+      var st = s.result ? s.result.state : 'pending';
+      if (st === 'pending') pending++;
+      else if (st === 'down') down.push(s);
+      else if (st === 'slow') { slow.push(s); reached++; }
+      else if (st === 'unknown') unknown.push(s);
+      else reached++;
+    });
+    /* Hors ligne : le navigateur le dit, ou aucun service (pas même le site) n'a pu être joint */
+    var offline = navigator.onLine === false || (!pending && down.length > 0 && reached === 0);
     var state, title, sub;
-    if (pending) { state = 'pending'; title = 'Vérification…'; sub = 'Interrogation des services en cours.'; }
-    else if (bad) { state = 'bad'; title = 'Perturbation sur ' + plural(bad, 'service', 'services'); sub = 'Les services concernés sont signalés ci-dessous.'; }
-    else { state = 'ok'; title = 'Tous les services fonctionnent'; sub = unknown ? plural(unknown, 'service n’a pas pu être vérifié', 'services n’ont pas pu être vérifiés') + ' depuis cette page.' : 'Aucun incident détecté.'; }
+    if (offline) { state = 'offline'; title = 'Votre appareil semble hors ligne'; sub = ['Vérifiez votre connexion Internet, puis revérifiez.']; }
+    else if (pending) { state = 'pending'; title = 'Vérification…'; sub = ['Interrogation des services en cours.']; }
+    else if (down.length) {
+      state = 'bad'; title = 'Perturbation sur ' + plural(down.length + slow.length, 'service', 'services');
+      sub = [{ label: 'Injoignable', items: down }];
+      if (slow.length) sub.push({ label: 'Lent', items: slow });
+    }
+    else if (slow.length) { state = 'warn'; title = 'Ralentissement sur ' + plural(slow.length, 'service', 'services'); sub = [{ label: 'Lent', items: slow }]; }
+    else if (unknown.length) { state = 'ok'; title = 'Tous les services vérifiés fonctionnent'; sub = [{ label: 'Non vérifiable depuis cette page', items: unknown }]; }
+    else { state = 'ok'; title = 'Tous les services fonctionnent'; sub = ['Aucun incident détecté.']; }
     banner.setAttribute('data-state', state);
     if (bTitle.textContent !== title) bTitle.textContent = title;
-    if (bSub.textContent !== sub) bSub.textContent = sub;
+    setSub(sub);
   }
 
   function check(s, manual) {
@@ -228,9 +267,14 @@
     var job;
     if (s.needs) {
       job = getConfig().then(function () {
-        var base = (config && config[s.needs]) || safeHttps(FALLBACK[s.needs]);
+        var published = config && config[s.needs];
+        var base = published || safeHttps(FALLBACK[s.needs]);
         if (!base) return { state: 'unknown', ms: null, detail: 'L’adresse de ce service n’est pas publiée' + NB + ': il ne peut pas être vérifié depuis cette page.' };
-        return s.run(base, s.result);
+        return Promise.resolve(s.run(base, s.result)).then(null, failure).then(function (r) {
+          /* adresse de repli (non publiée) qui ne répond pas : peut-être un service pas encore ouvert, pas une panne */
+          if (!published && r && r.state === 'down') return { state: 'unknown', ms: null, detail: 'Ce service n’a pas pu être vérifié depuis cette page.' };
+          return r;
+        });
       });
     } else job = s.run(null, s.result);
     return Promise.resolve(job).then(null, function () { return { state: 'down', ms: null, detail: 'Le service n’a pas pu être joint.' }; }).then(function (r) {
@@ -239,19 +283,25 @@
     });
   }
 
-  var running = false, lastAll = 0;
+  var running = false, lastAll = 0, again = false;
   function checkAll(manual) {
-    if (running) return;
+    if (running) { if (manual) again = true; return; }
     running = true; lastAll = Date.now();
     if (btnAll) btnAll.disabled = true;
     var db = SERVICES.filter(function (s) { return s.id === 'database'; })[0];
     /* la base de données d'abord (elle fournit les adresses du paiement et de l'IA), le reste en parallèle */
     var first = check(db, manual);
     var all = SERVICES.filter(function (s) { return s !== db; }).map(function (s) { return check(s, manual); });
-    Promise.all([first].concat(all)).then(function () { running = false; if (btnAll) btnAll.disabled = false; });
+    Promise.all([first].concat(all)).then(function () {
+      running = false; if (btnAll) btnAll.disabled = false;
+      if (again) { again = false; checkAll(true); }        // demande arrivée pendant la vérification (retour du réseau)
+    });
   }
 
   if (btnAll) btnAll.addEventListener('click', function () { checkAll(true); });
+  /* Retour du réseau : tout revérifier ; perte du réseau : le bandeau le dit tout de suite */
+  window.addEventListener('online', function () { checkAll(true); });
+  window.addEventListener('offline', paintBanner);
   setInterval(function () { if (document.visibilityState === 'visible') checkAll(false); }, PERIOD);
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && Date.now() - lastAll >= PERIOD) checkAll(false);
