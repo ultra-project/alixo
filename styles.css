@@ -770,7 +770,8 @@ html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border
   .ai-band { grid-template-columns: 1fr; padding: 56px 32px; }
   .keys-wrap { grid-template-columns: 1fr; } .palette { position: static; max-width: 560px; }
 }
-@media (max-width: 900px) {
+/* Menu burger dès 1120 px : en dessous, les sept liens (avec Tarifs) ne tiennent plus dans la pilule */
+@media (max-width: 1120px) {
   .nav-links { display: none; }
   .nav-burger { display: inline-grid; }
   .nav-sheet {
@@ -781,6 +782,10 @@ html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border
   #nav.open .nav-sheet { opacity: 1; visibility: visible; transform: none; }
   .nav-sheet a { display: block; padding: 12px 16px; border-radius: 12px; font-size: 16px; font-weight: 500; }
   .nav-sheet a:hover { background: var(--hover); }
+  /* Coco (accueil) : pieds décalés pour ne pas être dans l'axe du burger */
+  .coco { --coco-inset: 50px; }
+}
+@media (max-width: 900px) {
   .btn-login span { display: none; } .btn-login { width: 38px; padding: 0; justify-content: center; }
   .feat-row, .feat-row.rev { grid-template-columns: 1fr; gap: 28px; margin-bottom: 72px; }
   .feat-row.rev .feat-img { order: 0; }

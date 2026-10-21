@@ -1,0 +1,243 @@
+/* ============================================================
+   Alixo — Page Tarifs (reprend les variables et composants de styles.css :
+   .plan, .plan-list, .faq, .eyebrow, .reveal, et la bulle terminal de Coco)
+   ============================================================ */
+/* Dégradé assombri pour le texte blanc des pastilles : contraste ≥ 5:1 sur toute la longueur, dans les deux thèmes
+   (le dégradé du logo descend à 2:1 sur sa teinte claire) */
+:root { --tf-pill-grad: linear-gradient(100deg, #1f45d9 0%, #5b48e6 45%, #7f2be0 80%, #9a3fe0 100%); }
+.nav-links a.on { color: var(--ink); background: var(--hover); }
+.nav-sheet a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+.coco-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.tarifs-page a:focus-visible, .tarifs-page button:focus-visible, .tarifs-page summary:focus-visible { outline: 2px solid var(--tint); outline-offset: 3px; }
+
+/* ---------- En-tête ---------- */
+.tf-hero { position: relative; padding: 64px 24px 112px; overflow: clip; }
+.tf-hero-inner { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; text-align: center; }
+.tf-hero h1 { font-size: clamp(36px, 5.2vw, 64px); letter-spacing: -.05em; line-height: 1; text-wrap: balance; }
+.tf-hero-sub { color: var(--ink-2); font-size: clamp(16px, 1.4vw, 19px); max-width: 640px; margin: 24px auto 0; line-height: 1.6; text-wrap: pretty; }
+
+/* Bascule mensuel / annuel (radiogroup : flèches gauche/droite gérées dans tarifs.js) */
+.tf-switch {
+  display: inline-flex; gap: 4px; margin-top: 34px; padding: 5px; border-radius: 999px;
+  border: 1px solid var(--border); background: color-mix(in srgb, var(--surface) 75%, transparent); backdrop-filter: blur(10px);
+}
+.tf-switch-opt {
+  display: inline-flex; align-items: center; gap: 8px; padding: 9px 18px; border-radius: 999px;
+  font-size: 14.5px; font-weight: 600; color: var(--ink-2); transition: background .2s, color .2s, box-shadow .2s;
+}
+.tf-switch-opt:hover { color: var(--ink); }
+.tf-switch-opt.is-on { background: var(--ink); color: var(--bg); box-shadow: var(--shadow-sm); }
+.tf-save {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+  padding: 3px 8px; border-radius: 999px; background: var(--tf-pill-grad); color: #fff;
+}
+.tf-save sup { font-size: .75em; line-height: 0; }
+
+/* ---------- Cartes (sur la base de .plan de styles.css) ---------- */
+.tf-plans { position: relative; z-index: 1; margin-top: 100px; align-items: stretch; }
+.tf-plans .plan-head h2 { font-size: 22px; letter-spacing: -.03em; }
+.tf-plans .plan-list { align-content: start; }
+.tf-prices { display: grid; margin-top: -6px; }
+.tf-price { grid-area: 1 / 1; display: grid; gap: 10px; align-content: start; }
+.tf-price:not(.is-on) { visibility: hidden; }
+.tf-price-sub { font-size: 14px; color: var(--ink-2); line-height: 1.5; }
+.tf-price-sub strong { color: var(--ink); font-weight: 600; }
+.tf-plus .plan-note a { font-weight: 600; }
+
+/* ---------- Coco, assis sur le bord haut de la carte Alixo+ ----------
+   L'image fait 320 × 419 ; le bas de ses cuisses est vers 91 % de la hauteur et ses pieds
+   touchent le bas de l'image. On l'enfonce de --tf-coco-sink sous le bord : ses jambes
+   passent devant la bordure dégradée, comme s'il était assis dessus, les pieds pendants.
+   Une ombre de contact elliptique, posée sur la carte sous lui, l'ancre. */
+.tf-plus { --tf-coco-w: 124px; --tf-coco-sink: 22px; --tf-coco-right: 30px; }
+.tf-coco {
+  position: absolute; z-index: 3; right: var(--tf-coco-right); bottom: calc(100% - var(--tf-coco-sink));
+  width: var(--tf-coco-w); aspect-ratio: 320 / 419; pointer-events: none;
+}
+/* Ombre de contact, sur la carte, juste sous le bord où il est assis */
+.tf-coco::before {
+  content: ""; position: absolute; left: 0; right: -6%; bottom: calc(var(--tf-coco-sink) - 13px); height: 20px;
+  background: radial-gradient(closest-side, rgba(15,18,22,.34), rgba(15,18,22,.14) 55%, transparent);
+  filter: blur(2.5px); transform-origin: 50% 50%;
+}
+html[data-theme="dark"] .tf-coco::before { background: radial-gradient(closest-side, rgba(0,0,0,.75), rgba(0,0,0,.35) 55%, transparent); }
+.tf-coco-body {
+  position: absolute; inset: 0; transform-origin: 50% 92%;
+  filter: drop-shadow(0 6px 8px rgba(15,18,22,.16)) drop-shadow(0 1px 2px rgba(15,18,22,.10));
+}
+html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,0,.5)) drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.tf-coco-img {
+  width: 100%; height: 100%; transform-origin: 50% 100%;
+  user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none;
+  animation: tf-breathe 4.2s ease-in-out infinite;
+}
+/* Survoler Coco lui-même compte comme survoler la carte (il en fait partie) : zone sur son corps seulement */
+.tf-coco-hit { position: absolute; left: 14%; right: 6%; top: 6%; bottom: 12%; border-radius: 45%; pointer-events: auto; }
+.tf-coco.is-talking .tf-coco-body { animation: tf-hop .62s cubic-bezier(.3, .7, .3, 1) both; }
+.tf-coco.is-talking::before { animation: tf-shadow-hop .62s cubic-bezier(.3, .7, .3, 1) both; }
+
+/* Bulle : mêmes classes que la bulle de l'accueil (fond, barre, invite, curseur) ; seuls la place et l'apparition changent.
+   À gauche de Coco, posée juste au-dessus du bord de la carte : elle ne couvre ni la bascule, ni le titre, ni le prix. */
+.tf-coco .tf-bubble {
+  right: calc(100% - 2px); left: auto; top: auto; bottom: calc(var(--tf-coco-sink) + 10px);
+  width: 238px; max-width: calc(100vw - var(--tf-coco-w) - 56px);
+  pointer-events: none; transform-origin: 100% calc(100% - 28px);
+}
+.tf-coco .tf-bubble::after { top: auto; bottom: 21px; }
+.tf-coco.is-talking .tf-bubble { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; pointer-events: none; }
+
+@keyframes tf-breathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.015); } }
+@keyframes tf-hop {
+  0% { transform: none; } 30% { transform: translateY(-9px) rotate(-5deg); }
+  55% { transform: translateY(0) rotate(2deg); } 75% { transform: translateY(-2px) rotate(-1deg); } 100% { transform: none; }
+}
+@keyframes tf-shadow-hop { 0%, 100% { transform: none; opacity: 1; } 30% { transform: scaleX(.78); opacity: .55; } 55% { transform: none; opacity: 1; } }
+
+/* ---------- Prix dégressif ---------- */
+.tf-ladders { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; max-width: var(--max); margin: 0 auto; }
+.tf-ladder {
+  position: relative; border-radius: var(--r-xl); border: 1px solid var(--border); background: var(--surface);
+  padding: 28px; display: flex; flex-direction: column; transition: border-color .3s, box-shadow .3s;
+}
+/* La formule choisie en haut de page est mise en avant ; l'autre reste lisible */
+#degressif[data-billing-view="monthly"] .tf-ladder-monthly,
+#degressif[data-billing-view="annual"] .tf-ladder-annual {
+  border-color: transparent; box-shadow: var(--shadow);
+  background: linear-gradient(var(--surface), var(--surface)) padding-box, var(--grad) border-box;
+}
+.tf-ladder-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.tf-ladder-head h3 { font-size: 22px; letter-spacing: -.03em; }
+.tf-ladder-tag {
+  font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+  padding: 3px 8px; border-radius: 999px; background: var(--tf-pill-grad); color: #fff;
+  opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
+}
+#degressif[data-billing-view="monthly"] .tf-ladder-monthly .tf-ladder-tag,
+#degressif[data-billing-view="annual"] .tf-ladder-annual .tf-ladder-tag { opacity: 1; visibility: visible; }
+.tf-ladder-sub { font-size: 14px; color: var(--ink-3); margin-top: 6px; }
+
+/* Barres : hauteur proportionnelle au prix (--r, 1 = 14,99 €), apparition échelonnée (--i) quand la carte entre à l'écran */
+.tf-bars {
+  --bar-max: 190px;
+  list-style: none; display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; align-items: end; margin-top: 26px;
+}
+.tf-bars li { display: flex; flex-direction: column; justify-content: flex-end; text-align: center; min-width: 0; }
+.tf-bar-fill {
+  position: relative; display: block; height: calc(var(--bar-max) * var(--r)); margin-top: 8px; border-radius: 10px 10px 4px 4px;
+  background: color-mix(in srgb, var(--tint) 22%, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--tint) 30%, transparent);
+  transform-origin: 50% 100%; transform: scaleY(0);
+  transition: transform .9s var(--ease); transition-delay: calc(.15s + var(--i) * .09s);
+}
+.tf-bar-price {
+  font-weight: 700; font-size: 14.5px; letter-spacing: -.02em; white-space: nowrap;
+  opacity: 0; transition: opacity .5s var(--ease); transition-delay: calc(.45s + var(--i) * .09s);
+}
+.tf-bar-label { padding-top: 10px; min-height: calc(2 * 1.35em + 10px); font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); line-height: 1.35; }
+.tf-bars li.is-floor .tf-bar-fill { background: var(--tf-pill-grad); border-color: transparent; box-shadow: 0 12px 28px -12px rgba(109,91,250,.7); }
+.tf-bars li.is-floor .tf-bar-price { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tf-bars li.is-floor .tf-bar-label { color: var(--ink); font-weight: 600; }
+.tf-bar-fill b {
+  position: absolute; left: 0; right: 0; top: 10px; font-family: var(--font-mono); font-size: 11.5px; font-weight: 600; color: #fff;
+}
+.tf-ladder.in .tf-bar-fill { transform: none; }
+.tf-ladder.in .tf-bar-price { opacity: 1; }
+
+/* Annuel : quatre paliers */
+.tf-years { list-style: none; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 26px; flex: 1; }
+.tf-years li {
+  display: flex; flex-direction: column; gap: 4px; padding: 16px 16px 14px; border-radius: 16px;
+  border: 1px solid var(--border); background: var(--surface-2);
+}
+.tf-year-n { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.tf-year-price { font-size: 26px; font-weight: 700; letter-spacing: -.04em; line-height: 1.1; margin-top: 4px; }
+.tf-year-month { font-size: 13.5px; color: var(--ink-2); }
+.tf-year-tag {
+  align-self: flex-start; margin-top: auto; font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
+  padding: 3px 8px; border-radius: 999px; background: var(--tint-soft); color: var(--tint-ink);
+}
+.tf-years li:not(:first-child) .tf-year-tag { margin-top: 8px; }
+.tf-years li:first-child .tf-year-tag { margin-top: 8px; }
+.tf-years li.is-floor {
+  border-color: transparent; background: linear-gradient(color-mix(in srgb, var(--brand-b) 7%, var(--surface)), color-mix(in srgb, var(--brand-b) 7%, var(--surface))) padding-box, var(--grad) border-box;
+}
+.tf-years li.is-floor .tf-year-price { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tf-years li.is-floor .tf-year-tag { background: var(--tf-pill-grad); color: #fff; }
+.tf-ladder-note { margin-top: 14px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
+
+/* Ce que tu économises */
+.tf-savings {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; max-width: var(--max); margin: 16px auto 0;
+  border-radius: var(--r-xl); border: 1px solid var(--border); background: var(--border); overflow: hidden;
+}
+.tf-savings > * { background: var(--surface); padding: 26px 28px; }
+.tf-savings-head { grid-column: 1 / -1; }
+.tf-savings-head h3 { font-size: 22px; letter-spacing: -.03em; }
+.tf-savings-head p { font-size: 14px; color: var(--ink-2); margin-top: 8px; line-height: 1.55; }
+.tf-saving { display: flex; flex-direction: column; gap: 6px; }
+.tf-saving-when { font-family: var(--font-mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.tf-saving-amount { font-size: clamp(32px, 3.4vw, 42px); font-weight: 700; letter-spacing: -.045em; line-height: 1.05; background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.tf-saving-amount::after { content: " économisés"; font-size: 14px; letter-spacing: 0; font-weight: 500; -webkit-text-fill-color: var(--ink-3); }
+.tf-saving-detail { font-size: 14.5px; color: var(--ink-2); }
+.tf-saving-detail strong { color: var(--ink); font-weight: 600; }
+.tf-saving-more { margin-top: 4px; }
+.tf-saving-more summary { cursor: pointer; width: max-content; font-size: 13px; font-weight: 600; color: var(--tint); }
+.tf-saving-more summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tf-saving-calc { display: block; margin-top: 6px; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); overflow-wrap: anywhere; }
+
+/* Règles */
+.tf-rules-head { max-width: var(--max); margin: 64px auto 18px; text-align: center; }
+.tf-rules-head h3 { font-size: clamp(24px, 2.6vw, 32px); letter-spacing: -.035em; }
+.tf-rules { list-style: none; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px; max-width: var(--max); margin: 0 auto; }
+.tf-rule { grid-column: span 2; border-radius: var(--r-lg); border: 1px solid var(--border); background: var(--surface); padding: 22px 22px 24px; }
+.tf-rule:nth-child(4), .tf-rule:nth-child(5) { grid-column: span 3; }
+.tf-rule .ic { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--tint-soft); color: var(--tint); margin-bottom: 14px; }
+.tf-rule .ic svg { width: 18px; height: 18px; }
+.tf-rule h4 { font-size: 16px; letter-spacing: -.015em; margin-bottom: 6px; }
+.tf-rule p { font-size: 14px; color: var(--ink-2); line-height: 1.6; }
+
+.tf-legal { max-width: 780px; margin: 40px auto 0; text-align: center; font-size: 13px; color: var(--ink-3); line-height: 1.6; }
+.tf-legal a, .tf-plus .plan-note a { color: var(--tint); text-decoration: underline; text-underline-offset: 2px; }
+
+/* ---------- Réactif ---------- */
+@media (max-width: 1080px) {
+  .tf-ladders { grid-template-columns: 1fr; max-width: 720px; }
+  .tf-savings { grid-template-columns: 1fr; max-width: 720px; }
+  .tf-rules { grid-template-columns: 1fr 1fr; max-width: 720px; }
+  .tf-rule, .tf-rule:nth-child(4) { grid-column: span 1; }
+  .tf-rule:nth-child(5) { grid-column: span 2; }
+}
+/* Cartes empilées : l'écart entre les deux laisse la place à Coco, assis sur Alixo+ */
+@media (max-width: 900px) {
+  .tf-plans { row-gap: 150px; max-width: 560px; }
+}
+@media (max-width: 640px) {
+  .tf-hero { padding: 40px 16px 80px; }
+  .tf-plans { margin-top: 48px; row-gap: 122px; }
+  .tf-plus { --tf-coco-w: 92px; --tf-coco-sink: 16px; --tf-coco-right: 22px; }
+  .tf-coco .tf-bubble { width: 226px; }
+  .tf-switch-opt { padding: 9px 15px; }
+  .tf-ladder { padding: 22px 18px; }
+  /* Barres horizontales : une ligne par palier (libellé, barre de largeur proportionnelle au prix, prix) */
+  .tf-bars { grid-template-columns: 1fr; gap: 10px; }
+  .tf-bars li { display: grid; grid-template-columns: 96px 1fr 58px; align-items: center; gap: 10px; text-align: left; }
+  .tf-bar-label { grid-column: 1; grid-row: 1; padding: 0; min-height: 0; font-size: 12px; }
+  .tf-bar-fill {
+    grid-column: 2; grid-row: 1; width: calc(var(--r) * 100%); height: 26px; margin: 0; border-radius: 4px 8px 8px 4px;
+    transform-origin: 0 50%; transform: scaleX(0);
+  }
+  .tf-bar-price { grid-column: 3; grid-row: 1; text-align: right; font-size: 13.5px; }
+  .tf-bar-fill b { top: 50%; left: auto; right: 8px; transform: translateY(-50%); font-size: 12px; }
+  .tf-years { gap: 8px; }
+  .tf-years li { padding: 14px 12px 12px; }
+  .tf-year-price { font-size: 22px; }
+  .tf-savings > * { padding: 22px 20px; }
+  .tf-rules { grid-template-columns: 1fr; }
+  .tf-rule, .tf-rule:nth-child(4), .tf-rule:nth-child(5) { grid-column: span 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .tf-coco-img, .tf-coco.is-talking .tf-coco-body, .tf-coco.is-talking::before, .tf-coco .coco-caret { animation: none !important; }
+  .tf-coco .tf-bubble { transition: opacity .15s, visibility 0s .15s; transform: none; }
+  .tf-bar-fill { transform: none; transition: none; }
+  .tf-bar-price { opacity: 1; transition: none; }
+  .tf-switch-opt, .tf-ladder, .tf-ladder-tag { transition: none; }
+}
