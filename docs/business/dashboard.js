@@ -300,7 +300,7 @@
   /* ============================================================
      1.35 : sans entreprise — les offres, puis l'assistant « Configurer votre entreprise »
      ------------------------------------------------------------
-     - Offres : 60 € / mois ou 690 € / an (deux mois offerts) pour l'offre de base : 10 employés dont 5 licences Alixo+.
+     - Offres : 60 € / mois ou 690 € / an (30 € de moins qu'au mensuel) pour l'offre de base : 10 employés dont 5 licences Alixo+.
        Les tarifs réels viennent du serveur de paiement (billing/, GET /business/offer) ; tant qu'il ne les publie pas
        (abonnement pas encore ouvert chez Stripe), « Souscrire » propose une pré-inscription (bizleads/{uid}) — jamais de
        faux paiement.
@@ -386,6 +386,10 @@
   function offersHTML() {
     const yearly = period === 'yearly';
     const perMonthYearly = offerOpen() && bizOffer.yearly ? bizOffer.yearly.amount / 12 : PRICES.yearly / 12;
+    /* économie réelle de l'annuel sur douze mois au tarif mensuel (690 € contre 12 × 60 € : 30 €, pas « deux mois offerts ») */
+    const amt = k => (offerOpen() && bizOffer[k] ? bizOffer[k].amount : PRICES[k]);
+    const saving = Math.max(0, 12 * amt('monthly') - amt('yearly'));
+    const savingTxt = saving ? `${fmtEur(saving)} de moins qu’au mensuel` : '';
     const sub = subActive() ? `<div class="bz-note ok">${ICO.check}<div><b>Votre abonnement Alixo Business est actif</b> (${bizSub.plan === 'yearly' ? 'formule annuelle' : 'formule mensuelle'}). Il reste à configurer votre entreprise.</div><button type="button" class="bz-btn primary small" data-ov="configurer">Configurer</button></div>` : '';
     return `<section class="bz-hero2">
         <span class="bz-kicker">Alixo Business</span>
@@ -396,12 +400,12 @@
       <section class="bz-pricing">
         <div class="bz-period" role="radiogroup" aria-label="Facturation">
           <button type="button" data-period="monthly" class="${yearly ? '' : 'on'}" role="radio" aria-checked="${!yearly}">Mensuel</button>
-          <button type="button" data-period="yearly" class="${yearly ? 'on' : ''}" role="radio" aria-checked="${yearly}">Annuel <span class="bz-save">2 mois offerts</span></button>
+          <button type="button" data-period="yearly" class="${yearly ? 'on' : ''}" role="radio" aria-checked="${yearly}">Annuel${savingTxt ? ` <span class="bz-save">${savingTxt}</span>` : ''}</button>
         </div>
         <div class="bz-plans">
           <article class="bz-plan main">
             <div class="bz-plantop"><span class="bz-plantag">Offre de base</span><h2>Business</h2><p>Pour une équipe jusqu’à ${OFFER_SEATS.seats} personnes.</p></div>
-            <div class="bz-price"><b>${yearly ? priceOf('yearly') : priceOf('monthly')}</b><span>${yearly ? 'par an' : 'par mois'}</span>${yearly ? `<small>soit ${fmtEur(Math.round(perMonthYearly))} par mois · ${priceOf('monthly')} en mensuel</small>` : `<small>ou ${priceOf('yearly')} par an, deux mois offerts</small>`}</div>
+            <div class="bz-price"><b>${yearly ? priceOf('yearly') : priceOf('monthly')}</b><span>${yearly ? 'par an' : 'par mois'}</span>${yearly ? `<small>soit ${fmtEur(Math.round(perMonthYearly))} par mois · ${priceOf('monthly')} en mensuel</small>` : `<small>ou ${priceOf('yearly')} par an${savingTxt ? ', ' + savingTxt : ''}</small>`}</div>
             <ul class="bz-feats">${BIZ_FEATURES.map(([i, t, d]) => `<li><span class="bz-fico">${ICO[i]}</span><div><b>${esc(t)}</b><small>${esc(d)}</small></div></li>`).join('')}</ul>
             <button type="button" class="bz-btn primary big" data-subscribe="${period}" ${subActive() ? 'disabled' : ''}>${subActive() ? 'Abonnement actif' : offerOpen() ? `Souscrire — ${yearly ? priceOf('yearly') + ' / an' : priceOf('monthly') + ' / mois'}` : 'Souscrire'}</button>
             <p class="bz-muted bz-center">${offerOpen() ? 'Paiement sécurisé par Stripe · sans engagement · facture par e-mail' : 'Les abonnements ouvrent très bientôt : laissez-nous vos coordonnées, nous vous prévenons à l’ouverture.'}</p>

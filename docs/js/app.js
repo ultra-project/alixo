@@ -2206,6 +2206,28 @@ const canCheckoutBusiness = () => billingReady() && !!(billingOffer && billingOf
 const subActive = () => !!(billingInfo && billingInfo.subscriptionId && SUB_GRANTING.includes(billingInfo.status));
 const fmtMoney = (cents, cur) => { try { return (cents / 100).toLocaleString('fr-FR', { style: 'currency', currency: String(cur || 'eur').toUpperCase() }); } catch { return (cents / 100).toFixed(2).replace('.', ',') + ' €'; } };
 const fmtLongDate = ts => new Date(+ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+/* tarif fidélité (prix dégressifs selon l'ancienneté) : billing/{uid}.loyalty, calculé par le serveur de paiement d'après Stripe ;
+   `loyaltyServer()` : le serveur connaît le passage à l'annuel et la pause (sa réponse /api/offer porte `ladder`) */
+const loyaltyInfo = () => (billingInfo && billingInfo.loyalty && typeof billingInfo.loyalty === 'object' ? billingInfo.loyalty : null);
+const loyaltyServer = () => !!(billingOffer && 'ladder' in billingOffer);
+/* prix d'un nouveau paiement : le palier d'ancienneté (client qui revient dans les 30 jours), sinon le tarif lu chez Stripe */
+function quoteAmount(k) {
+  const p = billingOffer && billingOffer[k], l = loyaltyInfo();
+  const q = l && l.quote && +l.quote[k] > 0 && (!l.graceUntil || +l.graceUntil > Date.now()) ? +l.quote[k] : 0;
+  return q || (p ? p.amount : 0);
+}
+/* « Tarif fidélité : 12,99 €/mois au lieu de 14,99 € (−2,00 €) · 11,99 € dans 4 mois » ; '' sans tarif fidélité */
+function loyaltyText() {
+  const b = billingInfo, l = loyaltyInfo();
+  if (!b || !l || !subActive() || b.cancelAtPeriodEnd || !(+l.amount > 0)) return '';
+  const cur = l.currency || 'eur', unit = l.plan === 'yearly' ? 'an' : 'mois';
+  const months = l.nextAt ? Math.max(1, Math.round((+l.nextAt - Date.now()) / (30.44 * 86400000))) : +l.nextIn || 0;
+  const when = l.plan === 'yearly' ? (l.nextAt ? `à partir du ${fmtLongDate(l.nextAt)}` : 'au renouvellement suivant') : `dans ${months} mois`;
+  const next = +l.nextAmount > 0 ? fmtMoney(+l.nextAmount, cur) : '';
+  const frozen = l.frozen ? ' · palier conservé pendant la pause' : '';
+  if (+l.saving > 0) return `Tarif fidélité : ${fmtMoney(+l.amount, cur)}/${unit} au lieu de ${fmtMoney(+l.baseAmount, cur)} (−${fmtMoney(+l.saving, cur)})${next ? ` · ${next} ${when}` : ''}${frozen}`;
+  return next ? `Tarif fidélité : ${next}/${unit} ${when}${frozen}` : '';
+}
 /* « 14,99 €/mois ou 149,99 €/an » */
 function offerLabel() {
   if (!billingOffer) return plusOffer.price || '';
@@ -2213,12 +2235,6 @@ function offerLabel() {
   if (billingOffer.monthly) parts.push(fmtMoney(billingOffer.monthly.amount, billingOffer.monthly.currency) + '/mois');
   if (billingOffer.yearly) parts.push(fmtMoney(billingOffer.yearly.amount, billingOffer.yearly.currency) + '/an');
   return parts.join(' ou ');
-}
-/* mois « offerts » par la formule annuelle, par rapport à douze mois au tarif mensuel */
-function yearlySavingMonths() {
-  const m = billingOffer && billingOffer.monthly, y = billingOffer && billingOffer.yearly;
-  if (!m || !y || !m.amount) return 0;
-  return Math.max(0, Math.round((12 * m.amount - y.amount) / m.amount));
 }
 const planActive = p => !!(p && p.plus && (!p.until || +p.until > Date.now()));
 /* Alixo+ actif sur ce compte ? (sans service en ligne : tout est ouvert) */
@@ -2284,13 +2300,105 @@ function removeEdition() {
 function subscriptionHTML() {
   const b = billingInfo; if (!b || !b.subscriptionId || !billingReady()) return '';
   const st = subscriptionStatusText(); if (!st) return '';
+  const loyal = loyaltyText();
   return `<div class="set-sect"><div class="po-label">Votre abonnement</div>
-      <div class="plus-sub ${b.status === 'past_due' ? 'warn' : ''}"><span>${esc(st)}</span>
-        <div class="po-row" style="gap:8px; margin:0">${subActive() ? '<button class="cta plus-cta small" id="plus-manage2" type="button">Gérer mon abonnement</button>' : ''}${b.lastInvoiceUrl ? `<button class="cta ghost small" id="plus-invoice" type="button">Dernière facture</button>` : ''}<button class="cta ghost small" id="plus-sync" type="button" title="Relire l’abonnement chez Stripe">Actualiser</button></div>
+      <div class="plus-sub ${b.status === 'past_due' ? 'warn' : ''}"><span>${esc(st)}</span>${loyal ? `<span>${esc(loyal)}</span>` : ''}
+        <div class="po-row" style="gap:8px; margin:0">${subActive() ? '<button class="cta plus-cta small" id="plus-manage2" type="button">Gérer mon abonnement</button>' : ''}${subActionsHTML()}${b.lastInvoiceUrl ? `<button class="cta ghost small" id="plus-invoice" type="button">Dernière facture</button>` : ''}<button class="cta ghost small" id="plus-sync" type="button" title="Relire l’abonnement chez Stripe">Actualiser</button></div>
       </div>
-      <div class="po-hint" style="margin-top:8px">Carte bancaire, factures, passage du mensuel à l’annuel et résiliation se font dans « Gérer mon abonnement » (portail sécurisé Stripe). Les changements apparaissent ici en quelques secondes.</div></div>`;
+      <div class="po-hint" style="margin-top:8px">${loyaltyServer() ? 'Carte bancaire, factures et résiliation se font dans « Gérer mon abonnement » (portail sécurisé Stripe) ; le passage à l’annuel et la pause, ici.' : 'Carte bancaire, factures et résiliation se font dans « Gérer mon abonnement » (portail sécurisé Stripe).'} Les changements apparaissent ici en quelques secondes.</div></div>`;
+}
+/* tarif fidélité : « Passer à l'annuel », « Mettre en pause » (mensuel actif) et « Reprendre » (pause programmée ou en cours) */
+const pauseSet = () => !!(billingInfo && (billingInfo.paused || +billingInfo.pausedUntil > Date.now()));
+function subActionsHTML() {
+  const b = billingInfo;
+  if (!b || !subActive() || !loyaltyServer() || !billingReady()) return '';
+  if (pauseSet()) return '<button class="cta ghost small" data-sub-act="resume" type="button">Reprendre</button>';
+  if (b.plan !== 'monthly' || b.status !== 'active' || b.cancelAtPeriodEnd) return '';
+  return `${billingOffer.yearly ? '<button class="cta ghost small" data-sub-act="switch" type="button">Passer à l’annuel</button>' : ''}<button class="cta ghost small" data-sub-act="pause" type="button">Mettre en pause</button>`;
+}
+function bindSubActions(root) {
+  root.querySelectorAll('[data-sub-act]').forEach(btn => {
+    if (btn.dataset.bound) return; btn.dataset.bound = '1';
+    btn.addEventListener('click', () => ({ switch: openSwitchYearly, pause: openPauseDialog, resume: openResumeDialog })[btn.dataset.subAct]());
+  });
+}
+/* appel au serveur de paiement depuis une fenêtre : bouton occupé, message d'erreur, fermeture au succès */
+async function subAction(btn, close, run, done) {
+  const label = btn.textContent; btn.disabled = true; btn.textContent = 'Un instant…';
+  try { const r = await run(); close(); toast(done(r), { duration: 7000 }); }
+  catch (e) { toast('Impossible : ' + (e && e.message || 'réessayez dans un instant'), { duration: 7000 }); btn.disabled = false; btn.textContent = label; }
+}
+/* passage à l'annuel : une nouvelle commande — prix de l'année, montant exact prélevé aujourd'hui (aperçu Stripe, rien
+   n'est modifié), CGV à accepter, demande facultative d'accès immédiat (L. 221-25), consentement tracé (via: 'switch') */
+function openSwitchYearly() {
+  const y = billingOffer && billingOffer.yearly; if (!y) return;
+  const l = loyaltyInfo(); let amount = l && l.quote && +l.quote.yearly > 0 ? +l.quote.yearly : y.amount, due = null;
+  const cur = y.currency;
+  const payLabel = () => (due != null ? `Confirmer et payer ${fmtMoney(due, cur)}` : 'Passer à l’annuel et payer');
+  openDialog({ id: 'plusswitch', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Passer à l’annuel',
+    sub: 'Un seul paiement par an, au prix de votre année d’ancienneté.',
+    body: `<div class="plus-precontract">
+        <div class="acc-fact"><span>Prix de l’année</span><b id="sw-year">${esc(fmtMoney(amount, cur))} par an${billingOffer.tax ? ' (TVA incluse)' : ''}</b></div>
+        <div class="acc-fact"><span>Prélevé aujourd’hui</span><b id="sw-due">Calcul en cours…</b></div>
+        <div class="acc-fact"><span>Si le paiement échoue</span><b>Rien ne change : votre abonnement reste mensuel.</b></div>
+        <div class="acc-fact"><span>Durée</span><b>Un an, reconduit tacitement chaque année, puis prix dégressif selon votre ancienneté (grille complète : alixoapp.com/tarifs.html) ; un e-mail vous rappelle la date limite pour résilier 1 à 3 mois avant chaque échéance</b></div>
+        <div class="acc-fact"><span>Résiliation</span><b>Effet à la fin de l’année payée ; l’année en cours n’est pas remboursée.</b></div>
+        <div class="acc-fact"><span>Rétractation</span><b>14 jours à compter du passage à l’annuel ; la part déjà utilisée reste due au prorata (art. L. 221-25).</b></div>
+      </div>
+      <label class="plus-chk"><input type="checkbox" id="sw-cgv"> J’ai lu et j’accepte les <a href="${LEGAL_URLS.cgv}" target="_blank" rel="noopener">conditions générales de vente</a> et la <a href="${LEGAL_URLS.privacy}" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
+      <label class="plus-chk"><input type="checkbox" id="sw-ret"> Je demande que l’année commence immédiatement, avant la fin du délai de rétractation de 14 jours. Si je me rétracte, je paierai la part correspondant à la période déjà utilisée (Code de la consommation, art. L. 221-25).</label>
+      <div class="po-hint">Pas de retour à la formule mensuelle en cours d’année.</div>`,
+    foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="sw-go" disabled>${esc(payLabel())}</button>`,
+    onMount: (card, close) => {
+      const go = card.querySelector('#sw-go'), cgv = card.querySelector('#sw-cgv'), ret = card.querySelector('#sw-ret');
+      cgv.addEventListener('change', () => { go.disabled = !cgv.checked; });
+      /* aperçu : montant exact de la facture de prorata (rien n'est modifié chez Stripe) */
+      AlixoCloud.billing.switch('yearly', { preview: true }).then(p => {
+        if (!card.isConnected || !p) return;
+        if (+p.yearAmount > 0) { amount = +p.yearAmount; card.querySelector('#sw-year').textContent = `${fmtMoney(amount, cur)} par an${billingOffer.tax ? ' (TVA incluse)' : ''}`; }
+        if (p.amountDue != null) { due = +p.amountDue; card.querySelector('#sw-due').textContent = `${fmtMoney(due, p.currency || cur)} (le prix de l’année, moins la part non utilisée du mois en cours) ; votre année commence aujourd’hui`; if (!go.matches('[data-busy]')) go.textContent = payLabel(); }
+      }).catch(() => { if (card.isConnected) card.querySelector('#sw-due').textContent = 'Le prix de l’année, moins la part non utilisée du mois en cours (montant exact sur votre facture) ; votre année commence aujourd’hui'; });
+      go.addEventListener('click', e => {
+        if (!cgv.checked) return;
+        if (window.AlixoCloud && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: fmtMoney(amount, cur) + '/an', plan: 'yearly', cgv: true, waiver: ret.checked, version: ALIXO_VERSION, via: 'switch' });
+        e.currentTarget.dataset.busy = '1';
+        subAction(e.currentTarget, close, () => AlixoCloud.billing.switch('yearly', { cgv: true, immediate: ret.checked }),
+          r => (r && r.pending ? 'Paiement en attente : l’abonnement passera à l’annuel dès qu’il sera encaissé.' : 'Votre abonnement est maintenant annuel.'));
+      });
+    }
+  });
+}
+function openPauseDialog() {
+  const b = billingInfo; if (!b) return;
+  openDialog({ id: 'pluspause', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Mettre en pause',
+    sub: `Réservée à l’abonnement mensuel. Elle commence le ${esc(fmtLongDate(b.periodEnd))}, à la fin du mois déjà payé : Alixo+ reste ouvert jusque-là.`,
+    body: `<div class="plus-plans" role="radiogroup" aria-label="Durée de la pause" style="grid-template-columns:repeat(3, 1fr)">
+        ${[1, 2, 3].map(n => `<button type="button" class="set-tile plus-plan ${n === 1 ? 'on' : ''}" data-plan="${n}" role="radio" aria-checked="${n === 1}"><b>${n} mois</b></button>`).join('')}
+      </div>
+      <div class="po-hint">Aucun prélèvement pendant la pause. Votre palier est conservé.</div>
+      <div class="po-hint"><b>Alixo+ est fermé pendant la pause</b> : vous revenez au compte gratuit, vos cours et vos notes sont conservés. Il rouvre à la fin de la pause, avec le prélèvement du mois suivant. Reprendre plus tôt est possible : un nouveau mois est alors prélevé tout de suite. Au plus 3 mois de pause sur 12 mois glissants.</div>`,
+    foot: '<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="pz-go">Mettre en pause</button>',
+    onMount: (card, close) => {
+      let months = 1; bindPlanTiles(card, v => { months = +v; });
+      card.querySelector('#pz-go').addEventListener('click', e => subAction(e.currentTarget, close, () => AlixoCloud.billing.pause(months),
+        r => `Pause programmée${r && r.until ? ' jusqu’au ' + fmtLongDate(r.until) : ''} : aucun prélèvement pendant la pause.`));
+    }
+  });
+}
+function openResumeDialog() {
+  const b = billingInfo; if (!b) return;
+  const l = loyaltyInfo(), amount = l && +l.amount > 0 ? +l.amount : billingOffer && billingOffer.monthly ? billingOffer.monthly.amount : 0;
+  const started = !!b.paused;
+  openDialog({ id: 'plusresume', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Reprendre l’abonnement',
+    sub: started ? 'Alixo+ rouvre dès le paiement.' : 'La pause programmée est annulée.',
+    body: `<div class="po-hint">${started ? `Un nouveau mois commence aujourd’hui : ${amount ? esc(fmtMoney(amount, (l && l.currency) || 'eur')) + ' sont prélevés' : 'le mois est prélevé'} maintenant, puis chaque mois à cette date.` : 'Rien ne change : l’abonnement continue et se renouvelle normalement.'}</div>`,
+    foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="rs-go">${started ? (amount ? `Reprendre et payer ${esc(fmtMoney(amount, (l && l.currency) || 'eur'))}` : 'Reprendre et payer') : 'Reprendre'}</button>`,
+    onMount: (card, close) => card.querySelector('#rs-go').addEventListener('click', e => subAction(e.currentTarget, close, () => AlixoCloud.billing.resume(),
+      r => (r && r.charged ? 'Abonnement repris : Alixo+ rouvre dès que le paiement est encaissé.' : 'Pause annulée : l’abonnement continue.')))
+  });
 }
 function bindSubscription(root) {
+  bindSubActions(root);
   const mg = root.querySelector('#plus-manage2'); if (mg) mg.addEventListener('click', e => openBillingPortal(e.currentTarget));
   const inv = root.querySelector('#plus-invoice'); if (inv) inv.addEventListener('click', () => openExternalUrl(billingInfo.lastInvoiceUrl));
   const sy = root.querySelector('#plus-sync'); if (sy) sy.addEventListener('click', async e => { const b = e.currentTarget; b.disabled = true; b.textContent = 'Vérification…'; try { await AlixoCloud.billing.sync(); toast('Abonnement vérifié auprès de Stripe'); } catch (err) { toast('Vérification impossible : ' + (err && err.message || '')); } b.disabled = false; b.textContent = 'Actualiser'; });
@@ -2387,11 +2495,14 @@ function openExternalUrl(url) {
   if (window.alixoDesktop && alixoDesktop.openExternal) alixoDesktop.openExternal(url); else window.open(url, '_blank', 'noopener');
 }
 /* 1.26 : avant le lien de paiement — informations précontractuelles (C. conso., art. L. 221-5), acceptation des CGV
-   et renonciation expresse au droit de rétractation (art. L. 221-28) ; un mineur est renvoyé vers un parent. */
+   et demande facultative d'accès immédiat (art. L. 221-25) ; un mineur est renvoyé vers un parent. Jamais affiché quand le
+   paiement Stripe (checkout) est disponible. */
+/* ancien achat d'une clé (lien externe) : seulement si aucun serveur de paiement Stripe n'est branché */
+const keyPurchaseOpen = () => !!plusOffer.url && !(billingOffer && billingOffer.ladder) && !(billingReady() && billingOffer);
 function openPlusUrl() {
   if (canCheckout()) { openPlusCheckout(); return; }
+  if (!keyPurchaseOpen()) return;          // le paiement par clé n'est plus proposé quand l'abonnement dégressif existe
   const url = plusOffer.url;
-  if (!url) return;
   const ag = ageGroup();
   if (ag === 'u15' || ag === '15-17') {
     openDialog({ id: 'plusminor', cls: 'plus-dlg', eyebrow: 'Alixo+', title: 'Demande à un parent',
@@ -2411,42 +2522,61 @@ function openPlusUrl() {
         <div class="acc-fact"><span>Durée</span><b>Celle choisie sur la page de paiement (1, 3, 6 ou 12 mois), sans reconduction automatique</b></div>
         <div class="acc-fact"><span>Activation</span><b>Par une clé envoyée après paiement, à saisir dans Paramètres › Alixo+ › Clé d’activation</b></div>
         <div class="acc-fact"><span>Vendeur</span><b>L’éditeur d’Alixo, identifié dans les <a href="https://alixoapp.com/mentions-legales.html" target="_blank" rel="noopener">mentions légales</a></b></div>
-        <div class="acc-fact"><span>Rétractation</span><b>14 jours après l’achat, sauf si vous demandez l’activation immédiate ci-dessous</b></div>
+        <div class="acc-fact"><span>Rétractation</span><b>14 jours après l’achat. Si vous avez demandé l’activation immédiate, la part du service déjà utilisée reste due (au prorata) ; sinon, le remboursement est intégral.</b></div>
       </div>
       <label class="plus-chk"><input type="checkbox" id="pb-cgv"> J’ai lu et j’accepte les <a href="${LEGAL_URLS.cgv}" target="_blank" rel="noopener">conditions générales de vente</a> et la <a href="${LEGAL_URLS.privacy}" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
-      <label class="plus-chk"><input type="checkbox" id="pb-ret"> Je demande que l’abonnement commence dès l’activation de ma clé et je reconnais perdre mon droit de rétractation une fois Alixo+ activé (Code de la consommation, art. L. 221-28).</label>
+      <label class="plus-chk"><input type="checkbox" id="pb-ret"> Facultatif : je demande l’accès immédiat dès l’activation de ma clé, avant la fin du délai de rétractation de 14 jours. Si je me rétracte, je paierai la part correspondant à la période déjà utilisée (Code de la consommation, art. L. 221-25).</label>
       <div class="po-hint">Le paiement se fait sur une page externe sécurisée. Vous recevrez une facture et votre clé par e-mail.</div>`,
     foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="pb-go" disabled>Continuer vers le paiement</button>`,
     onMount: (card, close) => {
       const cgv = card.querySelector('#pb-cgv'), ret = card.querySelector('#pb-ret'), go = card.querySelector('#pb-go');
-      const sync = () => { go.disabled = !(cgv.checked && ret.checked); };
-      cgv.addEventListener('change', sync); ret.addEventListener('change', sync);
+      const sync = () => { go.disabled = !cgv.checked; };
+      cgv.addEventListener('change', sync);
       go.addEventListener('click', () => {
-        if (window.AlixoCloud && AlixoCloud.enabled && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: plusOffer.price || '', cgv: true, waiver: true, version: ALIXO_VERSION });
+        if (window.AlixoCloud && AlixoCloud.enabled && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: plusOffer.price || '', cgv: true, waiver: ret.checked, version: ALIXO_VERSION, via: 'key' });
         close();
         openExternalUrl(url);
       });
     } });
 }
+/* « Prix suivants » de la fenêtre d'achat : le palier suivant de la grille publique (/api/offer › ladder), à partir de
+   l'ancienneté reprise (client qui revient dans les 30 jours) ou de zéro (nouvel abonné) ; '' sans grille */
+function nextPriceText(plan, amount, cur) {
+  const lad = billingOffer && billingOffer.ladder; if (!lad) return '';
+  const l = loyaltyInfo();
+  const months = l && +l.months > 0 && l.graceUntil && +l.graceUntil > Date.now() ? +l.months : 0;
+  if (plan === 'yearly') {
+    const year = Math.min(4, Math.floor(months / 12) + 1);
+    const nx = (lad.yearly || []).find(x => x.year > year && +x.amount > 0 && +x.amount < amount);
+    return nx ? `${fmtMoney(+nx.amount, cur)} ${nx.year === year + 1 ? (months ? 'l’année prochaine' : 'la 2e année') : `la ${nx.year}e année`}, puis selon la grille` : '';
+  }
+  const n = months + 1;
+  const nx = (lad.monthly || []).find(x => x.from > n && +x.amount > 0 && +x.amount < amount);
+  return nx ? `${fmtMoney(+nx.amount, cur)}/mois ${months ? `dans ${nx.from - n} mois (votre ancienneté est reprise)` : `à partir du ${nx.from}e mois`}, puis selon la grille` : '';
+}
 /* 1.30 : choix de la formule (mensuelle / annuelle) — tuiles de la fenêtre d'achat */
 function planTilesHTML(sel) {
-  const m = billingOffer.monthly, y = billingOffer.yearly, saved = yearlySavingMonths();
-  const tile = (k, p, title, hint, tag) => `<button type="button" class="set-tile plus-plan ${sel === k ? 'on' : ''}" data-plan="${k}" role="radio" aria-checked="${sel === k}">${tag ? `<span class="plus-tag">${esc(tag)}</span>` : ''}<b>${title}</b><span class="plus-price">${esc(fmtMoney(p.amount, p.currency))}<small> / ${k === 'yearly' ? 'an' : 'mois'}</small></span><span>${hint}</span></button>`;
+  /* tarif fidélité : un client qui revient dans les 30 jours voit le prix de son palier (loyalty.quote) */
+  const m = billingOffer.monthly, y = billingOffer.yearly;
+  const tile = (k, p, title, hint, tag) => `<button type="button" class="set-tile plus-plan ${sel === k ? 'on' : ''}" data-plan="${k}" role="radio" aria-checked="${sel === k}">${tag ? `<span class="plus-tag">${esc(tag)}</span>` : ''}<b>${title}</b><span class="plus-price">${esc(fmtMoney(quoteAmount(k), p.currency))}<small> / ${k === 'yearly' ? 'an' : 'mois'}</small></span><span>${hint}</span></button>`;
   return `<div class="plus-plans" role="radiogroup" aria-label="Formule">
     ${m ? tile('monthly', m, 'Mensuel', 'Sans engagement, résiliable à tout moment') : ''}
-    ${y ? tile('yearly', y, 'Annuel', m ? `soit ${esc(fmtMoney(Math.round(y.amount / 12), y.currency))} par mois` : 'Une seule fois par an', saved ? `${saved} mois offert${saved > 1 ? 's' : ''}` : '') : ''}
+    ${y ? tile('yearly', y, 'Annuel', m ? `soit ${esc(fmtMoney(Math.round(quoteAmount('yearly') / 12), y.currency))} par mois` : 'Une seule fois par an') : ''}
   </div>`;
 }
 function bindPlanTiles(card, onChange) {
   card.querySelectorAll('.plus-plan').forEach(b => b.addEventListener('click', () => { card.querySelectorAll('.plus-plan').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-checked', x === b); }); onChange(b.dataset.plan); }));
 }
 /* ouvre la page de paiement Stripe (navigateur système en version PC, nouvel onglet sur le web) */
-async function startCheckout(plan, btn) {
+/* `consent` : ce qui a réellement été coché ({ cgv, immediate }) ; parcours parent : rien n'est coché ici (lien transmis à
+   un parent, qui accepte les CGV sur la page Stripe) → cgv: false, waiver: false, via: 'parent-link' */
+async function startCheckout(plan, btn, consent) {
   const label = btn ? btn.textContent : '';
+  const c = consent || { cgv: false, immediate: false, via: 'parent-link' };
   if (btn) { btn.disabled = true; btn.textContent = 'Ouverture du paiement…'; }
   try {
-    if (window.AlixoCloud && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: offerLabel(), plan, cgv: true, waiver: true, version: ALIXO_VERSION, via: 'stripe' });
-    const r = await AlixoCloud.billing.checkout(plan);
+    if (window.AlixoCloud && AlixoCloud.recordPlusConsent) AlixoCloud.recordPlusConsent({ price: offerLabel(), plan, cgv: !!c.cgv, waiver: !!c.immediate, version: ALIXO_VERSION, via: c.via || 'stripe' });
+    const r = await AlixoCloud.billing.checkout(plan, { immediate: !!c.immediate });
     if (!r || !r.url) throw new Error('Pas d’adresse de paiement reçue.');
     return r.url;
   } catch (e) {
@@ -2467,7 +2597,7 @@ function openPlusCheckout() {
       onMount: card => {
         let plan = def; bindPlanTiles(card, p => { plan = p; card.querySelector('#pm-row').hidden = true; });
         const copy = async url => { try { await navigator.clipboard.writeText(url); toast('Lien de paiement copié'); } catch { card.querySelector('#pm-url').select(); } };
-        card.querySelector('#pm-make').addEventListener('click', async e => { const btn = e.currentTarget; const url = await startCheckout(plan, btn); if (!url) return; const row = card.querySelector('#pm-row'); row.hidden = false; card.querySelector('#pm-url').value = url; btn.textContent = 'Nouveau lien'; btn.disabled = false; copy(url); });
+        card.querySelector('#pm-make').addEventListener('click', async e => { const btn = e.currentTarget; const url = await startCheckout(plan, btn, { cgv: false, immediate: false, via: 'parent-link' }); if (!url) return; const row = card.querySelector('#pm-row'); row.hidden = false; card.querySelector('#pm-url').value = url; btn.textContent = 'Nouveau lien'; btn.disabled = false; copy(url); });
         card.querySelector('#pm-copy').addEventListener('click', () => copy(card.querySelector('#pm-url').value));
       } });
     return;
@@ -2479,30 +2609,37 @@ function openPlusCheckout() {
       <div class="plus-precontract">
         <div class="acc-fact"><span>Offre</span><b id="pb-offer"></b></div>
         <div class="acc-fact"><span>Durée</span><b id="pb-duration"></b></div>
-        <div class="acc-fact"><span>Résiliation</span><b>À tout moment, en deux clics : Paramètres › Alixo+ › Gérer mon abonnement. Alixo+ reste ouvert jusqu’à la fin de la période déjà payée, rien n’est débité ensuite.</b></div>
+        <div class="acc-fact" id="pb-nextrow" hidden><span>Prix suivants</span><b id="pb-next"></b></div>
+        <div class="acc-fact"><span>Résiliation</span><b>À tout moment, en ligne : Paramètres › Alixo+ › Gérer mon abonnement. Effet à la fin de la période déjà payée ; rien n’est prélevé ensuite. À l’annuel, l’année en cours n’est pas remboursée.</b></div>
         <div class="acc-fact"><span>Activation</span><b>Immédiate après le paiement, sur tous vos appareils (PC, Mac, web, téléphone)</b></div>
         <div class="acc-fact"><span>Vendeur</span><b>L’éditeur d’Alixo, identifié dans les <a href="https://alixoapp.com/mentions-legales.html" target="_blank" rel="noopener">mentions légales</a></b></div>
-        <div class="acc-fact"><span>Rétractation</span><b>14 jours après l’achat, sauf si vous demandez l’accès immédiat ci-dessous ; la résiliation reste possible à tout moment</b></div>
+        <div class="acc-fact"><span>Rétractation</span><b>14 jours après l’achat. Si vous avez demandé l’accès immédiat, la part du service déjà utilisée reste due (au prorata) ; sinon, le remboursement est intégral.</b></div>
       </div>
       <label class="plus-chk"><input type="checkbox" id="pb-cgv"> J’ai lu et j’accepte les <a href="${LEGAL_URLS.cgv}" target="_blank" rel="noopener">conditions générales de vente</a> et la <a href="${LEGAL_URLS.privacy}" target="_blank" rel="noopener">politique de confidentialité</a>.</label>
-      <label class="plus-chk"><input type="checkbox" id="pb-ret"> Je demande l’accès immédiat à Alixo+ et je reconnais perdre mon droit de rétractation une fois Alixo+ activé (Code de la consommation, art. L. 221-28).</label>
+      <label class="plus-chk"><input type="checkbox" id="pb-ret"> Je demande l’accès immédiat à Alixo+, avant la fin du délai de rétractation de 14 jours. Si je me rétracte, je paierai la part correspondant à la période déjà utilisée (Code de la consommation, art. L. 221-25).</label>
       <div class="po-hint">Le paiement se fait sur la page sécurisée de Stripe (carte bancaire, Apple Pay, Google Pay) ; Alixo ne voit jamais votre numéro de carte. Vous recevrez votre facture par e-mail.</div>`,
     foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button><button class="cta plus-cta" type="button" id="pb-go" disabled>Continuer vers le paiement</button>`,
     onMount: (card, close) => {
       let plan = def;
       const describe = () => {
         const p = billingOffer[plan]; if (!p) return;
-        card.querySelector('#pb-offer').textContent = `Alixo+ — abonnement ${plan === 'yearly' ? 'annuel' : 'mensuel'}, ${fmtMoney(p.amount, p.currency)} par ${plan === 'yearly' ? 'an' : 'mois'}${billingOffer.tax ? ' (TVA incluse)' : ''}${billingOffer.trialDays ? `, après ${billingOffer.trialDays} jours d’essai gratuit` : ''}`;
+        const amount = quoteAmount(plan);
+        const hadSub = !!(billingInfo && billingInfo.subscriptionId);     // essai gratuit : seulement pour un tout premier abonnement (règle du serveur)
+        card.querySelector('#pb-offer').textContent = `Alixo+ — abonnement ${plan === 'yearly' ? 'annuel' : 'mensuel'}, ${fmtMoney(amount, p.currency)} par ${plan === 'yearly' ? 'an' : 'mois'}${billingOffer.tax ? ' (TVA incluse)' : ''}${billingOffer.trialDays && !hadSub ? `, après ${billingOffer.trialDays} jours d’essai gratuit` : ''}`;
+        const fidel = billingOffer.ladder ? 'puis prix dégressif selon votre ancienneté (grille complète : alixoapp.com/tarifs.html)' : 'au même tarif';
         card.querySelector('#pb-duration').textContent = plan === 'yearly'
-          ? 'Un an, renouvelé automatiquement chaque année au même tarif ; un e-mail vous le rappelle avant chaque renouvellement'
-          : 'Un mois, renouvelé automatiquement chaque mois au même tarif, sans engagement';
+          ? `Un an, reconduit tacitement chaque année, ${fidel} ; un e-mail vous rappelle la date limite pour résilier 1 à 3 mois avant chaque échéance`
+          : `Mensuel sans engagement, renouvelé automatiquement chaque mois, ${fidel}`;
+        const nx = nextPriceText(plan, amount, p.currency);
+        card.querySelector('#pb-nextrow').hidden = !nx; card.querySelector('#pb-next').textContent = nx;
       };
       bindPlanTiles(card, p => { plan = p; describe(); }); describe();
+      /* CGV obligatoires ; demande d'accès immédiat (L. 221-25) facultative : sans elle, Alixo+ s'active aussi, le choix est tracé */
       const cgv = card.querySelector('#pb-cgv'), ret = card.querySelector('#pb-ret'), go = card.querySelector('#pb-go');
-      const sync = () => { go.disabled = !(cgv.checked && ret.checked); };
-      cgv.addEventListener('change', sync); ret.addEventListener('change', sync);
+      const sync = () => { go.disabled = !cgv.checked; };
+      cgv.addEventListener('change', sync);
       go.addEventListener('click', async () => {
-        const url = await startCheckout(plan, go); if (!url) return;
+        const url = await startCheckout(plan, go, { cgv: true, immediate: ret.checked, via: 'stripe' }); if (!url) return;
         close();
         openExternalUrl(url);
         toast('La page de paiement s’est ouverte dans votre navigateur. Alixo+ s’activera ici dès le paiement.', { duration: 8000 });
@@ -2528,9 +2665,16 @@ async function openBillingPortal(btn) {
 function subscriptionStatusText() {
   const b = billingInfo; if (!b || !b.subscriptionId) return '';
   const formula = b.plan === 'yearly' ? 'annuel' : b.plan === 'monthly' ? 'mensuel' : '';
-  const price = billingOffer && billingOffer[b.plan] ? ` (${fmtMoney(billingOffer[b.plan].amount, billingOffer[b.plan].currency)} par ${b.plan === 'yearly' ? 'an' : 'mois'})` : '';
+  /* montant du prochain prélèvement : le tarif fidélité calculé par le serveur, sinon le tarif lu chez Stripe */
+  const l = loyaltyInfo(), o = billingOffer && billingOffer[b.plan];
+  const amount = l && +l.amount > 0 && (!l.plan || l.plan === b.plan) ? +l.amount : o ? o.amount : 0;
+  const price = amount ? ` (${fmtMoney(amount, (l && l.currency) || (o && o.currency) || 'eur')} par ${b.plan === 'yearly' ? 'an' : 'mois'})` : '';
+  /* « quelques jours » : doit correspondre au réglage des relances Stripe (Récupération des revenus) et à GRACE_DAYS du
+     serveur de paiement, ainsi qu'à la durée qui sera inscrite dans les CGV — à mettre à jour ensemble */
   if (b.status === 'past_due' || (b.paymentFailedAt && SUB_GRANTING.includes(b.status))) return `Abonnement ${formula}${price} — le dernier paiement a échoué : mettez à jour votre moyen de paiement dans « Gérer mon abonnement ». L’accès reste ouvert quelques jours.`;
   if (b.status === 'trialing') return `Essai gratuit jusqu’au ${fmtLongDate(b.trialEnd || b.periodEnd)}, puis abonnement ${formula}${price}.`;
+  if (b.paused && SUB_GRANTING.includes(b.status)) return `Abonnement ${formula} en pause${+b.pausedUntil ? ' jusqu’au ' + fmtLongDate(b.pausedUntil) : ''} : aucun prélèvement, Alixo+ rouvre à la reprise. Votre palier de fidélité est conservé.`;
+  if (+b.pausedUntil > Date.now() && SUB_GRANTING.includes(b.status)) return `Abonnement ${formula}${price} — pause programmée du ${fmtLongDate(b.pauseFrom || b.periodEnd)} au ${fmtLongDate(b.pausedUntil)} : Alixo+ reste ouvert jusqu’au ${fmtLongDate(b.pauseFrom || b.periodEnd)}.`;
   if (SUB_GRANTING.includes(b.status)) return b.cancelAtPeriodEnd ? `Abonnement ${formula}${price} — renouvellement arrêté : Alixo+ reste actif jusqu’au ${fmtLongDate(b.periodEnd)}.` : `Abonnement ${formula}${price} — prochain renouvellement le ${fmtLongDate(b.periodEnd)}.`;
   if (b.status === 'canceled') return `Abonnement ${formula} terminé${b.canceledAt ? ' le ' + fmtLongDate(b.periodEnd && b.periodEnd < Date.now() ? b.periodEnd : b.canceledAt) : ''}. Vous pouvez vous réabonner à tout moment.`;
   if (b.status === 'unpaid' || b.status === 'incomplete_expired') return `Abonnement ${formula} interrompu : le paiement n’a pas pu être encaissé.`;
@@ -2541,20 +2685,23 @@ function plusCtaHTML() {
   const A = window.AlixoAuth;
   if (isPlus()) {
     const st = subActive() ? subscriptionStatusText() : '';
-    return `<div class="plus-state on ${billingInfo && billingInfo.status === 'past_due' ? 'warn' : ''}">${PLUS_ICO.star}<div><b>${esc(planLabel())}</b><span>${st ? esc(st) : 'Toutes les fonctions sont ouvertes sur ce compte.' + (planInfo.note ? ' ' + esc(planInfo.note) : '')}</span></div>${subActive() && billingReady() ? '<button class="cta ghost" id="plus-manage" type="button">Gérer mon abonnement</button>' : ''}</div>`;
+    const loyal = subActive() ? loyaltyText() : '';
+    return `<div class="plus-state on ${billingInfo && billingInfo.status === 'past_due' ? 'warn' : ''}">${PLUS_ICO.star}<div><b>${esc(planLabel())}</b><span>${st ? esc(st) : 'Toutes les fonctions sont ouvertes sur ce compte.' + (planInfo.note ? ' ' + esc(planInfo.note) : '')}</span>${loyal ? `<span>${esc(loyal)}</span>` : ''}</div>${subActive() && billingReady() ? '<button class="cta ghost" id="plus-manage" type="button">Gérer mon abonnement</button>' : ''}</div>`;
   }
+  if (billingInfo && billingInfo.paused && subActive()) return `<div class="plus-state"><div><b>Alixo+ en pause</b><span>${esc(subscriptionStatusText())}</span></div>${billingReady() && loyaltyServer() ? '<button class="cta plus-cta" data-sub-act="resume" type="button">Reprendre</button>' : ''}</div>`;
   if (A && A.isConfigured && !A.account()) return `<div class="plus-state"><div><b>Connectez-vous pour activer Alixo+</b><span>L’abonnement suit votre compte Alixo, sur tous vos appareils.</span></div><button class="cta" id="plus-login" type="button">Se connecter</button></div>`;
   if (canCheckout()) {
     const ended = billingInfo && billingInfo.subscriptionId && !subActive() ? subscriptionStatusText() : '';
     return `<div class="plus-state"><div><b>${esc('Alixo+ — ' + offerLabel())}</b><span>${esc(ended || plusOffer.note || 'Paiement sécurisé par Stripe, activation immédiate sur tous vos appareils, résiliable à tout moment.')}</span></div><button class="cta plus-cta" id="plus-go" type="button">Passer à Alixo+</button></div>`;
   }
-  if (plusOffer.url) return `<div class="plus-state"><div><b>${esc(plusOffer.price ? `Alixo+ — ${plusOffer.price}` : 'Passer à Alixo+')}</b><span>${esc(plusOffer.note || 'Paiement sécurisé ; l’abonnement est activé sur votre compte dès réception.')}</span></div><button class="cta plus-cta" id="plus-go" type="button">Passer à Alixo+</button></div>`;
+  if (keyPurchaseOpen()) return `<div class="plus-state"><div><b>${esc(plusOffer.price ? `Alixo+ — ${plusOffer.price}` : 'Passer à Alixo+')}</b><span>${esc(plusOffer.note || 'Paiement sécurisé ; l’abonnement est activé sur votre compte dès réception.')}</span></div><button class="cta plus-cta" id="plus-go" type="button">Passer à Alixo+</button></div>`;
   return `<div class="plus-state"><div><b>${esc(plusOffer.price ? `Alixo+ — ${plusOffer.price}` : 'Alixo+ arrive')}</b><span>${esc(plusOffer.note || 'Le lien d’abonnement n’est pas encore ouvert : l’administrateur d’Alixo peut activer Alixo+ sur votre compte.')}</span></div></div>`;
 }
 function bindPlusCta(root, close) {
   const go = root.querySelector('#plus-go'); if (go) go.addEventListener('click', openPlusUrl);
   const mg = root.querySelector('#plus-manage'); if (mg) mg.addEventListener('click', e => openBillingPortal(e.currentTarget));
   const lg = root.querySelector('#plus-login'); if (lg) lg.addEventListener('click', () => { if (close) close(); closeSettings(); window.AlixoAuth.openAuthOverlay(); });
+  bindSubActions(root);
 }
 function plusTableHTML(feature) {
   return `<div class="plus-table">
@@ -2571,7 +2718,7 @@ function openPlusDialog(feature) {
     sub: f ? `${f.text} Cette fonction fait partie d’Alixo+.` : 'Toutes les fonctions d’Alixo, sans limite, sur tous vos appareils.',
     body: `${plusCtaHTML()}${plusTableHTML(feature)}
       <div class="po-hint">Le compte gratuit garde tout l’essentiel : cours, présentations, dossiers, fichiers jusqu’à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. Alixo+ suit le compte : une seule fois pour le PC, le Mac, le web et le téléphone.</div>`,
-    foot: `<button class="cta ghost" type="button" data-dlg-close>${isPlus() ? 'Fermer' : 'Plus tard'}</button>${!isPlus() && (canCheckout() || plusOffer.url) ? '<button class="cta plus-cta" type="button" id="plus-go2">Passer à Alixo+</button>' : ''}`,
+    foot: `<button class="cta ghost" type="button" data-dlg-close>${isPlus() ? 'Fermer' : 'Plus tard'}</button>${!isPlus() && (canCheckout() || keyPurchaseOpen()) ? '<button class="cta plus-cta" type="button" id="plus-go2">Passer à Alixo+</button>' : ''}`,
     onMount: (card, close) => { bindPlusCta(card, close); const g2 = card.querySelector('#plus-go2'); if (g2) g2.addEventListener('click', openPlusUrl); }
   });
   ov.dataset.feature = feature || '';
@@ -10696,6 +10843,8 @@ setTimeout(() => {
   try {
     const wn = new URLSearchParams(location.search).get('nouveautes');
     if (wn) showWhatsNew(wn === '1' ? ALIXO_VERSION : wn);
+    /* lien « gérer / résilier » de l'e-mail de rappel avant reconduction (serveur de paiement) : …/docs/?plus */
+    if (new URLSearchParams(location.search).has('plus')) { settingsCat = 'plus'; openSettings(); }
     const prev = state.settings.lastVersion;
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();

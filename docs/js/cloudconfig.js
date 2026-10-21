@@ -135,7 +135,7 @@ window.AlixoCloud = (() => {
      écrit plans/{uid} + billing/{uid} à chaque événement Stripe. L'application lui parle avec le jeton Firebase du
      compte (jamais de clé Stripe côté client) ; son adresse vient de firebase-config.js (ALIXO_BILLING.api) ou de
      config/public.billingApi. billing/{uid} (lecture seule) : { customerId, subscriptionId, status, plan, periodEnd,
-     cancelAtPeriodEnd, paymentFailedAt, lastInvoiceUrl… } → AlixoApp.setBilling. */
+     cancelAtPeriodEnd, paymentFailedAt, lastInvoiceUrl, paused, pausedUntil, loyalty… } → AlixoApp.setBilling. */
   const DEFAULT_BILLING_API = String(window.ALIXO_BILLING && window.ALIXO_BILLING.api || '').replace(/\/+$/, '');
   let billingApi = '', offerFor = '';
   async function idToken() { const u = firebase.auth().currentUser; if (!u) throw new Error('Connectez-vous à votre compte Alixo.'); return u.getIdToken(); }
@@ -165,9 +165,16 @@ window.AlixoCloud = (() => {
   const billing = {
     ready: () => !!billingApi,
     api: () => billingApi,
-    checkout: async plan => bapi('/api/checkout', { idToken: await idToken(), plan: plan === 'yearly' ? 'yearly' : 'monthly', nonce: Date.now().toString(36) }),
+    /* opts.immediate : demande d'accès immédiat (C. conso. art. L. 221-25), tracée par le serveur (métadonnée immediate_access) */
+    checkout: async (plan, opts) => bapi('/api/checkout', { idToken: await idToken(), plan: plan === 'yearly' ? 'yearly' : 'monthly', immediate: !!(opts && opts.immediate), nonce: Date.now().toString(36) }),
     portal: async () => bapi('/api/portal', { idToken: await idToken() }),
-    sync: async () => bapi('/api/sync', { idToken: await idToken() })
+    sync: async () => bapi('/api/sync', { idToken: await idToken() }),
+    /* tarif fidélité : passage du mensuel à l'annuel, pause (1 à 3 mois) et reprise du mensuel */
+    /* opts.preview : montant exact prélevé aujourd'hui, sans rien modifier ; sinon opts.cgv (exigé par le serveur) et
+       opts.immediate (accès immédiat, L. 221-25), dont le serveur garde la preuve dans les métadonnées Stripe */
+    switch: async (plan, opts) => { const o = opts || {}; return bapi('/api/switch', Object.assign({ idToken: await idToken(), plan: plan === 'yearly' ? 'yearly' : 'monthly', preview: !!o.preview }, o.preview ? {} : { cgv: o.cgv === true, immediate: o.immediate === true })); },
+    pause: async months => bapi('/api/pause', { idToken: await idToken(), months: [1, 2, 3].includes(+months) ? +months : 1 }),
+    resume: async () => bapi('/api/resume', { idToken: await idToken() })
   };
   setBillingApi(DEFAULT_BILLING_API);
   db.collection('billing').doc(uid).onSnapshot(snap => {
@@ -225,7 +232,11 @@ window.AlixoCloud = (() => {
   /* 1.26 : trace de l'acceptation des CGV et de la renonciation au droit de rétractation avant un paiement Alixo+
      (preuve pour l'éditeur, lisible par le titulaire et les administrateurs) */
   function recordPlusConsent(info) {
-    try { return profRef.set({ plusConsent: Object.assign({ at: Date.now() }, info || {}) }, { merge: true }); } catch { return Promise.resolve(); }
+    /* plusConsent : le dernier (lu par le panneau admin, comme avant) ; plusConsents : historique en ajout seul, une clé par
+       consentement (« via_horodatage ») — la fusion ne remplace jamais une entrée précédente */
+    const at = Date.now(), entry = Object.assign({ at }, info || {});
+    const key = String(entry.via || 'checkout').replace(/[^a-z0-9-]/gi, '') + '_' + at;
+    try { return profRef.set({ plusConsent: entry, plusConsents: { [key]: entry } }, { merge: true }); } catch { return Promise.resolve(); }
   }
   ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach(ev => document.addEventListener(ev, () => { lastInput = Date.now(); }, { passive: true, capture: true }));
   beat();
