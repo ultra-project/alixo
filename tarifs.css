@@ -2,6 +2,9 @@
    Alixo — Page Tarifs (reprend les variables et composants de styles.css :
    .plan, .plan-list, .faq, .eyebrow, .reveal, et la bulle terminal de Coco)
    ============================================================ */
+/* Dégradé assombri pour le texte blanc des pastilles : contraste ≥ 5:1 sur toute la longueur, dans les deux thèmes
+   (le dégradé du logo descend à 2:1 sur sa teinte claire) */
+:root { --tf-pill-grad: linear-gradient(100deg, #1f45d9 0%, #5b48e6 45%, #7f2be0 80%, #9a3fe0 100%); }
 .nav-links a.on { color: var(--ink); background: var(--hover); }
 .nav-sheet a[aria-current="page"] { color: var(--ink); font-weight: 600; }
 .coco-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -26,12 +29,14 @@
 .tf-switch-opt.is-on { background: var(--ink); color: var(--bg); box-shadow: var(--shadow-sm); }
 .tf-save {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .04em;
-  padding: 3px 7px; border-radius: 999px; background: var(--grad); color: #fff;
+  padding: 3px 8px; border-radius: 999px; background: var(--tf-pill-grad); color: #fff;
 }
+.tf-save sup { font-size: .75em; line-height: 0; }
 
 /* ---------- Cartes (sur la base de .plan de styles.css) ---------- */
 .tf-plans { position: relative; z-index: 1; margin-top: 100px; align-items: stretch; }
 .tf-plans .plan-head h2 { font-size: 22px; letter-spacing: -.03em; }
+.tf-plans .plan-list { align-content: start; }
 .tf-prices { display: grid; margin-top: -6px; }
 .tf-price { grid-area: 1 / 1; display: grid; gap: 10px; align-content: start; }
 .tf-price:not(.is-on) { visibility: hidden; }
@@ -104,10 +109,11 @@ html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,
 .tf-ladder-head h3 { font-size: 22px; letter-spacing: -.03em; }
 .tf-ladder-tag {
   font-family: var(--font-mono); font-size: 10.5px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
-  padding: 3px 8px; border-radius: 999px; background: var(--grad); color: #fff; opacity: 0; transition: opacity .25s;
+  padding: 3px 8px; border-radius: 999px; background: var(--tf-pill-grad); color: #fff;
+  opacity: 0; visibility: hidden; transition: opacity .25s, visibility .25s;
 }
 #degressif[data-billing-view="monthly"] .tf-ladder-monthly .tf-ladder-tag,
-#degressif[data-billing-view="annual"] .tf-ladder-annual .tf-ladder-tag { opacity: 1; }
+#degressif[data-billing-view="annual"] .tf-ladder-annual .tf-ladder-tag { opacity: 1; visibility: visible; }
 .tf-ladder-sub { font-size: 14px; color: var(--ink-3); margin-top: 6px; }
 
 /* Barres : hauteur proportionnelle au prix (--r, 1 = 14,99 €), apparition échelonnée (--i) quand la carte entre à l'écran */
@@ -127,7 +133,7 @@ html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,
   opacity: 0; transition: opacity .5s var(--ease); transition-delay: calc(.45s + var(--i) * .09s);
 }
 .tf-bar-label { padding-top: 10px; min-height: calc(2 * 1.35em + 10px); font-family: var(--font-mono); font-size: 11px; color: var(--ink-3); line-height: 1.35; }
-.tf-bars li.is-floor .tf-bar-fill { background: var(--grad); border-color: transparent; box-shadow: 0 12px 28px -12px rgba(109,91,250,.7); }
+.tf-bars li.is-floor .tf-bar-fill { background: var(--tf-pill-grad); border-color: transparent; box-shadow: 0 12px 28px -12px rgba(109,91,250,.7); }
 .tf-bars li.is-floor .tf-bar-price { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
 .tf-bars li.is-floor .tf-bar-label { color: var(--ink); font-weight: 600; }
 .tf-bar-fill b {
@@ -155,14 +161,16 @@ html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,
   border-color: transparent; background: linear-gradient(color-mix(in srgb, var(--brand-b) 7%, var(--surface)), color-mix(in srgb, var(--brand-b) 7%, var(--surface))) padding-box, var(--grad) border-box;
 }
 .tf-years li.is-floor .tf-year-price { background: var(--grad); -webkit-background-clip: text; background-clip: text; color: transparent; }
-.tf-years li.is-floor .tf-year-tag { background: var(--grad); color: #fff; }
+.tf-years li.is-floor .tf-year-tag { background: var(--tf-pill-grad); color: #fff; }
+.tf-ladder-note { margin-top: 14px; font-size: 13.5px; color: var(--ink-2); line-height: 1.55; }
 
 /* Ce que tu économises */
 .tf-savings {
-  display: grid; grid-template-columns: 1fr 1.3fr 1.3fr; gap: 1px; max-width: var(--max); margin: 16px auto 0;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; max-width: var(--max); margin: 16px auto 0;
   border-radius: var(--r-xl); border: 1px solid var(--border); background: var(--border); overflow: hidden;
 }
 .tf-savings > * { background: var(--surface); padding: 26px 28px; }
+.tf-savings-head { grid-column: 1 / -1; }
 .tf-savings-head h3 { font-size: 22px; letter-spacing: -.03em; }
 .tf-savings-head p { font-size: 14px; color: var(--ink-2); margin-top: 8px; line-height: 1.55; }
 .tf-saving { display: flex; flex-direction: column; gap: 6px; }
@@ -171,7 +179,10 @@ html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,
 .tf-saving-amount::after { content: " économisés"; font-size: 14px; letter-spacing: 0; font-weight: 500; -webkit-text-fill-color: var(--ink-3); }
 .tf-saving-detail { font-size: 14.5px; color: var(--ink-2); }
 .tf-saving-detail strong { color: var(--ink); font-weight: 600; }
-.tf-saving-calc { margin-top: 4px; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); overflow-wrap: anywhere; }
+.tf-saving-more { margin-top: 4px; }
+.tf-saving-more summary { cursor: pointer; width: max-content; font-size: 13px; font-weight: 600; color: var(--tint); }
+.tf-saving-more summary:hover { text-decoration: underline; text-underline-offset: 3px; }
+.tf-saving-calc { display: block; margin-top: 6px; font-size: 11.5px; line-height: 1.6; color: var(--ink-3); overflow-wrap: anywhere; }
 
 /* Règles */
 .tf-rules-head { max-width: var(--max); margin: 64px auto 18px; text-align: center; }
@@ -206,10 +217,16 @@ html[data-theme="dark"] .tf-coco-body { filter: drop-shadow(0 6px 10px rgba(0,0,
   .tf-coco .tf-bubble { width: 226px; }
   .tf-switch-opt { padding: 9px 15px; }
   .tf-ladder { padding: 22px 18px; }
-  .tf-bars { gap: 6px; --bar-max: 160px; }
-  .tf-bar-price { font-size: 12px; letter-spacing: -.03em; }
-  .tf-bar-label { font-size: 10px; }
-  .tf-bar-fill b { font-size: 10px; }
+  /* Barres horizontales : une ligne par palier (libellé, barre de largeur proportionnelle au prix, prix) */
+  .tf-bars { grid-template-columns: 1fr; gap: 10px; }
+  .tf-bars li { display: grid; grid-template-columns: 96px 1fr 58px; align-items: center; gap: 10px; text-align: left; }
+  .tf-bar-label { grid-column: 1; grid-row: 1; padding: 0; min-height: 0; font-size: 12px; }
+  .tf-bar-fill {
+    grid-column: 2; grid-row: 1; width: calc(var(--r) * 100%); height: 26px; margin: 0; border-radius: 4px 8px 8px 4px;
+    transform-origin: 0 50%; transform: scaleX(0);
+  }
+  .tf-bar-price { grid-column: 3; grid-row: 1; text-align: right; font-size: 13.5px; }
+  .tf-bar-fill b { top: 50%; left: auto; right: 8px; transform: translateY(-50%); font-size: 12px; }
   .tf-years { gap: 8px; }
   .tf-years li { padding: 14px 12px 12px; }
   .tf-year-price { font-size: 22px; }

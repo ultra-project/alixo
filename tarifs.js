@@ -60,6 +60,7 @@
   const prices = Array.from(document.querySelectorAll('.tf-price'));
   const degressif = document.getElementById('degressif');
   const priceLive = document.getElementById('tf-price-live');
+  const ctaBilling = document.getElementById('tf-cta-billing');   /* « Passer à Alixo+ mensuel / annuel » */
   const PRICE_SAY = {
     monthly: "Alixo+ au mensuel : 14,99 € par mois, puis de moins en moins cher, jusqu'à 9,99 € par mois.",
     annual: "Alixo+ à l'année : 149,99 € par an, soit 12,50 € par mois, puis de moins en moins cher, jusqu'à 99,99 € par an.",
@@ -74,6 +75,7 @@
     });
     prices.forEach(p => p.classList.toggle('is-on', p.dataset.billing === billing));
     if (degressif) degressif.dataset.billingView = billing;
+    if (ctaBilling) ctaBilling.textContent = billing === 'annual' ? 'annuel' : 'mensuel';
     if (announce && priceLive) priceLive.textContent = PRICE_SAY[billing];
   };
   if (opts.length) {
