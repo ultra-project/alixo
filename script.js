@@ -298,3 +298,87 @@ if (frame && !reduceMotion && window.matchMedia('(min-width: 641px)').matches) {
   window.addEventListener('resize', tilt);
   tilt();
 }
+
+/* ---------- Coco, le compagnon ---------- */
+/* Au repos, Coco pend sous la nav (seuls ses pieds dépassent). Survol à la souris, focus au clavier ou tap :
+   il descend en rappel ; une fois en bas, il dit bonjour dans une bulle terminal tapée caractère par caractère.
+   Plusieurs raisons peuvent le garder en bas (survol, focus, tap) : il remonte quand il n'en reste aucune. */
+const coco = document.getElementById('coco');
+if (coco) {
+  const cocoBtn = coco.querySelector('.coco-btn');
+  const cocoRig = coco.querySelector('.coco-rig');
+  const cocoTyped = coco.querySelector('.coco-typed');
+  const cocoLive = document.getElementById('coco-live');
+  const COCO_MSG = "Salut moi c'est coco, ton compagnon pour tes cours !";
+  const cocoCalm = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const reasons = new Set();
+  let arriveTimer, leaveTimer, typeTimer, lastPointer = '';
+
+  /* durée de la descente, lue dans le CSS (elle change avec prefers-reduced-motion) */
+  const descentMs = () => {
+    const d = (getComputedStyle(cocoRig).transitionDuration || '0s').split(',')[0].trim();
+    return parseFloat(d) * (d.endsWith('ms') ? 1 : 1000) || 0;
+  };
+  const typeFrom = (i) => {
+    cocoTyped.textContent = COCO_MSG.slice(0, i);
+    if (i >= COCO_MSG.length) return;
+    typeTimer = setTimeout(() => typeFrom(i + 1), COCO_MSG[i - 1] === ',' ? 220 : 34);   /* petite pause après la virgule */
+  };
+  const arrive = () => {
+    if (!coco.classList.contains('is-down')) return;
+    coco.classList.add('is-arrived');
+    cocoLive.textContent = COCO_MSG;                   /* annoncé une seule fois, en entier */
+    clearTimeout(typeTimer);
+    if (cocoCalm.matches) { cocoTyped.textContent = COCO_MSG; return; }
+    cocoTyped.textContent = '';
+    typeTimer = setTimeout(() => typeFrom(1), 220);
+  };
+  const update = () => {
+    const down = reasons.size > 0;
+    if (down === coco.classList.contains('is-down')) return;
+    clearTimeout(arriveTimer);
+    if (down) {
+      coco.classList.add('is-down');
+      arriveTimer = setTimeout(arrive, descentMs() + 40);
+    } else {
+      clearTimeout(typeTimer);                          /* la bulle s'efface avec le texte figé ; remis à zéro à la prochaine arrivée */
+      coco.classList.remove('is-down', 'is-arrived');
+      cocoLive.textContent = '';
+    }
+  };
+  const toggle = (why) => { if (reasons.has(why)) reasons.delete(why); else reasons.add(why); update(); };
+
+  /* Souris : la zone sensible (pieds, puis corps et corde) suit Coco ; petit délai de grâce en sortant */
+  cocoRig.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(leaveTimer);
+    reasons.add('hover'); update();
+  });
+  cocoRig.addEventListener('pointerleave', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(leaveTimer);
+    leaveTimer = setTimeout(() => { reasons.delete('hover'); update(); }, 400);
+  });
+  cocoRig.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType; });
+
+  /* Tactile : un tap le fait descendre, un autre (ou un tap ailleurs) le fait remonter. Clavier : Entrée / Espace. */
+  cocoBtn.addEventListener('click', (e) => {
+    if (e.detail === 0) toggle('focus');
+    else if (lastPointer === 'touch' || lastPointer === 'pen') toggle('tap');
+    lastPointer = '';
+  });
+  document.addEventListener('pointerdown', (e) => {
+    if (reasons.has('tap') && !cocoRig.contains(e.target)) { reasons.delete('tap'); update(); }
+  });
+  cocoBtn.addEventListener('focus', () => {
+    let kb = true; try { kb = cocoBtn.matches(':focus-visible'); } catch (err) {}   /* focus clavier seulement */
+    if (kb) { reasons.add('focus'); update(); }
+  });
+  cocoBtn.addEventListener('blur', () => { reasons.delete('focus'); update(); });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && reasons.size) { reasons.clear(); update(); }
+  });
+  /* Le menu mobile passe devant : Coco remonte (et le CSS le masque tant que le menu est ouvert) */
+  const cocoBurger = document.getElementById('nav-burger');
+  if (cocoBurger) cocoBurger.addEventListener('click', () => { reasons.clear(); update(); });
+}

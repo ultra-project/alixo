@@ -69,6 +69,30 @@
   </nav>
 </header>
 
+<!-- ================= Coco, le compagnon (pend sous la navigation, descend en rappel au survol) ================= -->
+<div class="coco" id="coco">
+  <div class="coco-swing">
+    <div class="coco-rig">
+      <div class="coco-body">
+        <button type="button" class="coco-btn" id="coco-btn" aria-label="Coco, le compagnon Alixo — dis bonjour">
+          <picture>
+            <source srcset="img/coco.webp" type="image/webp">
+            <img class="coco-img" src="img/coco.png" alt="" width="360" height="649" decoding="async" draggable="false">
+          </picture>
+          <span class="coco-hit coco-hit-rope" aria-hidden="true"></span>
+          <span class="coco-hit coco-hit-body" aria-hidden="true"></span>
+          <span class="coco-hit coco-hit-feet" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="coco-bubble" aria-hidden="true">
+        <div class="coco-term-bar"><i></i><i></i><i></i><span>coco@alixo:~</span></div>
+        <p class="coco-term-body"><span class="coco-term-ghost"><b>$</b> Salut moi c'est coco, ton compagnon pour tes cours !</span><span class="coco-term-live"><b>$</b> <span class="coco-typed"></span><span class="coco-caret"></span></span></p>
+      </div>
+    </div>
+  </div>
+  <p class="coco-sr" id="coco-live" aria-live="polite"></p>
+</div>
+
 <!-- ================= Hero ================= -->
 <section id="top" class="hero">
   <div class="hero-bg" aria-hidden="true"><span class="grid"></span><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>

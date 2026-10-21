@@ -638,6 +638,114 @@ footer { padding: 72px 24px 40px; border-top: 1px solid var(--border); backgroun
 .dl-toast-close { color: var(--ink-3); margin-left: auto; padding: 2px 4px; }
 @keyframes toast-in { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 
+/* ---------- Coco, le compagnon ----------
+   Pend sous la pilule de navigation : au repos, seuls ses pieds dépassent.
+   Au survol (ou focus clavier, ou tap) il descend en rappel, se balance,
+   puis une petite bulle terminal lui fait dire bonjour.
+   Le conteneur est découpé au ras du bas de la nav (overflow) : rien ne
+   transparaît à travers le verre, et seuls les éléments visibles captent
+   la souris (pointer-events). L'image fait 360 × 649 ; la corde y est
+   centrée à 71,16 % de la largeur (≈ 3,3 % d'épaisseur) et part du bord haut. */
+.coco {
+  --coco-w: 150px;
+  --coco-h: calc(var(--coco-w) * 649 / 360);
+  --coco-peek: 28px;                 /* hauteur des pieds visibles au repos */
+  --coco-drop: 44px;                 /* écart nav → haut de l'image une fois descendu */
+  --coco-top: 72px;                  /* bas de la pilule : padding 14 + hauteur 58 */
+  --coco-gutter: 16px;               /* padding latéral de #nav */
+  position: fixed; top: var(--coco-top); left: 0; right: 0; bottom: 0; z-index: 55;
+  overflow: hidden; pointer-events: none;
+  transition: opacity .2s, visibility .2s;
+}
+#nav.open ~ .coco { opacity: 0; visibility: hidden; }
+/* Aligné sous l'extrémité droite de la pilule (même calcul que #nav .nav-inner) */
+.coco-swing {
+  position: absolute; top: 0; width: var(--coco-w); height: var(--coco-h);
+  right: calc(var(--coco-gutter) + max(0px, (100% - 2 * var(--coco-gutter) - var(--max)) / 2) + 18px);
+  transform-origin: 71.16% 0;        /* point d'attache : la corde, au ras de la nav */
+}
+.coco-rig {
+  position: relative; width: 100%; height: 100%;
+  transform: translateY(calc(var(--coco-peek) - var(--coco-h)));
+  transition: transform .9s cubic-bezier(.55, 0, .35, 1);
+}
+.coco.is-down .coco-rig { transform: translateY(var(--coco-drop)); transition: transform 1.6s cubic-bezier(.42, .05, .2, 1.04); }
+.coco.is-down .coco-swing { animation: coco-swing 2.6s cubic-bezier(.3, 0, .3, 1) both; }
+.coco-body {
+  position: absolute; inset: 0;
+  filter: drop-shadow(0 10px 12px rgba(15,18,22,.18)) drop-shadow(0 2px 3px rgba(15,18,22,.10));
+}
+html[data-theme="dark"] .coco-body { filter: drop-shadow(0 10px 14px rgba(0,0,0,.55)) drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
+.coco:not(.is-down) .coco-body { transform-origin: 71.16% 55%; animation: coco-idle 4.8s ease-in-out infinite; }
+/* Prolongement de la corde jusque sous la nav : même position (colonnes 250 à 262 de l'image, axe à 71,16 %),
+   même épaisseur et même modelé que la corde dessinée, avec un léger torsadé */
+.coco-body::before {
+  content: ""; position: absolute; left: 69.444%; width: 3.611%; bottom: calc(100% - 1px); height: 240px;
+  background:
+    repeating-linear-gradient(-60deg, rgba(0,0,0,.10) 0 1px, transparent 1px 2.4px),
+    linear-gradient(90deg, rgba(110,150,130,.7) 3.8%, #164f36 11.5%, #155034 34.6%, #165334 42.3%, #1a5b3a 50%,
+      #206642 57.7%, #29734a 65.4%, #2c7a4f 73%, #29764c 80.8%, rgba(90,150,120,.7) 88.5%, transparent 100%);
+}
+.coco-btn {
+  position: absolute; inset: 0; display: block; padding: 0; border-radius: 0;
+  pointer-events: none; outline: none; -webkit-tap-highlight-color: transparent;
+}
+.coco-img { width: 100%; height: 100%; user-select: none; -webkit-user-select: none; -webkit-user-drag: none; -webkit-touch-callout: none; }
+/* Zones sensibles : le corps et les pieds seulement, pas le rectangle vide de l'image */
+.coco-hit { position: absolute; pointer-events: auto; cursor: pointer; }
+/* La corde au-dessus de lui fait partie de la zone une fois descendu : la souris restée en haut le garde en bas */
+.coco-hit-rope { left: 30%; right: 0; top: calc(-1 * var(--coco-drop)); bottom: 50%; }
+.coco-hit-body { left: 0; right: 4%; top: 45%; bottom: 12%; border-radius: 40%; }
+.coco-hit-feet { left: 40%; right: 0; bottom: 0; height: 14%; border-radius: 0 0 40% 40%; }
+.coco-btn:focus-visible .coco-hit-body { outline: 2px dashed color-mix(in srgb, var(--tint) 75%, transparent); outline-offset: 2px; border-radius: 34px; }
+
+/* Bulle terminal, à gauche du personnage, à hauteur de la main qui fait coucou */
+.coco-bubble {
+  position: absolute; right: calc(100% + 6px); top: 46%;
+  width: min(244px, calc(100vw - var(--coco-w) - var(--coco-gutter) - 48px));
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.55; color: #e6edf3; text-align: left;
+  background: rgba(14, 18, 24, .86); border: 1px solid rgba(255,255,255,.08); border-radius: var(--r);
+  -webkit-backdrop-filter: saturate(140%) blur(14px); backdrop-filter: saturate(140%) blur(14px);
+  box-shadow: var(--shadow), 0 0 0 .5px rgba(15,18,22,.25);
+  opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateX(8px) scale(.92); transform-origin: 100% 45%;
+  transition: opacity .2s, transform .3s var(--ease), visibility 0s .3s;
+}
+html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border-color: rgba(255,255,255,.13); }
+.coco.is-arrived .coco-bubble { opacity: 1; visibility: visible; pointer-events: auto; transform: none; transition-delay: 0s; }
+/* Petite pointe vers Coco */
+.coco-bubble::after {
+  content: ""; position: absolute; left: 100%; top: 30px; width: 7px; height: 14px;
+  background: inherit; clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+.coco-term-bar { display: flex; align-items: center; gap: 5px; padding: 8px 11px 0; font-size: 10.5px; color: rgba(230,237,243,.45); }
+.coco-term-bar i { width: 7px; height: 7px; border-radius: 50%; background: #ff5f57; }
+.coco-term-bar i:nth-child(2) { background: #febc2e; } .coco-term-bar i:nth-child(3) { background: #28c840; }
+.coco-term-bar span { margin-left: 5px; }
+/* Le texte complet (invisible) fixe la taille de la bulle ; le texte tapé se superpose */
+.coco-term-body { display: grid; padding: 5px 12px 10px; }
+.coco-term-ghost, .coco-term-live { grid-area: 1 / 1; }
+.coco-term-ghost { visibility: hidden; }
+.coco-term-body b { color: #5cd08f; font-weight: 600; }
+.coco-caret {
+  display: inline-block; width: .55em; height: 1.1em; margin-left: 1px; vertical-align: -.2em;
+  background: #5cd08f; border-radius: 1px; animation: coco-blink 1.05s steps(1) infinite;
+}
+.coco-sr { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+@keyframes coco-idle { 0%, 100% { transform: rotate(-1.6deg); } 50% { transform: rotate(1.6deg); } }
+@keyframes coco-swing {
+  0% { transform: rotate(0); } 20% { transform: rotate(3deg); } 40% { transform: rotate(-2.2deg); }
+  58% { transform: rotate(1.4deg); } 74% { transform: rotate(-.8deg); } 88% { transform: rotate(.3deg); } 100% { transform: rotate(0); }
+}
+@keyframes coco-blink { 50% { opacity: 0; } }
+@media (max-width: 720px) { .coco { --coco-w: 100px; --coco-peek: 22px; --coco-drop: 28px; } }
+@media (max-width: 640px) { .coco { --coco-top: 68px; --coco-gutter: 10px; } }
+@media (prefers-reduced-motion: reduce) {
+  .coco-body, .coco.is-down .coco-swing, .coco:not(.is-down) .coco-body, .coco-caret { animation: none !important; }
+  .coco-rig, .coco.is-down .coco-rig { transition: transform .01s linear; }
+  .coco-bubble { transition: opacity .15s, visibility 0s .15s; transform: none; }
+}
+
 /* ---------- Apparition au défilement ---------- */
 .reveal { opacity: 0; transform: translateY(22px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
 .reveal.in { opacity: 1; transform: none; }
