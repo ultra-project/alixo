@@ -312,31 +312,36 @@ if (coco) {
   const COCO_MSG = "Salut moi c'est coco, ton compagnon pour tes cours !";
   const cocoCalm = window.matchMedia('(prefers-reduced-motion: reduce)');
   const reasons = new Set();
-  let arriveTimer, leaveTimer, typeTimer, lastPointer = '';
+  let arriveTimer, enterTimer, leaveTimer, typeTimer, autoUpTimer, lastPointer = '';
 
   /* durée de la descente, lue dans le CSS (elle change avec prefers-reduced-motion) */
   const descentMs = () => {
     const d = (getComputedStyle(cocoRig).transitionDuration || '0s').split(',')[0].trim();
     return parseFloat(d) * (d.endsWith('ms') ? 1 : 1000) || 0;
   };
+  /* En tactile, rien ne « quitte » Coco : il remonte de lui-même 5 s après avoir fini sa phrase */
+  const typed = () => {
+    clearTimeout(autoUpTimer);
+    if (reasons.has('tap')) autoUpTimer = setTimeout(() => { reasons.delete('tap'); update(); }, 5000);
+  };
   const typeFrom = (i) => {
     cocoTyped.textContent = COCO_MSG.slice(0, i);
-    if (i >= COCO_MSG.length) return;
+    if (i >= COCO_MSG.length) { typed(); return; }
     typeTimer = setTimeout(() => typeFrom(i + 1), COCO_MSG[i - 1] === ',' ? 220 : 34);   /* petite pause après la virgule */
   };
   const arrive = () => {
     if (!coco.classList.contains('is-down')) return;
     coco.classList.add('is-arrived');
     cocoLive.textContent = COCO_MSG;                   /* annoncé une seule fois, en entier */
-    clearTimeout(typeTimer);
-    if (cocoCalm.matches) { cocoTyped.textContent = COCO_MSG; return; }
+    clearTimeout(typeTimer); clearTimeout(autoUpTimer);
+    if (cocoCalm.matches) { cocoTyped.textContent = COCO_MSG; typed(); return; }
     cocoTyped.textContent = '';
     typeTimer = setTimeout(() => typeFrom(1), 220);
   };
   const update = () => {
     const down = reasons.size > 0;
     if (down === coco.classList.contains('is-down')) return;
-    clearTimeout(arriveTimer);
+    clearTimeout(arriveTimer); clearTimeout(autoUpTimer);
     if (down) {
       coco.classList.add('is-down');
       arriveTimer = setTimeout(arrive, descentMs() + 40);
@@ -347,28 +352,40 @@ if (coco) {
     }
   };
   const toggle = (why) => { if (reasons.has(why)) reasons.delete(why); else reasons.add(why); update(); };
+  /* Déjà en bas : il redit bonjour (la phrase est retapée et annoncée à nouveau) */
+  const replay = () => {
+    if (!coco.classList.contains('is-arrived')) return;
+    arrive();
+    cocoLive.textContent = '';                         /* vidée puis remplie : la région live annonce de nouveau */
+    setTimeout(() => { if (coco.classList.contains('is-arrived')) cocoLive.textContent = COCO_MSG; }, 60);
+  };
 
-  /* Souris : la zone sensible (pieds, puis corps et corde) suit Coco ; petit délai de grâce en sortant */
+  /* Souris : petit délai d'intention avant de descendre (on ne fait que passer en quittant la nav),
+     la zone sensible (pieds, puis corps et corde) suit Coco, délai de grâce en sortant */
   cocoRig.addEventListener('pointerenter', (e) => {
     if (e.pointerType !== 'mouse') return;
-    clearTimeout(leaveTimer);
-    reasons.add('hover'); update();
+    clearTimeout(leaveTimer); clearTimeout(enterTimer);
+    if (coco.classList.contains('is-down')) { reasons.add('hover'); update(); return; }
+    enterTimer = setTimeout(() => { reasons.add('hover'); update(); }, 200);
   });
   cocoRig.addEventListener('pointerleave', (e) => {
     if (e.pointerType !== 'mouse') return;
-    clearTimeout(leaveTimer);
+    clearTimeout(leaveTimer); clearTimeout(enterTimer);
     leaveTimer = setTimeout(() => { reasons.delete('hover'); update(); }, 400);
   });
   cocoRig.addEventListener('pointerdown', (e) => { lastPointer = e.pointerType; });
 
-  /* Tactile : un tap le fait descendre, un autre (ou un tap ailleurs) le fait remonter. Clavier : Entrée / Espace. */
+  /* Tactile : un tap le fait descendre, un autre (sur lui, sa bulle ou ailleurs) le fait remonter.
+     Clavier (Entrée / Espace) et clic souris : le fait descendre, ou lui fait redire bonjour s'il est déjà en bas.
+     Échap le fait remonter. */
   cocoBtn.addEventListener('click', (e) => {
-    if (e.detail === 0) toggle('focus');
-    else if (lastPointer === 'touch' || lastPointer === 'pen') toggle('tap');
+    if (lastPointer === 'touch' || lastPointer === 'pen') toggle('tap');
+    else if (coco.classList.contains('is-down')) replay();
+    else { reasons.add(e.detail === 0 ? 'focus' : 'hover'); update(); }
     lastPointer = '';
   });
   document.addEventListener('pointerdown', (e) => {
-    if (reasons.has('tap') && !cocoRig.contains(e.target)) { reasons.delete('tap'); update(); }
+    if (reasons.has('tap') && !cocoBtn.contains(e.target)) { reasons.delete('tap'); update(); }
   });
   cocoBtn.addEventListener('focus', () => {
     let kb = true; try { kb = cocoBtn.matches(':focus-visible'); } catch (err) {}   /* focus clavier seulement */
