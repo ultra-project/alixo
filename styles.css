@@ -173,7 +173,9 @@ html[data-theme="dark"] .ico-sun { display: none; } html:not([data-theme="dark"]
   background: color-mix(in srgb, var(--surface) 70%, transparent); margin-bottom: 20px;
 }
 .eyebrow::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--grad); box-shadow: 0 0 0 3px var(--glow-b); }
-.section { padding: 112px 24px; position: relative; }
+/* overflow-x: clip (et non hidden) : coupe les halos qui débordent sans créer
+   de conteneur de défilement ni casser position: sticky (.palette). */
+.section { padding: 112px 24px; position: relative; overflow-x: clip; }
 .section.alt { background: var(--bg-alt); }
 .section.tight { padding: 72px 24px; }
 .section-head { max-width: 780px; margin: 0 auto 56px; text-align: center; }
@@ -808,6 +810,7 @@ html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border
   .key-row { grid-template-columns: 1fr; gap: 8px; }
   .cta-card { padding: 64px 20px; }
   .foot-cols { grid-template-columns: 1fr 1fr; }
+  .foot-links { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .dl-toast { left: 16px; right: 16px; max-width: none; }
   .btn-login { display: none; }
   #nav { padding: 10px 10px 0; } #nav .nav-inner { padding: 0 8px 0 14px; gap: 8px; } .nav-actions { gap: 6px; }

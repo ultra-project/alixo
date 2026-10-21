@@ -42,6 +42,8 @@
 .sys-versions .vs-notes { padding: 0 18px 16px; border-top: 1px solid var(--border); }
 .sys-versions .vs-notes h4 { margin: 16px 0 6px; }
 .sys-versions .vs-notes li, .sys-versions .vs-notes p { font-size: 14.5px; line-height: 1.6; }
+/* URL (liens ou texte brut) et code longs des notes : coupés plutôt que de déborder sur petit écran */
+.sys-versions .vs-notes, .sys-versions-page .doc-main a, .sys-versions-page .doc-main code { overflow-wrap: anywhere; }
 
 /* ---- défi anti-robot (mentions légales, contact) : defi.js ---- */
 .defi-zone { margin: 14px 0; padding: 14px 16px; border: 1px dashed var(--border, #d7dde6); border-radius: 12px; background: color-mix(in srgb, var(--tint, #33658a) 6%, transparent); }
