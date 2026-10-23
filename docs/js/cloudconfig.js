@@ -147,7 +147,7 @@ window.AlixoCloud = (() => {
     try { res = await fetch(billingApi + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : { method: 'GET' }); }
     catch { throw new Error('serveur de paiement injoignable (hors ligne ?)'); }
     let j; try { j = await res.json(); } catch { j = {}; }
-    if (!res.ok) throw new Error(j.error || ('erreur ' + res.status));
+    if (!res.ok) { const err = new Error(j.error || ('erreur ' + res.status)); err.status = res.status; throw err; }
     return j;
   }
   async function loadOffer() {
@@ -176,7 +176,15 @@ window.AlixoCloud = (() => {
        opts.immediate (accès immédiat, L. 221-25), dont le serveur garde la preuve dans les métadonnées Stripe */
     switch: async (plan, opts) => { const o = opts || {}; return bapi('/api/switch', Object.assign({ idToken: await idToken(), plan: plan === 'yearly' ? 'yearly' : 'monthly', preview: !!o.preview }, o.preview ? {} : { cgv: o.cgv === true, immediate: o.immediate === true })); },
     pause: async months => bapi('/api/pause', { idToken: await idToken(), months: [1, 2, 3].includes(+months) ? +months : 1 }),
-    resume: async () => bapi('/api/resume', { idToken: await idToken() })
+    resume: async () => bapi('/api/resume', { idToken: await idToken() }),
+    /* e-mails transactionnels envoyés par le serveur (Resend) : liste fermée ; le serveur relit lui-même le destinataire
+       (jamais d'adresse, d'objet ni de contenu fournis ici) — welcome : {} ; share : { sid, email } ; account : { uid } (admin) */
+    mail: async (kind, extra) => {
+      if (!['welcome', 'share', 'account'].includes(kind)) throw new Error('E-mail inconnu.');
+      const e = extra || {};
+      const body = kind === 'share' ? { sid: String(e.sid || ''), email: String(e.email || '') } : kind === 'account' ? { uid: String(e.uid || '') } : {};
+      return bapi('/api/mail/' + kind, Object.assign({ idToken: await idToken() }, body));
+    }
   };
   setBillingApi(DEFAULT_BILLING_API);
 
@@ -187,8 +195,10 @@ window.AlixoCloud = (() => {
   /* ---------------- compte suspendu par l'administrateur ---------------- */
   const profRef = db.collection('profiles').doc(uid);
   let firstSeenDone = false;
+  let noShareMail = false;   // profiles/{uid}.noShareMail : refus des e-mails d'invitation à un partage
   profRef.onSnapshot(snap => {
     const d = snap.exists ? snap.data() : null;
+    noShareMail = !!(d && d.noShareMail === true);
     /* 1.32 : date de première apparition du compte (Alixo Business : seul un compte récent peut rejoindre une entreprise) ;
        la date de création du compte Firebase, sinon la dernière ouverture connue d'un profil ancien */
     if (!firstSeenDone && !(snap.metadata && snap.metadata.fromCache)) { firstSeenDone = true; if (!d || !d.firstSeen) { const u = A.user(); const created = u && u.metadata && Date.parse(u.metadata.creationTime || ''); profRef.set({ firstSeen: created > 0 ? created : (d && d.lastSeen ? +d.lastSeen : Date.now()) }, { merge: true }).catch(() => {}); } }
@@ -287,5 +297,8 @@ window.AlixoCloud = (() => {
     return { ok: true, msg: until ? `Alixo+ activé jusqu’au ${new Date(until).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}` : 'Alixo+ activé sans limite de durée' };
   }
 
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf };
+  /* Paramètres › Compte › E-mails : recevoir (ou non) les invitations à un partage par e-mail (lu par le serveur d'envoi) */
+  const shareMailPref = () => !noShareMail;
+  const setShareMailPref = async on => { await profRef.set({ noShareMail: !on }, { merge: true }); noShareMail = !on; };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf, shareMailPref, setShareMailPref };
 })();

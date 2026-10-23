@@ -708,6 +708,7 @@ window.AlixoShare = (() => {
     const inv = { email: u.email, role: role === 'write' ? 'write' : 'read', name: u.name || '', by: me.name, ts: now() };
     await sharesRef.doc(sid).update({ invites: FV.arrayUnion(inv), inviteEmails: FV.arrayUnion(u.email), updatedAt: now() });
     sh.invites = [...(sh.invites || []), inv]; sh.inviteEmails = [...(sh.inviteEmails || []), u.email];
+    if (u.uid) knownAccount.add(inv);
     inv.mailed = await sendMail(sh, inv).catch(() => false);   // true : parti tout seul ; false : à envoyer soi-même (boutons du gestionnaire)
     return inv;
   }
@@ -718,10 +719,21 @@ window.AlixoShare = (() => {
     const html = `<p>Bonjour${inv.name ? ' ' + esc(inv.name) : ''},</p><p><b>${esc(me.name)}</b> (${esc(me.email)}) vous invite à consulter ${kindThe(sh.kind)} <b>« ${esc(sh.title)} »</b> sur Alixo${inv.role === 'write' ? ', <b>avec le droit d’écriture</b>' : ''}.</p><p>Pour accepter : ouvrez Alixo avec le compte <b>${esc(inv.email)}</b>, puis <b>Bibliothèque › Partagés avec moi › Accepter</b>.</p><p><a href="${link}">Ouvrir dans Alixo</a> (version PC)</p><p style="color:#888">Alixo — cockpit d’amphi</p>`;
     return { subject, text, html };
   }
-  /* envoi automatique : (1) webhook configuré dans firebase-config.js (Google Apps Script, voir SETUP-COMPTES.md § 3 ter),
-     (2) extension Firebase « Trigger Email » (collection `mail`). Renvoie true si un service d'envoi est configuré. */
+  /* envoi automatique : (0) serveur Alixo (billing/, Resend) si la personne invitée a un compte Alixo — le serveur relit
+     le partage, vérifie l'invitation et choisit lui-même le destinataire ; sinon (1) webhook configuré dans firebase-config.js
+     (Google Apps Script, voir SETUP-COMPTES.md § 3 ter), (2) extension Firebase « Trigger Email » (collection `mail`).
+     Renvoie true si l'e-mail est parti (ou si un service d'envoi est configuré). */
   const MAIL = window.ALIXO_MAIL || {};
+  const serverQueued = new WeakSet();   // invitations confiées au serveur (e-mail seulement si la personne a un compte)
+  const knownAccount = new WeakSet();   // invitations adressées à un compte connu (pseudo Alixo trouvé par findUser)
+  const serverMail = () => { try { const B = window.AlixoCloud && window.AlixoCloud.billing; return B && B.mail && B.ready && B.ready() ? B : null; } catch { return null; } };
   async function sendMail(sh, inv) {
+    const B = serverMail();
+    if (B) {
+      /* { queued: true } : le serveur a pris la demande (il ne dit jamais si l'adresse a un compte : pas d'énumération) */
+      try { const r = await B.mail('share', { sid: sh.id, email: inv.email }); if (r && (r.queued || r.sent || r.already)) { serverQueued.add(inv); return true; } }
+      catch { /* pas de compte Alixo à cette adresse, plafond du jour, hors ligne… : moyens habituels ci-dessous */ }
+    }
     const m = inviteMessage(sh, inv);
     let sent = false;
     if (MAIL.webhook) {
@@ -1015,8 +1027,11 @@ window.AlixoShare = (() => {
   /* l'invitation est enregistrée : si aucun envoi automatique n'est configuré, on propose le brouillon d'e-mail */
   function afterInvite(sh, inv) {
     const who = inv.name || inv.email;
+    const write = { action: 'Écrire l’e-mail', onAction: () => openMail(shares.get(sh.id) || sh, inv, 'gmail') };
+    /* confiée au serveur sans savoir si l'adresse a un compte (invitation par e-mail, pas par pseudo) : on le dit franchement */
+    if (inv.mailed && serverQueued.has(inv) && !knownAccount.has(inv)) { toast(`Invitation enregistrée pour ${who}. Si cette personne a déjà un compte Alixo, elle reçoit un e-mail ; sinon, prévenez-la vous-même.`, Object.assign({ duration: 12000 }, write)); return; }
     if (inv.mailed) { toast(`Invitation et e-mail envoyés à ${who}`); return; }
-    toast(`Invitation enregistrée pour ${who} — elle la voit dans son Alixo. La prévenir par e-mail ?`, { duration: 12000, action: 'Écrire l’e-mail', onAction: () => openMail(shares.get(sh.id) || sh, inv, 'gmail') });
+    toast(`Invitation enregistrée pour ${who}. Aucun e-mail n’est parti : prévenez cette personne vous-même.`, Object.assign({ duration: 12000 }, write));
   }
   /* gestionnaire de partage : fenêtre à onglets Membres / Contenu / Journal ; réutilisée (pas recréée)
      tant qu'elle est ouverte sur le même partage, pour que la liste se rafraîchisse sans clignoter */
@@ -1028,7 +1043,7 @@ window.AlixoShare = (() => {
       return `<div class="po-label" style="margin-top:0">Membres${members.length ? ` <span class="dlg-chip">${members.length}</span>` : ''}</div>
         <div class="sh-members">${members.map(([u, m]) => `<div class="sh-member"><div class="sh-av">${esc(initial(m.name || m.email))}</div><div class="sh-mi"><b>${esc(m.name || m.email)}</b><span>${esc(m.email || '')}</span></div><select data-role="${u}"><option value="read" ${m.role !== 'write' ? 'selected' : ''}>Lecture</option><option value="write" ${m.role === 'write' ? 'selected' : ''}>Écriture</option></select><button class="sh-rm" data-rm="${u}" title="Retirer l’accès">✕</button></div>`).join('')}
         ${invites.map(inv => `<div class="sh-member pending"><div class="sh-av" style="opacity:.5">${esc(initial(inv.name || inv.email))}</div><div class="sh-mi"><b>${esc(inv.name || inv.email)}</b><span>Invitation en attente · ${inv.role === 'write' ? 'écriture' : 'lecture'} · ${esc(inv.email)}</span></div><button class="sh-mailbtn" data-mail="gmail" data-to="${esc(inv.email)}" title="Ouvrir un brouillon Gmail prêt à envoyer">Gmail</button><button class="sh-mailbtn" data-mail="mailto" data-to="${esc(inv.email)}" title="Ouvrir un brouillon dans l’application de messagerie de l’ordinateur">E-mail</button><button class="sh-rm" data-cancel="${esc(inv.email)}" title="Annuler l’invitation">✕</button></div>`).join('')}
-        ${invites.length ? `<div class="po-hint" style="margin-top:4px">${MAIL.webhook || MAIL.extension ? 'L’e-mail d’invitation part automatiquement.' : 'L’invitation apparaît déjà dans l’Alixo de la personne (Bibliothèque › Partagés avec moi).'} Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.</div>` : ''}
+        ${invites.length ? `<div class="po-hint" style="margin-top:4px">${MAIL.webhook || MAIL.extension ? 'L’e-mail d’invitation part automatiquement. Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.' : serverMail() ? 'Si la personne a déjà un compte Alixo, elle reçoit un e-mail et retrouve l’invitation dans Bibliothèque › Partagés avec moi. Sinon, prévenez-la avec <b>Gmail</b> ou <b>E-mail</b>.' : 'L’invitation apparaît déjà dans l’Alixo de la personne (Bibliothèque › Partagés avec moi). Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.'}</div>` : ''}
         ${!members.length && !invites.length ? '<div class="po-hint">Personne pour l’instant : invitez quelqu’un ci-dessous.</div>' : ''}</div>
         <div class="po-label">Inviter</div>
         <div class="sh-inv"><input id="sh-who" placeholder="e-mail ou pseudo Alixo" autocomplete="off" spellcheck="false"><select id="sh-role"><option value="read">Lecture</option><option value="write">Écriture</option></select><button class="pobtn" id="sh-add" type="button">Inviter</button></div>

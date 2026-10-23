@@ -42,7 +42,7 @@
   const avColor = id => { let h = 0; for (const ch of String(id || '')) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return ['#e5322d', '#2f6fa8', '#c98316', '#2e8b6a', '#8a4b9c', '#3d4250'][h % 6]; };
   const avatar = (p, cls = '') => { const pr = presence(p); return `<span class="av-wrap"><span class="avatar ${cls}" style="background:${avColor(p.uid)}">${esc(initials(p.name || p.pseudo || p.email || p.uid))}</span><i class="pres-dot ${pr.cls}"></i></span>`; };
   let toastTm = null;
-  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTm); toastTm = setTimeout(() => { t.hidden = true; }, 2600); }
+  function toast(msg, ms) { const t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastTm); toastTm = setTimeout(() => { t.hidden = true; }, ms || 2600); }
   function modal(html, onMount) {
     const m = $('#modal'), c = $('#modal-card'); c.className = 'card modal-card'; c.innerHTML = html; m.hidden = false;
     const close = () => { m.hidden = true; c.innerHTML = ''; };
@@ -377,6 +377,20 @@
     const n = $('#msg-all-n'); if (n) n.textContent = `${list.length} destinataire${list.length > 1 ? 's' : ''}`;
   }
 
+  /* e-mail de service « compte suspendu / réactivé » (serveur billing/, Resend) : le serveur vérifie que l'appelant est
+     administrateur, relit profiles/{uid}.disabled et l'adresse du compte, et n'envoie la réactivation que si la suspension
+     avait été annoncée par e-mail. → 'sent' (parti ou déjà parti), 'none' (rien à annoncer), 'noserver' (serveur d'e-mails
+     non configuré), 'fail' */
+  async function notifyAccount(uid) {
+    const api = String(state.pub.billingApi || (window.ALIXO_BILLING && window.ALIXO_BILLING.api) || '').trim().replace(/\/+$/, '');
+    if (!me || !/^https:\/\//.test(api)) return 'noserver';
+    try {
+      const res = await fetch(api + '/api/mail/account', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ idToken: await me.getIdToken(), uid }) });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) { console.warn('E-mail de compte :', res.status, j.error || ''); return 'fail'; }
+      return j.sent || j.already ? 'sent' : j.skipped === 'no_suspension' ? 'none' : 'fail';
+    } catch (err) { console.warn('E-mail de compte :', err && err.message); return 'fail'; }
+  }
   /* actions sur un compte (menu ⋯, fiche) */
   async function userAction(act, p) {
     const uid = p.uid;
@@ -386,13 +400,38 @@
     if (act === 'storage') return openStorageModal(p);
     if (act === 'msg') return openMsgModal(p);
     if (act === 'copy-mail' || act === 'copy-uid') { try { await navigator.clipboard.writeText(act === 'copy-uid' ? uid : p.email || ''); toast(act === 'copy-uid' ? 'UID copié' : 'E-mail copié'); } catch { /* presse-papiers indisponible */ } return; }
+    /* échec de l'e-mail : prévenir l'administrateur assez longtemps pour qu'il écrive lui-même à l'utilisateur */
+    const mailFail = (what, r) => toast(r === 'noserver' ? `${what}. Serveur d’e-mails non configuré : prévenez l’utilisateur vous-même (${p.email || p.uid}).` : `${what}. L’e-mail n’a pas pu partir : prévenez l’utilisateur vous-même (${p.email || p.uid}).`, 8000);
     if (act === 'disable') {
-      modal(`<h3>Suspendre ${esc(p.email || p.uid)}</h3><p class="muted">L’application affichera « Accès suspendu » à sa prochaine synchronisation ; ses cours restent sur ses appareils.</p><label class="field">Motif (affiché à l’utilisateur)<textarea id="dis-reason" placeholder="Ex. compte partagé entre plusieurs personnes, contactez…"></textarea></label><div class="modal-foot"><button class="btn ghost" data-close>Annuler</button><button class="btn danger ghost" id="dis-ok">Suspendre</button></div>`, (c, close) => {
-        c.querySelector('#dis-ok').onclick = async () => { const reason = c.querySelector('#dis-reason').value.trim(); await db.collection('profiles').doc(uid).set({ disabled: true, disabledReason: reason, disabledAt: Date.now() }, { merge: true }); audit('user.suspend', uid, { reason }); close(); toast('Compte suspendu'); };
+      /* exposé des motifs (DSA art. 17) : motif obligatoire, règle concernée et origine de la décision ; l'utilisateur est
+         toujours prévenu par e-mail */
+      modal(`<h3>Suspendre ${esc(p.email || p.uid)}</h3><p class="muted">L’application affichera « Accès suspendu » à sa prochaine synchronisation ; ses cours restent sur ses appareils. L’utilisateur reçoit un e-mail qui reprend le motif, la règle concernée et l’origine de la décision.</p>
+        <label class="field">Motif (obligatoire, affiché à l’utilisateur et repris dans l’e-mail)<textarea id="dis-reason" maxlength="500" required placeholder="Ex. compte partagé entre plusieurs personnes, contactez…"></textarea></label>
+        <label class="field">Règle des conditions d’utilisation concernée (facultatif)<input id="dis-rule" maxlength="200" placeholder="Ex. article 4 — un compte par personne"></label>
+        <label class="field">Origine de la décision<select id="dis-origin"><option value="team">Vérification de l’équipe</option><option value="report">Signalement</option></select></label>
+        <p class="note bad" id="dis-err" hidden>Indiquez le motif de la suspension.</p>
+        <div class="modal-foot"><button class="btn ghost" data-close>Annuler</button><button class="btn danger ghost" id="dis-ok">Suspendre et prévenir par e-mail</button></div>`, (c, close) => {
+        const ok = c.querySelector('#dis-ok');
+        ok.onclick = async () => {
+          const reason = c.querySelector('#dis-reason').value.trim(), rule = c.querySelector('#dis-rule').value.trim(), origin = c.querySelector('#dis-origin').value === 'report' ? 'report' : 'team';
+          if (!reason) { c.querySelector('#dis-err').hidden = false; c.querySelector('#dis-reason').focus(); return; }
+          ok.disabled = true;
+          try { await db.collection('profiles').doc(uid).set({ disabled: true, disabledReason: reason, disabledRule: rule || FV.delete(), disabledOrigin: origin, disabledAt: Date.now() }, { merge: true }); }
+          catch (err) { ok.disabled = false; toast('Suspension impossible : ' + err.message, 8000); return; }
+          audit('user.suspend', uid, { reason, rule, origin }); close();
+          toast('Compte suspendu — envoi de l’e-mail…', 8000);
+          const r = await notifyAccount(uid);
+          if (r === 'sent') toast('Compte suspendu, utilisateur prévenu par e-mail'); else mailFail('Compte suspendu', r);
+        };
       });
       return;
     }
-    if (act === 'enable') { await db.collection('profiles').doc(uid).set({ disabled: false, disabledReason: FV.delete(), disabledAt: FV.delete() }, { merge: true }); audit('user.enable', uid); toast('Compte réactivé'); }
+    if (act === 'enable') {
+      await db.collection('profiles').doc(uid).set({ disabled: false, disabledReason: FV.delete(), disabledAt: FV.delete(), disabledRule: FV.delete(), disabledOrigin: FV.delete() }, { merge: true }); audit('user.enable', uid);
+      /* e-mail de réactivation par défaut (envoyé seulement si la suspension avait été annoncée) */
+      const r = await notifyAccount(uid);
+      if (r === 'sent') toast('Compte réactivé, utilisateur prévenu par e-mail'); else if (r === 'none') toast('Compte réactivé'); else mailFail('Compte réactivé', r);
+    }
   }
   const menuItems = p => [
     ['card', 'user', 'Ouvrir la fiche'], ['msg', 'chat', 'Envoyer un message'], null,

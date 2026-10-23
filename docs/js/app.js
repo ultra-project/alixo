@@ -2169,6 +2169,13 @@ function syncTone(txt) {
   if (/inactif/i.test(txt)) return 'off';
   return 'wait';
 }
+/* e-mails d'invitation à un partage (serveur Alixo) : le titulaire peut les refuser — profiles/{uid}.noShareMail */
+function shareMailPrefHTML() {
+  const C = window.AlixoCloud;
+  if (!C || !C.enabled || !C.shareMailPref) return '';
+  return `<div class="set-sect"><div class="po-label">E-mails</div>
+    <div class="set-checks" id="set-sharemail"><label><input type="checkbox" role="switch" data-set="shareMail" ${C.shareMailPref() ? 'checked' : ''}><span><b>Recevoir par e-mail les invitations à un partage</b><small>Quand quelqu’un partage une séance, un dossier, un fichier ou un événement avec vous. L’invitation reste visible dans Bibliothèque › Partagés avec moi dans tous les cas.</small></span></label></div></div>`;
+}
 function accountSectionHTML() {
   const A = window.AlixoAuth;
   if (!A || !A.isConfigured) {
@@ -3068,7 +3075,7 @@ function settingsSectionHTML(k) {
   const theme = state.settings.theme || 'auto';
   const view = state.settings.libView || 'grid';
   const desk = window.alixoDesktop;
-  if (k === 'compte') return `<div class="set-sect">${accountSectionHTML()}</div>
+  if (k === 'compte') return `<div class="set-sect">${accountSectionHTML()}</div>${shareMailPrefHTML()}
     <div class="set-sect"><div class="po-label">Activité</div>
       <div class="po-row" style="align-items:center; gap:10px"><button id="po-weekly" class="cta ghost small" type="button">Voir mon bilan de la semaine</button><span class="po-hint" style="margin:0">Le bilan s’affiche à chaque ouverture d’Alixo.</span></div></div>`;
   if (k === 'apparence') return `<div class="set-sect"><div class="po-label">Thème de couleurs</div>
@@ -3160,6 +3167,13 @@ function bindSettingsSection(k, root) {
     if (editProfil) editProfil.addEventListener('click', () => { closeSettings(); openOnboarding(true); });
     const login = root.querySelector('#po-login');
     if (login) login.addEventListener('click', () => { closeSettings(); window.AlixoAuth.openAuthOverlay(); });
+    const sm = root.querySelector('#set-sharemail input');
+    if (sm) sm.addEventListener('change', async () => {
+      const on = sm.checked; sm.disabled = true;
+      try { await window.AlixoCloud.setShareMailPref(on); toast(on ? 'Vous recevrez les invitations à un partage par e-mail' : 'Plus d’e-mail pour les invitations à un partage'); }
+      catch { sm.checked = !on; toast('Réglage non enregistré : vérifiez la connexion puis réessayez'); }
+      finally { sm.disabled = false; }
+    });
     return;
   }
   if (k === 'apparence') {
@@ -11361,6 +11375,8 @@ setTimeout(() => {
     if (wn) showWhatsNew(wn === '1' ? ALIXO_VERSION : wn);
     /* lien « gérer / résilier » de l'e-mail de rappel avant reconduction (serveur de paiement) : …/docs/?plus */
     if (new URLSearchParams(location.search).has('plus')) { settingsCat = 'plus'; openSettings(); }
+    /* bouton « Voir l'invitation » de l'e-mail de partage (serveur de paiement) : …/docs/?partages → Bibliothèque › Partagés avec moi */
+    else if (new URLSearchParams(location.search).has('partages')) openSharedHome();
     const prev = state.settings.lastVersion;
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();

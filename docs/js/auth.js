@@ -377,6 +377,30 @@ window.AlixoAuth = (() => {
   }
   if (redirectPending) finishRedirect();
 
+  /* e-mail de bienvenue (serveur billing/, Resend) : demandé une seule fois par compte et par appareil, pour un compte récent
+     (moins de 7 jours) dont l'adresse est vérifiée (Google, Apple : tout de suite ; e-mail + mot de passe : après la
+     confirmation). Le serveur revérifie tout et n'envoie qu'une fois par compte ; rien ici ne bloque ni ne retarde la connexion.
+     AlixoCloud (cloudconfig.js) est chargé après ce fichier et n'ouvre billing qu'une fois config/public lu : quelques essais espacés. */
+  const WELCOME_ASKED = uid => 'alixo.welcomeAsked.' + uid;
+  function askWelcome(user) {
+    try {
+      if (!user || !user.uid || !user.email || !user.emailVerified) return;
+      const t = createdAt(user); if (!t || Date.now() - t > 7 * 86400000) return;
+      try { if (localStorage.getItem(WELCOME_ASKED(user.uid))) return; } catch { return; }
+      const mark = () => { try { localStorage.setItem(WELCOME_ASKED(user.uid), String(Date.now())); } catch { /* stockage indisponible */ } };
+      let tries = 0;
+      const attempt = async () => {
+        try {
+          const B = window.AlixoCloud && window.AlixoCloud.billing;
+          if (!B || !B.mail || !B.ready || !B.ready()) { if (++tries < 20) setTimeout(attempt, 3000); return; }
+          const r = await B.mail('welcome');
+          if (r && (r.sent || r.already)) mark();
+        } catch (e) { if (e && e.status === 409) mark(); }   // 409 : compte trop ancien, adresse non vérifiée… inutile de redemander
+      };
+      setTimeout(attempt, 4000);
+    } catch { /* jamais bloquant */ }
+  }
+
   if (auth) {
     let first = true;
     auth.onAuthStateChanged(user => {
@@ -387,6 +411,7 @@ window.AlixoAuth = (() => {
         if (mustVerify(user)) { const show = () => { showOverlay(); ov.dispatchEvent(new CustomEvent('alixo-verify', { detail: user })); }; if (document.body) show(); else document.addEventListener('DOMContentLoaded', show); return; }
         setSession(user); location.reload(); return;
       }
+      if (user && !mustVerify(user)) askWelcome(user);
       if (!user && cached) {
         // session expirée ou déconnectée ailleurs
         localStorage.removeItem(SESSION_KEY);
