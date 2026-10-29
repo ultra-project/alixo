@@ -10,9 +10,10 @@
 <link rel="stylesheet" href="docedit.css">
 <link rel="stylesheet" href="alx.css">
 <link rel="stylesheet" href="imagepick.css">
+<link rel="stylesheet" href="refonte.css">
 <link id="app-favicon" rel="icon" type="image/png" href="logo.png">
 <link id="app-touchicon" rel="apple-touch-icon" href="logo.png">
-<meta name="theme-color" content="#33658a">
+<meta name="theme-color" content="#4f66e0">
 <!-- redirect-domain : l'application vit désormais sur alixoapp.com/docs ; un compte connecté sur l'ancienne adresse GitHub Pages y est envoyé (les cours « sans compte » restent lisibles ici) --><script>(function(){try{if(location.hostname!=='ultra-project.github.io'&&location.hostname!=='fayze-kadox.github.io')return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(!s||!s.uid)return;var f=location.pathname.split('/').pop();if(f==='index.html')f='';location.replace('https://alixoapp.com/docs/'+f+location.search+location.hash);}catch(e){}})();</script>
 <!-- redirect-mobile --><script>(function(){try{if(!window.alixoDesktop&&!/[?&]desktop/.test(location.search)&&!localStorage.getItem('alixo.forceDesktop')&&matchMedia('(max-width: 760px) and (pointer: coarse)').matches){location.replace('mobile.html'+location.search+location.hash);}}catch(e){}})();</script><!-- /redirect-mobile -->
 </head>
@@ -25,6 +26,9 @@
       <span class="logo-mark"><img class="app-logo-img" src="logo.png" alt="Alixo"></span><span class="logo-name">Alixo</span>
     </button>
     <nav id="breadcrumb" class="crumbs"></nav>
+    <button id="btn-search" class="tbtn tb-search" title="Rechercher partout (Ctrl+K)" aria-label="Rechercher un cours, une séance (Ctrl+K)" aria-keyshortcuts="Control+K">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg><span class="tb-sq">Rechercher un cours, une séance…</span><kbd class="tb-kbd" aria-hidden="true">Ctrl K</kbd>
+    </button>
   </div>
   <div class="tb-right">
     <button id="cal-now" class="cal-now" hidden title="Agenda — cliquer pour ouvrir"></button>
@@ -35,9 +39,6 @@
     </button>
     <button id="btn-agenda" class="tbtn" title="Agenda : cours et événements (Ctrl+Maj+A)">
       <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M13 14h3M8 18h3"/></svg>
-    </button>
-    <button id="btn-search" class="tbtn" title="Recherche universelle (Ctrl+K)">
-      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M16.5 16.5 21 21"/></svg>
     </button>
     <button id="btn-share" class="tbtn only-editor" title="Partager cette séance (Alixo Share)">
       <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>

@@ -14,9 +14,12 @@ const stripTags = h => { const d = document.createElement('div'); d.innerHTML = 
 const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
-const DEFAULT_TINT = '#33658a';
+const DEFAULT_TINT = '#4f66e0';
+/* 1.46 : accent d'interface réellement en vigueur (--accent de styles.css, repris par les thèmes colorés) — sert de teinte
+   quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
+function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.45.0';
+const ALIXO_VERSION = '1.46.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -142,8 +145,25 @@ const FOLDER_COLORS = [
 const FOLDER_ICONS = AlixoIcons.CATEGORIES;
 
 function folderIconHTML(f, big) {
-  if (f && f.icone) return AlixoIcons.svg(f.icone, 'ficon-ico' + (big ? ' big' : ''));
+  if (f && f.icone && f.icone !== 'folder') return AlixoIcons.svg(f.icone, 'ficon-ico' + (big ? ' big' : ''));   // 1.46 : « folder » = icône par défaut
   return big ? FOLDER_ICON_BIG : FOLDER_ICON;
+}
+/* 1.46 : tuile monogramme des cartes de dossiers — initiales des deux premiers mots « pleins » (les mots-outils de, la,
+   du… sont ignorés : « Histoire de la pensée éco » → HP, « Introduction au droit » → ID), ou deux premières lettres d'un
+   mot seul (« NUMOC » → NU) ; un dossier qui a une icône personnalisée (autre que « folder ») la garde dans la tuile */
+const MONO_STOP = new Set(['de', 'des', 'du', 'la', 'le', 'les', 'l', 'd', 'et', 'a', 'au', 'aux', 'en', 'un', 'une', 'sur', 'pour', 'par']);
+function folderMonogram(nom) {
+  const all = String(nom || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .split(/[\s\-_\u2013\u2014\u00b7/'\u2019]+/).map(w => w.replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean);
+  let words = all.filter(w => !MONO_STOP.has(w.toLowerCase()));
+  if (!words.length) words = all;
+  if (!words.length) return '?';
+  const m = words.length >= 2 ? words[0][0] + words[1][0] : words[0].slice(0, 2);
+  return m.toUpperCase();
+}
+function folderTileHTML(f) {
+  if (f && f.icone && f.icone !== 'folder') return `<span class="fc-tile has-ico" aria-hidden="true">${folderIconHTML(f, true)}</span>`;
+  return `<span class="fc-tile" aria-hidden="true"><span class="fc-mono">${esc(folderMonogram(f && f.nom))}</span></span>`;
 }
 
 /* ---------------- état de départ ----------------
@@ -293,7 +313,7 @@ function showLibrary() {
   $('#view-library').style.display = 'flex';
   $('#toolbar').hidden = true;
   closeRightPanels();
-  document.documentElement.style.setProperty('--tint', currentFolderId ? folderTint(currentFolderId) : DEFAULT_TINT);
+  document.documentElement.style.setProperty('--tint', currentFolderId ? folderTint(currentFolderId) : defaultTint());
   renderTabs();
   renderCrumbs();
   renderLibrary();
@@ -556,13 +576,13 @@ function renderTabs() {
     openTabs.map(id => {
       if (isVTabId(id)) {
         const vt = vtabs.get(id); if (!vt) return '';   // vue à rétablir plus tard (module pas encore chargé)
-        return `<button class="tab vtab ${id === currentDocId ? 'active' : ''}" data-tab="${esc(id)}" draggable="true" title="${esc(vt.title || '')} — glisser pour réordonner">
+        return `<button class="tab vtab ${id === currentDocId ? 'active' : ''}" data-tab="${esc(id)}" draggable="true" style="--mc:var(--tint)" title="${esc(vt.title || '')} — glisser pour réordonner">
         ${vt.icon ? `<span class="tab-vico">${vt.icon}</span>` : ''}<span class="tab-name">${esc(vt.title || 'Document')}</span><span class="tab-x" data-close="${esc(id)}" title="Fermer l’onglet (Ctrl+W)">✕</span></button>`;
       }
       const d = findDoc(id);
       const name = d.titre || 'Sans titre';
       const sh = isSharedDoc(id) ? '<svg class="tab-sh" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>' : '';
-      return `<button class="tab ${id === currentDocId ? 'active' : ''}" data-tab="${id}" draggable="true" title="${esc(name)}${sh ? ' (partagé)' : ' — double-clic : renommer'} — glisser pour réordonner">
+      return `<button class="tab ${id === currentDocId ? 'active' : ''}" data-tab="${id}" draggable="true" style="--mc:${esc(folderTint(d.folderId))}" title="${esc(name)}${sh ? ' (partagé)' : ' — double-clic : renommer'} — glisser pour réordonner">
         ${sh}<span class="tab-name">${esc(name)}</span><span class="tab-x" data-close="${id}" title="Fermer l’onglet (Ctrl+W)">✕</span></button>`;
     }).join('');
   /* 1.19 : plus de défilement horizontal (il laissait une barre claire sous les onglets) : les onglets se
@@ -727,7 +747,7 @@ function openVTab(id) {
   $('#view-library').style.display = 'none';
   $('#toolbar').hidden = true;
   closeRightPanels();
-  document.documentElement.style.setProperty('--tint', vt.data && vt.data.folderId ? folderTint(vt.data.folderId) : DEFAULT_TINT);
+  document.documentElement.style.setProperty('--tint', vt.data && vt.data.folderId ? folderTint(vt.data.folderId) : defaultTint());
   setSaveStatus('saved');
   if (!openTabs.includes(id)) openTabs.push(id);
   renderTabs(); renderCrumbs(); renderAccess();
@@ -897,7 +917,7 @@ function renderLibrary() {
     path.map(f => `<span class="psep">›</span><button data-nav="${f.id}">${esc(f.nom)}</button>`).join('');
   const cur = folder(currentFolderId);
   $('#lib-title').innerHTML = (cur && cur.icone ? AlixoIcons.svg(cur.icone, 'title-ico') : '') + esc(cur ? cur.nom : 'Mes cours');
-  document.documentElement.style.setProperty('--tint', cur ? folderTint(cur.id) : DEFAULT_TINT);
+  document.documentElement.style.setProperty('--tint', cur ? folderTint(cur.id) : defaultTint());
 
   // agenda (vue mois) ou partages à la place de la grille
   document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo');
@@ -934,10 +954,11 @@ function renderLibrary() {
       const nd = subtreeDocCount(f.id);
       const nf = childFolders(f.id).length;
       const nfi = window.AlixoFiles ? AlixoFiles.subtreeCount(f.id) : 0;
-      const meta = [nd ? `${nd} séance${nd > 1 ? 's' : ''}` : '', nf ? `${nf} dossier${nf > 1 ? 's' : ''}` : '', nfi ? `${nfi} fichier${nfi > 1 ? 's' : ''}` : '', profBadgeHTML(f)].filter(Boolean).join(' · ') || 'Vide';
+      const pills = [nd ? `${nd} séance${nd > 1 ? 's' : ''}` : '', nf ? `${nf} dossier${nf > 1 ? 's' : ''}` : '', nfi ? `${nfi} fichier${nfi > 1 ? 's' : ''}` : ''].filter(Boolean);
+      const meta = pills.length ? pills.map(t => `<span class="pill">${t}</span>`).join('') : '<span class="pill empty">Vide</span>';
       return `<button class="folder-card" data-fid="${f.id}" draggable="true" style="--mc:${f.couleur}">
-        ${folderIconHTML(f, true)}
-        <div><h3>${esc(f.nom)}</h3><div class="meta">${meta}</div></div>
+        ${folderTileHTML(f)}
+        <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="fc-prof">${profBadgeHTML(f) || ''}</div><div class="meta">${meta}</div></div>
         <span class="fc-act ren" data-ren="${f.id}" title="Renommer"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4"/></svg></span>
         <span class="fc-act del" data-fdel="${f.id}" title="Supprimer"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
       </button>`;
@@ -1075,12 +1096,12 @@ function renderSharedFolder() {
   if (!v) { libMode = 'docs'; sharedNav = null; renderLibrary(); return; }
   $('#lib-path').innerHTML = `<button data-nav="">Mes cours</button><span class="psep">›</span><button data-shnav="${v.sid}" data-fid="${v.rootId}">${esc(v.sh.title)}</button>` + v.path.map(f => `<span class="psep">›</span><button data-shnav="${v.sid}" data-fid="${f.id}">${esc(f.nom)}</button>`).join('');
   $('#lib-title').innerHTML = (v.cur && v.cur.icone ? AlixoIcons.svg(v.cur.icone, 'title-ico') : '') + esc(v.cur ? v.cur.nom : v.sh.title) + `<span class="title-shared">${SHARE_ICO}partagé par ${esc(v.sh.owner)} · ${v.sh.role === 'write' ? 'écriture' : 'lecture seule'}</span>`;
-  document.documentElement.style.setProperty('--tint', (v.cur && v.cur.couleur) || v.sh.color || DEFAULT_TINT);
+  document.documentElement.style.setProperty('--tint', (v.cur && v.cur.couleur) || v.sh.color || defaultTint());
   document.body.classList.remove('lib-agenda');
   $$('#view-seg button').forEach(b => b.classList.remove('on'));
   let html = v.folders.map(f => `<button class="folder-card shared-card" data-shf="${v.sid}" data-fid="${f.id}" style="--mc:${esc(f.couleur || v.sh.color)}">
-      ${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico big') : FOLDER_ICON_BIG}
-      <div><h3>${esc(f.nom)}</h3><div class="meta">${f.nDocs ? `${f.nDocs} séance${f.nDocs > 1 ? 's' : ''}` : 'Vide'}</div></div>
+      ${folderTileHTML(f)}
+      <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="meta">${f.nDocs ? `<span class="pill">${f.nDocs} séance${f.nDocs > 1 ? 's' : ''}</span>` : '<span class="pill empty">Vide</span>'}</div></div>
     </button>`).join('');
   if (v.folders.length && v.docs.length) html += `<div class="grid-sect">Séances</div>`;
   html += v.docs.map(d => sharedDocCardHTML(d, (v.cur && v.cur.couleur) || v.sh.color, v.sh.owner, v.sh.role)).join('');
@@ -1097,7 +1118,7 @@ function sharedTreeHTML() {
   const folders = AlixoShare.sharedFolders(), docs = AlixoShare.sharedDocsAlone().filter(x => x.d);
   if (!folders.length && !docs.length) return '';
   return `<div class="tree-shared"><div class="ln-title tree-shtitle">${SHARE_ICO}Partagés avec moi</div>` +
-    folders.map(f => `<div class="tree-row ${libMode === 'shfolder' && sharedNav && sharedNav.sid === f.sid ? 'active' : ''}" style="--mc:${esc(f.color)}"><button class="tree-caret leaf">▶</button><button class="tree-label" data-shrow="${f.sid}" data-fid="${f.rootId}" title="Dossier partagé par ${esc(f.owner)}">${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}<span class="tree-name">${esc(f.title)}</span><span class="tree-count">${f.nDocs || ''}</span></button></div>`).join('') +
+    folders.map(f => `<div class="tree-row ${libMode === 'shfolder' && sharedNav && sharedNav.sid === f.sid ? 'active' : ''}" style="--mc:${esc(f.color)}"><button class="tree-caret leaf">▶</button><button class="tree-label" data-shrow="${f.sid}" data-fid="${f.rootId}" title="Dossier partagé par ${esc(f.owner)}">${f.icone && f.icone !== 'folder' ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}<span class="tree-name">${esc(f.title)}</span><span class="tree-count">${f.nDocs || ''}</span></button></div>`).join('') +
     docs.map(x => `<div class="tree-row doc"><button class="tree-caret leaf">▶</button><button class="tree-label" data-doc="${x.d.id}" title="Séance partagée par ${esc(x.owner)}">${docIcon(x.d)}<span class="tree-name">${esc(x.d.titre || 'Sans titre')}</span></button></div>`).join('') + `</div>`;
 }
 
@@ -9516,6 +9537,8 @@ function openSearch() {
 function closeSearch() { $('#searchov').hidden = true; }
 
 $('#btn-search').addEventListener('click', openSearch);
+/* 1.46 : sur Mac, le champ de recherche affiche ⌘ K (les autres infobulles gardent leur libellé) */
+if (IS_MAC_BROWSER) { const sb = $('#btn-search'); const k = sb.querySelector('.tb-kbd'); if (k) k.textContent = '⌘ K'; sb.title = 'Rechercher partout (⌘K)'; sb.setAttribute('aria-label', 'Rechercher un cours, une séance (⌘K)'); sb.setAttribute('aria-keyshortcuts', 'Meta+K'); }
 $('#searchov').addEventListener('pointerdown', e => { if (!e.target.closest('#searchbox')) closeSearch(); });
 
 function blockPlain(b) {
@@ -11406,7 +11429,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Nouveau réglage : chaque document peut s’ouvrir dans sa propre fenêtre, comme dans Word (Paramètres › Apparence › Fenêtres). Le bouton « Sauvegarde en ligne » tient de nouveau sur une ligne.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Nouveau look : police Geist, palette claire et sombre plus douce, champ de recherche dans la barre du haut (Ctrl K), cartes de dossiers à initiales et pastilles de couleur sur les onglets. Vos cours et vos thèmes ne changent pas.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

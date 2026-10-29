@@ -1,29 +1,62 @@
 /* ============================================================
    Alixo — design plat, inspiré Google Docs / Drive
    Fonds unis, bordures fines, pas de dégradés ni de flou.
+   1.46 : refonte visuelle (polices Geist, palette, barre du haut, onglets,
+   bibliothèque). Les variables (jetons) sont définies ici ; les règles de
+   composants de la refonte vivent dans refonte.css, chargé en dernier.
    ============================================================ */
 
+/* polices d'interface (app/fonts/, SIL OFL 1.1 — voir THIRD-PARTY.txt) : graisse variable */
+@font-face {
+  font-family: "Geist"; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url("fonts/geist-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist"; font-style: normal; font-weight: 400 700; font-display: swap;
+  src: url("fonts/geist-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: "Geist Mono"; font-style: normal; font-weight: 400 600; font-display: swap;
+  src: url("fonts/geist-mono-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Geist Mono"; font-style: normal; font-weight: 400 600; font-display: swap;
+  src: url("fonts/geist-mono-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 :root {
-  --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-ui-legacy: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-ui: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
   --font-serif: "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
   --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math", Georgia, serif;
-  --font-mono: "SF Mono", ui-monospace, Consolas, monospace;
+  --font-mono: "Geist Mono", "SF Mono", ui-monospace, Consolas, monospace;
 
-  --topbar-h: 56px;
+  --topbar-h: 60px;
   --toolbar-h: 44px;
-  --tabbar-h: 0px;               /* 36px quand des séances sont ouvertes en onglets (body.has-tabs) */
+  --tabbar-h: 0px;               /* 40px quand des séances sont ouvertes en onglets (body.has-tabs, refonte.css) */
 
   /* Mode clair */
-  --bg: #f6f7f9;
+  --bg: #f6f6f8;
   --surface: #ffffff;
-  --border: #dadce0;
-  --ink: #202124;
-  --ink-2: #5f6368;
-  --ink-3: #9198a1;
-  --hover: rgba(32, 33, 36, .06);
+  --surface-2: #eeeef1;          /* puces, fonds relevés */
+  --border: #e5e5ea;
+  --ink: #1a1b1f;
+  --ink-2: #4b4c55;
+  --ink-3: #66676f;
+  --hover: rgba(26, 27, 31, .06);
   --paper: #ffffff;
+  --topbar-bg: #ffffff;
 
-  --tint: #33658a;               /* teinte du dossier courant (posée par le JS) */
+  /* accent d'interface (hors dossier) : recherche, liens, pastille « en cours » */
+  --accent: #4f66e0;
+  --accent-soft: rgba(79, 102, 224, .12);
+  --accent-ink: #4f66e0;
+
+  --tint: #4f66e0;               /* teinte du dossier courant (posée par le JS) */
   --tint-soft: color-mix(in srgb, var(--tint) 12%, transparent);
 
   --ok: #2e8b6a; --warn: #b3762a; --danger: #c04343;
@@ -33,18 +66,23 @@
   --stor-cours: #33658a; --stor-slides: #c4703f; --stor-sheet: #2e8b6a; --stor-board: #7a5cb8;
   --stor-quiz: #c24d7c; --stor-imgs: #2f8fae; --stor-files: #b3892a; --stor-meta: #9198a1;
 
-  --r: 8px;
+  --r: 10px;
 }
 
 html[data-theme="dark"] {
-  --bg: #141414;
-  --surface: #1f1f1f;
-  --border: #3c4043;
-  --ink: #e8eaed;
-  --ink-2: #bdc1c6;
-  --ink-3: #80868b;
-  --hover: rgba(255, 255, 255, .08);
-  --paper: #1f1f1f;
+  --bg: #0f1012;
+  --surface: #17181b;
+  --surface-2: #1f2025;
+  --border: #25262b;
+  --ink: #ececee;
+  --ink-2: #c4c5cb;
+  --ink-3: #9a9ba3;
+  --hover: rgba(255, 255, 255, .06);
+  --paper: #17181b;
+  --topbar-bg: #131417;
+  --accent: #4f66e0;             /* blanc sur #4f66e0 = 4,85:1, dans les deux thèmes */
+  --accent-soft: rgba(79, 102, 224, .16);
+  --accent-ink: #a9b8ff;
   --tint-soft: color-mix(in srgb, var(--tint) 20%, transparent);
   --c-demand: #d8756b; --c-supply: #52ab90; --c-third: #6d95d8;
   --stor-cours: #6fa3cc; --stor-slides: #e0915f; --stor-sheet: #52ab90; --stor-board: #a58ad8;
@@ -2831,8 +2869,8 @@ body.printing-slides #sl-print { display: block; }
 .set-about .logo-mark img { width: 52px; height: 52px; }
 
 /* la fenêtre Paramètres garde l'accent bleu d'Alixo, quel que soit le dossier affiché derrière */
-#setov { --tint: #33658a; --tint-soft: rgba(51, 101, 138, .14); }
-html[data-theme="dark"] #setov { --tint: #6fa3cc; --tint-soft: rgba(111, 163, 204, .2); }
+#setov { --tint: #4f66e0; --tint-soft: rgba(79, 102, 224, .14); }
+html[data-theme="dark"] #setov { --tint: #4f66e0; --tint-soft: rgba(79, 102, 224, .2); }
 
 /* thèmes de couleurs (Paramètres › Apparence). Base clair/sombre = html[data-theme], jeu de couleurs = html[data-skin] */
 html[data-skin="galaxy"] { --bg: #0a0f1f; --surface: #121a30; --border: #26304f; --ink: #e7ecff; --ink-2: #aab5db; --ink-3: #7784ae; --hover: rgba(140, 160, 255, .1); --paper: #121a30; }
@@ -2850,6 +2888,9 @@ html[data-skin="candy"] { --bg: #1a0e15; --surface: #26141f; --border: #4a2a3c; 
 html[data-skin="violet"] { --bg: #120d1f; --surface: #1b1430; --border: #37295a; --ink: #eee8fb; --ink-2: #c3b8dd; --ink-3: #8d82a8; --hover: rgba(179, 136, 255, .1); --paper: #1b1430; --skin-acc: #b388ff; }
 html[data-skin="ocean"] { --bg: #061418; --surface: #0d1f24; --border: #1f3c44; --ink: #e2f4f5; --ink-2: #a8cfd2; --ink-3: #6f9a9f; --hover: rgba(42, 212, 200, .1); --paper: #0d1f24; --skin-acc: #2ad4c8; }
 html[data-skin="ember"] { --bg: #1a0d0a; --surface: #261512; --border: #4a2a24; --ink: #fbe9e3; --ink-2: #d9b5aa; --ink-3: #a0807a; --hover: rgba(255, 122, 69, .1); --paper: #261512; --skin-acc: #ff7a45; }
+/* 1.46 : les thèmes colorés reprennent leur surface pour la barre du haut et dérivent le fond relevé de leur encre ; les thèmes à accent (--skin-acc) l'étendent à l'accent d'interface */
+html[data-skin] { --topbar-bg: var(--surface); --surface-2: color-mix(in srgb, var(--ink) 8%, var(--surface)); }
+html[data-skin="amber"], html[data-skin="candy"], html[data-skin="violet"], html[data-skin="ocean"], html[data-skin="ember"] { --accent: var(--skin-acc); --accent-ink: var(--skin-acc); --accent-soft: color-mix(in srgb, var(--skin-acc) 16%, transparent); }
 /* l'accent du thème colore ce qui n'appartient pas à un dossier : boutons principaux, liens, cases cochées */
 html[data-skin="amber"] .cta:not(.ghost), html[data-skin="candy"] .cta:not(.ghost), html[data-skin="violet"] .cta:not(.ghost), html[data-skin="ocean"] .cta:not(.ghost), html[data-skin="ember"] .cta:not(.ghost) { background: var(--skin-acc); border-color: var(--skin-acc); color: #1a1408; }
 html[data-skin="amber"] a, html[data-skin="candy"] a, html[data-skin="violet"] a, html[data-skin="ocean"] a, html[data-skin="ember"] a { color: var(--skin-acc); }

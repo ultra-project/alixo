@@ -13,7 +13,7 @@ window.AlixoWidget = (() => {
   const kind = params.get('k') || 'horloge';
   const id = params.get('id') || '';
   const preview = params.get('preview') === '1';
-  const def = (window.ALIXO_WIDGET && ALIXO_WIDGET(kind)) || { k: kind, name: 'Widget', ico: '', color: '#33658a' };
+  const def = (window.ALIXO_WIDGET && ALIXO_WIDGET(kind)) || { k: kind, name: 'Widget', ico: '', color: '#4f66e0' };
   const bridge = window.alixoDesktop && alixoDesktop.widget ? alixoDesktop.widget : null;
   let snap = null, tick = 0;
   let quizQ = null, quizPicked = null, quizSeen = new Set();
@@ -33,7 +33,7 @@ window.AlixoWidget = (() => {
     const html = document.documentElement;
     if (!snap) { body.innerHTML = '<div class="wg-empty">Connexion à Alixo…</div>'; return; }
     html.dataset.theme = snap.theme === 'dark' ? 'dark' : 'light';
-    html.style.setProperty('--tint', snap.tint || '#33658a');
+    html.style.setProperty('--tint', snap.tint || '#4f66e0');
     html.style.setProperty('--op', String((snap.opacity || 100) / 100));
     if (!snap.plus) { body.innerHTML = '<div class="wg-empty"><b>Alixo+</b> est nécessaire pour les widgets de bureau.<br><button type="button" class="wg-cta" data-open="widgets">Voir dans Alixo</button></div>'; return; }
     const r = RENDER[kind];

@@ -107,7 +107,7 @@ window.AlixoWidgets = (() => {
     const out = {
       v: ALIXO_VERSION, now: now.getTime(), plus, opacity: c.opacity,
       theme: document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light',
-      tint: (getComputedStyle(document.documentElement).getPropertyValue('--tint') || '#33658a').trim()
+      tint: (getComputedStyle(document.documentElement).getPropertyValue('--tint') || '#4f66e0').trim()
     };
     if (!plus) return out;
     out.opts = {}; for (const it of c.items) out.opts[it.id] = it.opts || {};

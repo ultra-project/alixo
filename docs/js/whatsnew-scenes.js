@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.45.0 (ou nouveautes.html?v=1.37.0 en page seule).
+   Aperçu : index.html?nouveautes=1.46.0 (ou nouveautes.html?v=1.46.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.46.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Un nouveau <em>look</em>', text: 'Une interface plus claire et plus douce. Vos cours, eux, ne bougent pas.', dur: 5000 },
+    { title: 'Une nouvelle <em>apparence</em>', text: 'Nouvelle palette claire et sombre, accent bleu, coins arrondis : Alixo change de visage.',
+      bullets: ['<b>Palette</b> plus douce, en clair comme en sombre', '<b>Accent bleu</b> par défaut sur les boutons et les liens', '<b>Thèmes</b> de Paramètres › Apparence : toujours là, vos icônes aussi'],
+      art: 'palette', accent: '#3d6bb5', accent2: '#8a4b9c', dur: 7500 },
+    { title: 'La <em>recherche</em> sous les yeux', text: 'Le bouton loupe devient un vrai champ au centre de la barre du haut.',
+      bullets: ['<b>Rechercher…</b> : un clic, ou Ctrl K (⌘ K sur Mac)', '<b>Même recherche</b> qu’avant, simplement plus visible', '<b>Boutons</b> de droite plus grands, plus faciles à viser'],
+      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 7000 },
+    { title: 'Des dossiers à <em>initiales</em>', text: 'Dans la bibliothèque, chaque dossier se reconnaît à sa tuile et résume son contenu.',
+      bullets: ['<b>Tuile</b> « MA » pour Maths, « HG » pour Histoire-géo, dans sa couleur', '<b>Puces</b> : « 3 séances · 1 dossier · 2 fichiers »', '<b>Pastilles</b> de couleur sur les onglets et dans l’explorateur'],
+      art: 'cards', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
+    { title: 'Vos cours ne <em>changent</em> pas', text: 'Nouvelle police d’interface Geist, embarquée dans l’application : rien n’est téléchargé.',
+      bullets: ['<b>Éditeur</b>, présentations, tableurs et quiz : même rendu', '<b>PDF</b> exportés identiques', '<b>Hors ligne</b> : la police est dans Alixo, aucun appel à Google'],
+      art: 'text', accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.45.0', {
   scenes: [
@@ -49,28 +68,6 @@ AlixoWhatsNew.register('1.44.0', {
     { title: 'Sur le web et le <em>téléphone</em>', text: 'La correction pendant la frappe reste partout ; les outils AlixoAI demandent l’application Windows ou Mac.',
       bullets: ['<b>Correction</b> de l’orthographe et de la grammaire : partout', '<b>F7, Quiz IA, fiches</b> : dans l’application Windows ou Mac', '<b>Alixo+</b> : privé d’AlixoAI ? Résiliation possible sous 30 jours'],
       art: 'spell', accent: '#3d6bb5', accent2: '#c04343', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.43.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Écrire juste, <em>partout</em>', text: 'Une correction des fautes qui marche sur tous les ordinateurs, AlixoAI en ligne, et de nouveaux blocs.', dur: 5000 },
-    { title: 'La correction <em>partout</em>', text: 'Les fautes sont soulignées sur tous les ordinateurs, sans rien faire ramer.',
-      bullets: ['<b>Orthographe</b> : clic droit sur le mot pour les suggestions', '<b>Grammaire</b> : « il à » devient « il a » avec la touche Tab', '<b>Gratuite</b> et hors ligne : rien ne quitte l’appareil'],
-      art: 'spell', accent: '#c04343', accent2: '#33658a', dur: 8000 },
-    { title: 'AlixoAI passe <em>en ligne</em>', text: 'Avec Alixo+, sur n’importe quel ordinateur ou téléphone connecté.',
-      bullets: ['<b>F7</b>, Quiz IA et fiches : des réponses plus rapides et plus justes', '<b>Rien à télécharger</b> : jusqu’à 2,4 Go libérés', '<b>À votre demande</b> : texte non conservé, Paramètres › IA'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"/><path d="M12.5 9.5l1 2.5 2.5 1-2.5 1-1 2.5-1-2.5-2.5-1 2.5-1Z"/></svg>' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 8000 },
-    { title: 'Un tableau au <em>quadrillage</em>', text: 'Dans une séance, deux nouvelles façons d’insérer : un tableau dessiné, un autre document.',
-      bullets: ['<b>Tableau</b> : glissez sur le quadrillage, puis cliquez', '<b>Au clavier</b> : flèches puis Entrée', '<b>Bloc Document</b> : « / » › Document, une carte qui s’ouvre d’un clic'],
-      art: 'grid', accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8000 },
-    { title: 'Onglets et <em>stockage</em>', text: 'Un nouvel onglet se nomme sur place, l’espace utilisé se lit d’un coup d’œil.',
-      bullets: ['<b>Nouvel onglet</b> : son nom se tape directement dedans', '<b>Stockage</b> : une barre par catégorie, Paramètres › Compte', '<b>Plus gros éléments</b> : listés, un clic les ouvre'],
-      art: 'storage', accent: '#b3762a', accent2: '#8a4b9c', dur: 7500 },
-    { title: 'Des widgets <em>par appareil</em>', text: 'Le PC du bureau et l’ordinateur portable gardent chacun leur disposition.',
-      bullets: ['<b>Disposition</b> propre à chaque ordinateur', '<b>Au démarrage</b> : Alixo peut s’ouvrir seul, Paramètres › Widgets', '<b>Discret</b> : seuls vos widgets apparaissent'],
-      art: 'board', accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

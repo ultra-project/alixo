@@ -20,7 +20,7 @@
 'use strict';
 
 window.AlixoGalaxy = (() => {
-  const HOME_BLUE = '#33658a';
+  const HOME_BLUE = '#4f66e0';
   let host = null, canvas = null, ctx = null, hud = null;
   let nodes = [], links = [], byId = new Map();
   let running = false, raf = 0, lastT = 0, t0 = 0;

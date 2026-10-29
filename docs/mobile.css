@@ -14,6 +14,16 @@ body.mobile .crumbs .chip, body.mobile .crumbs .sep, body.mobile .crumbs .crumb-
 body.mobile #tb-title { max-width: 44vw; font-size: 14px; }
 body.mobile #cal-now, body.mobile #timer-now, body.mobile #save-status, body.mobile #btn-theme { display: none !important; }
 body.mobile .tbtn { width: 36px; height: 36px; }
+body.mobile .tb-sq, body.mobile .tb-kbd { display: none; }   /* 1.46 : le champ de recherche de bureau reste un simple bouton loupe */
+/* 1.46 : cartes de dossiers de la bibliothèque (tuile monogramme et puces, cf. refonte.css, non chargé sur mobile) */
+body.mobile .folder-card .fc-tile { width: 44px; height: 44px; flex: none; border-radius: 11px; display: grid; place-items: center; background: color-mix(in srgb, var(--mc, var(--tint)) 15%, transparent); color: var(--mc, var(--tint)); }
+body.mobile .folder-card .fc-mono { font-size: 15px; font-weight: 700; letter-spacing: .01em; line-height: 1; }
+body.mobile .folder-card .fc-tile .ficon-ico.big { width: 24px; height: 24px; }
+body.mobile .folder-card .fc-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; padding-right: 60px; }
+body.mobile .folder-card .fc-prof { font-size: 13px; color: var(--ink-3); }
+body.mobile .folder-card .fc-prof:empty { display: none; }
+body.mobile .folder-card .meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+body.mobile .folder-card .pill { display: inline-flex; align-items: center; padding: 4px 9px; border-radius: 7px; background: var(--surface-2); color: var(--ink-2); font-size: 12px; font-weight: 500; line-height: 1.2; white-space: nowrap; }
 body.mobile #mob-menu { flex: none; }
 body.mobile #access-chips .acc-lbl { display: none; }
 
