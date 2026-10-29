@@ -47,7 +47,12 @@ window.AlixoShare = (() => {
   const now = () => Date.now();
   const norm2 = s => String(s || '').trim().toLowerCase();
   const isOwner = sh => sh && sh.owner === uid;
-  const myRole = sh => (sh && sh.members && sh.members[uid] && sh.members[uid].role) || (isOrgShare(sh) ? 'read' : '');
+  /* 1.47 : rôle et identifiants reçus du nuage, toujours normalisés avant usage (classes CSS, attributs data-*) */
+  const safeRole = r => (r === 'write' ? 'write' : 'read');
+  const SAFE_ID = /^[\w-]{1,64}$/;
+  const safeId = id => typeof id === 'string' && SAFE_ID.test(id);
+  const safeColor = c => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : DEFAULT_TINT);
+  const myRole = sh => { const m = sh && sh.members && sh.members[uid]; if (m) return safeRole(m.role); return isOrgShare(sh) ? 'read' : ''; };
   /* 1.32 : un partage « à l'entreprise » (sh.org) est lu par tous les membres de l'entreprise (Alixo Business) */
   const bizOrg = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? AlixoBusiness.orgId() : '');
   const isOrgShare = sh => !!(sh && sh.org && sh.org === bizOrg());
@@ -355,8 +360,9 @@ window.AlixoShare = (() => {
       snap.docChanges().forEach(ch => {
         const id = ch.doc.id;
         if (ch.type === 'removed') { if (map.delete(id)) changed = true; return; }
+        if (!safeId(id)) return;   // identifiant hors format Alixo : ignoré
         const m = ch.doc.data(); if (!m || !m.name || !m.chunks) return;
-        map.set(id, { id, sid, name: m.name, size: m.size || 0, mime: m.mime || '', folderId: m.folderId || null, createdAt: m.createdAt || 0, updatedAt: m.updatedAt || 0, chunks: m.chunks });
+        map.set(id, { id, sid, name: String(m.name), size: m.size || 0, mime: m.mime || '', folderId: safeId(m.folderId) ? m.folderId : null, createdAt: m.createdAt || 0, updatedAt: m.updatedAt || 0, chunks: m.chunks });
         changed = true;
       });
       if (changed && !currentDocId) { if (libMode === 'shared') renderSharedHome(); else renderLibrary(); }
@@ -458,9 +464,13 @@ window.AlixoShare = (() => {
         if (owner) (pushedIds.get(sid) || pushedIds.set(sid, new Set()).get(sid))[ch.type === 'removed' ? 'delete' : 'add'](id);
         if (ch.doc.metadata.hasPendingWrites) return;
         if (ch.type === 'removed') { if (!owner) { map.delete(id); removed.push(id); } lastPushed.delete(k); return; }
+        if (!safeId(id)) return;   // identifiant hors format Alixo : ignoré (jamais injecté dans un attribut)
         const raw = ch.doc.data(); if (!raw || !raw.data) return;
         if (lastPushed.get(k) === raw.data) return;
         let remote; try { remote = JSON.parse(raw.data); } catch { return; }
+        if (!remote || typeof remote !== 'object') return;
+        remote.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
+        if (!safeId(remote.folderId)) remote.folderId = null;
         if (owner) {
           if (raw.by === uid) { lastPushed.set(k, raw.data); return; }
           const local = state.docs.find(d => d.id === id);
@@ -495,10 +505,25 @@ window.AlixoShare = (() => {
     stopFiles(sid);
   }
 
+  /* instantané reçu : couleurs validées (#rrggbb), identifiants de dossiers / cible conformes — les entrées douteuses sont écartées */
+  function sanitizeShare(sh) {
+    if (sh.color != null) sh.color = safeColor(sh.color);
+    if (!safeId(sh.target)) sh.target = '';
+    if (sh.folder && typeof sh.folder === 'object') {
+      const root = sh.folder.root && typeof sh.folder.root === 'object' && safeId(sh.folder.root.id) ? Object.assign({}, sh.folder.root, { couleur: sh.folder.root.couleur ? safeColor(sh.folder.root.couleur) : '' }) : null;
+      const folders = (Array.isArray(sh.folder.folders) ? sh.folder.folders : []).filter(f => f && typeof f === 'object' && safeId(f.id) && (f.parentId == null || safeId(f.parentId)))
+        .map(f => Object.assign({}, f, { couleur: f.couleur ? safeColor(f.couleur) : '' }));
+      sh.folder = Object.assign({}, sh.folder, { root, folders });
+    }
+    if (sh.members && typeof sh.members === 'object') for (const m of Object.values(sh.members)) if (m && typeof m === 'object') m.role = safeRole(m.role);
+    return sh;
+  }
   function applyShareSnapshot(docs, source) {
     const seen = new Set();
     docs.forEach(s => {
+      if (!safeId(s.id)) return;   // identifiant de partage hors format : ignoré
       const sh = Object.assign({ id: s.id }, s.data());
+      sanitizeShare(sh);
       seen.add(sh.id);
       const prev = shares.get(sh.id);
       shares.set(sh.id, sh);
@@ -595,8 +620,8 @@ window.AlixoShare = (() => {
   /* ---------------- accès : qui voit cette séance ---------------- */
   function accessFor(docId) {
     const sh = shareForAny(docId); if (!sh) return null;
-    const members = Object.entries(sh.members || {}).map(([u, m]) => ({ uid: u, name: m.name || m.email || '', email: m.email || '', role: m.role || 'read' }));
-    return { sid: sh.id, kind: sh.kind, title: sh.title, isOwner: isOwner(sh), role: isOwner(sh) ? 'owner' : myRole(sh), owner: { uid: sh.owner, name: sh.ownerName || sh.ownerEmail || '', email: sh.ownerEmail || '' }, members, invites: (sh.invites || []).map(i => ({ name: i.name || i.email, email: i.email, role: i.role })), color: sh.color };
+    const members = Object.entries(sh.members || {}).map(([u, m]) => ({ uid: u, name: m.name || m.email || '', email: m.email || '', role: safeRole(m.role) }));
+    return { sid: sh.id, kind: sh.kind, title: sh.title, isOwner: isOwner(sh), role: isOwner(sh) ? 'owner' : myRole(sh), owner: { uid: sh.owner, name: sh.ownerName || sh.ownerEmail || '', email: sh.ownerEmail || '' }, members, invites: (sh.invites || []).map(i => ({ name: i.name || i.email, email: i.email, role: safeRole(i.role) })), color: sh.color };
   }
   /* dossiers partagés avec moi, pour la bibliothèque (1.15) */
   function sharedFolders() {
@@ -769,6 +794,7 @@ window.AlixoShare = (() => {
     sh.invites = (sh.invites || []).filter(x => x.email !== inv.email); sh.inviteEmails = (sh.inviteEmails || []).filter(x => x !== inv.email);
   }
   async function setRole(sid, memberUid, role) {
+    role = safeRole(role);
     const sh = shares.get(sid); if (!sh || !sh.members || !sh.members[memberUid]) return;
     await sharesRef.doc(sid).update({ [`members.${memberUid}.role`]: role, updatedAt: now() });
     sh.members[memberUid].role = role;
@@ -801,7 +827,7 @@ window.AlixoShare = (() => {
   async function accept(sid) {
     const sh = shares.get(sid); if (!sh) return;
     const inv = (sh.invites || []).find(x => x.email === me.email);
-    const role = inv ? inv.role : 'read';
+    const role = inv && inv.role === 'write' ? 'write' : 'read';   // jamais autre chose que read | write
     const member = { role, name: profile.pseudo || me.name, email: me.email, since: now() };
     const upd = { [`members.${uid}`]: member, memberIds: FV.arrayUnion(uid), inviteEmails: FV.arrayRemove(me.email), updatedAt: now() };
     if (inv) upd.invites = FV.arrayRemove(inv);
@@ -856,7 +882,7 @@ window.AlixoShare = (() => {
   }
   function stateHint(sh, emptyMsg) {
     const st = docsState.get(sh.id) || {};
-    if (st.st === 'error') return `<div class="po-hint sh-err">Impossible de charger ce partage : ${esc(st.msg)} <button class="cta ghost small" data-sh="reload" data-sid="${sh.id}" type="button">Réessayer</button></div>`;
+    if (st.st === 'error') return `<div class="po-hint sh-err">Impossible de charger ce partage : ${esc(st.msg)} <button class="cta ghost small" data-sh="reload" data-sid="${esc(sh.id)}" type="button">Réessayer</button></div>`;
     if (st.st !== 'ready') return '<div class="po-hint">Chargement des séances…</div>';
     return `<div class="po-hint">${emptyMsg}</div>`;
   }
@@ -866,7 +892,7 @@ window.AlixoShare = (() => {
     const received = [...shares.values()].filter(sh => isMember(sh) && !isOwner(sh));
     const mine = [...shares.values()].filter(isOwner);
     let html = '';
-    if (invites.length) html += `<div class="sh-section"><div class="sh-stitle">Invitations</div>${invites.map(sh => `<div class="sh-invite"><div class="sh-ico">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-txt"><b>${esc(sh.ownerName || sh.ownerEmail || 'Un membre')} partage ${kindThe(sh.kind)} « ${esc(sh.title || '')} »</b><span>${((sh.invites || []).find(x => x.email === me.email) || {}).role === 'write' ? 'Lecture et écriture' : 'Lecture seule'} · ${esc(sh.ownerEmail || '')}</span></div><button class="cta small" data-sh="accept" data-sid="${sh.id}">Accepter</button><button class="cta ghost small" data-sh="decline" data-sid="${sh.id}">Refuser</button></div>`).join('')}</div>`;
+    if (invites.length) html += `<div class="sh-section"><div class="sh-stitle">Invitations</div>${invites.map(sh => `<div class="sh-invite"><div class="sh-ico">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-txt"><b>${esc(sh.ownerName || sh.ownerEmail || 'Un membre')} partage ${kindThe(sh.kind)} « ${esc(sh.title || '')} »</b><span>${((sh.invites || []).find(x => x.email === me.email) || {}).role === 'write' ? 'Lecture et écriture' : 'Lecture seule'} · ${esc(sh.ownerEmail || '')}</span></div><button class="cta small" data-sh="accept" data-sid="${esc(sh.id)}">Accepter</button><button class="cta ghost small" data-sh="decline" data-sid="${esc(sh.id)}">Refuser</button></div>`).join('')}</div>`;
     html += `<div class="sh-section"><div class="sh-stitle">Partagés avec moi</div>`;
     if (!received.length) html += `<div class="sh-empty">Personne ne partage encore de cours avec vous.<br>Les cours, dossiers et événements que d’autres membres d’Alixo vous partagent apparaîtront ici (invitation par e-mail ou par pseudo).${profile.pseudo ? `<br><br>Votre pseudo : <b>${esc(profile.pseudo)}</b>` : '<br><br>Choisissez un pseudo dans Paramètres › Compte pour être invité plus facilement.'}</div>`;
     else {
@@ -878,30 +904,30 @@ window.AlixoShare = (() => {
         const fs = (sh.folder && sh.folder.folders) || [];
         const rootId = sh.folder && sh.folder.root ? sh.folder.root.id : sh.target;
         const known = new Set(fs.map(f => f.id)); known.add(rootId);
-        const docBtn = d => `<button data-shdoc="${d.id}">${SH_ICO}${esc(d.titre || 'Sans titre')}</button>`;
-        const fileBtn = f => `<button data-shfile="${f.id}" data-sid="${sh.id}" title="${esc(f.name)}">${window.AlixoFiles ? AlixoFiles.iconHTML(f.name) : SH_ICO}${esc(f.name)}</button>`;
+        const docBtn = d => `<button data-shdoc="${esc(d.id)}">${SH_ICO}${esc(d.titre || 'Sans titre')}</button>`;
+        const fileBtn = f => `<button data-shfile="${esc(f.id)}" data-sid="${esc(sh.id)}" title="${esc(f.name)}">${window.AlixoFiles ? AlixoFiles.iconHTML(f.name) : SH_ICO}${esc(f.name)}</button>`;
         const fileMap = filesBy.get(sh.id) || new Map();
         const filesIn = fid => [...fileMap.values()].filter(f => (f.folderId || null) === fid).map(fileBtn).join('');
         const docsIn = fid => [...map.values()].filter(d => (d.folderId || null) === fid).map(docBtn).join('');
         const orphans = [...map.values()].filter(d => !known.has(d.folderId || null)).map(docBtn).join('');   // sous-dossier retiré : à la racine
-        const render = pid => fs.filter(f => (f.parentId || null) === pid).map(f => `<button class="sh-sf" data-shf="${f.id}" style="--mc:${esc(f.couleur || sh.color || DEFAULT_TINT)}">${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}${esc(f.nom)}</button><div style="margin-left:18px">${render(f.id)}${docsIn(f.id)}${filesIn(f.id)}</div>`).join('');
+        const render = pid => fs.filter(f => (f.parentId || null) === pid).map(f => `<button class="sh-sf" data-shf="${esc(f.id)}" style="--mc:${esc(safeColor(f.couleur || sh.color))}">${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}${esc(f.nom)}</button><div style="margin-left:18px">${render(f.id)}${docsIn(f.id)}${filesIn(f.id)}</div>`).join('');
         const orphanFiles = [...fileMap.values()].filter(f => !known.has(f.folderId || null)).map(fileBtn).join('');
         const sub = render(rootId), rootLeaves = docsIn(rootId) + orphans + filesIn(rootId) + orphanFiles;
-        html += `<div class="sh-folder" style="--mc:${esc(sh.color || DEFAULT_TINT)}"><div class="sh-fhead">${sh.folder && sh.folder.root && sh.folder.root.icone ? AlixoIcons.svg(sh.folder.root.icone, 'ficon-ico') : FOLDER_ICON}<span>${esc(sh.title || 'Dossier')}</span><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span class="sh-sub">par ${esc(sh.ownerName || sh.ownerEmail || '')} · ${map.size} séance${map.size > 1 ? 's' : ''}${fileMap.size ? ` · ${fileMap.size} fichier${fileMap.size > 1 ? 's' : ''}` : ''}</span><button class="cta ghost small" data-sh="leave" data-sid="${sh.id}" title="Ne plus recevoir ce partage">Quitter</button></div><div class="sh-tree">${sub}${rootLeaves}${!map.size && !fileMap.size ? stateHint(sh, 'Aucune séance ni fichier pour l’instant.') : ''}</div></div>`;
+        html += `<div class="sh-folder" style="--mc:${esc(safeColor(sh.color))}"><div class="sh-fhead">${sh.folder && sh.folder.root && sh.folder.root.icone ? AlixoIcons.svg(sh.folder.root.icone, 'ficon-ico') : FOLDER_ICON}<span>${esc(sh.title || 'Dossier')}</span><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span class="sh-sub">par ${esc(sh.ownerName || sh.ownerEmail || '')} · ${map.size} séance${map.size > 1 ? 's' : ''}${fileMap.size ? ` · ${fileMap.size} fichier${fileMap.size > 1 ? 's' : ''}` : ''}</span><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}" title="Ne plus recevoir ce partage">Quitter</button></div><div class="sh-tree">${sub}${rootLeaves}${!map.size && !fileMap.size ? stateHint(sh, 'Aucune séance ni fichier pour l’instant.') : ''}</div></div>`;
       }
-      if (docs.length) html += `<div class="sh-grid">${docs.map(sh => { const d = (docsBy.get(sh.id) || new Map()).get(sh.target); const first = d && (d.blocks || []).find(b => ['p', 'callout', 'quote', 'li'].includes(b.type)); const isSl = d && d.kind === 'slides', isBd = d && d.kind === 'board', isQz = d && d.kind === 'quiz', nBd = isBd ? (d.items || []).filter(it => it.t !== 'arrow').length : 0, nQz = isQz ? (d.questions || []).length : 0; return `<button class="sh-card" data-shdoc="${sh.target}" data-sid="${sh.id}" style="--mc:${esc(sh.color || DEFAULT_TINT)}"><h3>${isSl ? SLIDES_ICON : isBd ? BOARD_ICON : isQz ? QUIZ_ICON : ''}${esc((d && d.titre) || sh.title || 'Sans titre')}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${isSl ? `Présentation · ${(d.slides || []).length} diapositive${(d.slides || []).length > 1 ? 's' : ''}` : isBd ? `Planche · ${nBd} élément${nBd > 1 ? 's' : ''}` : isQz ? `Quiz · ${nQz} question${nQz > 1 ? 's' : ''}` : esc(first ? stripTags(first.text).slice(0, 140) : (d ? '' : stateText(sh)))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span>${d ? `<span>${fmtDate(d.updatedAt || now())}</span>` : ''}</div></button>`; }).join('')}</div>`;
+      if (docs.length) html += `<div class="sh-grid">${docs.map(sh => { const d = (docsBy.get(sh.id) || new Map()).get(sh.target); const first = d && (d.blocks || []).find(b => ['p', 'callout', 'quote', 'li'].includes(b.type)); const isSl = d && d.kind === 'slides', isBd = d && d.kind === 'board', isQz = d && d.kind === 'quiz', nBd = isBd ? (d.items || []).filter(it => it.t !== 'arrow').length : 0, nQz = isQz ? (d.questions || []).length : 0; return `<button class="sh-card" data-shdoc="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${isSl ? SLIDES_ICON : isBd ? BOARD_ICON : isQz ? QUIZ_ICON : ''}${esc((d && d.titre) || sh.title || 'Sans titre')}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${isSl ? `Présentation · ${(d.slides || []).length} diapositive${(d.slides || []).length > 1 ? 's' : ''}` : isBd ? `Planche · ${nBd} élément${nBd > 1 ? 's' : ''}` : isQz ? `Quiz · ${nQz} question${nQz > 1 ? 's' : ''}` : esc(first ? stripTags(first.text).slice(0, 140) : (d ? '' : stateText(sh)))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span>${d ? `<span>${fmtDate(d.updatedAt || now())}</span>` : ''}</div></button>`; }).join('')}</div>`;
       const fls = received.filter(sh => sh.kind === 'file');
       if (fls.length) html += `<div class="sh-stitle" style="margin-top:14px">Fichiers partagés</div><div class="sh-grid">${fls.map(sh => {
         const f = (filesBy.get(sh.id) || new Map()).get(sh.target);
         const name = (f && f.name) || sh.title || 'Fichier';
-        return `<button class="sh-card sh-filecard" data-shfile="${sh.target}" data-sid="${sh.id}" style="--mc:${esc(sh.color || DEFAULT_TINT)}"><h3>${window.AlixoFiles ? AlixoFiles.iconHTML(name) : SH_ICO}${esc(name)}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${f && window.AlixoFiles ? esc(AlixoFiles.fmtSize(f.size)) : esc(stateText(sh))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">lecture</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span></div></button>`;
+        return `<button class="sh-card sh-filecard" data-shfile="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${window.AlixoFiles ? AlixoFiles.iconHTML(name) : SH_ICO}${esc(name)}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${f && window.AlixoFiles ? esc(AlixoFiles.fmtSize(f.size)) : esc(stateText(sh))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">lecture</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span></div></button>`;
       }).join('')}</div>`;
-      if (evs.length) html += `<div class="sh-stitle" style="margin-top:14px">Événements partagés</div>${evs.map(sh => `<div class="sh-member"><div class="sh-av">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-mi"><b>${esc(sh.title || 'Événement')}</b><span>${sh.event ? esc(sh.event.date + ' · ' + sh.event.start + '–' + sh.event.end + (sh.event.lieu ? ' · ' + sh.event.lieu : '')) : ''} — par ${esc(sh.ownerName || '')}</span></div><button class="cta ghost small" data-sh="leave" data-sid="${sh.id}">Retirer</button></div>`).join('')}`;
+      if (evs.length) html += `<div class="sh-stitle" style="margin-top:14px">Événements partagés</div>${evs.map(sh => `<div class="sh-member"><div class="sh-av">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-mi"><b>${esc(sh.title || 'Événement')}</b><span>${sh.event ? esc(sh.event.date + ' · ' + sh.event.start + '–' + sh.event.end + (sh.event.lieu ? ' · ' + sh.event.lieu : '')) : ''} — par ${esc(sh.ownerName || '')}</span></div><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}">Retirer</button></div>`).join('')}`;
     }
     html += `</div>`;
     html += `<div class="sh-section"><div class="sh-stitle">Mes partages <span class="po-hint" style="margin:0; text-transform:none; letter-spacing:0; font-weight:400">— clic droit sur une séance ou un dossier › Partager…</span></div>`;
     if (!mine.length) html += `<div class="po-hint" style="padding:0 4px">Vous ne partagez rien pour l’instant.</div>`;
-    else html += mine.map(sh => { const nM = (sh.memberIds || []).length, nI = (sh.invites || []).length; return `<div class="sh-member"><div class="sh-av" style="background:${esc(sh.color || DEFAULT_TINT)}">${sh.kind === 'doc' ? '📄' : sh.kind === 'folder' ? '📁' : sh.kind === 'file' ? '📎' : '📅'}</div><div class="sh-mi"><b>${esc(sh.title || '')}</b><span>${kindLabel(sh.kind)} · ${nM} membre${nM > 1 ? 's' : ''}${nI ? ` · ${nI} invitation${nI > 1 ? 's' : ''} en attente` : ''}</span></div><button class="cta ghost small" data-sh="manage" data-sid="${sh.id}">Gérer…</button></div>`; }).join('');
+    else html += mine.map(sh => { const nM = (sh.memberIds || []).length, nI = (sh.invites || []).length; return `<div class="sh-member"><div class="sh-av" style="background:${esc(sh.color || DEFAULT_TINT)}">${sh.kind === 'doc' ? '📄' : sh.kind === 'folder' ? '📁' : sh.kind === 'file' ? '📎' : '📅'}</div><div class="sh-mi"><b>${esc(sh.title || '')}</b><span>${kindLabel(sh.kind)} · ${nM} membre${nM > 1 ? 's' : ''}${nI ? ` · ${nI} invitation${nI > 1 ? 's' : ''} en attente` : ''}</span></div><button class="cta ghost small" data-sh="manage" data-sid="${esc(sh.id)}">Gérer…</button></div>`; }).join('');
     html += `</div>`;
     root.innerHTML = html;
   }
@@ -1041,7 +1067,7 @@ window.AlixoShare = (() => {
     const invites = sh.invites || [];
     if (tab === 'members') {
       return `<div class="po-label" style="margin-top:0">Membres${members.length ? ` <span class="dlg-chip">${members.length}</span>` : ''}</div>
-        <div class="sh-members">${members.map(([u, m]) => `<div class="sh-member"><div class="sh-av">${esc(initial(m.name || m.email))}</div><div class="sh-mi"><b>${esc(m.name || m.email)}</b><span>${esc(m.email || '')}</span></div><select data-role="${u}"><option value="read" ${m.role !== 'write' ? 'selected' : ''}>Lecture</option><option value="write" ${m.role === 'write' ? 'selected' : ''}>Écriture</option></select><button class="sh-rm" data-rm="${u}" title="Retirer l’accès">✕</button></div>`).join('')}
+        <div class="sh-members">${members.map(([u, m]) => `<div class="sh-member"><div class="sh-av">${esc(initial(m.name || m.email))}</div><div class="sh-mi"><b>${esc(m.name || m.email)}</b><span>${esc(m.email || '')}</span></div><select data-role="${esc(u)}"><option value="read" ${m.role !== 'write' ? 'selected' : ''}>Lecture</option><option value="write" ${m.role === 'write' ? 'selected' : ''}>Écriture</option></select><button class="sh-rm" data-rm="${esc(u)}" title="Retirer l’accès">✕</button></div>`).join('')}
         ${invites.map(inv => `<div class="sh-member pending"><div class="sh-av" style="opacity:.5">${esc(initial(inv.name || inv.email))}</div><div class="sh-mi"><b>${esc(inv.name || inv.email)}</b><span>Invitation en attente · ${inv.role === 'write' ? 'écriture' : 'lecture'} · ${esc(inv.email)}</span></div><button class="sh-mailbtn" data-mail="gmail" data-to="${esc(inv.email)}" title="Ouvrir un brouillon Gmail prêt à envoyer">Gmail</button><button class="sh-mailbtn" data-mail="mailto" data-to="${esc(inv.email)}" title="Ouvrir un brouillon dans l’application de messagerie de l’ordinateur">E-mail</button><button class="sh-rm" data-cancel="${esc(inv.email)}" title="Annuler l’invitation">✕</button></div>`).join('')}
         ${invites.length ? `<div class="po-hint" style="margin-top:4px">${MAIL.webhook || MAIL.extension ? 'L’e-mail d’invitation part automatiquement. Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.' : serverMail() ? 'Si la personne a déjà un compte Alixo, elle reçoit un e-mail et retrouve l’invitation dans Bibliothèque › Partagés avec moi. Sinon, prévenez-la avec <b>Gmail</b> ou <b>E-mail</b>.' : 'L’invitation apparaît déjà dans l’Alixo de la personne (Bibliothèque › Partagés avec moi). Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.'}</div>` : ''}
         ${!members.length && !invites.length ? '<div class="po-hint">Personne pour l’instant : invitez quelqu’un ci-dessous.</div>' : ''}</div>

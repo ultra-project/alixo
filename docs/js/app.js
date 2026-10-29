@@ -10,16 +10,21 @@ const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 const uid = () => Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-4);
 const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-const stripTags = h => { const d = document.createElement('div'); d.innerHTML = h || ''; return d.textContent || ''; };
+/* texte brut d'un fragment HTML — document inerte (DOMParser) : aucun script ni gestionnaire ne s'exécute */
+const stripTags = h => { try { return new DOMParser().parseFromString(String(h || ''), 'text/html').body.textContent || ''; } catch { return ''; } };
 const norm = s => (s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
 
 const DEFAULT_TINT = '#4f66e0';
+/* couleur de dossier valide (#rrggbb) ; safeTint = couleur sûre pour une injection dans un style (données locales
+   ou reçues d'un partage) — déclarés ici car la bibliothèque (libItems…) s'en sert avant le formulaire de dossier */
+const HEX_COLOR = /^#[0-9a-f]{6}$/i;
+const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
 /* 1.46 : accent d'interface réellement en vigueur (--accent de styles.css, repris par les thèmes colorés) — sert de teinte
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.46.0';
+const ALIXO_VERSION = '1.47.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -323,6 +328,7 @@ function openDoc(id) {
   if (isVTabId(id)) { openVTab(id); return; }
   const d = findDoc(id);
   if (!d) { toast('Cette séance n’existe plus'); showLibrary(); return; }
+  noteRecent(id);   // 1.47 : bloc « Reprendre » de l'accueil
   leaveVTab();
   if (isSlidesDoc(d)) { if (window.AlixoSlides) AlixoSlides.open(id); else toast('Module de présentation indisponible'); return; }
   if (isSheetDoc(d)) { if (window.AlixoSheets) AlixoSheets.open(id); else toast('Module de tableur indisponible'); return; }
@@ -853,21 +859,38 @@ $('#breadcrumb').addEventListener('keydown', e => {
 /* ============================================================
    Bibliothèque — explorateur
    ============================================================ */
-const DOC_ICON = '<svg class="dicon" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></svg>';
-const SLIDES_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M12 16v4M8 20h8M7 9h6M7 12h4"/></svg>';
-const SHEET_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M3 14.5h18M9 4v16M15 4v16"/></svg>';
+/* 1.47 : icônes de types de documents (24×24, trait 1.8, rondes) — séance, présentation, tableur, planche, quiz */
+const DOC_ICON = '<svg class="dicon" viewBox="0 0 24 24"><path d="M6 4h12v16H6z"/><path d="M9.5 9h5M9.5 13h5M9.5 17h2.5"/></svg>';
+const SLIDES_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M12 17v3M8.5 20h7"/></svg>';
+const SHEET_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M4 10h16M10 4v16"/></svg>';
 /* séance « présentation » (diapositives, js/slides.js) : d.kind === 'slides', d.slides = [...] ; d.blocks reste vide */
 const isSlidesDoc = d => !!d && d.kind === 'slides';
 /* séance « tableur » (grille de calcul, js/sheets.js) : d.kind === 'sheet', d.sheets = [...] ; d.blocks reste vide */
 const isSheetDoc = d => !!d && d.kind === 'sheet';
 /* séance « planche » (tableau blanc libre, js/board.js) : d.kind === 'board', d.items = [...] ; d.blocks reste vide */
-const BOARD_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><rect x="6" y="7" width="5" height="5" rx="1"/><path d="M14 9h4M14 12h3M11 18v3M9 21h4"/></svg>';
+const BOARD_ICON = '<svg class="dicon" viewBox="0 0 24 24"><rect x="4" y="4" width="7" height="7" rx="1.5"/><circle cx="16.5" cy="7.5" r="3.5"/><path d="M4 20l3.5-7 3.5 7z"/><rect x="13" y="13" width="7" height="7" rx="1.5"/></svg>';
 const isBoardDoc = d => !!d && d.kind === 'board';
 /* séance « quiz » (1.24, js/quiz.js) : d.kind === 'quiz', d.questions = [...], d.results = [...] ; d.blocks reste vide */
-const QUIZ_ICON = '<svg class="dicon" viewBox="0 0 24 24"><path d="M9 9a3 3 0 1 1 4.5 2.6c-1 .6-1.5 1.2-1.5 2.4"/><path d="M12 17h.01"/><rect x="3" y="3" width="18" height="18" rx="4"/></svg>';
+const QUIZ_ICON = '<svg class="dicon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7"/><path d="M12 17h.01"/></svg>';
 const isQuizDoc = d => !!d && d.kind === 'quiz';
 /* séance qui n'utilise pas l'éditeur de texte (présentation, tableur, planche, quiz) */
 const isSpecialDoc = d => isSlidesDoc(d) || isSheetDoc(d) || isBoardDoc(d) || isQuizDoc(d);
+/* 1.47 : types de documents — libellé, classe de couleur (--stor-* dans styles.css), icône ; `docType(d)` donne la clé */
+const DOC_TYPES = {
+  cours: { label: 'Séance', cls: 't-cours', icon: DOC_ICON, mark: 'S' },
+  slides: { label: 'Présentation', cls: 't-slides', icon: SLIDES_ICON, mark: 'P' },
+  sheet: { label: 'Tableur', cls: 't-sheet', icon: SHEET_ICON, mark: 'T' },
+  board: { label: 'Planche', cls: 't-board', icon: BOARD_ICON, mark: 'Pl' },
+  quiz: { label: 'Quiz', cls: 't-quiz', icon: QUIZ_ICON, mark: 'Q' }
+};
+const docType = d => (isSlidesDoc(d) ? 'slides' : isSheetDoc(d) ? 'sheet' : isBoardDoc(d) ? 'board' : isQuizDoc(d) ? 'quiz' : 'cours');
+/* puce colorée « Séance / Présentation / … » ; `custom` = { label, color } pour un fichier importé (couleur de sa famille) */
+const FILE_CLIP_ICO = '<svg class="dicon" viewBox="0 0 24 24"><path d="m21 11.5-8.5 8.5a5 5 0 0 1-7-7l9-9a3.5 3.5 0 0 1 5 5l-9 9a2 2 0 0 1-3-3l8-8"/></svg>';
+function typeChipHTML(key, custom) {
+  if (custom) return `<span class="type-chip t-file" style="--fc:${esc(safeTint(custom.color))}">${FILE_CLIP_ICO}${esc(custom.label)}</span>`;
+  const t = DOC_TYPES[key] || DOC_TYPES.cours;
+  return `<span class="type-chip ${t.cls}">${t.icon}${t.label}</span>`;
+}
 const docIcon = d => (isSlidesDoc(d) ? SLIDES_ICON : isSheetDoc(d) ? SHEET_ICON : isBoardDoc(d) ? BOARD_ICON : isQuizDoc(d) ? QUIZ_ICON : DOC_ICON);
 
 function treeDocsHTML(pid) {
@@ -934,158 +957,256 @@ function renderLibrary() {
   if (libMode === 'agenda') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-agenda').hidden = false; renderAgendaHome(); return; }
   $('#lib-agenda').hidden = true;
 
-  // bascule grille / arbre / galaxie
-  const view = state.settings.libView || 'grid';
+  // bascule grille / liste / arbre / galaxie (1.47 : la vue Liste met tout en lignes ; la Grille garde les dossiers en cartes)
+  let view = state.settings.libView;
+  if (!['grid', 'list', 'tree', 'galaxy'].includes(view)) view = 'grid';
   $$('#view-seg button').forEach(b => b.classList.toggle('on', b.dataset.view === view));
-  $('#doc-grid').hidden = view !== 'grid';
+  $('#doc-grid').hidden = view !== 'grid' && view !== 'list';
   $('#lib-tree').hidden = view !== 'tree';
   $('#lib-galaxy').hidden = view !== 'galaxy';
   if (view === 'tree') { renderLibTree(); return; }
   if (view === 'galaxy') { if (window.AlixoGalaxy) AlixoGalaxy.render(); return; }
 
-  // grille : dossiers puis séances
-  const folders = childFolders(currentFolderId);
-  let docs = folderDocs(currentFolderId).slice().sort((a, b) => (b.pinned - a.pinned) || (b.updatedAt - a.updatedAt));
-  const grid = $('#doc-grid');
+  $('#doc-grid').innerHTML = libHTML(currentFolderId, view === 'list');
+}
 
-  let html = '';
-  if (folders.length) {
-    html += folders.map(f => {
-      const nd = subtreeDocCount(f.id);
-      const nf = childFolders(f.id).length;
-      const nfi = window.AlixoFiles ? AlixoFiles.subtreeCount(f.id) : 0;
-      const pills = [nd ? `${nd} séance${nd > 1 ? 's' : ''}` : '', nf ? `${nf} dossier${nf > 1 ? 's' : ''}` : '', nfi ? `${nfi} fichier${nfi > 1 ? 's' : ''}` : ''].filter(Boolean);
-      const meta = pills.length ? pills.map(t => `<span class="pill">${t}</span>`).join('') : '<span class="pill empty">Vide</span>';
-      return `<button class="folder-card" data-fid="${f.id}" draggable="true" style="--mc:${f.couleur}">
-        ${folderTileHTML(f)}
-        <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="fc-prof">${profBadgeHTML(f) || ''}</div><div class="meta">${meta}</div></div>
-        <span class="fc-act ren" data-ren="${f.id}" title="Renommer"><svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4"/></svg></span>
-        <span class="fc-act del" data-fdel="${f.id}" title="Supprimer"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+/* ============================================================
+   1.47 — éléments de bibliothèque : un modèle unique (dossier, séance, fichier, partagé), deux rendus
+   (carte de dossier, ligne de liste). Règle : vue Grille = sous-dossiers en cartes + tout le reste en UNE
+   liste dessous ; vue Liste = tout en lignes (dossiers d'abord, puis le reste par date).
+   ============================================================ */
+const SEL_DOC = '.doc-card, .row-doc';
+const SEL_FOLDER = '.folder-card, .row-folder';
+const PIN_SVG = '<svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg>';
+const TRASH_SVG = '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const REN_SVG = '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4"/></svg>';
+const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
+/* date courte des lignes : « Aujourd’hui », « Hier », « 12 oct. », sinon la date complète */
+function fmtRowDate(ts) {
+  if (!ts) return '';
+  const k = dayKey(ts), now = new Date();
+  if (k === todayKey()) return 'Aujourd’hui';
+  const y = new Date(now); y.setDate(y.getDate() - 1);
+  if (k === dayKey(y)) return 'Hier';
+  const d = new Date(ts);
+  if (d.getFullYear() === now.getFullYear()) return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+  return fmtDate(ts);
+}
+/* sous-titre d'une séance : premier bloc de texte, sinon le nombre de blocs ; pour les autres types, le compte d'éléments */
+function docSubtitle(d) {
+  try {
+    const type = docType(d);
+    const arr = a => (Array.isArray(a) ? a : []);
+    if (type === 'slides') return plural(arr(d.slides).length, 'diapositive');
+    if (type === 'sheet') { const nc = window.AlixoSheets ? AlixoSheets.cellCount(d) : 0; return plural(arr(d.sheets).length, 'feuille') + (nc ? ` · ${plural(nc, 'cellule')}` : ''); }
+    if (type === 'board') return plural(window.AlixoBoard ? AlixoBoard.itemCount(d) : arr(d.items).length, 'élément');
+    if (type === 'quiz') { const nr = arr(d.results).length; return plural(window.AlixoQuiz ? AlixoQuiz.count(d) : arr(d.questions).length, 'question') + (nr ? ` · ${plural(nr, 'résultat')}` : ''); }
+    const blocks = arr(d.blocks).filter(b => b && typeof b === 'object');
+    let filled = 0;   // blocs qui portent quelque chose (texte, ou bloc non textuel : tableau, image, fiche…)
+    for (const b of blocks) {
+      const textual = ['p', 'callout', 'quote', 'li', 'h'].includes(b.type);
+      const t = textual ? stripTags(b.text).replace(/\u200B/g, '').trim() : '';
+      if (t) { if (!filled) return t.length > 160 ? t.slice(0, 160) + '…' : t; filled++; }
+      else if (!textual) filled++;
+    }
+    return filled ? plural(filled, 'bloc') : 'Document vide';   // « Document vide » tant qu'aucun bloc n'a de texte
+  } catch { return ''; }
+}
+function docItem(d, tint) {
+  return { kind: 'doc', id: d.id, title: d.titre || 'Sans titre', sub: docSubtitle(d), when: d.updatedAt || d.createdAt || 0, type: docType(d), tint: safeTint(tint || folderTint(d.folderId)), pinned: !!d.pinned, prof: d.prof || '', raw: d };
+}
+function folderItem(f) { return { kind: 'folder', id: f.id, title: f.nom, sub: '', when: 0, type: 'folder', tint: safeTint(f.couleur), pinned: false, raw: f }; }
+/* éléments du dossier `fid` (null = racine) : { cards, rows } selon la vue ; à la racine, les partages reçus se mêlent aux miens */
+function libItems(fid, { listAll = false } = {}) {
+  fid = fid || null;
+  const folders = childFolders(fid).map(folderItem);
+  const docs = folderDocs(fid).map(d => docItem(d));
+  const files = window.AlixoFiles ? AlixoFiles.rowItems(fid) : [];
+  let shf = [], shd = [];
+  if (!fid && window.AlixoShare && AlixoShare.enabled) {
+    shf = AlixoShare.sharedFolders().map(f => ({ kind: 'shfolder', id: f.rootId, sid: f.sid, title: f.title, sub: '', when: 0, type: 'folder', tint: safeTint(f.color), shared: { owner: f.owner, role: f.role }, pinned: false, raw: f }));
+    shd = AlixoShare.sharedDocsAlone().filter(x => x.d).map(x => Object.assign(docItem(x.d, safeTint(x.color)), { kind: 'shdoc', sid: x.sid, shared: { owner: x.owner, role: x.role } }));
+  }
+  const byDate = (a, b) => (b.pinned - a.pinned) || (b.when - a.when);
+  const rest = docs.concat(files, shd).sort(byDate);
+  if (listAll) return { cards: [], rows: folders.concat(shf, rest) };
+  return { cards: folders.concat(shf), rows: rest };
+}
+/* rôle reçu d'un partage : toujours normalisé (read | write) avant toute injection dans le HTML */
+const roleHTML = role => { const r = role === 'write' ? 'write' : 'read'; return `<span class="sh-role ${r}">${r === 'write' ? 'écriture' : 'lecture'}</span>`; };
+function folderPillsHTML(f) {
+  const nd = subtreeDocCount(f.id), nf = childFolders(f.id).length, nfi = window.AlixoFiles ? AlixoFiles.subtreeCount(f.id) : 0;
+  const pills = [nd ? plural(nd, 'séance') : '', nf ? plural(nf, 'dossier') : '', nfi ? plural(nfi, 'fichier') : ''].filter(Boolean);
+  return pills.length ? pills.map(t => `<span class="pill">${t}</span>`).join('') : '<span class="pill empty">Aucune séance</span>';
+}
+/* carte de dossier (vue Grille) : la mienne, ou un dossier partagé avec moi (carte .shared-card, sans actions) */
+function folderCardHTML(it) {
+  if (it.kind === 'shfolder') {
+    const f = it.raw;
+    const pills = [f.nDocs ? plural(f.nDocs, 'séance') : '', f.nFiles ? plural(f.nFiles, 'fichier') : ''].filter(Boolean).map(t => `<span class="pill">${t}</span>`).join('') || '<span class="pill empty">Aucune séance</span>';
+    return `<button class="folder-card shared-card" data-shf="${esc(f.sid)}" data-fid="${esc(f.rootId)}" style="--mc:${esc(safeTint(f.color))}" title="Dossier partagé par ${esc(f.owner)}">
+        ${folderTileHTML({ nom: f.title, icone: f.icone })}
+        <div class="fc-body"><h3>${esc(f.title)}</h3><div class="fc-prof"><span class="card-prof">${SHARE_ICO}par ${esc(f.owner)}</span></div><div class="meta">${pills}${roleHTML(f.role)}</div></div>
       </button>`;
-    }).join('');
   }
-  if (folders.length && docs.length) html += `<div class="grid-sect">Séances</div>`;
-  html += docs.map(d => {
-    const tint = folderTint(d.folderId);
-    if (isSlidesDoc(d)) {
-      const ns = (d.slides || []).length;
-      const preview = window.AlixoSlides ? AlixoSlides.preview(d) : '';
-      return `<button class="doc-card slides-card" data-id="${d.id}" draggable="true" style="--mc:${tint}">
-      <span class="mat-chip">${SLIDES_ICON}${esc(folder(d.folderId)?.nom || 'Présentation')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview slides-prev">${preview || '<span class="sp-empty">Présentation vide</span>'}</div>
-      <div class="meta">${fmtDate(d.updatedAt)} · ${ns} diapositive${ns > 1 ? 's' : ''}${d.prof ? ` · <span class="card-prof">${esc(d.prof)}</span>` : ''}</div>
-      <span class="pin-btn ${d.pinned ? 'pinned' : ''}" data-pin="${d.id}" title="Épingler">
-        <svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg></span>
-      <span class="del-btn" data-del="${d.id}" title="Supprimer">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+  const f = it.raw;
+  return `<button class="folder-card" data-fid="${esc(f.id)}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
+        ${folderTileHTML(f)}
+        <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="fc-prof">${profBadgeHTML(f) || ''}</div><div class="meta">${folderPillsHTML(f)}</div></div>
+        <span class="fc-act ren" data-ren="${esc(f.id)}" title="Renommer">${REN_SVG}</span>
+        <span class="fc-act del" data-fdel="${esc(f.id)}" title="Supprimer">${TRASH_SVG}</span>
+      </button>`;
+}
+/* petite tuile (32px) d'un dossier dans une ligne */
+function rowTileHTML(f) {
+  if (f && f.icone && f.icone !== 'folder') return `<span class="row-tile has-ico" aria-hidden="true">${AlixoIcons.svg(f.icone, 'ficon-ico')}</span>`;
+  return `<span class="row-tile" aria-hidden="true"><span class="fc-mono">${esc(folderMonogram(f && f.nom))}</span></span>`;
+}
+/* ligne de liste : [type 108px] [titre + sous-titre] [prof ou « par X · lecture »] [date] [actions au survol] */
+function libRowHTML(it) {
+  if (it.kind === 'file') return window.AlixoFiles ? AlixoFiles.rowHTML(it) : '';
+  if (it.kind === 'shfile') return window.AlixoFiles ? AlixoFiles.sharedRowHTML(it) : '';
+  if (it.kind === 'folder') {
+    const f = it.raw;
+    const nd = subtreeDocCount(f.id), nf = childFolders(f.id).length, nfi = window.AlixoFiles ? AlixoFiles.subtreeCount(f.id) : 0;
+    const counts = [nd ? plural(nd, 'séance') : '', nf ? plural(nf, 'dossier') : '', nfi ? plural(nfi, 'fichier') : ''].filter(Boolean).join(' · ') || 'Aucune séance';
+    return `<button class="lib-row row-folder" data-fid="${esc(f.id)}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
+      <span class="row-type">${rowTileHTML(f)}</span>
+      <span class="row-main"><span class="row-title">${esc(f.nom)}</span><span class="row-sub">${counts}</span></span>
+      <span class="row-where">${profBadgeHTML(f) || ''}</span><span class="row-date"></span>
+      <span class="row-acts"><span class="fc-act ren" data-ren="${esc(f.id)}" title="Renommer">${REN_SVG}</span><span class="fc-act del" data-fdel="${esc(f.id)}" title="Supprimer">${TRASH_SVG}</span></span>
     </button>`;
-    }
-    if (isSheetDoc(d)) {
-      const nc = window.AlixoSheets ? AlixoSheets.cellCount(d) : 0;
-      const nf = (d.sheets || []).length;
-      return `<button class="doc-card sheet-card" data-id="${d.id}" draggable="true" style="--mc:${tint}">
-      <span class="mat-chip">${SHEET_ICON}${esc(folder(d.folderId)?.nom || 'Tableur')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview sheet-prev">${window.AlixoSheets ? AlixoSheets.preview(d) : ''}</div>
-      <div class="meta">${fmtDate(d.updatedAt)} · ${nf} feuille${nf > 1 ? 's' : ''} · ${nc} cellule${nc > 1 ? 's' : ''}${d.prof ? ` · <span class="card-prof">${esc(d.prof)}</span>` : ''}</div>
-      <span class="pin-btn ${d.pinned ? 'pinned' : ''}" data-pin="${d.id}" title="Épingler">
-        <svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg></span>
-      <span class="del-btn" data-del="${d.id}" title="Supprimer">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+  }
+  if (it.kind === 'shfolder') {
+    const f = it.raw, nDocs = f.nDocs || 0, nFiles = f.nFiles || 0;
+    const counts = [nDocs ? plural(nDocs, 'séance') : '', nFiles ? plural(nFiles, 'fichier') : ''].filter(Boolean).join(' · ') || 'Aucune séance';
+    return `<button class="lib-row row-folder shared-card" data-shf="${esc(it.sid)}" data-fid="${esc(it.id)}" style="--mc:${esc(safeTint(it.tint))}" title="Dossier partagé par ${esc(it.shared.owner)}">
+      <span class="row-type">${rowTileHTML({ nom: it.title, icone: f.icone })}</span>
+      <span class="row-main"><span class="row-title">${esc(it.title)}</span><span class="row-sub">${counts}</span></span>
+      <span class="row-where">${SHARE_ICO}par ${esc(it.shared.owner)}${roleHTML(it.shared.role)}</span><span class="row-date"></span><span class="row-acts"></span>
     </button>`;
-    }
-    if (isBoardDoc(d)) {
-      const ni = window.AlixoBoard ? AlixoBoard.itemCount(d) : (d.items || []).length;
-      return `<button class="doc-card board-card" data-id="${d.id}" draggable="true" style="--mc:${tint}">
-      <span class="mat-chip">${BOARD_ICON}${esc(folder(d.folderId)?.nom || 'Planche')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview board-prev">${window.AlixoBoard ? AlixoBoard.preview(d) : ''}</div>
-      <div class="meta">${fmtDate(d.updatedAt)} · ${ni} élément${ni > 1 ? 's' : ''}${d.prof ? ` · <span class="card-prof">${esc(d.prof)}</span>` : ''}</div>
-      <span class="pin-btn ${d.pinned ? 'pinned' : ''}" data-pin="${d.id}" title="Épingler">
-        <svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg></span>
-      <span class="del-btn" data-del="${d.id}" title="Supprimer">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
+  }
+  const shared = it.kind === 'shdoc';
+  let where = '';
+  if (shared) {
+    const peers = window.AlixoShare && AlixoShare.enabled ? AlixoShare.peersFor(it.id) : [];
+    where = `${SHARE_ICO}par ${esc(it.shared.owner || 'un contact')}${roleHTML(it.shared.role)}${peers.length ? `<span class="peer-live" title="${esc(peers.map(p => p.name).join(', '))}">● ${peers.length === 1 ? esc(peers[0].name) : peers.length + ' personnes'}</span>` : ''}`;
+  } else if (it.prof) where = `<span class="card-prof">${esc(it.prof)}</span>`;
+  return `<button class="lib-row row-doc${shared ? ' shared-card' : ''}" data-id="${esc(it.id)}" ${shared ? '' : 'draggable="true"'} style="--mc:${esc(safeTint(it.tint))}">
+      <span class="row-type">${typeChipHTML(it.type)}</span>
+      <span class="row-main"><span class="row-title">${it.pinned ? `<svg class="pinned-ico" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg>` : ''}<span class="row-ttl">${esc(it.title)}</span></span><span class="row-sub">${esc(it.sub)}</span></span>
+      <span class="row-where">${where}</span>
+      <span class="row-date">${fmtRowDate(it.when)}</span>
+      ${shared ? '<span class="row-acts"></span>' : `<span class="row-acts"><span class="pin-btn ${it.pinned ? 'pinned' : ''}" data-pin="${esc(it.id)}" title="${it.pinned ? 'Désépingler' : 'Épingler'}">${PIN_SVG}</span><span class="del-btn" data-del="${esc(it.id)}" title="Supprimer">${TRASH_SVG}</span></span>`}
     </button>`;
-    }
-    if (isQuizDoc(d)) {
-      const nq = window.AlixoQuiz ? AlixoQuiz.count(d) : (d.questions || []).length;
-      return `<button class="doc-card quiz-card" data-id="${d.id}" draggable="true" style="--mc:${tint}">
-      <span class="mat-chip">${QUIZ_ICON}${esc(folder(d.folderId)?.nom || 'Quiz')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview quiz-prev">${window.AlixoQuiz ? AlixoQuiz.preview(d) : ''}</div>
-      <div class="meta">${fmtDate(d.updatedAt)} · ${nq} question${nq > 1 ? 's' : ''}${(d.results || []).length ? ` · ${d.results.length} résultat${d.results.length > 1 ? 's' : ''}` : ''}${d.prof ? ` · <span class="card-prof">${esc(d.prof)}</span>` : ''}</div>
-      <span class="pin-btn ${d.pinned ? 'pinned' : ''}" data-pin="${d.id}" title="Épingler">
-        <svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg></span>
-      <span class="del-btn" data-del="${d.id}" title="Supprimer">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
-    </button>`;
-    }
-    const firstText = d.blocks.find(b => ['p', 'callout', 'quote', 'li'].includes(b.type));
-    const preview = firstText ? stripTags(firstText.text) : (d.blocks.length ? d.blocks.length + ' blocs' : 'Document vide');
-    const nb = d.blocks.length;
-    return `<button class="doc-card" data-id="${d.id}" draggable="true" style="--mc:${tint}">
-      <span class="mat-chip">${esc(folder(d.folderId)?.nom || 'Séance')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview">${esc(preview)}</div>
-      <div class="meta">${fmtDate(d.updatedAt)} · ${nb} bloc${nb > 1 ? 's' : ''}${d.prof ? ` · <span class="card-prof">${esc(d.prof)}</span>` : ''}</div>
-      <span class="pin-btn ${d.pinned ? 'pinned' : ''}" data-pin="${d.id}" title="Épingler">
-        <svg viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg></span>
-      <span class="del-btn" data-del="${d.id}" title="Supprimer">
-        <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span>
-    </button>`;
-  }).join('');
+}
+function libSectionHTML(title, n, inner, extra = '') {
+  return `<section class="lib-sect"><div class="lib-sect-head"><h2>${title}${n ? ` · ${n}` : ''}${extra}</h2></div>${inner}</section>`;
+}
+/* contenu de #doc-grid pour un dossier (ou la racine) : Reprendre (racine), cartes de dossiers, liste */
+function libHTML(fid, listAll) {
+  const { cards, rows } = libItems(fid, { listAll });
+  const nPending = !fid && window.AlixoShare && AlixoShare.enabled ? AlixoShare.pendingCount() : 0;
+  let pending = nPending ? `<button class="sh-pending" data-nav="__shared" type="button">${plural(nPending, 'invitation')} en attente</button>` : '';
+  let html = !fid ? resumeSectionHTML() : '';
+  if (cards.length) { html += libSectionHTML(fid ? 'Dossiers' : 'Cours', cards.length, `<div class="lib-cards">${cards.map(folderCardHTML).join('')}</div>`, pending); pending = ''; }
+  if (rows.length) {
+    const nFolders = rows.filter(r => r.kind === 'folder' || r.kind === 'shfolder').length;
+    const nFiles = rows.filter(r => r.kind === 'file' || r.kind === 'shfile').length;
+    const title = nFolders ? (fid ? 'Contenu' : 'Cours, séances et fichiers') : (nFiles === rows.length ? 'Fichiers' : nFiles ? 'Séances et fichiers' : 'Séances');
+    html += libSectionHTML(title, rows.length, `<div class="lib-list">${rows.map(libRowHTML).join('')}</div>`, pending); pending = '';
+  }
+  if (!cards.length && !rows.length) {
+    html += `<div class="empty-state"><div class="big">${AlixoIcons.svg('folder-open')}</div>
+      <p>Ce dossier est vide.<br>Cliquez ici ou sur « Nouveau » pour commencer, ou glissez-y vos fichiers (PDF, Word, diaporamas, images…) : ils s’ouvrent directement dans Alixo.</p>${pending ? `<p style="margin-top:12px">${pending}</p>` : ''}</div>`;
+  }
+  return html;
+}
 
-  if (window.AlixoFiles) html += AlixoFiles.gridHTML(currentFolderId, !!html);
-  if (!currentFolderId) html += sharedSectionHTML(!!html);
-  if (!html) {
-    html = `<div class="empty-state"><div class="big">${AlixoIcons.svg('folder-open')}</div>
-      <p>Ce dossier est vide.<br>Créez un sous-dossier ou une nouvelle séance, ou glissez ici vos fichiers (PDF, Word, diaporamas, images…) : ils s’ouvrent directement dans Alixo.</p></div>`;
+/* ---------------- Reprendre (1.47) : cours en ce moment / prochain cours, derniers documents ouverts ---------------- */
+/* derniers documents ouverts : sur l'appareil seulement (localStorage), jamais dans la fiche du document — la synchronisation
+   pousserait le document entier à chaque ouverture */
+const RECENT_LS = 'alixo.recent' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
+let recentDocs = (() => { try { const t = JSON.parse(localStorage.getItem(RECENT_LS)); return Array.isArray(t) ? t.filter(r => r && typeof r.id === 'string' && typeof r.ts === 'number').slice(0, 10) : []; } catch { return []; } })();
+function noteRecent(id) {
+  if (!id || isVTabId(id)) return;
+  recentDocs = [{ id, ts: Date.now() }].concat(recentDocs.filter(r => r.id !== id)).slice(0, 10);
+  try { localStorage.setItem(RECENT_LS, JSON.stringify(recentDocs)); } catch { /* stockage indisponible */ }
+}
+/* séance « du jour » d'un dossier : créée aujourd'hui, ou dont un bloc a été écrit aujourd'hui ; la plus récente */
+function todaySessionFor(fid) {
+  const tk = todayKey();
+  const list = folderDocs(fid || null).filter(d => !isSpecialDoc(d) && !isLocalOnly(d) && (dayKey(d.createdAt || 0) === tk || (d.blocks || []).some(b => b.day === tk)));
+  list.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return list[0] || null;
+}
+function openOrCreateTodaySession(fid) {
+  const f = fid && folder(fid);   // dossier inconnu (supprimé, identifiant d'un événement reçu…) → racine
+  const target = f ? f.id : null;
+  const d = todaySessionFor(target);
+  if (d) openDoc(d.id); else createDocIn(target);
+}
+const RS_ARROW = '<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+function resumeSectionHTML() {
+  const st = calStatus(), now = new Date();
+  let live = '';
+  if (st) {
+    const ev = st.o.ev, fid = eventFolderId(ev) || null, f = folder(fid);
+    const title = ev.title || (f ? f.nom : 'Événement');
+    const prof = f ? folderProf(f.id) : '';
+    const sess = f ? todaySessionFor(fid) : null;   // tant que l'événement n'a pas de dossier, on ne devine pas de séance
+    const hm = d => pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    const bits = [prof, sess ? `Séance du jour : ${sess.titre || 'Sans titre'}` : (st.kind === 'now' ? `jusqu’à ${hm(st.o.end)}` : `${hm(st.o.start)} – ${hm(st.o.end)}`)].filter(Boolean).map(esc);
+    // lien « Relier à un cours » dans son propre <span> (jamais de « · » orphelin en fin de ligne)
+    const sub = `<span class="rs-bits">${bits.join(' · ')}</span>${f ? '' : `<span class="rs-link"><button type="button" data-rslink="${esc(ev.id || '')}" title="Choisir le dossier de ce cours : la séance ira dedans">Relier à un cours</button></span>`}`;
+    // appel à l'action : sans dossier relié, on commence par choisir le cours (fiche de l'événement)
+    const cta = label => (f
+      ? `<button type="button" class="rs-cta" data-rsnotes="${esc(f.id)}" title="Ouvre la séance d’aujourd’hui dans « ${esc(f.nom)} » (ou la crée)">${label}${RS_ARROW}</button>`
+      : `<button type="button" class="rs-cta" data-rslink="${esc(ev.id || '')}" title="Choisir le dossier de ce cours : la séance du jour ira dedans">Choisir le cours${RS_ARROW}</button>`);
+    const mc = esc(safeTint(f ? f.couleur : DEFAULT_TINT));
+    if (st.kind === 'now') {
+      const pct = Math.max(2, Math.min(100, Math.round((now - st.o.start) / (st.o.end - st.o.start) * 100)));
+      live = `<div class="rs-live now" style="--mc:${mc}"><div class="rs-body">
+          <div class="rs-kicker"><i></i>Cours en ce moment</div>
+          <div class="rs-title">${esc(title)}</div>
+          <div class="rs-sub">${sub}</div>
+          <div class="rs-prog"><div class="rs-bar"><i style="--p:${pct}%"></i></div><span class="rs-left">reste ${fmtLeft(st.left)}</span></div>
+        </div>${cta(sess ? 'Reprendre les notes' : 'Prendre des notes')}</div>`;
+    } else {
+      live = `<div class="rs-live next" style="--mc:${mc}"><div class="rs-body">
+          <div class="rs-kicker"><i></i>Prochain cours · dans ${fmtLeft(st.in)}</div>
+          <div class="rs-title">${esc(title)}</div>
+          <div class="rs-sub">${sub}</div>
+        </div>${cta(sess ? 'Reprendre les notes' : 'Préparer la séance')}</div>`;
+    }
   }
-  grid.innerHTML = html;
+  const cards = recentDocs.map(r => ({ r, d: findDoc(r.id) })).filter(x => x.d && !isLocalOnly(x.d)).slice(0, 2).map(({ r, d }) => {
+    const f = folder(d.folderId), shared = isSharedDoc(d.id);
+    const tint = safeTint((shared && AlixoShare.tintFor(d.id)) || folderTint(d.folderId));
+    const when = fmtRowDate(r.ts);
+    // sans dossier : mention discrète « Sans dossier », sans pastille de couleur
+    const course = f ? `<span class="rs-course"><i></i>${esc(f.nom)}</span>` : shared ? `<span class="rs-course"><i></i>Partagé avec moi</span>` : '<span class="rs-course nofolder">Sans dossier</span>';
+    return `<button type="button" class="rs-card" data-rsdoc="${esc(d.id)}" style="--mc:${esc(tint)}">
+        ${course}
+        <span class="rs-name">${esc(d.titre || 'Sans titre')}</span>
+        <span class="rs-when">${openTabs.includes(d.id) ? 'Onglet ouvert' : 'Ouvert ' + (/^[A-Z]/.test(when) ? when.toLowerCase() : 'le ' + when)}</span>
+      </button>`;
+  }).join('');
+  if (!live && !cards) return '';
+  return `<section class="lib-sect lib-resume" id="lib-resume"><div class="lib-sect-head"><h2>Reprendre</h2></div><div class="rs-grid">${live}${cards}</div></section>`;
+}
+/* rafraîchit seulement le bloc Reprendre (toutes les 30 s avec renderCalNow : temps restant, progression) */
+function renderResume() {
+  if (currentDocId || libMode !== 'docs' || currentFolderId !== null) return;
+  const grid = $('#doc-grid'); if (!grid || grid.hidden) return;
+  const html = resumeSectionHTML(), el = $('#lib-resume');
+  if (el) { if (html) el.outerHTML = html; else el.remove(); }
+  else if (html) grid.insertAdjacentHTML('afterbegin', html);
 }
 
 /* ---------------- partagés avec moi : dans la bibliothèque (1.15) ---------------- */
 const SHARE_ICO = '<svg class="dicon" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>';
 let sharedNav = null;   // { sid, fid } dossier partagé affiché (libMode 'shfolder')
-function sharedDocCardHTML(d, tint, owner, role) {
-  const ns = isSlidesDoc(d) ? (d.slides || []).length : 0;
-  const nf = isSheetDoc(d) ? (d.sheets || []).length : 0;
-  const ni = isBoardDoc(d) ? (window.AlixoBoard ? AlixoBoard.itemCount(d) : (d.items || []).length) : 0;
-  const nq = isQuizDoc(d) ? (d.questions || []).length : 0;
-  const firstText = !isSpecialDoc(d) && (d.blocks || []).find(b => ['p', 'callout', 'quote', 'li'].includes(b.type));
-  const preview = isSlidesDoc(d) ? (window.AlixoSlides ? AlixoSlides.preview(d) : '')
-    : isSheetDoc(d) ? (window.AlixoSheets ? AlixoSheets.preview(d) : '')
-    : isBoardDoc(d) ? (window.AlixoBoard ? AlixoBoard.preview(d) : '')
-    : isQuizDoc(d) ? (window.AlixoQuiz ? AlixoQuiz.preview(d) : '')
-    : esc(firstText ? stripTags(firstText.text) : ((d.blocks || []).length ? d.blocks.length + ' blocs' : 'Document vide'));
-  const count = isSlidesDoc(d) ? `${ns} diapositive${ns > 1 ? 's' : ''}`
-    : isSheetDoc(d) ? `${nf} feuille${nf > 1 ? 's' : ''}`
-    : isBoardDoc(d) ? `${ni} élément${ni > 1 ? 's' : ''}`
-    : isQuizDoc(d) ? `${nq} question${nq > 1 ? 's' : ''}`
-    : `${(d.blocks || []).length} bloc${(d.blocks || []).length > 1 ? 's' : ''}`;
-  const peers = window.AlixoShare && AlixoShare.enabled ? AlixoShare.peersFor(d.id) : [];
-  return `<button class="doc-card shared-card ${isSlidesDoc(d) ? 'slides-card' : ''}${isSheetDoc(d) ? 'sheet-card' : ''}${isBoardDoc(d) ? 'board-card' : ''}${isQuizDoc(d) ? 'quiz-card' : ''}" data-id="${d.id}" style="--mc:${tint}">
-      <span class="mat-chip">${SHARE_ICO}${esc(owner || 'Partagé')}</span>
-      <h3>${esc(d.titre || 'Sans titre')}</h3>
-      <div class="preview ${isSlidesDoc(d) ? 'slides-prev' : ''}${isSheetDoc(d) ? 'sheet-prev' : ''}${isBoardDoc(d) ? 'board-prev' : ''}${isQuizDoc(d) ? 'quiz-prev' : ''}">${preview}</div>
-      <div class="meta">${fmtDate(d.updatedAt || Date.now())} · ${count} · <span class="sh-role ${role}">${role === 'write' ? 'écriture' : 'lecture'}</span>${peers.length ? `<span class="peer-live" title="${esc(peers.map(p => p.name).join(', '))}">● ${peers.length === 1 ? esc(peers[0].name) + ' est dessus' : peers.length + ' personnes dessus'}</span>` : ''}</div>
-    </button>`;
-}
-function sharedSectionHTML(hasContent) {
-  if (!window.AlixoShare || !AlixoShare.enabled) return '';
-  const folders = AlixoShare.sharedFolders();
-  const docs = AlixoShare.sharedDocsAlone().filter(x => x.d);
-  const n = AlixoShare.pendingCount();
-  if (!folders.length && !docs.length && !n) return '';
-  let html = `<div class="grid-sect grid-sect-shared">${SHARE_ICO}Partagés avec moi${n ? ` <button class="sh-pending" data-nav="__shared" type="button">${n} invitation${n > 1 ? 's' : ''} en attente</button>` : ''}</div>`;
-  html += folders.map(f => `<button class="folder-card shared-card" data-shf="${f.sid}" data-fid="${f.rootId}" style="--mc:${esc(f.color)}">
-      ${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico big') : FOLDER_ICON_BIG}
-      <div><h3>${esc(f.title)}</h3><div class="meta">${SHARE_ICO}par ${esc(f.owner)} · ${f.nDocs} séance${f.nDocs > 1 ? 's' : ''}${f.nFiles ? ` · ${f.nFiles} fichier${f.nFiles > 1 ? 's' : ''}` : ''} · <span class="sh-role ${f.role}">${f.role === 'write' ? 'écriture' : 'lecture'}</span></div></div>
-    </button>`).join('');
-  html += docs.map(x => sharedDocCardHTML(x.d, x.color, x.owner, x.role)).join('');
-  return html;
-}
 function openSharedFolder(sid, fid) {
   libMode = 'shfolder'; sharedNav = { sid, fid: fid || null };
   if (currentDocId) showLibrary(); else renderLibrary();
@@ -1094,18 +1215,21 @@ function openSharedFolder(sid, fid) {
 function renderSharedFolder() {
   const v = window.AlixoShare && AlixoShare.enabled && sharedNav ? AlixoShare.sharedFolderView(sharedNav.sid, sharedNav.fid) : null;
   if (!v) { libMode = 'docs'; sharedNav = null; renderLibrary(); return; }
-  $('#lib-path').innerHTML = `<button data-nav="">Mes cours</button><span class="psep">›</span><button data-shnav="${v.sid}" data-fid="${v.rootId}">${esc(v.sh.title)}</button>` + v.path.map(f => `<span class="psep">›</span><button data-shnav="${v.sid}" data-fid="${f.id}">${esc(f.nom)}</button>`).join('');
+  $('#lib-path').innerHTML = `<button data-nav="">Mes cours</button><span class="psep">›</span><button data-shnav="${esc(v.sid)}" data-fid="${esc(v.rootId)}">${esc(v.sh.title)}</button>` + v.path.map(f => `<span class="psep">›</span><button data-shnav="${esc(v.sid)}" data-fid="${esc(f.id)}">${esc(f.nom)}</button>`).join('');
   $('#lib-title').innerHTML = (v.cur && v.cur.icone ? AlixoIcons.svg(v.cur.icone, 'title-ico') : '') + esc(v.cur ? v.cur.nom : v.sh.title) + `<span class="title-shared">${SHARE_ICO}partagé par ${esc(v.sh.owner)} · ${v.sh.role === 'write' ? 'écriture' : 'lecture seule'}</span>`;
-  document.documentElement.style.setProperty('--tint', (v.cur && v.cur.couleur) || v.sh.color || defaultTint());
+  document.documentElement.style.setProperty('--tint', safeTint((v.cur && v.cur.couleur) || v.sh.color || defaultTint()));
   document.body.classList.remove('lib-agenda');
   $$('#view-seg button').forEach(b => b.classList.remove('on'));
-  let html = v.folders.map(f => `<button class="folder-card shared-card" data-shf="${v.sid}" data-fid="${f.id}" style="--mc:${esc(f.couleur || v.sh.color)}">
-      ${folderTileHTML(f)}
-      <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="meta">${f.nDocs ? `<span class="pill">${f.nDocs} séance${f.nDocs > 1 ? 's' : ''}</span>` : '<span class="pill empty">Vide</span>'}</div></div>
-    </button>`).join('');
-  if (v.folders.length && v.docs.length) html += `<div class="grid-sect">Séances</div>`;
-  html += v.docs.map(d => sharedDocCardHTML(d, (v.cur && v.cur.couleur) || v.sh.color, v.sh.owner, v.sh.role)).join('');
-  if (window.AlixoFiles) html += AlixoFiles.sharedGridHTML(v.files || [], !!(v.folders.length || v.docs.length));
+  const listAll = state.settings.libView === 'list';
+  const tint = safeTint((v.cur && v.cur.couleur) || v.sh.color);
+  const folders = v.folders.map(f => ({ kind: 'shfolder', id: f.id, sid: v.sid, title: f.nom, sub: '', when: 0, type: 'folder', tint: safeTint(f.couleur || v.sh.color), shared: { owner: v.sh.owner, role: v.sh.role }, pinned: false, raw: { nDocs: f.nDocs, nFiles: 0, icone: f.icone, sid: v.sid, rootId: f.id, color: safeTint(f.couleur || v.sh.color), title: f.nom, owner: v.sh.owner, role: v.sh.role } }));
+  const docs = v.docs.map(d => Object.assign(docItem(d, tint), { kind: 'shdoc', sid: v.sid, shared: { owner: v.sh.owner, role: v.sh.role } }));
+  const files = window.AlixoFiles ? AlixoFiles.sharedRowItems(v.files || []) : [];
+  const rest = docs.concat(files).sort((a, b) => (b.pinned - a.pinned) || (b.when - a.when));
+  const cards = listAll ? [] : folders, rows = listAll ? folders.concat(rest) : rest;
+  let html = '';
+  if (cards.length) html += libSectionHTML('Dossiers', cards.length, `<div class="lib-cards">${cards.map(folderCardHTML).join('')}</div>`);
+  if (rows.length) html += libSectionHTML(listAll && folders.length ? 'Contenu' : (files.length ? 'Séances et fichiers' : 'Séances'), rows.length, `<div class="lib-list">${rows.map(libRowHTML).join('')}</div>`);
   if (!html) html = `<div class="empty-state"><div class="big">${AlixoIcons.svg('folder-open')}</div><p>${v.state === 'loading' ? 'Chargement du dossier partagé…' : 'Ce dossier partagé est vide pour l’instant.'}</p></div>`;
   $('#doc-grid').innerHTML = html;
   // arbre de gauche : mise en avant
@@ -1118,8 +1242,8 @@ function sharedTreeHTML() {
   const folders = AlixoShare.sharedFolders(), docs = AlixoShare.sharedDocsAlone().filter(x => x.d);
   if (!folders.length && !docs.length) return '';
   return `<div class="tree-shared"><div class="ln-title tree-shtitle">${SHARE_ICO}Partagés avec moi</div>` +
-    folders.map(f => `<div class="tree-row ${libMode === 'shfolder' && sharedNav && sharedNav.sid === f.sid ? 'active' : ''}" style="--mc:${esc(f.color)}"><button class="tree-caret leaf">▶</button><button class="tree-label" data-shrow="${f.sid}" data-fid="${f.rootId}" title="Dossier partagé par ${esc(f.owner)}">${f.icone && f.icone !== 'folder' ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}<span class="tree-name">${esc(f.title)}</span><span class="tree-count">${f.nDocs || ''}</span></button></div>`).join('') +
-    docs.map(x => `<div class="tree-row doc"><button class="tree-caret leaf">▶</button><button class="tree-label" data-doc="${x.d.id}" title="Séance partagée par ${esc(x.owner)}">${docIcon(x.d)}<span class="tree-name">${esc(x.d.titre || 'Sans titre')}</span></button></div>`).join('') + `</div>`;
+    folders.map(f => `<div class="tree-row ${libMode === 'shfolder' && sharedNav && sharedNav.sid === f.sid ? 'active' : ''}" style="--mc:${esc(safeTint(f.color))}"><button class="tree-caret leaf">▶</button><button class="tree-label" data-shrow="${esc(f.sid)}" data-fid="${esc(f.rootId)}" title="Dossier partagé par ${esc(f.owner)}">${f.icone && f.icone !== 'folder' ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}<span class="tree-name">${esc(f.title)}</span><span class="tree-count">${f.nDocs || ''}</span></button></div>`).join('') +
+    docs.map(x => `<div class="tree-row doc"><button class="tree-caret leaf">▶</button><button class="tree-label" data-doc="${esc(x.d.id)}" title="Séance partagée par ${esc(x.owner)}">${docIcon(x.d)}<span class="tree-name">${esc(x.d.titre || 'Sans titre')}</span></button></div>`).join('') + `</div>`;
 }
 
 /* ---------------- accès à la séance ouverte : qui la voit (1.15) ---------------- */
@@ -1235,9 +1359,10 @@ $('#lib-tree').addEventListener('click', e => {
 $('#lib-tree').addEventListener('contextmenu', e => {
   const dBtn = e.target.closest('.tn-doc');
   if (dBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, dBtn.dataset.tdoc); return; }
-  const fBtn = e.target.closest('.tn-folder'); if (!fBtn) return;
-  e.preventDefault();
-  openFolderCtxMenu(e.clientX, e.clientY, fBtn.dataset.tfid);
+  const fBtn = e.target.closest('.tn-folder');
+  if (fBtn) { e.preventDefault(); openFolderCtxMenu(e.clientX, e.clientY, fBtn.dataset.tfid); return; }
+  /* 1.47 : fond de l'arbre (ou racine « Mes cours ») → menu du dossier courant */
+  if (e.target.id === 'lib-tree' || e.target.classList.contains('tn-canvas') || e.target.closest('.tn-root')) { e.preventDefault(); openLibBgMenu(e.clientX, e.clientY); }
 });
 /* glisser-déposer des séances et des dossiers dans la vue arbre */
 $('#lib-tree').addEventListener('dragstart', e => {
@@ -1306,44 +1431,42 @@ $('#doc-grid').addEventListener('click', e => {
   if (shf) { openSharedFolder(shf.dataset.shf, shf.dataset.fid); return; }
   const shp = e.target.closest('.sh-pending');
   if (shp) { openSharedHome(); return; }
-  const fcard = e.target.closest('.folder-card');
+  /* 1.47 : bloc « Reprendre » */
+  const rsd = e.target.closest('[data-rsdoc]');
+  if (rsd) { openDoc(rsd.dataset.rsdoc); return; }
+  const rsl = e.target.closest('[data-rslink]');
+  if (rsl) { e.stopPropagation(); const ev = events().find(x => x.id === rsl.dataset.rslink); if (ev) openEventPopover(ev); return; }
+  const rsn = e.target.closest('[data-rsnotes]');
+  if (rsn) { openOrCreateTodaySession(rsn.dataset.rsnotes || null); return; }
+  const fcard = e.target.closest(SEL_FOLDER);
   if (fcard) { gotoFolder(fcard.dataset.fid); return; }
   const pin = e.target.closest('[data-pin]');
   if (pin) { e.stopPropagation(); togglePin(pin.dataset.pin); return; }
   const del = e.target.closest('[data-del]');
   if (del) { e.stopPropagation(); deleteDoc(del.dataset.del); return; }
-  const card = e.target.closest('.doc-card');
+  const card = e.target.closest(SEL_DOC);
   if (card) { openDoc(card.dataset.id); return; }
   /* 1.18 : un clic gauche dans le vide ne fait plus rien (le menu « créer ici » surgissait dès qu'on
      cliquait à côté d'une carte) ; il reste accessible au clic droit et par les boutons du haut */
-  if (e.target.closest('.empty-state')) openCreateMenu(e.clientX, e.clientY);
+  if (e.target.closest('.empty-state')) openNewMenu({ x: e.clientX, y: e.clientY }, currentFolderId);
 });
+/* clic droit dans la bibliothèque : document, dossier, ou le fond (= le dossier courant, racine comprise) — 1.47 : un seul écouteur */
+const LIB_BG_SEL = '.lib-sect, .lib-sect-head, .lib-cards, .lib-list, .lib-resume, .empty-state, .grid-sect';
+/* fond de la bibliothèque : à la racine, le menu « Nouveau » (comme l'état vide) ; dans un dossier, son menu sans « Ouvrir » */
+function openLibBgMenu(x, y) {
+  if (currentFolderId) openFolderCtxMenu(x, y, currentFolderId, { bg: true });
+  else openNewMenu({ x, y }, null);
+}
 $('#doc-grid').addEventListener('contextmenu', e => {
   const shc = e.target.closest('.shared-card');
   if (shc) { e.preventDefault(); if (shc.dataset.id && window.AlixoShare) AlixoShare.openInfo(shc.dataset.id); return; }
-  const card = e.target.closest('.doc-card');
+  const card = e.target.closest(SEL_DOC);
   if (card) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, card.dataset.id); return; }
-  if (e.target.id === 'doc-grid' || e.target.closest('.empty-state, .grid-sect')) { e.preventDefault(); openCreateMenu(e.clientX, e.clientY); }
+  const fc = e.target.closest(SEL_FOLDER);
+  if (fc) { e.preventDefault(); openFolderCtxMenu(e.clientX, e.clientY, fc.dataset.fid); return; }
+  if (e.target.closest('[data-file], [data-shfile]')) return;   // les fichiers ont leur menu (js/files.js)
+  if (e.target.id === 'doc-grid' || e.target.closest(LIB_BG_SEL)) { e.preventDefault(); openLibBgMenu(e.clientX, e.clientY); }
 });
-$('#lib-tree').addEventListener('contextmenu', e => {
-  if (e.target.id === 'lib-tree' || e.target.classList.contains('tn-canvas')) { e.preventDefault(); openCreateMenu(e.clientX, e.clientY); }
-});
-/* menu « créer ici » (clic droit dans le vide de la bibliothèque, ou clic sur le message « dossier vide ») */
-function openCreateMenu(x, y) {
-  const cur = folder(currentFolderId);
-  const menu = $('#ctxmenu');
-  menu.innerHTML = `<div class="cm-title">${cur ? esc(cur.nom) : 'Mes cours'}</div>
-    <button data-cm="cnewdoc">${CM_ICO.open}Nouvelle séance ici</button>
-    <button data-cm="cnewslides">${SLIDES_ICON}Nouvelle présentation ici</button>
-    <button data-cm="cnewsheet">${SHEET_ICON}Nouveau tableur ici</button>
-    <button data-cm="cnewboard">${BOARD_ICON}Nouvelle planche ici</button>
-    <button data-cm="cnewquiz">${QUIZ_ICON}Nouveau quiz ici</button>
-    <button data-cm="cnewfolder">${CM_ICO.folder}Nouveau dossier ici</button>
-    <button data-cm="cimport">${CM_ICO.plus}Importer des fichiers ici… (PDF, Word, images…)</button>
-    ${cur ? `<button data-cm="cagenda">${CM_ICO.plus}Ajouter ce cours à l’agenda</button>` : ''}`;
-  menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-  placeCtxMenu(menu, x, y);
-}
 
 function togglePin(id) {
   const d = state.docs.find(x => x.id === id); if (!d) return;
@@ -1466,6 +1589,7 @@ function confirmDialog({ title, text = '', ok = 'Supprimer', cancel = 'Annuler',
 
 /* ---------------- menu contextuel des séances ---------------- */
 const CM_ICO = {
+  cal: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M13 14h3M8 18h3"/></svg>',
   open: '<svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6Z"/><path d="M14 3v4h4"/></svg>',
   folder: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
   pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4"/></svg>',
@@ -1487,6 +1611,7 @@ function placeCtxMenu(menu, x, y) {
 function openDocCtxMenu(x, y, did) {
   const d = state.docs.find(v => v.id === did); if (!d) return;
   const menu = $('#ctxmenu');
+  menu.classList.remove('cm-create');
   menu.innerHTML = `
     <div class="cm-title">${esc(d.titre || 'Sans titre')}</div>
     <button data-cm="dopen">${CM_ICO.open}Ouvrir</button>
@@ -1641,22 +1766,24 @@ function moveFolderTo(fid, targetId) {
 }
 
 $('#doc-grid').addEventListener('dragstart', e => {
-  const card = e.target.closest('.doc-card, .folder-card, .file-card');
-  if (!card) { e.preventDefault(); return; }
-  if (card.classList.contains('file-card')) startDrag('file', card.dataset.file, card, e);
-  else if (card.classList.contains('doc-card')) startDrag('doc', card.dataset.id, card, e);
+  const card = e.target.closest('.doc-card, .folder-card, .file-card, .lib-row');
+  if (!card || card.classList.contains('shared-card')) { e.preventDefault(); return; }
+  if (card.classList.contains('file-card') || card.classList.contains('row-file')) startDrag('file', card.dataset.file, card, e);
+  else if (card.classList.contains('doc-card') || card.classList.contains('row-doc')) startDrag('doc', card.dataset.id, card, e);
   else startDrag('folder', card.dataset.fid, card, e);
 });
 $('#doc-grid').addEventListener('dragend', endDrag);
+/* cible de dépôt : carte ou ligne d'un de MES dossiers (pas un dossier partagé) */
+const dropFolderCard = e => { const fc = e.target.closest(SEL_FOLDER); return fc && !fc.classList.contains('shared-card') ? fc : null; };
 $('#doc-grid').addEventListener('dragover', e => {
   if (!drag) return;
-  const fc = e.target.closest('.folder-card');
+  const fc = dropFolderCard(e);
   clearDropTargets();
   if (fc && canDropOn(fc.dataset.fid)) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; fc.classList.add('drop-target'); }
 });
 $('#doc-grid').addEventListener('drop', e => {
   if (!drag) return;
-  const fc = e.target.closest('.folder-card');
+  const fc = dropFolderCard(e);
   if (!fc) return;
   e.preventDefault();
   dropOn(fc.dataset.fid);
@@ -1701,27 +1828,43 @@ $('#btn-new-slides').addEventListener('click', () => createSlidesIn(currentFolde
 $('#btn-new-sheet').addEventListener('click', () => createSheetIn(currentFolderId));
 $('#btn-new-board').addEventListener('click', () => createBoardIn(currentFolderId));
 $('#btn-new-quiz').addEventListener('click', () => createQuizIn(currentFolderId));
-/* 1.25 — menu « Autres » de la barre de création : dossier, planche, quiz, import (les trois types principaux restent en boutons) */
+/* 1.47 — menu « Nouveau » (bouton de la barre, clic sur « dossier vide », galaxie) : une seule fonction.
+   anchor = bouton (menu sous lui, aligné à droite) ou { x, y } ; fid = dossier cible (null = racine) */
 const IMPORT_ICON = '<svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>';
-function openCreateMenu(btn) {
+const NEW_ITEMS = [
+  ['doc', 'cours', 'Séance', 'Prise de notes, plan du cours, blocs'],
+  ['slides', 'slides', 'Présentation', 'Diapositives composées par glisser-déposer'],
+  ['sheet', 'sheet', 'Tableur', 'Grille de calcul, formules, graphiques'],
+  ['board', 'board', 'Planche', 'Tableau blanc libre : post-it, formes, schémas'],
+  ['quiz', 'quiz', 'Quiz', 'Questions à tester ou à présenter en direct'],
+  ['folder', 'folder', 'Dossier', 'Un cours, une matière, un semestre']
+];
+const cmTile = (key, mark) => `<span class="cm-tile t-${key}" aria-hidden="true">${mark}</span>`;
+const newMark = key => (DOC_TYPES[key] ? DOC_TYPES[key].mark : key === 'folder' ? 'D' : '');
+function openNewMenu(anchor, fid) {
   const menu = $('#ctxmenu');
-  if (!menu.hidden && menu.classList.contains('cm-create')) { closeCtxMenu(); return; }
+  const btn = anchor && typeof anchor.getBoundingClientRect === 'function' ? anchor : null;
+  if (btn && !menu.hidden && menu.classList.contains('cm-create')) { closeCtxMenu(); return; }
+  fid = fid || null;
+  const f = folder(fid);
   menu.innerHTML = `
-    <div class="cm-title">Créer dans « ${esc(currentFolderId ? (folder(currentFolderId) || {}).nom || 'ce dossier' : 'Mes cours')} »</div>
-    <button data-cm="cnewfolder">${CM_ICO.folder}<span class="cm-lbl">Dossier<small>Un cours, une matière, un semestre</small></span></button>
-    <button data-cm="cnewboard">${BOARD_ICON}<span class="cm-lbl">Planche<small>Tableau blanc libre : post-it, formes, schémas, cartes mentales</small></span></button>
-    <button data-cm="cnewquiz">${QUIZ_ICON}<span class="cm-lbl">Quiz<small>Questions à tester ou à présenter en direct</small></span></button>
+    <div class="cm-title">Créer dans « ${esc(f ? f.nom : 'Mes cours')} »</div>
+    ${NEW_ITEMS.map(([cm, key, label, small]) => `<button data-cm="cnew${cm}" role="menuitem">${cmTile(key, newMark(key))}<span class="cm-lbl">${label}<small>${small}</small></span></button>`).join('')}
     <div class="cm-sep"></div>
-    <button data-cm="cimport">${IMPORT_ICON}<span class="cm-lbl">Importer des fichiers…<small>PDF, Word, PowerPoint, Excel, images, audio</small></span></button>`;
+    <button data-cm="cimport" role="menuitem">${cmTile('import', IMPORT_ICON)}<span class="cm-lbl">Importer des fichiers…<small>PDF, Word, PowerPoint, Excel, images, audio</small></span></button>`;
   menu.className = 'cm-create';
-  menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-  const r = btn.getBoundingClientRect();
-  placeCtxMenu(menu, r.right - 250, r.bottom + 6);
-  btn.classList.add('open');
-  const off = () => { btn.classList.remove('open'); menu.classList.remove('cm-create'); document.removeEventListener('click', off, true); };
-  setTimeout(() => document.addEventListener('click', off, true), 0);
+  menu.setAttribute('role', 'menu');
+  menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.cfid = fid || '';
+  if (btn) {
+    const r = btn.getBoundingClientRect();
+    menu.hidden = false;
+    placeCtxMenu(menu, r.right - menu.offsetWidth, r.bottom + 6);
+    btn.classList.add('open'); btn.setAttribute('aria-expanded', 'true');
+    const off = () => { btn.classList.remove('open'); btn.removeAttribute('aria-expanded'); menu.classList.remove('cm-create'); menu.removeAttribute('role'); document.removeEventListener('click', off, true); };
+    setTimeout(() => document.addEventListener('click', off, true), 0);
+  } else placeCtxMenu(menu, anchor.x, anchor.y);
 }
-$('#btn-new-more').addEventListener('click', e => { e.stopPropagation(); openCreateMenu(e.currentTarget); });
+$('#btn-new-more').addEventListener('click', e => { e.stopPropagation(); openNewMenu(e.currentTarget, currentFolderId); });
 /* nouvelle présentation (diapositives) : même fiche qu'une séance, avec kind: 'slides' — voir js/slides.js */
 function createSlidesIn(fid) {
   if (!window.AlixoSlides) { toast('Module de présentation indisponible'); return; }
@@ -1756,42 +1899,70 @@ function createQuizIn(fid) {
   setTimeout(() => { const t = $('#tb-title'); if (t) t.focus(); }, 60);
 }
 
-/* création / renommage de dossier */
+/* création / renommage de dossier — 1.47 : formulaire compact (nom + professeur sur une ligne, 16 couleurs + couleur libre
+   sur une ligne, icônes par onglets de catégories dans un cadre à hauteur fixe) */
+/* noms français des 16 couleurs de la palette (lecteurs d'écran), dans l'ordre de FOLDER_COLORS */
+const FOLDER_COLOR_NAMES = ['Bordeaux', 'Rouge', 'Orange', 'Ocre', 'Moutarde', 'Brun', 'Taupe', 'Vert sapin', 'Vert', 'Sarcelle', 'Bleu Alixo', 'Bleu', 'Bleu nuit', 'Ardoise', 'Framboise', 'Gris'];
 function openFolderPopover(existing, parentId = currentFolderId) {
   const parentColor = existing ? existing.couleur : (folder(parentId)?.couleur || FOLDER_COLORS[10]);
   const curIcon = existing ? (existing.icone || '') : '';
   const curProf = existing ? (existing.prof || '') : folderProf(parentId);
-  showPopover(`<h4>${existing ? 'Modifier le dossier' : 'Nouveau dossier'}</h4>
-    <div class="po-row"><input id="po-f-name" placeholder="Ex. Droit administratif" value="${existing ? esc(existing.nom) : ''}"></div>
-    <div class="po-label">Professeur</div>
-    <div class="po-row"><input id="po-f-prof" list="profs-list" placeholder="Ex. Mme Dupont" autocomplete="off" value="${esc(curProf)}"></div>
-    <div class="po-hint" style="margin-top:4px">Repris automatiquement sur les séances du dossier (modifiable sur chaque séance).</div>
-    <div class="po-label">Couleur</div>
-    <div class="po-colors" id="po-colors">
-      ${FOLDER_COLORS.map(c => `<button data-c="${c}" class="${c === parentColor ? 'sel' : ''}" style="background:${c}"></button>`).join('')}
+  const customStart = HEX_COLOR.test(parentColor) && !FOLDER_COLORS.includes(parentColor);   // couleur hors palette : portée par la pastille libre
+  const cats = Object.entries(FOLDER_ICONS);
+  const iconsHTML = (cat, icone) => {
+    const list = cat ? (FOLDER_ICONS[cat] || []) : Object.keys(AlixoIcons.ICONS);
+    return `<button type="button" data-i="" class="none ${icone ? '' : 'sel'}" title="Icône par défaut" aria-label="Icône par défaut" aria-pressed="${icone ? 'false' : 'true'}">${FOLDER_ICON}</button>` +
+      list.map(i => `<button type="button" data-i="${esc(i)}" class="${i === icone ? 'sel' : ''}" title="${esc(i)}" aria-label="Icône ${esc(i)}" aria-pressed="${i === icone ? 'true' : 'false'}">${AlixoIcons.svg(i)}</button>`).join('');
+  };
+  showPopover(`<div class="po-folder"><h4>${existing ? 'Modifier le dossier' : 'Nouveau dossier'}</h4>
+    <div class="po-row">
+      <input id="po-f-name" class="po-f-name" placeholder="Nom (ex. Droit administratif)" aria-label="Nom du dossier" aria-describedby="po-f-err" value="${existing ? esc(existing.nom) : ''}">
+      <input id="po-f-prof" class="po-f-prof" list="profs-list" placeholder="Professeur" autocomplete="off" title="Repris automatiquement sur les séances du dossier (modifiable sur chaque séance)" value="${esc(curProf)}">
+    </div>
+    <div class="po-err" id="po-f-err" hidden>Donnez un nom au dossier.</div>
+    <div class="po-label" id="po-f-clabel">Couleur</div>
+    <div class="po-colors po-colors-row" id="po-colors" role="group" aria-labelledby="po-f-clabel">
+      ${FOLDER_COLORS.map((c, i) => `<button type="button" data-c="${c}" class="${c === parentColor ? 'sel' : ''}" style="background:${c}" title="${FOLDER_COLOR_NAMES[i]}" aria-label="Couleur ${FOLDER_COLOR_NAMES[i]}" aria-pressed="${c === parentColor ? 'true' : 'false'}"></button>`).join('')}
+      <label class="po-color-custom ${customStart ? 'sel picked' : ''}" title="Couleur libre" ${customStart ? `style="background:${esc(parentColor)}"` : ''}><input type="color" id="po-f-ccustom" value="${customStart ? esc(parentColor) : '#4f66e0'}" aria-label="Couleur libre"></label>
     </div>
     <div class="po-label">Icône</div>
-    <div class="po-icons" id="po-icons">
-      <button data-i="" class="none ${curIcon ? '' : 'sel'}" title="Icône par défaut">${FOLDER_ICON}</button>
-      ${Object.entries(FOLDER_ICONS).map(([sect, list]) => `<div class="po-icons-sect">${sect}</div>` +
-        list.map(i => `<button data-i="${i}" class="${i === curIcon ? 'sel' : ''}" title="${i}">${AlixoIcons.svg(i)}</button>`).join('')).join('')}
-    </div>
-    <div class="po-row" style="margin-top:12px; justify-content:flex-end"><button class="pobtn" id="po-f-ok">${existing ? 'Enregistrer' : 'Créer'}</button></div>`,
-    centerRect(), pop => {
+    <div class="po-icon-tabs" id="po-icon-tabs" role="tablist" aria-label="Catégories d’icônes"><button type="button" role="tab" data-cat="" class="on" aria-selected="true">Tous</button>${cats.map(([c]) => `<button type="button" role="tab" data-cat="${esc(c)}" title="${esc(c)}" aria-selected="false">${esc(c.replace(/ & .*$/, ''))}</button>`).join('')}</div>
+    <div class="po-icons" id="po-icons" role="group" aria-label="Icône du dossier">${iconsHTML('', curIcon)}</div>
+    <div class="po-row po-foot"><span class="po-hint">Le professeur est repris sur les séances du dossier.</span><button class="pobtn" id="po-f-ok">${existing ? 'Enregistrer' : 'Créer'}</button></div></div>`,
+    centerRect(460), pop => {
       let color = parentColor, icone = curIcon;
+      const custom = pop.querySelector('.po-color-custom'), cinput = pop.querySelector('#po-f-ccustom');
+      const nameEl = pop.querySelector('#po-f-name'), errEl = pop.querySelector('#po-f-err');
+      const setErr = on => { errEl.hidden = !on; if (on) nameEl.setAttribute('aria-invalid', 'true'); else nameEl.removeAttribute('aria-invalid'); };
+      nameEl.addEventListener('input', () => { if (nameEl.value.trim()) setErr(false); });
       pop.querySelector('#po-colors').addEventListener('click', e => {
         const b = e.target.closest('[data-c]'); if (!b) return;
         color = b.dataset.c;
-        pop.querySelectorAll('#po-colors button').forEach(x => x.classList.toggle('sel', x === b));
+        pop.querySelectorAll('#po-colors button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-pressed', String(on)); });
+        custom.classList.remove('sel');
+      });
+      cinput.addEventListener('input', () => {
+        const v = String(cinput.value || '').trim();
+        if (!HEX_COLOR.test(v)) return;
+        color = v;
+        custom.style.background = v; custom.classList.add('sel', 'picked');
+        pop.querySelectorAll('#po-colors button').forEach(x => { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+      });
+      pop.querySelector('#po-icon-tabs').addEventListener('click', e => {
+        const b = e.target.closest('[data-cat]'); if (!b) return;
+        pop.querySelectorAll('#po-icon-tabs button').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); });
+        const box = pop.querySelector('#po-icons'); box.innerHTML = iconsHTML(b.dataset.cat, icone); box.scrollTop = 0;
       });
       pop.querySelector('#po-icons').addEventListener('click', e => {
         const b = e.target.closest('[data-i]'); if (!b) return;
         icone = b.dataset.i;
-        pop.querySelectorAll('#po-icons button').forEach(x => x.classList.toggle('sel', x === b));
+        pop.querySelectorAll('#po-icons button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-pressed', String(on)); });
       });
       const ok = () => {
-        const nom = pop.querySelector('#po-f-name').value.trim();
-        if (!nom) return;
+        const nom = nameEl.value.trim();
+        if (!nom) { setErr(true); nameEl.focus(); return; }
+        if (!HEX_COLOR.test(color)) color = FOLDER_COLORS.includes(parentColor) ? parentColor : FOLDER_COLORS[10];   // couleur toujours validée (#rrggbb)
+        if (icone && !AlixoIcons.ICONS[icone]) icone = '';
         const prof = pop.querySelector('#po-f-prof').value.trim();
         rememberProf(prof);
         if (existing) {
@@ -1820,34 +1991,50 @@ function openFolderPopover(existing, parentId = currentFolderId) {
 $('#btn-new-folder').addEventListener('click', () => openFolderPopover(null));
 $('#btn-new-folder-side').addEventListener('click', () => openFolderPopover(null));
 
-/* ---------------- menu contextuel des dossiers ---------------- */
-function openFolderCtxMenu(x, y, fid) {
-  const f = folder(fid); if (!f) return;
+/* ---------------- menu contextuel des dossiers ----------------
+   1.47 : réduit à Ouvrir · Nouveau ▸ (groupe replié/déplié) · Importer · Agenda · Renommer / couleur · Déplacer · Partager ·
+   .zip · Supprimer. `fid` = null → racine « Mes cours » (pas de Renommer / Déplacer / Partager / .zip / Supprimer) ;
+   { bg: true } = ouvert sur le fond du dossier courant (pas d'« Ouvrir »). */
+function openFolderCtxMenu(x, y, fid, opts = {}) {
+  fid = fid || null;
+  const f = folder(fid); if (fid && !f) return;
   const menu = $('#ctxmenu');
+  menu.classList.remove('cm-create');
+  const openSub = false;   // le groupe « Nouveau » est toujours replié (le menu reste court et prévisible)
+  menu.removeAttribute('role');
   menu.innerHTML = `
-    <div class="cm-title">${esc(f.nom)}</div>
-    <button data-cm="open">${CM_ICO.folder}Ouvrir</button>
-    <button data-cm="newdoc">${CM_ICO.plus}Nouvelle séance ici</button>
-    <button data-cm="newslides">${SLIDES_ICON}Nouvelle présentation ici</button>
-    <button data-cm="newsheet">${SHEET_ICON}Nouveau tableur ici</button>
-    <button data-cm="newboard">${BOARD_ICON}Nouvelle planche ici</button>
-    <button data-cm="newquiz">${QUIZ_ICON}Nouveau quiz ici</button>
-    <button data-cm="newfolder">${CM_ICO.plus}Nouveau sous-dossier…</button>
-    <button data-cm="import">${CM_ICO.plus}Importer des fichiers…</button>
+    <div class="cm-title">${esc(f ? f.nom : 'Mes cours')}</div>
+    ${opts.bg ? '' : `<button data-cm="open">${CM_ICO.folder}Ouvrir</button>`}
+    <button class="cm-group ${openSub ? 'open' : ''}" data-cmx="new" aria-expanded="${openSub}">${CM_ICO.plus}Nouveau<svg class="cm-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
+    <div class="cm-sub" ${openSub ? '' : 'hidden'}>
+      ${NEW_ITEMS.map(([cm, key, label]) => `<button data-cm="new${cm}">${cmTile(key, newMark(key))}${label}</button>`).join('')}
+    </div>
+    <button data-cm="import">${IMPORT_ICON}Importer des fichiers…</button>
+    ${f ? `<button data-cm="agenda">${CM_ICO.cal}Ajouter ce cours à l’agenda…</button>
     <button data-cm="rename">${CM_ICO.pen}Renommer / couleur…</button>
     <button data-cm="move">${CM_ICO.move}Déplacer vers…</button>
-    <button data-cm="zip">${CM_ICO.zip}Télécharger en .zip</button>
     <button data-cm="share">${CM_ICO.share}Partager le dossier…</button>
-    <button data-cm="delete" class="danger">${CM_ICO.trash}Supprimer</button>`;
-  menu.dataset.fid = fid; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
+    <div class="cm-sep"></div>
+    <button data-cm="zip">${CM_ICO.zip}Télécharger en .zip</button>
+    <button data-cm="delete" class="danger">${CM_ICO.trash}Supprimer</button>` : ''}`;
+  menu.dataset.fid = fid || ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.root = f ? '' : '1';
   placeCtxMenu(menu, x, y);
 }
-function closeCtxMenu() { $('#ctxmenu').hidden = true; }
+function closeCtxMenu() { const m = $('#ctxmenu'); m.hidden = true; m.classList.remove('cm-create'); m.removeAttribute('role'); const b = $('#btn-new-more'); if (b) { b.classList.remove('open'); b.removeAttribute('aria-expanded'); } }
 
+/* groupe « Nouveau ▸ » du menu contextuel : replie / déplie sans fermer le menu */
+$('#ctxmenu').addEventListener('click', e => {
+  const g = e.target.closest('[data-cmx]'); if (!g) return;
+  e.stopPropagation();
+  const sub = g.nextElementSibling; if (!sub || !sub.classList.contains('cm-sub')) return;
+  const open = sub.hidden; sub.hidden = !open; g.classList.toggle('open', open); g.setAttribute('aria-expanded', String(open));
+  const menu = $('#ctxmenu'); placeCtxMenu(menu, parseFloat(menu.style.left) || 0, parseFloat(menu.style.top) || 0);
+});
 $('#ctxmenu').addEventListener('click', e => {
   const b = e.target.closest('[data-cm]'); if (!b) return;
   const menu = $('#ctxmenu');
   const f = folder(menu.dataset.fid);
+  const isRoot = menu.dataset.root === '1';   // 1.47 : menu de la racine « Mes cours »
   const did = menu.dataset.did;
   closeCtxMenu();
   const cm = b.dataset.cm;
@@ -1856,14 +2043,15 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'pgrename') renamePageInline(pid); else if (cm === 'pgleft') movePage(pid, -1); else if (cm === 'pgright') movePage(pid, 1); else if (cm === 'pgadd') addPage(); else if (cm === 'pgdelete') deletePage(pid);
     return;
   }
-  if (cm === 'cnewdoc') { createDocIn(currentFolderId); return; }
-  if (cm === 'cnewslides') { createSlidesIn(currentFolderId); return; }
-  if (cm === 'cnewsheet') { createSheetIn(currentFolderId); return; }
-  if (cm === 'cnewboard') { createBoardIn(currentFolderId); return; }
-  if (cm === 'cnewquiz') { createQuizIn(currentFolderId); return; }
-  if (cm === 'cnewfolder') { openFolderPopover(null, currentFolderId); return; }
-  if (cm === 'cimport') { if (window.AlixoFiles) AlixoFiles.pick(currentFolderId); return; }
-  if (cm === 'cagenda') { openEventPopover(null, { folderId: currentFolderId }); return; }
+  const cfid = menu.dataset.cfid || null;   // 1.47 : dossier visé par le menu « Nouveau »
+  if (cm === 'cnewdoc') { createDocIn(cfid); return; }
+  if (cm === 'cnewslides') { createSlidesIn(cfid); return; }
+  if (cm === 'cnewsheet') { createSheetIn(cfid); return; }
+  if (cm === 'cnewboard') { createBoardIn(cfid); return; }
+  if (cm === 'cnewquiz') { createQuizIn(cfid); return; }
+  if (cm === 'cnewfolder') { openFolderPopover(null, cfid); return; }
+  if (cm === 'cimport') { if (window.AlixoFiles) AlixoFiles.pick(cfid); return; }
+  if (cm === 'cagenda') { openEventPopover(null, { folderId: cfid }); return; }
   if (cm.startsWith('i') && menu.dataset.img) {
     const id = menu.dataset.img; const ib = getBlock(id); if (!ib || ib.type !== 'img') return;
     if (cm === 'isz') { ib.w = +b.dataset.pct; touch(); renderBlocks('__none'); selectObj(id); return; }
@@ -1890,7 +2078,7 @@ $('#ctxmenu').addEventListener('click', e => {
     if (ops[cm]) tableOp(tb, ops[cm]);
     return;
   }
-  if (cm.startsWith('d')) {
+  if (cm.startsWith('d') && did) {
     const d = state.docs.find(x => x.id === did); if (!d) return;
     if (cm === 'dopen') openDoc(d.id);
     if (cm === 'drename') openRenameDocPopover(d.id);
@@ -1902,15 +2090,18 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'ddelete') deleteDoc(d.id);
     return;
   }
+  if (!f && !isRoot) return;
+  const fid = f ? f.id : null;
+  if (cm === 'open') gotoFolder(fid);
+  if (cm === 'newdoc') createDocIn(fid);
+  if (cm === 'newslides') createSlidesIn(fid);
+  if (cm === 'newsheet') createSheetIn(fid);
+  if (cm === 'newboard') createBoardIn(fid);
+  if (cm === 'newquiz') createQuizIn(fid);
+  if (cm === 'newfolder') openFolderPopover(null, fid);
+  if (cm === 'import' && window.AlixoFiles) AlixoFiles.pick(fid);
   if (!f) return;
-  if (cm === 'open') gotoFolder(f.id);
-  if (cm === 'newdoc') createDocIn(f.id);
-  if (cm === 'newslides') createSlidesIn(f.id);
-  if (cm === 'newsheet') createSheetIn(f.id);
-  if (cm === 'newboard') createBoardIn(f.id);
-  if (cm === 'newquiz') createQuizIn(f.id);
-  if (cm === 'newfolder') openFolderPopover(null, f.id);
-  if (cm === 'import' && window.AlixoFiles) AlixoFiles.pick(f.id);
+  if (cm === 'agenda') openEventPopover(null, { folderId: f.id });
   if (cm === 'rename') openFolderPopover(f);
   if (cm === 'move') openMovePopover('folder', f.id);
   if (cm === 'zip') downloadFolderZip(f.id);
@@ -1922,19 +2113,14 @@ document.addEventListener('pointerdown', e => {
 });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtxMenu(); });
 
-$('#doc-grid').addEventListener('contextmenu', e => {
-  const fc = e.target.closest('.folder-card'); if (!fc) return;
-  e.preventDefault();
-  openFolderCtxMenu(e.clientX, e.clientY, fc.dataset.fid);
-});
 $('#folder-tree').addEventListener('contextmenu', e => {
   const docBtn = e.target.closest('[data-doc]');
   if (docBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, docBtn.dataset.doc); return; }
   const row = e.target.closest('.tree-row'); if (!row) return;
   const openBtn = row.querySelector('[data-open]');
-  if (!openBtn || !openBtn.dataset.open) return; // pas la racine
+  if (!openBtn) return;
   e.preventDefault();
-  openFolderCtxMenu(e.clientX, e.clientY, openBtn.dataset.open);
+  openFolderCtxMenu(e.clientX, e.clientY, openBtn.dataset.open || null);   // 1.47 : la racine « Mes cours » a son menu
 });
 
 /* ---------------- export .zip d'un dossier ---------------- */
@@ -3125,8 +3311,8 @@ function settingsSectionHTML(k) {
       </div>${isPlus() ? '' : `<div class="po-hint">Clair, sombre et automatique sont gratuits ; les autres thèmes font partie d’<b>Alixo+</b> (Paramètres › Alixo+).</div>`}
       <div class="set-checks" id="set-themebtn" style="margin-top:12px"><label><input type="checkbox" role="switch" data-set="showThemeBtn" ${state.settings.showThemeBtn ? 'checked' : ''}><span><b>Bouton clair / sombre dans la barre du haut</b><small>Le soleil à droite de la barre, pour basculer d’un clic entre le thème clair et le thème sombre.</small></span></label></div></div>
     <div class="set-sect"><div class="po-label">Affichage de la bibliothèque</div>
-      <div class="set-tiles" id="set-view">
-        ${[['grid', 'Grille', 'Cartes des dossiers et séances'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
+      <div class="set-tiles set-tiles4" id="set-view">
+        ${[['grid', 'Grille', 'Dossiers en cartes, séances en liste'], ['list', 'Liste', 'Dossiers et séances en lignes'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
       </div>
       <div class="po-hint">Le bouton en haut de la bibliothèque permet aussi de changer d’affichage à tout moment.</div></div>
     ${document.body.classList.contains('mobile') ? '' : `<div class="set-sect"><div class="po-label">Fenêtres</div>
@@ -7160,7 +7346,8 @@ function scrollSlashIntoView() {
 /* ============================================================
    Pop-over générique
    ============================================================ */
-function centerRect() { return { left: innerWidth / 2 - 150, top: innerHeight / 3, bottom: innerHeight / 3 }; }
+/* ancre « au centre » pour un pop-over de largeur w (320 px par défaut ; 460 px pour le formulaire de dossier) */
+function centerRect(w = 320) { return { left: innerWidth / 2 - w / 2, top: innerHeight / 3, bottom: innerHeight / 3 }; }
 
 function showPopover(html, rect, onMount) {
   let pop = $('#popover');
@@ -7172,8 +7359,10 @@ function showPopover(html, rect, onMount) {
   const fresh = pop.cloneNode(false); pop.replaceWith(fresh); pop = fresh;
   pop.innerHTML = html;
   pop.hidden = false;
-  pop.style.left = Math.max(12, Math.min(rect.left, innerWidth - 332)) + 'px';
   pop.style.top = '0px';
+  // largeur réelle (320 px, ou 460 px pour le formulaire de dossier) : jamais hors de la fenêtre
+  const w = pop.offsetWidth || 320;
+  pop.style.left = Math.max(12, Math.min(rect.left, innerWidth - 12 - w)) + 'px';
   // toujours visible : sous l'ancre, sinon au-dessus, sinon calé sur le bas de la fenêtre
   const h = pop.offsetHeight;
   const anchorBottom = rect.bottom != null ? rect.bottom : rect.top;
@@ -7866,6 +8055,7 @@ function renderCalNow() {
   const el = $('#cal-now'); if (!el) return;
   const st = calStatus();
   renderAgendaNav();
+  if (typeof renderResume === 'function') renderResume();   // 1.47 : bloc « Reprendre » (temps restant, progression)
   if (!st) { el.hidden = true; el.className = 'cal-now'; return; }
   el.hidden = false;
   const title = st.o.ev.title || 'Événement';
@@ -11429,7 +11619,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Nouveau look : police Geist, palette claire et sombre plus douce, champ de recherche dans la barre du haut (Ctrl K), cartes de dossiers à initiales et pastilles de couleur sur les onglets. Vos cours et vos thèmes ne changent pas.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Séances, fichiers et partages réunis dans une même liste (et une nouvelle vue Liste), bloc « Reprendre » en haut de Mes cours avec le cours en ce moment, menu « Nouveau » et clic droit sur le fond de la bibliothèque, puces de type colorées et formulaire de dossier compact.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

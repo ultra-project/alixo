@@ -363,11 +363,11 @@ window.AlixoGalaxy = (() => {
     if (n.kind === 'root' && dbl && currentFolderId) { const f = folder(currentFolderId); gotoFolder(f ? f.parentId : null); }
   }
   function contextFor(n, x, y) {
-    if (!n) { openCreateMenu(x, y); return; }
+    if (!n) { openFolderCtxMenu(x, y, currentFolderId, { bg: true }); return; }
     if (n.kind === 'doc' || n.kind === 'slides' || n.kind === 'sheet' || n.kind === 'board' || n.kind === 'quiz') openDocCtxMenu(x, y, n.did);
     else if (n.kind === 'folder') openFolderCtxMenu(x, y, n.fid);
     else if (n.kind === 'file' && window.AlixoFiles && AlixoFiles.openMenu) AlixoFiles.openMenu(x, y, n.fileId);
-    else openCreateMenu(x, y);
+    else openFolderCtxMenu(x, y, currentFolderId, { bg: true });
   }
   const related = (a, b) => a === b || links.some(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
   /* cœur exposé au rendu 3D : nœuds, liens, simulation, actions */

@@ -45,8 +45,21 @@ body.mobile #lib-main { padding: 12px 12px 0; border-radius: 10px; }
 body.mobile .lib-head { flex-direction: column; align-items: stretch; gap: 8px; padding-bottom: 10px; }
 body.mobile #lib-title { font-size: 20px; }
 body.mobile .lib-actions { justify-content: flex-start; }
-body.mobile #btn-import-files, body.mobile #btn-new-folder, body.mobile #btn-new-slides, body.mobile #btn-new-doc, body.mobile #btn-new-more, body.mobile .lib-actsep { display: none; }
-body.mobile #doc-grid { grid-template-columns: 1fr; gap: 10px; padding-bottom: 90px; }
+body.mobile #btn-import-files, body.mobile #btn-new-folder, body.mobile #btn-new-slides, body.mobile #btn-new-doc, body.mobile #btn-new-more { display: none; }
+body.mobile #doc-grid { gap: 18px; padding-bottom: 90px; }
+body.mobile .lib-cards { grid-template-columns: 1fr; gap: 10px; }
+/* 1.47 : lignes de la liste, bloc Reprendre */
+body.mobile .lib-row { padding: 10px 12px; gap: 10px; }
+body.mobile .lib-row .row-acts { opacity: 1; width: auto; gap: 6px; }
+body.mobile .lib-row .row-acts span { width: 40px; height: 40px; }   /* cibles tactiles ≥ 40 px */
+body.mobile .lib-row .row-date { display: none; }
+body.mobile .lib-row .row-where { display: none; }
+body.mobile .lib-row .row-type { width: auto; }
+body.mobile .lib-resume .rs-grid { grid-template-columns: 1fr 1fr; }
+body.mobile .rs-live { grid-column: span 2; padding: 16px; }
+body.mobile .rs-card { padding: 14px; }
+body.mobile .rs-card .rs-name { font-size: 14px; }
+body.mobile .rs-live .rs-title { font-size: 18px; }
 body.mobile .doc-card { min-height: 0; }
 body.mobile .doc-card .pin-btn, body.mobile .doc-card .del-btn, body.mobile .folder-card .fc-act { opacity: 1; }
 body.mobile #lib-tree { padding-bottom: 90px; }

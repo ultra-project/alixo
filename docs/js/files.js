@@ -39,8 +39,8 @@ window.AlixoFiles = (() => {
   const KINDS = {
     pdf: { label: 'PDF', color: '#c04343', exts: ['pdf'] },
     word: { label: 'Word', color: '#2b5fb4', exts: ['docx', 'doc', 'odt', 'rtf'] },
-    slides: { label: 'Diaporama', color: '#c8602b', exts: ['pptx', 'ppt', 'odp', 'key'] },
-    sheet: { label: 'Tableur', color: '#2e7d4f', exts: ['xlsx', 'xls', 'ods', 'csv', 'tsv'] },
+    slides: { label: 'PowerPoint', color: '#c8602b', exts: ['pptx', 'ppt', 'odp', 'key'] },   // 1.47 : libellés distincts des documents Alixo (Présentation, Tableur)
+    sheet: { label: 'Excel', color: '#2e7d4f', exts: ['xlsx', 'xls', 'ods', 'csv', 'tsv'] },
     image: { label: 'Image', color: '#7a5bb5', exts: ['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif', 'heic'] },
     audio: { label: 'Audio', color: '#2e8b8b', exts: ['mp3', 'wav', 'm4a', 'ogg', 'oga', 'flac', 'aac', 'opus'] },
     video: { label: 'Vidéo', color: '#a8556f', exts: ['mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi'] },
@@ -435,17 +435,32 @@ window.AlixoFiles = (() => {
 
   /* ---------------- bibliothèque : cartes, arbre, menus ---------------- */
   const cloudBadge = f => !Cloud.enabled ? '' : f.cloud ? '<span class="file-cloud ok" title="Synchronisé avec votre compte">☁</span>' : (f.size > MAX_SYNC ? '<span class="file-cloud off" title="Plus de 20 Mo : reste sur cet appareil">⌂</span>' : '<span class="file-cloud wait" title="En attente de synchronisation">☁</span>');
-  /* cartes des fichiers reçus par Alixo Share (vue d'un dossier partagé) */
-  function sharedGridHTML(list, hasOther) {
-    if (!list || !list.length) return '';
-    return `${hasOther ? '<div class="grid-sect">Fichiers partagés</div>' : ''}${list.map(f => `<button class="file-card shared-card" data-shfile="${esc(f.id)}" data-sid="${esc(f.sid)}" style="--mc:${kindOf(f.name).color}" title="${esc(f.name)}">
-        ${iconHTML(f.name, 'big')}<div class="file-info"><h3>${esc(f.name)}</h3><div class="meta">${kindOf(f.name).label} · ${fmtSize(f.size)} · partagé</div></div></button>`).join('')}`;
+  /* 1.47 : les fichiers ne sont plus une section à part — ils se mêlent aux séances dans la liste de la bibliothèque
+     (js/app.js libItems / libRowHTML). Un « item » normalisé par fichier, puis la ligne correspondante. */
+  /* sous-titre d'une ligne de fichier : « PDF · 1,8 Mo », « DOCX · 48 Ko » (extension en majuscules, sinon la famille) */
+  const rowSub = f => `${(extOf(f.name) || kindOf(f.name).label).toUpperCase()} · ${fmtSize(f.size)}`;
+  function rowItems(fid) {
+    return inFolder(fid).map(f => { const k = kindOf(f.name); return { kind: 'file', id: f.id, title: f.name, sub: rowSub(f), when: f.createdAt || 0, type: 'file', tint: k.color, pinned: false, raw: f }; });
   }
-  function gridHTML(fid, hasOther) {
-    const list = inFolder(fid); if (!list.length) return '';
-    return `${hasOther ? '<div class="grid-sect">Fichiers</div>' : ''}${list.map(f => `<button class="file-card" data-file="${f.id}" draggable="true" style="--mc:${kindOf(f.name).color}" title="${esc(f.name)}">
-        ${iconHTML(f.name, 'big')}<div class="file-info"><h3>${esc(f.name)}</h3><div class="meta">${kindOf(f.name).label} · ${fmtSize(f.size)} · ${fmtDate(f.createdAt || Date.now())} ${cloudBadge(f)}</div></div>
-        <span class="del-btn" data-filedel="${f.id}" title="Supprimer"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span></button>`).join('')}`;
+  function sharedRowItems(list) {
+    return (list || []).map(f => { const k = kindOf(f.name); return { kind: 'shfile', id: f.id, sid: f.sid, title: f.name, sub: `${rowSub(f)} · partagé`, when: f.createdAt || 0, type: 'file', tint: k.color, pinned: false, raw: f }; });
+  }
+  const TRASH = '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+  function rowHTML(it) {
+    const f = it.raw, k = kindOf(f.name);
+    return `<button class="lib-row row-file" data-file="${esc(f.id)}" draggable="true" style="--mc:${esc(k.color)}" title="${esc(f.name)}">
+        <span class="row-type">${typeChipHTML(null, { label: k.label, color: k.color })}</span>
+        <span class="row-main"><span class="row-title">${esc(f.name)}</span><span class="row-sub">${esc(it.sub)}${cloudBadge(f)}</span></span>
+        <span class="row-where"></span><span class="row-date">${fmtRowDate(f.createdAt || Date.now())}</span>
+        <span class="row-acts"><span class="del-btn" data-filedel="${esc(f.id)}" title="Supprimer">${TRASH}</span></span></button>`;
+  }
+  /* fichier reçu par Alixo Share (vue d'un dossier partagé) : même ligne, sans suppression ni glisser-déposer */
+  function sharedRowHTML(it) {
+    const f = it.raw, k = kindOf(f.name);
+    return `<button class="lib-row row-file shared-card" data-shfile="${esc(f.id)}" data-sid="${esc(f.sid)}" style="--mc:${esc(k.color)}" title="${esc(f.name)}">
+        <span class="row-type">${typeChipHTML(null, { label: k.label, color: k.color })}</span>
+        <span class="row-main"><span class="row-title">${esc(f.name)}</span><span class="row-sub">${esc(rowSub(f))}</span></span>
+        <span class="row-where">partagé</span><span class="row-date">${f.createdAt ? fmtRowDate(f.createdAt) : ''}</span><span class="row-acts"></span></button>`;
   }
   const sideTreeHTML = fid => inFolder(fid).map(f => `<div class="tree-row doc file"><button class="tree-caret leaf">▶</button><button class="tree-label" data-file="${f.id}" title="Ouvrir le fichier">${iconHTML(f.name, 'mini')}<span class="tree-name">${esc(f.name)}</span></button></div>`).join('');
   const libTreeHTML = fid => inFolder(fid).map(f => `<div class="tn"><button class="tn-card tn-doc tn-file" data-file="${f.id}" draggable="true">${iconHTML(f.name, 'mini')}<span class="tn-name">${esc(f.name)}</span></button></div>`).join('');
@@ -530,7 +545,7 @@ window.AlixoFiles = (() => {
   const lib = $('#view-library');
   const hasOsFiles = e => !!(e.dataTransfer && [...e.dataTransfer.types].includes('Files')) && !drag;
   const dropFolderOf = e => {
-    const fc = e.target.closest('.folder-card'); if (fc) return { el: fc, fid: fc.dataset.fid };
+    const fc = e.target.closest(SEL_FOLDER); if (fc && !fc.classList.contains('shared-card')) return { el: fc, fid: fc.dataset.fid };   // 1.47 : carte ou ligne de dossier
     const tn = e.target.closest('.tn-folder, .tn-root'); if (tn) return { el: tn, fid: tn.dataset.tfid || null };
     const row = e.target.closest('#folder-tree .tree-row'); const ob = row && row.querySelector('[data-open]'); if (ob) return { el: row, fid: ob.dataset.open || null };
     return { el: null, fid: currentFolderId };
@@ -653,5 +668,5 @@ window.AlixoFiles = (() => {
   // la bibliothèque a pu être dessinée avant le chargement de ce module
   setTimeout(() => { try { refreshLibrary(); } catch { /* pas encore prête */ } }, 0);
 
-  return { open, openShared, openSharedMenu, pick, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, gridHTML, sharedGridHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
+  return { open, openShared, openSharedMenu, pick, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
 })();

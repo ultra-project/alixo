@@ -11,9 +11,28 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.46.0 (ou nouveautes.html?v=1.46.0 en page seule).
+   Aperçu : index.html?nouveautes=1.47.0 (ou nouveautes.html?v=1.47.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.47.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une bibliothèque<br>plus <em>simple</em>', text: 'Tout au même endroit, un bloc pour reprendre, un menu pour créer.', dur: 5000 },
+    { title: '<em>Reprendre</em> là où vous en étiez', text: 'En haut de Mes cours, le cours en ce moment d’après votre agenda, et vos deux derniers documents.',
+      bullets: ['<b>Cours en cours</b> : barre de progression et « reste N min »', '<b>Prendre des notes</b> : la séance du jour s’ouvre, ou se crée dans le dossier', '<b>Prochain cours</b> : « Préparer la séance » quand rien n’est en cours', '<b>Derniers ouverts</b> : deux documents, un clic pour y revenir'],
+      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 8500 },
+    { title: 'Tout au <em>même endroit</em>', text: 'Séances, fichiers importés et éléments partagés : une seule liste sous vos cartes de cours.',
+      bullets: ['<b>Une ligne</b> par document : puce colorée, titre, aperçu, professeur, date', '<b>Épingle</b> et corbeille au bout de chaque ligne', '<b>Vue Liste</b> : la 4e vue, à côté de Grille, Arbre et Galaxie'],
+      art: 'cards', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
+    { title: '<em>Nouveau</em>, en un clic', text: 'La barre se résume à « Importer » et « Nouveau ▾ » ; le clic droit sur le fond fait la même chose.',
+      bullets: ['<b>Menu Nouveau</b> : séance, présentation, tableur, planche, quiz, dossier…', '<b>Clic droit</b> sur le fond de la bibliothèque, même à la racine', '<b>Dossiers</b> : un menu contextuel allégé, du plus utile au plus rare'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>' }, accent: '#8a4b9c', accent2: '#2e8b6a', dur: 7500 },
+    { title: 'Dossiers et <em>puces</em> de couleur', text: 'Un formulaire de dossier plus compact, et des icônes de type qu’on reconnaît avant de lire.',
+      bullets: ['<b>Puces</b> : séance, présentation, tableur, planche, quiz, chacune sa couleur', '<b>Fichiers</b> PowerPoint, Excel, Word, PDF : un trombone', '<b>Formulaire</b> : 16 couleurs + couleur libre, 112 icônes par onglets'],
+      art: 'palette', accent: '#b3762a', accent2: '#c04343', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.46.0', {
   scenes: [
@@ -49,25 +68,6 @@ AlixoWhatsNew.register('1.45.0', {
     { kicker: 'Correction', title: '« Sauvegarde en ligne », sur <em>une</em> ligne', text: 'Avec un fichier Alixo ouvert depuis l’ordinateur, « Sauvegarde en ligne » s’affichait sur deux lignes.',
       bullets: ['<b>Barre du haut</b> : icône et texte côte à côte', '<b>Même hauteur</b> que les autres boutons'],
       art: { svg: '<svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9H7Z"/><path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5"/></svg>' }, accent: '#c04343', accent2: '#33658a', dur: 6500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.44.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'AlixoAI, de retour<br>sur votre <em>ordinateur</em>', text: 'Une IA qui travaille chez vous, avec un moteur bien plus solide.', dur: 5000 },
-    { title: 'AlixoAI <em>chez vous</em>', text: 'Relecture F7, mise en forme, Quiz IA et fiches (Alixo+) tournent dans l’application Windows et Mac.',
-      bullets: ['<b>Rien n’est envoyé</b> : vos textes restent sur l’ordinateur', '<b>Sans limite</b> d’utilisation', '<b>Hors ligne</b> : tout marche sans connexion'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="11" rx="1.5"/><path d="M2 19h20"/><path d="M12 7.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9Z"/></svg>' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 8000 },
-    { title: 'Un moteur <em>solide</em>', text: 'Si quelque chose se passe mal, la fenêtre d’Alixo reste ouverte et vos cours ne bougent pas.',
-      bullets: ['<b>À part</b> : l’IA tourne seule de son côté, sans gêner Alixo', '<b>Repli</b> sur le processeur si la carte graphique pose problème', '<b>Mémoire</b> : plus de gel de l’ordinateur, libérée après 5 min sans demande'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6Z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg>' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 8000 },
-    { title: 'À <em>installer</em> une fois', text: 'Paramètres › IA › Installer AlixoAI : le bon profil est proposé selon l’ordinateur.',
-      bullets: ['<b>Standard</b> : ≈ 2,5 Go, conseillé dès 12 Go de mémoire vive', '<b>Léger</b> : ≈ 1,1 Go, pour les ordinateurs plus modestes', '<b>Avec votre accord</b> : téléchargement vérifié, reprise si coupure'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="M7.5 9.5L12 14l4.5-4.5"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>' }, accent: '#b3762a', accent2: '#33658a', dur: 8000 },
-    { title: 'Sur le web et le <em>téléphone</em>', text: 'La correction pendant la frappe reste partout ; les outils AlixoAI demandent l’application Windows ou Mac.',
-      bullets: ['<b>Correction</b> de l’orthographe et de la grammaire : partout', '<b>F7, Quiz IA, fiches</b> : dans l’application Windows ou Mac', '<b>Alixo+</b> : privé d’AlixoAI ? Résiliation possible sous 30 jours'],
-      art: 'spell', accent: '#3d6bb5', accent2: '#c04343', dur: 8000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
