@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-29T16:11:37.173Z",
- "version": "1.46.0",
- "date": "2026-10-29T14:32:59Z",
- "notes": "Nouveautés 1.46.0 — Un nouveau look pour l’interface\n\n\n- **Une nouvelle apparence, les mêmes cours.** Alixo change de visage : nouvelle **police d’interface Geist**, nouvelle **palette** claire et sombre plus douce, **accent bleu** par défaut, coins arrondis et espacements revus. Rien ne change dans la façon d’écrire ses cours : l’éditeur de séances, les présentations, les tableurs, les planches et les quiz gardent exactement leur rendu, et les PDF exportés restent identiques.\n- **La barre du haut a un champ de recherche.** Le bouton loupe devient un vrai champ « Rechercher… » au centre de la barre, avec son raccourci affiché (Ctrl K, ⌘ K sur Mac). C’est la même recherche qu’avant, simplement plus visible. Les boutons à droite sont un peu plus grands et plus faciles à viser.\n- **Onglets et explorateur à pastilles.** Chaque onglet de séance ouverte porte une **pastille de la couleur de son dossier**, et l’explorateur de la barre latérale montre la même pastille devant chaque dossier : on repère d’un coup d’œil à quel cours appartient ce qu’on lit.\n- **Des cartes de dossiers plus parlantes.** Dans la bibliothèque, chaque dossier a une **tuile à initiales** (« MA » pour Maths, « HG » pour Histoire-géo…) dans sa couleur, et des puces qui résument son contenu : « 3 séances · 1 dossier · 2 fichiers ». Un dossier vide le dit simplement.\n- **Vos réglages sont conservés.** Les **thèmes de couleurs** de Paramètres › Apparence restent tous disponibles, les **icônes personnalisées** de vos dossiers aussi, et le mode sombre suit toujours votre réglage. Les polices sont **embarquées dans l’application** : rien n’est téléchargé, aucun appel à Google ni à un autre service, et l’interface s’affiche pareil hors ligne. Leurs licences sont dans Aide › Composants tiers.\n- Côté technique : `app/refonte.css`, `app/fonts/`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.46.0",
+ "generatedAt": "2026-10-29T16:20:19.988Z",
+ "version": "1.47.0",
+ "date": "2026-10-29T16:19:58Z",
+ "notes": "Nouveautés 1.47.0 — Une bibliothèque en liste, un bloc « Reprendre » et un menu « Nouveau »\n\n\n- **Tout au même endroit.** Sous les cartes de cours, vos **séances, fichiers importés et éléments partagés** sont réunis dans **une même liste** : une puce de type colorée, le titre, un aperçu, le professeur (ou « par X » pour un partage), la date, et les boutons épingle et corbeille au bout de la ligne. Plus besoin de chercher dans trois blocs différents.\n- **Une 4e vue « Liste ».** À côté de Grille, Arbre et Galaxie, la vue **Liste** affiche tout en lignes, dossiers compris : pratique quand on a beaucoup de cours. Elle est en deuxième position dans la barre de vues, et dans Paramètres › Apparence.\n- **Reprendre là où vous en étiez.** En haut de Mes cours, un bloc **« Reprendre »** affiche le **cours en ce moment** d’après votre agenda, avec sa barre de progression, « reste N min » et un bouton **« Prendre des notes »** (ou « Reprendre les notes » si la séance du jour existe déjà) : il ouvre la séance du jour, ou la crée dans le dossier du cours. Hors cours, c’est le **prochain cours** qui s’affiche, avec « Préparer la séance » — ou « Choisir le cours » si l’événement de l’agenda n’est pas encore relié à un dossier. À côté, les **deux derniers documents ouverts**, pour y revenir d’un clic.\n- **Créer, en un clic.** La barre de création se résume à **« Importer »** et **« Nouveau ▾ »** : le menu propose Séance, Présentation, Tableur, Planche, Quiz, Dossier et Importer, chacun avec sa tuile-lettre. Un **clic droit sur le fond** de la bibliothèque (même à la racine) ouvre le même menu. Le menu contextuel d’un dossier est allégé : Ouvrir, Nouveau ▸, Importer, Ajouter à l’agenda, Renommer / couleur, Déplacer vers, Partager, Télécharger en .zip, Supprimer.\n- **Des puces de type colorées.** Nouvelles icônes pour chaque type : séance en bleu, présentation en orange, tableur en vert, planche en violet, quiz en rose ; les fichiers importés (PowerPoint, Excel, Word, PDF…) portent un trombone. On reconnaît un document avant même de lire son titre.\n- **Un formulaire de dossier plus compact.** Nom et professeur sur une ligne, **16 couleurs** plus une **couleur libre**, et **112 icônes** rangées par onglets. Le champ de recherche de la barre du haut est un peu plus étroit, et les puces des cartes de dossiers ne sautent plus au survol.\n- **Corrections** : « Supprimer » dans le menu contextuel d’un dossier ne faisait rien ; le clic droit sur le fond de la bibliothèque affichait une erreur ; la sécurité des partages est renforcée (les rôles, identifiants et couleurs reçus d’un partage sont contrôlés avant affichage, et les aperçus de texte sont rendus dans un document inerte).\n- Côté technique : `app/js/app.js`, `app/js/files.js`, `app/js/share.js`, `app/styles.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.0",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.46.0/Alixo-Setup.exe",
-   "size": 89256048
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Setup.exe",
+   "size": 89256544
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.46.0/Alixo-Portable.exe",
-   "size": 88451219
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Portable.exe",
+   "size": 88451726
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.46.0/Alixo-Mac.dmg",
-   "size": 206477594
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Mac.dmg",
+   "size": 206500695
   },
   "macZip": {
-   "name": "Alixo-1.46.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.46.0/Alixo-1.46.0-mac.zip",
-   "size": 199042830
+   "name": "Alixo-1.47.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-1.47.0-mac.zip",
+   "size": 199054188
   }
  },
  "history": [
+  {
+   "version": "1.47.0",
+   "date": "2026-10-29T16:19:58Z",
+   "notes": "Nouveautés 1.47.0 — Une bibliothèque en liste, un bloc « Reprendre » et un menu « Nouveau »\n\n\n- **Tout au même endroit.** Sous les cartes de cours, vos **séances, fichiers importés et éléments partagés** sont réunis dans **une même liste** : une puce de type colorée, le titre, un aperçu, le professeur (ou « par X » pour un partage), la date, et les boutons épingle et corbeille au bout de la ligne. Plus besoin de chercher dans trois blocs différents.\n- **Une 4e vue « Liste ».** À côté de Grille, Arbre et Galaxie, la vue **Liste** affiche tout en lignes, dossiers compris : pratique quand on a beaucoup de cours. Elle est en deuxième position dans la barre de vues, et dans Paramètres › Apparence.\n- **Reprendre là où vous en étiez.** En haut de Mes cours, un bloc **« Reprendre »** affiche le **cours en ce moment** d’après votre agenda, avec sa barre de progression, « reste N min » et un bouton **« Prendre des notes »** (ou « Reprendre les notes » si la séance du jour existe déjà) : il ouvre la séance du jour, ou la crée dans le dossier du cours. Hors cours, c’est le **prochain cours** qui s’affiche, avec « Préparer la séance » — ou « Choisir le cours » si l’événement de l’agenda n’est pas encore relié à un dossier. À côté, les **deux derniers documents ouverts**, pour y revenir d’un clic.\n- **Créer, en un clic.** La barre de création se résume à **« Importer »** et **« Nouveau ▾ »** : le menu propose Séance, Présentation, Tableur, Planche, Quiz, Dossier et Importer, chacun avec sa tuile-lettre. Un **clic droit sur le fond** de la bibliothèque (même à la racine) ouvre le même menu. Le menu contextuel d’un dossier est allégé : Ouvrir, Nouveau ▸, Importer, Ajouter à l’agenda, Renommer / couleur, Déplacer vers, Partager, Télécharger en .zip, Supprimer.\n- **Des puces de type colorées.** Nouvelles icônes pour chaque type : séance en bleu, présentation en orange, tableur en vert, planche en violet, quiz en rose ; les fichiers importés (PowerPoint, Excel, Word, PDF…) portent un trombone. On reconnaît un document avant même de lire son titre.\n- **Un formulaire de dossier plus compact.** Nom et professeur sur une ligne, **16 couleurs** plus une **couleur libre**, et **112 icônes** rangées par onglets. Le champ de recherche de la barre du haut est un peu plus étroit, et les puces des cartes de dossiers ne sautent plus au survol.\n- **Corrections** : « Supprimer » dans le menu contextuel d’un dossier ne faisait rien ; le clic droit sur le fond de la bibliothèque affichait une erreur ; la sécurité des partages est renforcée (les rôles, identifiants et couleurs reçus d’un partage sont contrôlés avant affichage, et les aperçus de texte sont rendus dans un document inerte).\n- Côté technique : `app/js/app.js`, `app/js/files.js`, `app/js/share.js`, `app/styles.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.0"
+  },
   {
    "version": "1.46.0",
    "date": "2026-10-29T14:32:59Z",
@@ -220,11 +225,6 @@
    "version": "1.23.2",
    "date": "2026-10-05T08:13:46Z",
    "notes": "Nouveautés 1.23.2 — mise à jour automatique : message réel et journal\n\n\n- **Mise à jour automatique (Windows)** : quand le téléchargement de la nouvelle version échoue, la cloche le dit clairement (serveur de téléchargement injoignable depuis ce réseau, ou le message d'erreur réel) au lieu de « Vérification des mises à jour impossible », et propose d'un clic la page de téléchargement du site pour installer la version par-dessus. Le téléchargement est toujours complet (le téléchargement différentiel échouait dès qu'un installateur avait été republié). Journal des mises à jour dans `%APPDATA%\\Alixo\\updater.log`, à joindre en cas de problème."
-  },
-  {
-   "version": "1.23.1",
-   "date": "2026-10-05T07:59:12Z",
-   "notes": "Nouveautés 1.23.1 — vue par pages : plus de trous ni de saut du défilement\n\n\n- **Vue par pages** : le défilement ne « remonte » plus de deux pages quand on passe à la ligne (les sauts de page sont recalculés avant de replacer le curseur, et le bloc sous le curseur reste au même endroit de l'écran quand une page s'ouvre ou se ferme au-dessus). **Plus de pages presque vides** : un bloc plus haut qu'une page (long tableau, grande image) ne part plus entier à la page suivante, il se coupe à l'écran comme dans le PDF ; un bloc qui déborde légèrement n'ouvre plus une page blanche derrière lui. Les numéros de pages tiennent compte des blocs qui s'étalent sur plusieurs pages ; le PDF reste identique à l'écran."
   }
  ]
 }
