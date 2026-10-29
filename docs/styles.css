@@ -1091,7 +1091,9 @@ body.mode-editor .tbtn.only-editor { display: grid; }
    ============================================================ */
 /* 1.38 : document .alx ouvert depuis le bureau (version PC) — bouton « Sauvegarde en ligne » dans la barre du haut */
 #btn-cloudsave[hidden] { display: none !important; }
-body.mode-slides #btn-cloudsave, body.mode-sheet #btn-cloudsave, body.mode-board #btn-cloudsave, body.mode-quiz #btn-cloudsave { display: flex; }
+/* 1.45 : visible, le bouton est toujours en ligne (icône puis texte) — « body.mode-editor .tbtn.only-editor { display: grid } »
+   le mettait sur deux lignes avec un .alx ouvert depuis l'ordinateur ; même hauteur que les autres boutons de la barre */
+#btn-cloudsave:not([hidden]) { display: flex; align-items: center; justify-content: center; white-space: nowrap; flex-shrink: 0; height: 34px; }
 .tbtn.cloudsave { width: auto; padding: 0 11px 0 9px; gap: 6px; border-radius: 999px; border: 1px solid var(--border); font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-right: 4px; }
 .tbtn.cloudsave svg { width: 17px; height: 17px; }
 .tbtn.cloudsave.on { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, transparent); }
@@ -4552,6 +4554,11 @@ body.pane, body.pane.has-tabs { --topbar-h: 0px; --tabbar-h: 0px; }
 body.pane #topbar, body.pane #tabbar, body.pane #view-library, body.pane #pp-pill:not(:hover) { }
 body.pane #topbar, body.pane #tabbar, body.pane #view-library { display: none !important; }
 body.pane #toolbar { padding-left: 8px; }
+/* 1.45 : « une fenêtre par document » (js/solo.js, index.html?doc=…&solo=1) : la barre supérieure reste, pas d'onglets */
+body.solo, body.solo.has-tabs { --tabbar-h: 0px; }
+body.solo #tabbar { display: none !important; }
+/* la bibliothèque ne doit pas apparaître le temps que le document s'ouvre (pas de « flash » de l'accueil) */
+body.solo:not(.mode-editor):not(.mode-slides):not(.mode-sheet):not(.mode-board):not(.mode-quiz):not(.mode-vtab) #view-library { visibility: hidden; }
 
 /* ---------- 1.36 : IA sur l'appareil (Paramètres › IA, panneau IA) ---------- */
 .ai-localintro { font-size: 12.5px; line-height: 1.5; color: var(--ink-2); margin: 2px 0 10px; }

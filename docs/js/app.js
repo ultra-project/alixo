@@ -16,7 +16,7 @@ const fmtDate = ts => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric',
 
 const DEFAULT_TINT = '#33658a';
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.44.0';
+const ALIXO_VERSION = '1.45.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -51,6 +51,14 @@ const LS_KEY = 'alixo.v1' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix()
    principale, mais pas de barre supérieure, d'onglets, de synchronisation en ligne ni de fenêtres de démarrage */
 const ALIXO_PANE = /[?&]pane=/.test(location.search);
 window.ALIXO_PANE = ALIXO_PANE;
+/* 1.45 : « une fenêtre par document » (js/solo.js) — cette fenêtre n'affiche qu'un document (index.html?doc=<id>&solo=1) :
+   même stockage que l'accueil, pas de barre d'onglets ni de synchronisation en ligne ; fermer le document ferme la fenêtre */
+const ALIXO_SOLO = /[?&]solo=1/.test(location.search);
+const ALIXO_SOLO_ID = ALIXO_SOLO ? (new URLSearchParams(location.search).get('doc') || '') : '';
+window.ALIXO_SOLO = ALIXO_SOLO;
+/* fenêtre auxiliaire (volet ou fenêtre de document) : l'accueil garde la synchronisation, les widgets et les fenêtres de démarrage */
+const ALIXO_AUX = ALIXO_PANE || ALIXO_SOLO;
+window.ALIXO_AUX = ALIXO_AUX;
 let state = null;
 let saveTm = null;
 /* horodatage des réglages (1.16) : la synchronisation garde les réglages les plus récents d'un appareil à
@@ -73,7 +81,7 @@ function save() {
     if (window.AlixoSync) window.AlixoSync.onLocalSave();
     if (window.AlixoAlx && window.AlixoAlx.onLocalSave) window.AlixoAlx.onLocalSave();   // 1.38 : documents .alx du disque
     if (window.AlixoShare && window.AlixoShare.enabled) window.AlixoShare.onLocalSave();
-    if (window.AlixoWidgets && !ALIXO_PANE) window.AlixoWidgets.onSave();
+    if (window.AlixoWidgets && !ALIXO_AUX) window.AlixoWidgets.onSave();
     setSaveStatus('saved');
   }, 350);
 }
@@ -97,6 +105,9 @@ function setSaveStatus(st) {
   if (st === 'saving') { paintSaveStatus('saving', 'Enregistrement en cours…'); return; }
   const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const sync = window.AlixoSync && window.AlixoSync.enabled;
+  /* 1.45 : une fenêtre de document ne synchronise pas elle-même ; avec un compte, c'est la fenêtre d'accueil qui s'en charge */
+  const viaHome = ALIXO_SOLO && !sync && window.AlixoAuth && AlixoAuth.isConfigured && AlixoAuth.account();
+  if (viaHome) { paintSaveStatus('saved', `Enregistré à ${t} — synchronisé par la fenêtre d’accueil`); return; }
   paintSaveStatus(sync ? 'saved' : 'local', `Enregistré à ${t}${sync ? ' · synchronisé' : ' sur cet appareil'}`);
 }
 window.AlixoSaveStatus = paintSaveStatus;
@@ -250,7 +261,7 @@ const FOLDER_ICON_BIG = '<svg class="fbig" viewBox="0 0 24 24"><path d="M3 7a2 2
    ============================================================ */
 /* position de lecture de chaque séance ouverte en onglet : on la retrouve en revenant sur l'onglet ;
    un onglet fermé (ou une séance rouverte depuis la bibliothèque) repart du haut */
-const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : '');
+const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
 let tabScroll = {};
 function loadTabScroll() { try { const t = JSON.parse(localStorage.getItem(TABSCROLL_LS)); tabScroll = t && typeof t === 'object' ? t : {}; } catch { tabScroll = {}; } }
 function saveTabScroll() { try { localStorage.setItem(TABSCROLL_LS, JSON.stringify(tabScroll)); } catch { /* stockage indisponible */ } }
@@ -528,7 +539,7 @@ $('#page-tabs').addEventListener('contextmenu', e => {
 const ppPage = $('#pp-page'); if (ppPage) ppPage.addEventListener('click', addPage);
 
 /* ---------------- onglets : plusieurs séances ouvertes en même temps ---------------- */
-const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : '');
+const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
 let openTabs = [];
 function loadTabs() { try { const t = JSON.parse(localStorage.getItem(TABS_LS)); openTabs = Array.isArray(t) ? t : []; } catch { openTabs = []; } }
 function renderTabs() {
@@ -1390,7 +1401,15 @@ function tombstone(kind, id) {
   if (!state.deleted[kind]) state.deleted[kind] = {};
   state.deleted[kind][id] = Date.now();
 }
-function untomb(kind, id) { if (state.deleted && state.deleted[kind]) delete state.deleted[kind][id]; }
+function untomb(kind, id) {
+  const ts = state.deleted && state.deleted[kind] ? +state.deleted[kind][id] || 0 : 0;
+  if (ts) delete state.deleted[kind][id];
+  /* 1.45 : l'élément restauré redevient strictement plus récent que la pierre tombale lue par les autres fenêtres (js/split.js,
+     js/solo.js), même si celle-ci est datée du futur */
+  const list = kind === 'docs' ? state.docs : kind === 'folders' ? state.folders : null;
+  const it = Array.isArray(list) ? list.find(x => x && x.id === id) : null;
+  if (it) it.updatedAt = Math.max(Date.now(), ts + 1);
+}
 function isTombstoned(kind, id, since = 0) {
   const t = state.deleted && state.deleted[kind] && state.deleted[kind][id];
   return !!t && t >= since;
@@ -2942,7 +2961,7 @@ function applyDocFont() {
 const SET_CATS = [
   { k: 'compte', name: 'Compte', sub: 'Connexion, profil, stockage, pseudo Alixo Share' },
   { k: 'plus', name: 'Alixo+', sub: 'Votre formule, clé d’activation' },
-  { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fond d’écran des documents' },
+  { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fenêtres, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Police, plan du cours et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction pendant la frappe, AlixoAI' },
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
@@ -3088,7 +3107,9 @@ function settingsSectionHTML(k) {
       <div class="set-tiles" id="set-view">
         ${[['grid', 'Grille', 'Cartes des dossiers et séances'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
       </div>
-      <div class="po-hint">Le bouton en haut de la bibliothèque permet aussi de changer d’affichage à tout moment.</div></div>${window.AlixoWall ? AlixoWall.settingsHTML() : ''}`;
+      <div class="po-hint">Le bouton en haut de la bibliothèque permet aussi de changer d’affichage à tout moment.</div></div>
+    ${document.body.classList.contains('mobile') ? '' : `<div class="set-sect"><div class="po-label">Fenêtres</div>
+      <div class="set-checks" id="set-windows"><label><input type="checkbox" role="switch" data-set="windowPerDoc" ${state.settings.windowPerDoc ? 'checked' : ''}><span><b>Une fenêtre par document</b><small>${IS_DESKTOP ? 'Chaque document ouvert depuis l’accueil s’ouvre dans sa propre fenêtre Alixo, sans barre d’onglets, comme dans Word. L’accueil reste ouvert. À l’activation, les onglets ouverts se ferment.' : 'Chaque document ouvert depuis l’accueil s’ouvre dans un nouvel onglet du navigateur, sans barre d’onglets Alixo ; l’accueil reste ouvert. À l’activation, les onglets Alixo ouverts se ferment.'}</small></span></label></div></div>`}${window.AlixoWall ? AlixoWall.settingsHTML() : ''}`;
   if (k === 'ecriture') return `<div class="set-sect"><div class="po-label">Police des cours</div>
       <div class="po-hint" style="margin:0 0 10px">Police du texte des séances (paragraphes, listes, encadrés). Les titres suivent la même police, sauf choix contraire ci-dessous. L’export PDF l’utilise aussi.</div>
       <div class="set-tiles set-tiles4 set-fonts" id="set-font">
@@ -3185,6 +3206,8 @@ function bindSettingsSection(k, root) {
       root.querySelectorAll('#set-theme .set-tile').forEach(t => t.classList.toggle('on', t === b));
     });
     root.querySelector('#set-themebtn').addEventListener('change', e => { if (e.target.dataset.set !== 'showThemeBtn') return; state.settings.showThemeBtn = e.target.checked; save(); applyTheme(); });
+    /* 1.45 : une fenêtre par document (js/solo.js) */
+    if (root.querySelector('#set-windows')) root.querySelector('#set-windows').addEventListener('change', e => { if (e.target.dataset.set !== 'windowPerDoc') return; state.settings.windowPerDoc = e.target.checked; save(); if (window.AlixoSolo) AlixoSolo.applySetting(); });
     root.querySelector('#set-view').addEventListener('click', e => {
       const b = e.target.closest('[data-view]'); if (!b) return;
       state.settings.libView = b.dataset.view; save();
@@ -11237,6 +11260,8 @@ window.AlixoApp = {
     current: () => (isVTabId(currentDocId) ? currentDocId : null),
     info: vtabInfo,
     list: () => openTabs.slice(),
+    /* 1.45 : ce que le module de la vue sait rétablir pour cet identifiant ({ title, icon, data }) ou null (js/solo.js) */
+    restoreFor(id) { const h = vtabKinds[vtabKind(id)]; try { return h && h.restore ? h.restore(id) : null; } catch (err) { console.error(err); return null; } },
     /* la vue affichée veut la barre d'outils des séances (#toolbar) ou le volet du plan : elle le dit ici */
     showChrome({ toolbar = false } = {}) { $('#toolbar').hidden = !toolbar; }
   },
@@ -11354,7 +11379,7 @@ if (window.AlixoZoom) {
 }
 /* premier passage : si la synchro est inactive (hors ligne, mode local avec compte),
    c'est ici qu'on propose le questionnaire ; sinon js/sync.js le fait après la fusion */
-setTimeout(() => { if (!ALIXO_PANE && (!window.AlixoSync || !window.AlixoSync.enabled)) maybeOnboard(); }, 800);
+setTimeout(() => { if (!ALIXO_AUX && (!window.AlixoSync || !window.AlixoSync.enabled)) maybeOnboard(); }, 800);
 /* 1.26 : présentation animée des nouveautés (js/whatsnew.js + js/whatsnew-scenes.js), jouée une fois au premier
    lancement après une mise à jour — jamais par-dessus la connexion, le questionnaire de bienvenue ou un compte suspendu.
    Aperçu à tout moment : index.html?nouveautes=1 (version courante) ou ?nouveautes=1.25.0. */
@@ -11369,7 +11394,7 @@ function showWhatsNew(version, tries) {
 }
 /* au démarrage : présentation animée + notification « nouvelle version installée », puis bilan de la semaine (à chaque ouverture) */
 setTimeout(() => {
-  if (ALIXO_PANE) return;   // un volet de l'écran partagé : la fenêtre principale s'en charge
+  if (ALIXO_AUX) return;   // un volet de l'écran partagé ou une fenêtre de document : la fenêtre principale s'en charge
   try {
     const wn = new URLSearchParams(location.search).get('nouveautes');
     if (wn) showWhatsNew(wn === '1' ? ALIXO_VERSION : wn);
@@ -11381,7 +11406,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'AlixoAI fonctionne désormais entièrement sur votre ordinateur, sans limite et sans rien envoyer — à installer une fois dans Paramètres › IA.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Nouveau réglage : chaque document peut s’ouvrir dans sa propre fenêtre, comme dans Word (Paramètres › Apparence › Fenêtres). Le bouton « Sauvegarde en ligne » tient de nouveau sur une ligne.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

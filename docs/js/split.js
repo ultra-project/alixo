@@ -38,10 +38,39 @@ window.AlixoSplit = (() => {
     let inc; try { inc = JSON.parse(json); } catch { return; }
     if (!inc || !Array.isArray(inc.docs)) return;
     const local = new Map(state.docs.map(d => [d.id, d]));
-    const upserts = inc.docs.filter(r => { const l = local.get(r.id); return !l || (+r.updatedAt || 0) > (+l.updatedAt || 0); });
-    /* la fenêtre principale fait foi pour les suppressions ; un volet ne retire jamais rien chez elle */
-    const removed = PANE ? state.docs.filter(d => !inc.docs.some(r => r.id === d.id)).map(d => d.id) : [];
+    /* 1.45 : pierres tombales (suppressions) fusionnées d'abord — union, horodatage le plus récent — comme entre deux
+       appareils (js/sync.js) : une fenêtre de document ne ressuscite plus une séance supprimée dans l'accueil, et inversement */
+    const incDeleted = inc.deleted && typeof inc.deleted === 'object' ? inc.deleted : null;
+    const incDocs = new Map(inc.docs.filter(r => r && r.id).map(r => [r.id, r]));
+    /* une pierre tombale datée du futur (horloge faussée, stockage altéré) n'est jamais reprise : elle effacerait tout ce qui suit */
+    const sane = ts => +ts > 0 && +ts <= Date.now() + 60000;
+    if (incDeleted) {
+      if (!state.deleted) state.deleted = {};
+      for (const kind of ['docs', 'folders']) {
+        const src = incDeleted[kind]; if (!src || typeof src !== 'object') continue;
+        if (!state.deleted[kind]) state.deleted[kind] = {};
+        for (const [id, ts] of Object.entries(src)) if (sane(ts)) state.deleted[kind][id] = Math.max(+ts, +state.deleted[kind][id] || 0);
+      }
+    }
+    /* l'autre fenêtre a restauré un document (annulation d'une suppression) : sa pierre tombale locale est levée avant la fusion
+       — le document y est plus récent que la tombale, ou il est de nouveau présent sans tombale chez l'autre */
+    if (state.deleted && state.deleted.docs) {
+      for (const [id, ts] of Object.entries(state.deleted.docs)) {
+        const r = incDocs.get(id); if (!r) continue;
+        const otherTomb = incDeleted && incDeleted.docs && sane(incDeleted.docs[id]) ? +incDeleted.docs[id] : 0;
+        if ((+r.updatedAt || 0) > +ts || !otherTomb) delete state.deleted.docs[id];
+      }
+    }
+    const tomb = (d, from) => { const t = from && from.docs && +from.docs[d.id]; return sane(t) && t >= (+d.updatedAt || 0); };
+    const upserts = inc.docs.filter(r => { const l = local.get(r.id); return !tomb(r, state.deleted) && (!l || (+r.updatedAt || 0) > (+l.updatedAt || 0)); });
+    /* un document supprimé par l'autre fenêtre (pierre tombale plus récente que lui) disparaît ici aussi ; avant la 1.45, seule la
+       fenêtre principale faisait foi : un volet ne retirait rien, et un document supprimé ailleurs pouvait réapparaître */
+    const removed = state.docs.filter(d => tomb(d, inc.deleted)).map(d => d.id);
     if (upserts.length || removed.length) AlixoApp.applyRemoteDocs(upserts, removed);
+    /* convergence : si cette fenêtre tient une version plus récente (ou un document que l'autre n'a pas), on la réécrit : l'autre
+       fenêtre la reprendra par le même événement « storage », et la dernière modification n'est jamais écrasée à la fermeture */
+    const ahead = state.docs.some(d => { const r = incDocs.get(d.id); return r ? (+d.updatedAt || 0) > (+r.updatedAt || 0) : !tomb(d, inc.deleted); });
+    if (ahead && !upserts.length && !removed.length) save();
     const foldersChanged = JSON.stringify(inc.folders || []) !== JSON.stringify(state.folders || []);
     const settingsNewer = (+inc.settingsAt || 0) > (+state.settingsAt || 0);
     if (foldersChanged || settingsNewer) AlixoApp.applyRemoteMeta(foldersChanged ? inc.folders : null, settingsNewer ? inc.settings : null, Array.isArray(inc.events) ? inc.events : null, { settingsAt: +inc.settingsAt || 0, todos: inc.todos, todoCats: inc.todoCats });
@@ -294,6 +323,7 @@ window.AlixoSplit = (() => {
 
   /* ---------------- rétablissement au démarrage ---------------- */
   function restore() {
+    if (window.ALIXO_SOLO) return;   // 1.45 : une fenêtre de document n'a pas de volets
     let saved = null; try { saved = JSON.parse(localStorage.getItem(LS)); } catch { saved = null; }
     if (!saved || !Array.isArray(saved.panes) || !saved.panes.length) return;
     if (document.body.classList.contains('mobile')) return;

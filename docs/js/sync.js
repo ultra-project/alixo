@@ -13,7 +13,7 @@
 window.AlixoSync = (() => {
   const A = window.AlixoAuth;
   const app = window.AlixoApp;
-  if (!A || !A.isConfigured || !A.account() || !app || window.ALIXO_PANE) {   // 1.35 : un volet de l'écran partagé ne synchronise pas (la fenêtre principale le fait)
+  if (!A || !A.isConfigured || !A.account() || !app || window.ALIXO_AUX) {   // 1.35 : un volet de l'écran partagé (1.45 : ou une fenêtre de document) ne synchronise pas (la fenêtre principale le fait)
     return { enabled: false, onLocalSave() {}, status: () => 'inactif' };
   }
 

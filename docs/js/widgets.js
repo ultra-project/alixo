@@ -235,7 +235,7 @@ window.AlixoWidgets = (() => {
   /* rappel unique (premier lancement de la 1.43), si le lancement au démarrage n'est pas activé ; jamais par-dessus la
      connexion, le questionnaire de bienvenue, les nouveautés ou une autre fenêtre ; rien si l'installateur a déjà posé la question */
   function maybeAskLogin(tries) {
-    if (window.ALIXO_PANE || !loginSupported()) return;
+    if (window.ALIXO_AUX || !loginSupported()) return;
     try { if (localStorage.getItem(LOGIN_ASKED_LS)) return; } catch { return; }
     const authov = $('#authov');
     if ((authov && !authov.hidden) || $('#obov') || $('#suspov') || $('#updov') || $('#wnov') || $('.dlgov') || document.hidden) {
@@ -487,7 +487,7 @@ window.AlixoWidgets = (() => {
     d0.screen().then(s => { if (s && s.w && s.h) screen = { w: s.w, h: s.h }; }).catch(() => {});
     setTimeout(() => sync(true), 400);
     setInterval(() => { if (active()) publish(); }, 30000);
-    if (!window.ALIXO_PANE) setTimeout(() => maybeAskLogin(0), 6000);
+    if (!window.ALIXO_AUX) setTimeout(() => maybeAskLogin(0), 6000);
   }
   matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => publish());
 
