@@ -10,8 +10,8 @@ body.mobile { height: calc(var(--vh, 1vh) * 100); }
 body.mobile #topbar { padding: 0 6px 0 4px; }
 body.mobile .logo { padding: 4px 6px 4px 2px; gap: 6px; }
 body.mobile .logo-name { display: none; }
-body.mobile .crumbs .chip, body.mobile .crumbs .sep, body.mobile .crumbs .crumb-root, body.mobile .crumbs > span { display: none; }
-body.mobile #tb-title { max-width: 44vw; font-size: 14px; }
+body.mobile .crumbs .chip, body.mobile .crumbs .sep, body.mobile .crumbs .crumb-root, body.mobile .crumbs .crumb-more, body.mobile .crumbs > span { display: none; }
+body.mobile #tb-title { min-width: 70px; max-width: 44vw; font-size: 14px; }
 body.mobile #cal-now, body.mobile #timer-now, body.mobile #save-status, body.mobile #btn-theme { display: none !important; }
 body.mobile .tbtn { width: 36px; height: 36px; }
 body.mobile .tb-sq, body.mobile .tb-kbd { display: none; }   /* 1.46 : le champ de recherche de bureau reste un simple bouton loupe */

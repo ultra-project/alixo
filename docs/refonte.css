@@ -17,9 +17,18 @@
    ============================================================ */
 #topbar { background: var(--topbar-bg); padding: 0 16px 0 12px; }
 .tb-left { gap: 14px; flex: 1 1 auto; }
-.logo { gap: 8px; padding: 4px 8px 4px 4px; border-radius: 8px; }
+.logo { gap: 8px; padding: 4px 8px 4px 4px; border-radius: 8px; flex: none; white-space: nowrap; }   /* 1.47 : jamais sur deux lignes */
 .logo-mark img { width: 28px; height: 28px; }
 .logo-name { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
+/* 1.47 : la formule (« Business ») est un badge à côté du nom, pas une seconde ligne */
+.logo-plan {
+  font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: .06em; text-transform: uppercase;
+  padding: 3px 6px; border-radius: 5px; background: var(--accent-soft); color: var(--accent);
+}
+/* mode éditeur, écrans ≤ 1280 px : le pictogramme suffit (le bouton garde son aria-label) */
+@media (max-width: 1280px) {
+  body.mode-editor .logo-name, body.mode-editor .logo-plan { display: none; }
+}
 .crumbs { font-size: 13px; }
 .crumbs .chip, .crumbs .crumb-root { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tb-right { gap: 6px; }
@@ -42,14 +51,18 @@
   flex: none; font-family: var(--font-mono); font-size: 11px; font-weight: 500; line-height: 1;
   padding: 4px 6px; border-radius: 5px; border: 1px solid var(--border); background: var(--surface-2); color: var(--ink-3);
 }
-/* écrans étroits (et mode éditeur dès 1100px, où la barre d'outils prend la place) : icône seule, 44px comme ses voisins */
+/* écrans étroits (bibliothèque) : icône seule, 44px comme ses voisins */
 @media (max-width: 900px) {
   .tbtn.tb-search { width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; }
   .tb-sq, .tb-kbd { display: none; }
 }
-@media (max-width: 1100px) {
-  body.mode-editor .tbtn.tb-search { width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; }
-  body.mode-editor .tb-sq, body.mode-editor .tb-kbd { display: none; }
+/* 1.47 : en mode éditeur la recherche est le premier élément sacrifié — loupe seule, sauf sur très grand écran
+   (≥ 1700 px : champ fixe de 260 px, qui ne concurrence plus le titre ni le fil d'Ariane) */
+body.mode-editor .tbtn.tb-search { width: 44px; min-width: 44px; height: 44px; padding: 0; justify-content: center; flex: none; }
+body.mode-editor .tb-sq, body.mode-editor .tb-kbd { display: none; }
+@media (min-width: 1700px) {
+  body.mode-editor .tbtn.tb-search { width: 260px; height: 38px; padding: 0 12px; justify-content: flex-start; }
+  body.mode-editor .tb-sq, body.mode-editor .tb-kbd { display: revert; }
 }
 
 /* ============================================================
