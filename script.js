@@ -1,43 +1,69 @@
 /* ============================================================
    Alixo — Site vitrine (v4)
    Téléchargement direct, version et poids live (/releases.json),
-   macOS auto-détecté (le bouton Mac passe en tête dans le hero),
-   thème, menu mobile, apparition au défilement, captures (onglets,
-   alternance automatique, inclinaison 3D du cadre), halo au survol
-   des cartes, Coco.
+   macOS auto-détecté (le bouton Mac passe en tête dans le hero, la carte Mac est mise en avant),
+   mobile détecté (le bouton principal ouvre l'application), thème, menu mobile,
+   apparition au défilement, captures (onglets, alternance automatique, inclinaison 3D du cadre),
+   halo au survol des cartes, Coco.
    Le site ne nomme jamais l'hébergement des fichiers : les pages /telecharger/… s'en chargent en arrière-plan.
    ============================================================ */
 
 const DL_PAGE = { setup: '/telecharger/windows/', portable: '/telecharger/windows-portable/', mac: '/telecharger/mac/' };
-let EXE_URL = null;   // adresse directe du fichier (lue dans releases.json) ; sinon la page /telecharger/windows/ s'en charge
+let EXE_URL = null;       // adresse directe du fichier Windows (lue dans releases.json) ; sinon la page /telecharger/windows/ s'en charge
+let MAC_URL_FILE = null;  // adresse directe du fichier Mac ; sinon la page /telecharger/mac/
+
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- Détection de la plateforme ---------- */
+const isMac = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
+const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchend' in document && innerWidth < 900);
 
 /* ---------- Téléchargement direct ---------- */
 const dlToast = document.getElementById('dl-toast');
+const dlFallback = document.getElementById('dl-fallback');
 let toastTimer;
 
-function startDownload() {
-  if (!EXE_URL) { location.href = DL_PAGE.setup; return; }
+/* Lance le téléchargement d'un fichier via un lien invisible, puis affiche le toast ;
+   le lien de secours du toast pointe vers la page /telecharger/… de la plateforme. */
+function triggerFile(url, fallbackPage, fallbackLabel) {
   const a = document.createElement('a');
-  a.href = EXE_URL;
+  a.href = url;
   a.rel = 'noopener';
   document.body.appendChild(a);
   a.click();
   a.remove();
+  if (dlFallback) { dlFallback.href = fallbackPage; dlFallback.textContent = fallbackLabel; }
   dlToast.hidden = false;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => { dlToast.hidden = true; }, 8000);
 }
 
+function startDownload() {
+  if (isMac) { location.href = DL_PAGE.mac; return; }
+  if (!EXE_URL) { location.href = DL_PAGE.setup; return; }
+  triggerFile(EXE_URL, DL_PAGE.setup, 'clique ici pour la version Windows');
+}
+
+function startMacDownload() {
+  if (!MAC_URL_FILE) { location.href = DL_PAGE.mac; return; }
+  triggerFile(MAC_URL_FILE, DL_PAGE.mac, 'clique ici pour la version Mac');
+}
+
+/* [data-download] ne vit que sur les deux boutons explicitement Windows (hero et carte Windows) */
 document.querySelectorAll('[data-download]').forEach(el => {
   el.addEventListener('click', (e) => { e.preventDefault(); startDownload(); });
+});
+/* Boutons Mac (hero et carte) : téléchargement direct dès que l'adresse du fichier est connue */
+['hero-mac', 'btn-mac'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', (e) => { if (MAC_URL_FILE) { e.preventDefault(); startMacDownload(); } });
 });
 dlToast.querySelector('.dl-toast-close').addEventListener('click', () => {
   clearTimeout(toastTimer);
   dlToast.hidden = true;
 });
 
-/* ---------- Détection macOS : dans le hero, le bouton Mac devient le bouton principal et passe en premier ---------- */
-const isMac = /Mac|iPhone|iPad/.test(navigator.platform || '') || /Macintosh/.test(navigator.userAgent);
+/* ---------- macOS : dans le hero, le bouton Mac devient le bouton principal et passe en premier ; la carte Mac est mise en avant ---------- */
 if (isMac) {
   const win = document.getElementById('hero-win');
   const mac = document.getElementById('hero-mac');
@@ -46,6 +72,23 @@ if (isMac) {
     mac.classList.remove('ghost'); mac.classList.add('primary');
     mac.style.order = '-1';
   }
+  const cardWin = document.querySelector('.dl-card.win');
+  const cardMac = document.querySelector('.dl-card.mac');
+  if (cardWin && cardMac) { cardWin.classList.remove('win'); cardMac.classList.add('win'); }
+}
+
+/* ---------- Mobile : pas de fichier à télécharger, le bouton principal ouvre l'application ---------- */
+if (isMobile) {
+  const win = document.getElementById('hero-win');
+  const mac = document.getElementById('hero-mac');
+  if (win) {
+    const open = win.cloneNode(false);           /* clone sans enfants : l'écouteur de téléchargement ne suit pas */
+    open.removeAttribute('data-download');
+    open.href = 'https://alixoapp.com/docs/';
+    open.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>Ouvrir Alixo sur ton téléphone';
+    win.replaceWith(open);
+  }
+  if (mac) { mac.hidden = true; mac.style.display = 'none'; }   /* .btn est inline-flex : [hidden] seul ne suffit pas */
 }
 
 /* ---------- Version et poids (/releases.json) ---------- */
@@ -68,6 +111,7 @@ fetch('/releases.json', { cache: 'no-cache' })
       document.querySelectorAll('.js-size').forEach(el => { el.textContent = mo; });
     }
     const mac = assets.mac;
+    if (mac && mac.url) MAC_URL_FILE = mac.url;
     if (mac && mac.size) {
       /* le séparateur vit dans le span : rien ne traîne tant que le poids n'est pas connu */
       const mo = ' · ' + toMo(mac.size);
@@ -150,24 +194,33 @@ const shotTabs = [...document.querySelectorAll('.shots-tab')];
 const shotImgs = [...document.querySelectorAll('.shot')];
 const shotTitle = document.getElementById('shots-title');
 function showShot(key) {
-  shotTabs.forEach(t => { const on = t.dataset.shot === key; t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false'); });
-  shotImgs.forEach(i => i.classList.toggle('on', i.dataset.shot === key));
+  shotTabs.forEach(t => { const on = t.dataset.shot === key; t.classList.toggle('active', on); t.setAttribute('aria-pressed', on ? 'true' : 'false'); });
+  shotImgs.forEach(i => { const on = i.dataset.shot === key; i.classList.toggle('on', on); i.setAttribute('aria-hidden', on ? 'false' : 'true'); });
   shotTitle.textContent = SHOT_TITLES[key] || '';
 }
 shotTabs.forEach(t => t.addEventListener('click', () => showShot(t.dataset.shot)));
 
-let autoSwap = setInterval(() => {
-  const stage = document.getElementById('demo');
-  const r = stage.getBoundingClientRect();
+/* Alternance automatique : pas en mouvement réduit ; suspendue tant que la souris ou le focus est sur les captures ; stoppée au premier clic sur un onglet */
+const demoStage = document.getElementById('demo');
+let autoSwap = null;
+const nextShot = () => {
+  const r = demoStage.getBoundingClientRect();
   if (r.bottom < 0 || r.top > window.innerHeight) return;
   const i = shotTabs.findIndex(t => t.classList.contains('active'));
   showShot(shotTabs[(i + 1) % shotTabs.length].dataset.shot);
-}, 7000);
-document.querySelector('.shots-tabs').addEventListener('click', () => clearInterval(autoSwap), { once: true });
+};
+let autoStopped = reduceMotion;
+const autoStart = () => { if (!autoStopped && autoSwap === null) autoSwap = setInterval(nextShot, 7000); };
+const autoPause = () => { clearInterval(autoSwap); autoSwap = null; };
+autoStart();
+demoStage.addEventListener('pointerenter', autoPause);
+demoStage.addEventListener('focusin', autoPause);
+demoStage.addEventListener('pointerleave', autoStart);
+demoStage.addEventListener('focusout', (e) => { if (!demoStage.contains(e.relatedTarget)) autoStart(); });
+document.querySelector('.shots-tabs').addEventListener('click', () => { autoStopped = true; autoPause(); }, { once: true });
 
 /* Le cadre est incliné en haut de page et se redresse en arrivant au centre de l'écran */
 const frame = document.getElementById('shots-frame');
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if (frame && !reduceMotion && window.matchMedia('(min-width: 641px)').matches) {
   let ticking = false;
   const tilt = () => {
