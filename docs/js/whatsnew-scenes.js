@@ -11,9 +11,25 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.47.0 (ou nouveautes.html?v=1.47.0 en page seule).
+   Aperçu : index.html?nouveautes=1.47.1 (ou nouveautes.html?v=1.47.1 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.47.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Correctif installé', title: 'La barre du haut<br><em>respire</em>', text: 'Dans l’éditeur, le titre et le chemin du document passent en premier.', dur: 5000 },
+    { title: 'Le <em>titre</em> d’abord', text: 'Le titre du document et son fil d’Ariane gardent leur place, même sur un petit écran.',
+      bullets: ['<b>Titre</b> toujours lisible, jamais écrasé par le reste de la barre', '<b>Fil d’Ariane</b> : « Mes cours » et le dossier du document restent entiers', '<b>Sauvegarde en ligne</b> en icône seule sur les écrans moyens'],
+      art: 'text', accent: '#33658a', accent2: '#b3762a', dur: 8000 },
+    { title: 'Les dossiers repliés en <em>« … »</em>', text: 'Quand le chemin est long, les dossiers du milieu se replient ; rien n’est perdu.',
+      bullets: ['<b>Clic</b> sur « … » : retour au dossier précédent', '<b>Survol</b> : le chemin complet s’affiche', '<b>Logo</b> sur une seule ligne, « Alixo » et son badge côte à côte'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="8.5" cy="13.5" r="1" fill="currentColor"/><circle cx="12" cy="13.5" r="1" fill="currentColor"/><circle cx="15.5" cy="13.5" r="1" fill="currentColor"/></svg>' }, accent: '#8a4b9c', accent2: '#33658a', dur: 8000 },
+    { title: 'Moins de <em>place</em> prise', text: 'La recherche devient une loupe et la pastille du cours en cours se fait plus discrète.',
+      bullets: ['<b>Loupe</b> seule dans l’éditeur, Ctrl K (⌘ K) marche toujours', '<b>Cours en cours</b> : pastille bornée, temps restant toujours entier', '<b>Bibliothèque</b> : rien ne change, le champ de recherche y reste'],
+      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
+  ]
+});
 
 AlixoWhatsNew.register('1.47.0', {
   scenes: [
@@ -53,21 +69,3 @@ AlixoWhatsNew.register('1.46.0', {
   ]
 });
 
-AlixoWhatsNew.register('1.45.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une <em>fenêtre</em><br>par document', text: 'Comme dans Word : chaque document dans sa propre fenêtre, si vous le souhaitez.', dur: 5000 },
-    { title: 'Chaque document dans sa <em>fenêtre</em>', text: 'Ouvrir un document depuis l’accueil ouvre une nouvelle fenêtre Alixo, sans barre d’onglets.',
-      bullets: ['<b>L’accueil</b> reste ouvert, à côté', '<b>Fermer</b> la fenêtre ramène à l’accueil', '<b>Déjà ouvert</b> : un second clic ramène sa fenêtre devant'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="2" y="4" width="13" height="10" rx="1.5"/><rect x="9" y="10" width="13" height="10" rx="1.5"/><path d="M2 7h13M9 13h13"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 8000 },
-    { title: 'À vous de <em>choisir</em>', text: 'Paramètres › Apparence › Fenêtres : l’interrupteur « Une fenêtre par document ».',
-      bullets: ['<b>Désactivé</b> : les onglets, comme avant', '<b>Activé</b> : une fenêtre par document, façon Word', '<b>À l’activation</b> : les onglets ouverts se ferment', '<b>Sur le web</b> : un nouvel onglet du navigateur'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="10" rx="5"/><circle cx="16" cy="12" r="3"/></svg>' }, accent: '#8a4b9c', accent2: '#2e8b6a', dur: 7500 },
-    { title: 'Tout reste <em>à jour</em>', text: 'Ce que vous écrivez dans une fenêtre apparaît aussitôt dans l’accueil et sur vos autres appareils.',
-      bullets: ['<b>Titre</b> et contenu visibles dans l’accueil sans recharger', '<b>Suppression</b> dans l’accueil : la fenêtre se ferme', '<b>Rien de perdu</b>, même en fermant très vite'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="2" y="5" width="9" height="14" rx="1.5"/><rect x="13" y="5" width="9" height="14" rx="1.5"/><path d="M2 8h9M13 8h9"/><path d="M9.5 11.5h5M12.5 9.5l2 2-2 2"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
-    { kicker: 'Correction', title: '« Sauvegarde en ligne », sur <em>une</em> ligne', text: 'Avec un fichier Alixo ouvert depuis l’ordinateur, « Sauvegarde en ligne » s’affichait sur deux lignes.',
-      bullets: ['<b>Barre du haut</b> : icône et texte côte à côte', '<b>Même hauteur</b> que les autres boutons'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9H7Z"/><path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5"/></svg>' }, accent: '#c04343', accent2: '#33658a', dur: 6500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});

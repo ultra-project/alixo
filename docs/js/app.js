@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.47.0';
+const ALIXO_VERSION = '1.47.1';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -822,8 +822,13 @@ function renderCrumbs() {
     return;
   }
   const path = folderPath(d.folderId);
+  /* 1.47 : seul le dossier parent reste en chip ; les dossiers intermédiaires se replient en « … » (clic : avant-dernier dossier) */
+  const chip = f => `<span class="sep">›</span><button class="chip" data-nav="${esc(f.id)}" title="Ouvrir le dossier ${esc(f.nom)}">${f.icone ? AlixoIcons.svg(f.icone, 'chip-ico') : ''}${esc(f.nom)}</button>`;
+  const parents = path.length >= 2 ? esc(path.slice(0, -1).map(f => f.nom).join(' › ')) : '';
   c.innerHTML = `<button class="crumb-root" data-nav="" title="Retour à Mes cours">Mes cours</button>` +
-    path.map(f => `<span class="sep">›</span><button class="chip" data-nav="${f.id}" title="Ouvrir le dossier">${f.icone ? AlixoIcons.svg(f.icone, 'chip-ico') : ''}${esc(f.nom)}</button>`).join('') +
+    (path.length >= 2
+      ? `<span class="sep">›</span><button class="crumb-more" data-nav="${esc(path[path.length - 2].id)}" title="${parents}" aria-label="Dossiers parents : ${parents}">…</button>` + chip(path[path.length - 1])
+      : path.map(chip).join('')) +
     `<span class="sep">›</span><input id="tb-title" placeholder="Sans titre" value="${esc(d.titre || '')}" spellcheck="false" autocomplete="off" title="${isSlidesDoc(d) ? 'Renommer la présentation' : isSheetDoc(d) ? 'Renommer le tableur' : isBoardDoc(d) ? 'Renommer la planche' : isQuizDoc(d) ? 'Renommer le quiz' : 'Renommer la séance'}">`;
 }
 
@@ -2786,8 +2791,15 @@ function applyAppLogo() {
   for (const id of ['#app-favicon', '#app-touchicon']) {
     const l = $(id); if (l && l.getAttribute('href') !== src) l.setAttribute('href', src);
   }
+  /* 1.47 : « Alixo Business » = nom « Alixo » + badge « Business » (.logo-plan), jamais sur deux lignes */
   const name = appName();
-  $$('#btn-home .logo-name').forEach(el => { if (el.textContent !== name) el.textContent = name; });
+  const biz = name === 'Alixo Business', short = biz ? 'Alixo' : name;
+  $$('#btn-home .logo-name').forEach(el => { if (el.textContent !== short) el.textContent = short; });
+  $$('#btn-home').forEach(b => {
+    const p = b.querySelector('.logo-plan');
+    if (biz && !p) { const s = document.createElement('span'); s.className = 'logo-plan'; s.textContent = 'Business'; b.appendChild(s); }
+    else if (!biz && p) p.remove();
+  });
   const desk = window.alixoDesktop;
   if (desk && desk.setPlusBranding) { try { desk.setPlusBranding(false); } catch { /* non bloquant */ } }
 }
@@ -11619,7 +11631,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Séances, fichiers et partages réunis dans une même liste (et une nouvelle vue Liste), bloc « Reprendre » en haut de Mes cours avec le cours en ce moment, menu « Nouveau » et clic droit sur le fond de la bibliothèque, puces de type colorées et formulaire de dossier compact.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Barre du haut allégée dans l’éditeur : le titre du document et le fil d’Ariane passent en premier, la recherche devient une loupe, la pastille du cours en cours et le logo tiennent sur une ligne.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
