@@ -18,11 +18,11 @@
 <script>(function(){try{if(/[?&]site(?=&|=|$)/.test(location.search))return;var app='/docs/';var abs=new URL(app,location.href).href;if(document.referrer&&document.referrer.indexOf(abs)===0)return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(s&&s.uid)location.replace(app);}catch(e){}})();</script>
 <link rel="stylesheet" href="/fonts/fonts.css">
 <script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css?v=20261021c">
+<link rel="stylesheet" href="styles.css?v=20261030a">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/logo.png">
-<meta property="og:image" content="https://alixoapp.com/img/shot-droit-light.jpg">
+<meta property="og:image" content="https://alixoapp.com/img/shot-seance-light.jpg">
 <script defer src="/protection.js"></script>
 </head>
 <body class="home">
@@ -36,7 +36,6 @@
     <nav class="nav-links" aria-label="Sections">
       <a href="#fonctions">Fonctionnalités</a>
       <a href="#ia">IA</a>
-      <a href="#plus">Tour</a>
       <a href="#alixo-plus">Alixo+</a>
       <a href="tarifs.html">Tarifs</a>
       <a href="#telecharger">Télécharger</a>
@@ -61,7 +60,6 @@
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
     <a href="#fonctions">Fonctionnalités</a>
     <a href="#ia">Intelligence artificielle</a>
-    <a href="#plus">Le tour d'Alixo</a>
     <a href="#alixo-plus">Alixo+</a>
     <a href="tarifs.html">Tarifs</a>
     <a href="#telecharger">Télécharger</a>
@@ -95,78 +93,53 @@
   <p class="coco-sr" id="coco-live" aria-live="polite"></p>
 </div>
 
+
 <!-- ================= Hero ================= -->
 <section id="top" class="hero">
   <div class="hero-bg" aria-hidden="true"><span class="grid"></span><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
   <div class="hero-inner">
     <a class="pill reveal" href="#ia">
-      <span class="pill-tag">Nouveau</span>
-      <span class="pill-txt">AlixoAI, 100&nbsp;% sur ton ordinateur · <span class="js-version">dernière version</span> · <span id="pill-mac">macOS disponible</span></span>
+      <span class="pill-txt">AlixoAI · <span class="js-version">dernière version</span></span>
       <span class="pill-arrow">→</span>
     </a>
     <h1 class="reveal d1">Ton cours va vite.<br><em>Alixo va plus vite.</em></h1>
     <p class="hero-sub reveal d2">
-      L'application de prise de notes conçue pour l'amphi&nbsp;: <strong>structure juridique automatique</strong>, fiches d'arrêt,
-      formules, graphiques, <strong>AlixoAI</strong>, quiz en direct, planches, tableurs et présentations.
-      Tout au clavier, même hors-ligne.
+      L'application de prise de notes conçue pour l'amphi&nbsp;: cours, tableurs, planches, quiz et présentations. Tout au clavier, même hors-ligne.
     </p>
     <div class="hero-ctas reveal d3">
-      <a class="btn primary big" href="#telecharger" data-download>
+      <a class="btn primary big" id="hero-win" href="#telecharger" data-download>
         <svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
         Télécharger pour Windows
-        <small class="btn-meta">Gratuit · <span class="js-size">72 Mo</span></small>
+        <small class="btn-meta">Gratuit · <span class="js-size">85 Mo</span></small>
       </a>
-      <a class="btn ghost big mac-ready" id="hero-mac" href="/telecharger/mac/" aria-label="Télécharger pour macOS">
+      <a class="btn ghost big" id="hero-mac" href="/telecharger/mac/">
         <svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
-        macOS
-        <span class="soon-badge ok">Disponible</span>
+        Télécharger pour macOS
+        <small class="btn-meta">Gratuit<span id="mac-size-hero"></span></small>
       </a>
-    </div>
-    <div class="hero-web reveal d3">
-      <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Pas envie d'installer&nbsp;? <strong>Essayer dans le navigateur&nbsp;→</strong></a>
-      <span class="hero-web-sep">·</span>
-      <a href="https://alixoapp.com/docs/?login">Déjà un compte&nbsp;? <strong>Se connecter&nbsp;→</strong></a>
-    </div>
-    <div class="hero-trust reveal d3">
-      <span>Sans compte pour télécharger</span>
-      <span>Mises à jour automatiques</span>
-      <span>Fonctionne hors-ligne</span>
-      <span>Web et mobile inclus</span>
-    </div>
-    <div id="mac-notice" class="mac-notice reveal" hidden>
-       La version macOS est disponible. <a href="/telecharger/mac/">Télécharger Alixo pour Mac →</a>
     </div>
   </div>
 
   <!-- Captures réelles de l'application -->
   <div class="shots reveal" id="demo">
     <div class="shots-tabs" role="tablist" aria-label="Choisir un écran de l'application">
-      <button class="shots-tab active" data-shot="droit" role="tab" aria-selected="true">Droit</button>
-      <button class="shots-tab" data-shot="eco" role="tab" aria-selected="false">Économie</button>
-      <button class="shots-tab" data-shot="quiz" role="tab" aria-selected="false">Quiz</button>
-      <button class="shots-tab" data-shot="board" role="tab" aria-selected="false">Planche</button>
+      <button class="shots-tab active" data-shot="seance" role="tab" aria-selected="true">Séance</button>
       <button class="shots-tab" data-shot="sheet" role="tab" aria-selected="false">Tableur</button>
-      <button class="shots-tab" data-shot="galaxy" role="tab" aria-selected="false">Galaxie</button>
-      <button class="shots-tab" data-shot="slides" role="tab" aria-selected="false">Présentations</button>
-      <button class="shots-tab" data-shot="agenda" role="tab" aria-selected="false">Agenda</button>
-      <button class="shots-tab" data-shot="search" role="tab" aria-selected="false">Recherche</button>
+      <button class="shots-tab" data-shot="board" role="tab" aria-selected="false">Planche</button>
+      <button class="shots-tab" data-shot="quiz" role="tab" aria-selected="false">Quiz</button>
+      <button class="shots-tab" data-shot="slides" role="tab" aria-selected="false">Présentation</button>
     </div>
     <div class="shots-glow" aria-hidden="true"></div>
     <div class="shots-frame" id="shots-frame">
-      <div class="shots-bar"><span class="dots"><i></i><i></i><i></i></span><span class="shots-title" id="shots-title">Droit des obligations — fiche d'arrêt, définition, références Légifrance</span><span class="shots-theme-hint" id="shots-theme-hint">Les captures suivent le thème du site</span></div>
+      <div class="shots-bar"><span class="dots"><i></i><i></i><i></i></span><span class="shots-title" id="shots-title">Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt</span><span class="shots-theme-hint" id="shots-theme-hint">Les captures suivent le thème du site</span></div>
       <div class="shots-stage">
-        <img class="shot on timg" data-shot="droit" data-light="img/shot-droit-light.jpg" data-dark="img/shot-droit-dark.jpg" width="2880" height="1800" alt="Alixo — séance de droit des obligations avec plan automatique, encadré définition, références d'articles et fiche d'arrêt" fetchpriority="high">
-        <img class="shot timg" data-shot="eco" data-light="img/shot-eco-light.jpg" data-dark="img/shot-eco-dark.jpg" width="2880" height="1800" alt="Alixo — séance de macroéconomie avec formules rendues et graphique IS-LM" loading="lazy">
-        <img class="shot timg" data-shot="quiz" data-light="img/shot-quiz-light.jpg" data-dark="img/shot-quiz-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types à glisser" loading="lazy">
-        <img class="shot timg" data-shot="board" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Alixo — planche de révision : zones, post-it, formes, flèches et liste à cocher sur un tableau blanc infini" loading="lazy">
+        <img class="shot on timg" data-shot="seance" data-light="img/shot-seance-light.jpg" data-dark="img/shot-seance-dark.jpg" width="2880" height="1800" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high">
         <img class="shot timg" data-shot="sheet" data-light="img/shot-sheet-light.jpg" data-dark="img/shot-sheet-dark.jpg" width="2880" height="1800" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" loading="lazy">
-        <img class="shot timg" data-shot="galaxy" data-light="img/shot-galaxy-light.jpg" data-dark="img/shot-galaxy-dark.jpg" width="2880" height="1800" alt="Alixo — vue Galaxie de la bibliothèque : dossiers et séances en orbite" loading="lazy">
-        <img class="shot timg" data-shot="slides" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de présentations avec palette de blocs et notes" loading="lazy">
-        <img class="shot timg" data-shot="agenda" data-light="img/shot-agenda-light.jpg" data-dark="img/shot-agenda-dark.jpg" width="2880" height="1800" alt="Alixo — agenda mensuel des cours" loading="lazy">
-        <img class="shot timg" data-shot="search" data-light="img/shot-search-light.jpg" data-dark="img/shot-search-dark.jpg" width="2880" height="1800" alt="Alixo — recherche universelle Ctrl+K dans tous les cours" loading="lazy">
+        <img class="shot timg" data-shot="board" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" loading="lazy">
+        <img class="shot timg" data-shot="quiz" data-light="img/shot-quiz-light.jpg" data-dark="img/shot-quiz-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types de questions à glisser" loading="lazy">
+        <img class="shot timg" data-shot="slides" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de présentations : diapositives dans le style du cours, palette de blocs et notes" loading="lazy">
       </div>
     </div>
-    <div class="mock-caption">Captures réelles · un onglet pour changer d'écran · le thème du site s'applique aux captures</div>
   </div>
 </section>
 
@@ -181,8 +154,49 @@
   </div>
 </section>
 
+<!-- ================= Gratuit / Alixo+ ================= -->
+<section id="alixo-plus" class="section">
+  <div class="section-head reveal">
+    <div class="eyebrow">Formules</div>
+    <h2>L'essentiel est gratuit.<br><em>Alixo+ pour aller plus loin.</em></h2>
+    <p>Le compte gratuit suffit pour prendre tes cours. Alixo+ suit ton compte sur PC, Mac, web et téléphone.</p>
+  </div>
+  <div class="plans reveal">
+    <div class="plan">
+      <div class="plan-head"><img src="img/logo.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Pour toujours, sans carte</span></div></div>
+      <div class="plan-price">0 €<small>sans limite de temps</small></div>
+      <ul class="plan-list">
+        <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
+        <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
+        <li>Agenda, dictionnaire, export PDF et Word</li>
+        <li>Alixo Share et travail à plusieurs en direct</li>
+        <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
+        <li>Thèmes clair, sombre, automatique · 3 polices</li>
+      </ul>
+      <a class="btn ghost full" href="#telecharger" data-download>Commencer gratuitement</a>
+    </div>
+    <div class="plan plus">
+      <div class="plan-head"><img src="img/logo-plus.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
+      <div class="plan-price">14,99&nbsp;€<small>par mois, puis jusqu'à 9,99&nbsp;€</small></div>
+      <ul class="plan-list">
+        <li><strong>AlixoAI</strong>&nbsp;: correction approfondie, mise en forme, Quiz IA et fiches de révision, sans limite</li>
+        <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
+        <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
+        <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
+        <li><strong>Stockage au-delà de 3 Go</strong></li>
+      </ul>
+      <a class="btn brand full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application</a>
+      <a class="dl-alt" href="tarifs.html">Voir les tarifs →</a>
+      <details class="plan-note">
+        <summary>Conditions de l'abonnement</summary>
+        <p>Alixo+&nbsp;: 14,99&nbsp;€ par mois ou 149,99&nbsp;€ par an (TTC), puis de moins en moins cher avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois ou 99,99&nbsp;€ par an&nbsp;: voir les <a href="tarifs.html">tarifs</a>. Abonnement mensuel sans engagement, ou annuel reconduit tacitement chaque année&nbsp;; résiliable à tout moment en ligne dans Paramètres › Alixo+, avec effet à la fin de la période payée. Droit de rétractation de 14&nbsp;jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</p>
+      </details>
+    </div>
+  </div>
+</section>
+
 <!-- ================= Fonctionnalités (bento) ================= -->
-<section id="fonctions" class="section">
+<section id="fonctions" class="section alt">
   <div class="section-head reveal">
     <div class="eyebrow">Fonctionnalités</div>
     <h2>Tout ce dont tu as besoin.<br><em>Rien qui te ralentit.</em></h2>
@@ -209,11 +223,10 @@
         <div class="v-ai">
           <div>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>.</div>
           <div class="v-ai-pop">✨ <b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
-          <div class="v-local"><span>AlixoAI</span><span>sur ton appareil</span><span>rien n'est envoyé</span></div>
         </div>
       </div>
       <h3>Correction pendant que tu tapes</h3>
-      <p>Orthographe et grammaire, gratuites pour tous : les corrections sont proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore. Tout se passe sur ton appareil.</p>
+      <p>Orthographe et grammaire, gratuites pour tous&nbsp;: les corrections sont proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore.</p>
     </article>
 
     <article class="card span2 reveal">
@@ -293,28 +306,12 @@
       <h4>Agenda intégré</h4><p>Tes cours dans un calendrier façon Apple. Pendant le cours, «&nbsp;+ séance&nbsp;» ouvre la prise de notes du jour.</p>
     </div>
     <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-4.5-7-11a7 7 0 0 1 14 0c0 6.5-7 11-7 11Z"/><path d="M9 10h6M12 7v6"/></svg></div>
-      <h4>Fiches &amp; scores Santé</h4><p>Pathologie, médicament, cas clinique, ECOS et 15 scores cliniques calculés (Glasgow, Wells, CHA₂DS₂-VASc…).</p>
-    </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16"/></svg></div>
-      <h4>Tableaux, dessins, images</h4><p>Tableaux collés depuis Excel, blocs imbriqués, schémas à main levée, images redimensionnables. Tout part dans l'export.</p>
-    </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M8 6h8M8 11h2M12 11h2M16 11h0M8 15h2M12 15h2M16 15h0M8 19h2M12 19h2"/></svg></div>
-      <h4>Calculatrices intégrées</h4><p>TI-83 Premium CE, Casio fx-92 et calculatrice contextuelle dans un panneau à côté de tes notes.</p>
-    </div>
-    <div class="also-item">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></div>
       <h4>Export impeccable</h4><p>PDF propre avec sommaire, en-tête et date&nbsp;; export Word fidèle&nbsp;; fichiers .alx pour tout emporter.</p>
     </div>
     <div class="also-item">
       <div class="ic"><svg viewBox="0 0 24 24"><path d="M7 17a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8a4.5 4.5 0 0 1 .5 9H7Z"/></svg></div>
       <h4>Hors-ligne &amp; synchronisé</h4><p>Tes notes vivent sur ta machine. Elles se synchronisent avec ton compte dès que tu retrouves du réseau.</p>
-    </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor" stroke="none"/></svg></div>
-      <h4>Clair, sombre, 12 thèmes</h4><p>Pour les amphis à 8h comme les révisions à 2h. Et 80 teintes pour surligner, colorer, dessiner.</p>
     </div>
   </div>
 </section>
@@ -324,159 +321,83 @@
   <div class="ai-band reveal">
     <div>
       <div class="eyebrow">Intelligence artificielle</div>
-      <h2>Voici AlixoAI.<br><em>Tes notes restent chez toi.</em></h2>
-      <p>AlixoAI est l'intelligence artificielle d'Alixo+, comprise dans l'abonnement et <strong>sans aucune limite d'usage</strong>. Dans l'application PC (Windows et Mac), elle fonctionne <strong>entièrement sur ton ordinateur</strong>&nbsp;: le modèle ouvert Qwen3 est téléchargé une seule fois, avec ton accord, puis tout marche même hors ligne. Relecture approfondie, mise en forme, quiz et fiches de révision&nbsp;: <strong>tes notes ne sont envoyées à personne</strong>. La correction pendant la frappe, gratuite pour tous, fonctionne aussi dans le navigateur et sur téléphone.</p>
+      <h2>AlixoAI.<br><em>Rapide, sûre, utile.</em></h2>
+      <p>AlixoAI relit ton cours, corrige tes fautes et te prépare à l'examen, directement dans Alixo. Elle répond en un instant, et tes notes ne sont partagées avec personne.</p>
       <ul class="ai-points">
-        <li>Le Quiz IA commence dès la première question&nbsp;: la suite s'écrit pendant que tu réponds</li>
-        <li>Correction <kbd>F7</kbd>, Quiz IA <kbd>F8</kbd>, analyse pendant la frappe, fiches de révision</li>
-        <li>Un seul téléchargement (environ 2,5&nbsp;Go, ou 1,1&nbsp;Go en profil Léger), puis hors ligne et sans limite</li>
+        <li><strong>Correction</strong>&nbsp;: orthographe et grammaire proposées sous le paragraphe, <kbd>Tab</kbd> pour accepter</li>
+        <li><strong>Quiz IA</strong>&nbsp;: des questions générées depuis ton cours, la première apparaît tout de suite</li>
+        <li><strong>Fiches de révision</strong>&nbsp;: l'essentiel de la séance résumé, prêt à relire</li>
       </ul>
+      <p class="ai-note">Comprise dans <a href="#alixo-plus">Alixo+</a>, sans limite d'usage. La correction pendant la frappe est gratuite pour tous.</p>
     </div>
-    <div class="ai-panel" aria-hidden="true">
-      <div class="ai-panel-head"><b>AlixoAI</b><span>Paramètres › IA</span></div>
-      <div class="ai-models">
-        <div class="ai-model sel"><b>Standard <span class="reco">· sur ton ordinateur</span></b><span>Qwen3-4B-Instruct-2507</span><span class="size">2,5&nbsp;Go</span></div>
-        <div class="ai-model"><b>Léger</b><span>Qwen3-1.7B, dès 8&nbsp;Go de mémoire vive</span><span class="size">1,1&nbsp;Go</span></div>
-        <div class="ai-model"><b>Correction pendant la frappe</b><span>Sur tous les appareils, gratuite pour tous</span><span class="size">✓</span></div>
-      </div>
-      <div class="ai-ready">✓ Téléchargé une fois, puis aucun texte envoyé</div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= Le tour ================= -->
-<section id="plus" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">Le tour</div>
-    <h2>Bien plus qu'un <em>éditeur.</em></h2>
-    <p>Réviser, faire réviser, calculer, organiser, présenter, travailler à plusieurs&nbsp;: tout est dans la même application, synchronisé avec ton compte.</p>
-  </div>
-
-  <div class="feat-row reveal" id="quiz">
-    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-quizplay-light.jpg" data-dark="img/shot-quizplay-dark.jpg" width="2880" height="1800" alt="Quiz Alixo en cours : question, chronomètre et propositions A B C D" loading="lazy"></div></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Quiz</div>
-      <h3>Des quiz pour réviser, ou pour faire jouer tout l'amphi</h3>
-      <p>Choix multiple, vrai / faux, nombre, curseur, réponse écrite, remise en ordre, association, sondage, nuage de mots&nbsp;: dix types de questions à glisser dans le déroulé. <strong>Tester</strong> (<kbd>F5</kbd>) te fait réviser seul&nbsp;; <strong>Présenter en direct</strong> affiche un code et un QR code, chacun répond depuis son téléphone sur <strong>alixoapp.com/quiz</strong>, sans compte.</p>
-      <ul class="feat-list"><li>Révélation avec pourcentages, classement qui bouge, podium animé</li><li>Statistiques par question, export CSV, la plus dure signalée</li><li>Quiz IA (<kbd>F8</kbd>)&nbsp;: Alixo génère les questions depuis ton cours</li></ul>
-      <div class="feat-btns"><a class="btn ghost small" href="/quiz/" target="_blank" rel="noopener">Rejoindre un quiz avec un code →</a></div>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal" id="planches">
-    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Planche Alixo : carte de révision du contrat avec zones, post-it, formes et flèches" loading="lazy"></div></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Planches</div>
-      <h3>Un tableau blanc infini pour tes cartes de révision</h3>
-      <p>Post-it, textes, formes, zones nommées, flèches, images, listes à cocher, stickers, et des <strong>blocs de tes séances</strong> épinglés qui rouvrent le cours au double-clic. Tu déplaces, tu zoomes, tu alignes, tu verrouilles.</p>
-      <ul class="feat-list"><li>Modèles prêts&nbsp;: carte mentale, fiche d'arrêt, plan de dissertation, SWOT, kanban, frise</li><li>Mini-carte, mode présentation plein écran, export PDF</li><li>Synchronisée, partageable, cherchable avec <kbd>Ctrl K</kbd></li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row reveal">
-    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-sheet-light.jpg" data-dark="img/shot-sheet-dark.jpg" width="2880" height="1800" alt="Tableur Alixo avec formules et graphique" loading="lazy"></div></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Tableurs</div>
-      <h3>Un vrai tableur, à côté de tes cours</h3>
-      <p>Budget, données de TD, séries statistiques&nbsp;: un tableur dans n'importe quel dossier. Formules <code>=SOMME(B2:B5)</code>, une cinquantaine de fonctions en français et en anglais, plusieurs feuilles, tri, formats monnaie et pourcentage, graphique de la sélection.</p>
-      <ul class="feat-list"><li>Copier-coller avec Excel, LibreOffice et Google Sheets</li><li>Import et export CSV, export PDF</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal">
-    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-galaxy-light.jpg" data-dark="img/shot-galaxy-dark.jpg" width="2880" height="1800" alt="Vue Galaxie de la bibliothèque Alixo" loading="lazy"></div></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Bibliothèque</div>
-      <h3>Ta bibliothèque en Galaxie, en 2D ou en 3D</h3>
-      <p>Chaque dossier devient un soleil, ses sous-dossiers des planètes, tes séances des étoiles en orbite. Tu tournes, tu zoomes, tu ouvres un cours d'un clic. Grille et arbre restent à portée pour les jours sérieux.</p>
-      <ul class="feat-list"><li>Rendu 3D avec anneaux, halos et champ d'étoiles</li><li>Glisser un astre pour le ranger ailleurs</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row reveal">
-    <div class="feat-wrap"><div class="feat-img-glow" aria-hidden="true"></div><div class="feat-img"><img class="timg" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Éditeur de présentations Alixo" loading="lazy"></div></div>
-    <div class="feat-txt">
-      <div class="feat-tag">Présentations</div>
-      <h3>Des diapos dans le style de tes cours</h3>
-      <p>Un exposé à rendre&nbsp;? 34 blocs à glisser-déposer (titre, liste, fiche d'arrêt, formule, tableau, graphique, frise, QCM, QR code…), 12 thèmes, notes pour l'orateur, mode présentation plein écran avec <kbd>F5</kbd>.</p>
-      <ul class="feat-list"><li>Export PDF, une page 16:9 par diapositive</li><li>Se partage comme une séance</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row rev reveal">
-    <div class="feat-wrap">
-      <div class="feat-img-glow" aria-hidden="true"></div>
-      <div class="collab-card">
-        <div class="collab-head">
-          <span class="collab-title">Séance 4 — La formation</span>
-          <span class="collab-avatars"><i style="--c:#3d6bb5">M</i><i style="--c:#2e8b6a">L</i><i style="--c:#b3762a">T</i></span>
-        </div>
-        <div class="collab-line"><span class="hnum">A.</span> L'offre</div>
-        <div class="collab-line edited" data-who="Léa est dessus">L'offre doit être ferme et précise, faute de quoi elle ne constitue qu'une invitation à entrer en pourparlers.</div>
-        <div class="collab-line">La rétractation de l'offre avant l'expiration du délai…<span class="mock-caret"></span></div>
-        <div class="collab-foot"><span class="collab-dot"></span> 3 personnes en direct · lecture / écriture par membre</div>
-      </div>
-    </div>
-    <div class="feat-txt">
-      <div class="feat-tag">Alixo Share</div>
-      <h3>Travaillez à plusieurs, en direct</h3>
-      <p>Partage une séance, un dossier ou un événement par e-mail ou pseudo. Les membres présents s'affichent dans la barre, le bloc qu'un camarade modifie se colore, et les modifications se fondent bloc par bloc, sans jamais couper ta saisie.</p>
-      <ul class="feat-list"><li>Lecture ou écriture, par membre</li><li>Journal de qui a rejoint, consulté, modifié</li><li>Présentations, tableurs et fichiers partageables aussi</li></ul>
-    </div>
-  </div>
-
-  <div class="feat-row reveal">
-    <div class="feat-wrap">
-      <div class="feat-img-glow" aria-hidden="true"></div>
-      <div class="feat-img phone-wrap"><div class="phone"><img class="timg" data-light="img/shot-mobile-light.jpg" data-dark="img/shot-mobile-dark.jpg" width="780" height="1688" alt="Alixo sur téléphone" loading="lazy"></div></div>
-    </div>
-    <div class="feat-txt">
-      <div class="feat-tag">Partout</div>
-      <h3>Sur PC, dans le navigateur, sur ton téléphone</h3>
-      <p>L'application PC pour l'amphi, la version web pour la BU sans installer, la version mobile pour relire dans le tram. Même compte, mêmes cours, synchronisés.</p>
-      <div class="feat-btns">
-        <a class="btn ghost small" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Ouvrir la version web →</a>
-        <a class="btn ghost small" href="https://alixoapp.com/docs/mobile.html" target="_blank" rel="noopener">Version mobile →</a>
+    <div class="ai-demo" aria-hidden="true">
+      <div class="ai-demo-head"><span class="hnum">A.</span> L'offre et l'acceptation</div>
+      <div class="v-ai">
+        <div>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>. L'offre doit être ferme et précise.</div>
+        <div class="v-ai-pop">✨ <b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ================= Tout au clavier ================= -->
-<section id="raccourcis" class="section">
+<!-- ================= Téléchargement ================= -->
+<section id="telecharger" class="section alt">
   <div class="section-head reveal">
-    <div class="eyebrow">Tout au clavier</div>
-    <h2>Tes mains restent <em>sur les touches.</em></h2>
-    <p>Un «&nbsp;/&nbsp;» ouvre la palette de blocs. Le reste, ce sont des raccourcis que tu connais déjà.</p>
+    <div class="eyebrow">Télécharger</div>
+    <h2>Alixo sur ton ordinateur.<br><em>En un clic.</em></h2>
+    <p>Tu cliques, le fichier se télécharge. Ou tu ouvres Alixo dans ton navigateur.</p>
   </div>
-  <div class="keys-wrap">
-    <div class="palette reveal" aria-hidden="true">
-      <div class="palette-bar"><span class="slash">/</span><span class="typed">arr</span></div>
-      <div class="palette-grp">Droit</div>
-      <div class="palette-item sel"><span class="pi">⚖️</span>Fiche d'arrêt<kbd>↵</kbd></div>
-      <div class="palette-item"><span class="pi">§</span>Référence d'article</div>
-      <div class="palette-grp">Blocs</div>
-      <div class="palette-item"><span class="pi">▦</span>Encadré définition</div>
-      <div class="palette-item"><span class="pi">∑</span>Formule<kbd>Ctrl E</kbd></div>
-      <div class="palette-item"><span class="pi">📈</span>Graphique économique</div>
-      <div class="palette-item"><span class="pi">▤</span>Tableau</div>
-      <div class="palette-foot"><span>↑↓ naviguer</span><span>↵ insérer</span><span>échap fermer</span></div>
+
+  <div class="dl-grid reveal">
+    <div class="dl-card win">
+      <div class="dl-head">
+        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
+        <div><h3>Windows</h3><span class="dl-sub">Windows 10 / 11</span></div>
+      </div>
+      <p class="dl-desc">Installation en une minute, mises à jour automatiques au démarrage.</p>
+      <div class="dl-cta">
+        <a class="btn primary big full" href="/telecharger/windows/" data-download>
+          <span class="btn-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Setup.exe</span>
+          <small class="btn-meta"><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small>
+        </a>
+      </div>
+      <div class="dl-more"><a class="dl-alt" href="/telecharger/windows-portable/">Version portable, sans installation →</a></div>
     </div>
-    <div class="keys reveal d1">
-      <div class="key-row"><span><kbd>/</kbd></span><p>Insérer un bloc : encadré, fiche d'arrêt, formule, graphique, tableau, image, dessin…</p></div>
-      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>K</kbd></span><p>Rechercher dans tous les cours et fichiers</p></div>
-      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>E</kbd></span><p>Ouvrir une formule</p></div>
-      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1…4</kbd></span><p>Titre de niveau I. / A. / 1. / a.</p></div>
-      <div class="key-row"><span><kbd>F7</kbd> <kbd>F8</kbd></span><p>Correction par l'IA, Quiz IA généré depuis le cours</p></div>
-      <div class="key-row"><span><kbd>Tab</kbd></span><p>Accepter la correction ou la mise en forme proposée</p></div>
-      <div class="key-row"><span><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd></span><p>Ouvrir l'agenda</p></div>
-      <div class="key-row"><span><kbd>-&gt;</kbd> <kbd>=&gt;</kbd> <kbd>&lt;=&gt;</kbd></span><p>Deviennent → ⇒ ⇔ automatiquement. Na+ devient Na⁺, &gt;= devient ≥.</p></div>
+
+    <div class="dl-card mac">
+      <div class="dl-head">
+        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
+        <div><h3>macOS</h3><span class="dl-sub">macOS 12 et plus, Intel et Apple Silicon</span></div>
+      </div>
+      <p class="dl-desc">Même application, même compte&nbsp;: tes cours pris ailleurs sont déjà là.</p>
+      <div class="dl-cta">
+        <a class="btn primary big full" href="/telecharger/mac/">
+          <span class="btn-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Mac.dmg</span>
+          <small class="btn-meta"><span class="js-version">Dernière version</span><span id="mac-size"></span></small>
+        </a>
+      </div>
+      <div class="dl-more"><a class="dl-alt" href="/telecharger/mac/">Première ouverture sur Mac&nbsp;: mode d'emploi →</a></div>
+    </div>
+
+    <div class="dl-card web">
+      <div class="dl-head">
+        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
+        <div><h3>Navigateur</h3><span class="dl-sub">Chrome, Edge, Firefox, Safari</span></div>
+      </div>
+      <p class="dl-desc">Rien à installer&nbsp;: la même application, idéale pour essayer ou pour la BU.</p>
+      <div class="dl-cta">
+        <a class="btn ghost big full" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">
+          <span class="btn-label">Ouvrir Alixo dans le navigateur</span>
+          <small class="btn-meta">Sans compte, ou avec le tien</small>
+        </a>
+      </div>
+      <div class="dl-more"><a class="dl-alt" href="https://alixoapp.com/docs/?login">Se connecter →</a></div>
     </div>
   </div>
 </section>
 
 <!-- ================= Comparatif ================= -->
-<section id="pourquoi" class="section alt">
+<section id="pourquoi" class="section">
   <div class="section-head reveal">
     <div class="eyebrow">Comparatif</div>
     <h2>Pourquoi pas juste <em>Word&nbsp;?</em></h2>
@@ -492,7 +413,7 @@
         <tr><td>Fiches d'arrêt, fiches Santé guidées</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Graphiques éco manipulables</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Formules tapées en langage naturel</td><td class="me">✓</td><td class="part">Éditeur d'équations</td><td class="part">LaTeX</td></tr>
-        <tr><td>AlixoAI incluse, sans limite, sur ton ordinateur</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
+        <tr><td>AlixoAI incluse, sans limite</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Quiz en direct depuis le cours</td><td class="me">✓</td><td class="no">✕</td><td class="no">✕</td></tr>
         <tr><td>Recherche dans tous les cours et fichiers</td><td class="me">✓</td><td class="part">Fichier par fichier</td><td class="part">✓</td></tr>
         <tr><td>Travail à plusieurs en direct</td><td class="me">✓</td><td class="part">✓</td><td class="part">✓</td></tr>
@@ -500,173 +421,6 @@
         <tr><td>Prix</td><td class="me">Gratuit · Alixo+ en option</td><td class="part">Abonnement</td><td class="part">Freemium</td></tr>
       </tbody>
     </table>
-  </div>
-</section>
-
-<!-- ================= Chiffres ================= -->
-<section class="section tight">
-  <div class="stats reveal">
-    <div class="stat"><span class="stat-n" data-count="7">0</span><span class="stat-l">filières avec leurs blocs dédiés</span></div>
-    <div class="stat"><span class="stat-n" data-count="10">0</span><span class="stat-l">types de questions de quiz</span></div>
-    <div class="stat"><span class="stat-n" data-count="34">0</span><span class="stat-l">blocs de présentation</span></div>
-    <div class="stat"><span class="stat-n" data-count="15">0</span><span class="stat-l">scores cliniques calculés</span></div>
-    <div class="stat"><span class="stat-n" data-count="0" data-suffix=" €">0</span><span class="stat-l">pour l'essentiel, sans limite de temps</span></div>
-  </div>
-</section>
-
-<!-- ================= Gratuit / Alixo+ ================= -->
-<section id="alixo-plus" class="section">
-  <div class="section-head reveal">
-    <div class="eyebrow">Formules</div>
-    <h2>L'essentiel est gratuit.<br><em>Alixo+ pour aller plus loin.</em></h2>
-    <p>Le compte gratuit garde tout ce qu'il faut pour prendre des notes en amphi. Alixo+ suit ton compte&nbsp;: une seule fois pour le PC, le Mac, le web et le téléphone.</p>
-  </div>
-  <div class="plans reveal">
-    <div class="plan">
-      <div class="plan-head"><img src="img/logo.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Pour toujours, sans carte</span></div></div>
-      <div class="plan-price">0 €<small>sans limite de temps</small></div>
-      <ul class="plan-list">
-        <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
-        <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
-        <li>Agenda, dictionnaire, export PDF et Word</li>
-        <li>Alixo Share et travail à plusieurs en direct</li>
-        <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
-        <li>Thèmes clair, sombre, automatique · 3 polices</li>
-      </ul>
-      <a class="btn ghost full" href="#telecharger" data-download>Commencer gratuitement</a>
-    </div>
-    <div class="plan plus">
-      <div class="plan-head"><img src="img/logo-plus.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
-      <div class="plan-price">14,99&nbsp;€<small>par mois, puis jusqu'à 9,99&nbsp;€</small></div>
-      <ul class="plan-list">
-        <li><strong>AlixoAI</strong>&nbsp;: relecture approfondie, mise en forme, Quiz IA, fiches de révision, sans limite, dans l'application PC</li>
-        <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
-        <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
-        <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
-        <li><strong>Stockage au-delà de 3 Go</strong></li>
-      </ul>
-      <a class="btn brand full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application</a>
-      <a class="dl-alt" href="tarifs.html">Voir les tarifs →</a>
-      <div class="plan-note">Alixo+&nbsp;: 14,99&nbsp;€ par mois ou 149,99&nbsp;€ par an (TTC), puis de moins en moins cher avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois ou 99,99&nbsp;€ par an&nbsp;: voir les <a href="tarifs.html">tarifs</a>. Abonnement mensuel sans engagement, ou annuel reconduit tacitement chaque année&nbsp;; résiliable à tout moment en ligne dans Paramètres › Alixo+, avec effet à la fin de la période payée. Droit de rétractation de 14&nbsp;jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= Téléchargement ================= -->
-<section id="telecharger" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">Télécharger</div>
-    <h2>Alixo sur ton ordinateur.<br><em>En un clic.</em></h2>
-    <p>Pas de compte, pas de page intermédiaire&nbsp;: tu cliques, le fichier se télécharge. Ou tu l'ouvres directement dans ton navigateur.</p>
-  </div>
-
-  <div class="dl-grid reveal">
-    <div class="dl-card win">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
-        <div><h3>Windows</h3><span class="dl-avail">Disponible · Windows 10 / 11</span></div>
-      </div>
-      <a class="btn primary big full" href="/telecharger/windows/" data-download>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
-        Télécharger Alixo-Setup.exe
-        <small class="btn-meta"><span class="js-version">Dernière version</span> · <span class="js-size">71 Mo</span></small>
-      </a>
-      <a class="dl-alt" id="dl-portable" href="/telecharger/windows-portable/">Version portable, sans installation →</a>
-      <ul class="dl-list">
-        <li>Mises à jour automatiques au démarrage</li>
-        <li>Fonctionne hors-ligne</li>
-        <li>Gratuit pour l'essentiel, sans carte ni compte</li>
-      </ul>
-      <div class="dl-hint">
-        Windows affiche un avertissement SmartScreen&nbsp;? C'est normal pour une app récente&nbsp;:
-        «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».
-      </div>
-    </div>
-
-    <div class="dl-card mac available" id="dl-mac">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
-        <div><h3>macOS</h3><span class="dl-soon-tag">Disponible · macOS 12 et plus</span></div>
-      </div>
-      <p class="dl-mac-txt">
-        Même application, mêmes fonctionnalités, même compte&nbsp;: tes cours pris sur Windows ou sur le web sont déjà là.
-      </p>
-      <a class="btn primary big full" id="btn-mac" href="/telecharger/mac/"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg> Télécharger Alixo-Mac.dmg</a>
-      <div class="dl-meta-mac" id="mac-meta" hidden><span class="js-version">Dernière version</span> · <span id="mac-size"></span> · universel Intel / Apple Silicon</div>
-      <ul class="dl-list muted">
-        <li>Universel&nbsp;: Apple Silicon et Intel</li>
-        <li>Synchronisation avec ton compte existant</li>
-        <li>Linux&nbsp;: à l'étude</li>
-      </ul>
-      <div class="dl-hint" id="mac-hint">
-        Au premier lancement, macOS demande une autorisation (application non signée par Apple)&nbsp;: Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;». <a href="/telecharger/mac/">Mode d'emploi →</a>
-      </div>
-    </div>
-
-    <div class="dl-card web">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
-        <div><h3>Navigateur</h3><span class="dl-avail">Disponible · sans installation</span></div>
-      </div>
-      <p class="dl-mac-txt">La même application, dans Chrome, Edge, Firefox ou Safari. Idéal pour essayer, ou pour la BU. Sur téléphone, la version mobile s'ouvre toute seule.</p>
-      <a class="btn ghost big full" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Ouvrir Alixo dans le navigateur</a>
-      <div class="dl-login">
-        <a class="dl-alt" href="https://alixoapp.com/docs/?login">Se connecter →</a>
-        <a class="dl-alt" href="https://alixoapp.com/docs/?login=signup">Créer un compte →</a>
-      </div>
-      <ul class="dl-list">
-        <li>Sans compte&nbsp;: «&nbsp;Continuer sans compte&nbsp;», tout reste sur l'appareil</li>
-        <li>Même compte, mêmes cours que sur PC</li>
-        <li>Toujours au niveau de la version PC</li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<!-- ================= Nouveautés (changelog live) ================= -->
-<section id="nouveautes" class="section">
-  <div class="section-head reveal">
-    <div class="eyebrow">Nouveautés</div>
-    <h2>Une mise à jour <em>chaque semaine.</em></h2>
-    <p>Alixo évolue avec les retours des étudiants. Les versions installées se mettent à jour toutes seules.</p>
-  </div>
-  <div class="news-grid reveal">
-    <a class="news-card" href="#ia">
-      <span class="news-ico" aria-hidden="true">✨</span>
-      <span class="news-tag">À la une</span>
-      <b>Voici AlixoAI</b>
-      <span>L'intelligence artificielle d'Alixo, sur ton ordinateur&nbsp;: correction, Quiz IA dès la première question et fiches de révision, sans limite et sans rien envoyer.</span>
-      <span class="news-more">Découvrir →</span>
-    </a>
-    <a class="news-card" href="#quiz">
-      <span class="news-ico" aria-hidden="true">🏆</span>
-      <span class="news-tag">Quiz</span>
-      <b>Quiz en direct</b>
-      <span>Crée un quiz depuis ton cours, révise seul ou fais jouer le groupe&nbsp;: code, QR code, réponses sur téléphone, classement et statistiques.</span>
-      <span class="news-more">Découvrir les quiz →</span>
-    </a>
-    <a class="news-card" href="#planches">
-      <span class="news-ico" aria-hidden="true">🧩</span>
-      <span class="news-tag">Planches</span>
-      <b>Un tableau blanc infini</b>
-      <span>Post-it, formes, zones, flèches, listes, blocs de cours épinglés et modèles (carte mentale, fiche d'arrêt, plan de dissertation).</span>
-      <span class="news-more">Découvrir les planches →</span>
-    </a>
-  </div>
-  <div class="changelog reveal" id="changelog">
-    <div class="cl-head">
-      <span class="cl-tag js-version">Dernière version</span>
-      <span class="cl-date" id="cl-date"></span>
-    </div>
-    <div class="cl-body" id="cl-body">
-      <ul>
-        <li><strong>AlixoAI</strong> : l'intelligence artificielle d'Alixo, exécutée sur ton ordinateur dans l'application PC, sans limite et sans rien envoyer ; le Quiz IA commence dès la première question.</li>
-        <li><strong>Quiz</strong> : dix types de questions, test en solo, présentation en direct avec code et QR code, statistiques et export CSV.</li>
-        <li><strong>Planches</strong> : tableau blanc infini avec post-it, formes, zones, flèches et modèles prêts à l'emploi.</li>
-        <li><strong>Word comme une séance</strong>, écran partagé, fichiers .alx, table des matières, tableurs, Galaxie 3D, présentations.</li>
-      </ul>
-    </div>
-    <a class="cl-more" href="/versions/">Voir toutes les versions →</a>
   </div>
 </section>
 
@@ -682,32 +436,20 @@
       <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
     </details>
     <details>
-      <summary>L'IA envoie-t-elle mes notes quelque part&nbsp;?</summary>
-      <p>Non. AlixoAI fonctionne entièrement sur ton appareil&nbsp;: la correction pendant la frappe partout, et, dans l'application PC (Windows et Mac), la relecture approfondie (<kbd>F7</kbd>), la mise en forme, les quiz et les fiches (Alixo+). Seul le modèle d'IA est téléchargé, une fois et avec ton accord, depuis Hugging Face&nbsp;; ensuite, tout marche hors ligne et tes notes ne sont envoyées à personne. Tu peux désactiver AlixoAI dans Paramètres › IA. <a href="/confidentialite.html#alixoai">En savoir plus</a></p>
+      <summary>L'IA lit-elle mes notes&nbsp;?</summary>
+      <p>AlixoAI travaille dans l'application et tes notes ne sont partagées avec personne. Tu peux la désactiver dans les paramètres. <a href="/confidentialite.html#alixoai">En savoir plus</a></p>
     </details>
     <details>
       <summary>Je peux essayer sans rien installer&nbsp;?</summary>
       <p>Oui. <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">La version web</a> est la même application, dans ton navigateur, toujours au niveau de la version PC. Sur téléphone, la version mobile s'ouvre automatiquement. Avec un compte, tes cours sont partagés entre le web, le mobile et l'application PC.</p>
     </details>
     <details>
-      <summary>Il faut un compte pour utiliser la version web&nbsp;?</summary>
-      <p>Non. À l'ouverture, l'écran de connexion propose «&nbsp;<strong>Continuer sans compte (local uniquement)</strong>&nbsp;»&nbsp;: tes cours restent alors dans ce navigateur. Un compte (Google, Apple ou e-mail) sert à retrouver tes cours sur tous tes appareils, à partager et à activer Alixo+. Les cours créés sans compte sont récupérés à la première connexion.</p>
-    </details>
-    <details>
-      <summary id="faq-mac-q">Alixo existe sur Mac&nbsp;?</summary>
-      <p id="faq-mac-a">Oui&nbsp;: une application universelle (Apple Silicon et Intel), avec le même compte et les mêmes cours que sur Windows et sur le web. <a href="/telecharger/mac/">Télécharge Alixo-Mac.dmg</a>, glisse Alixo dans Applications, puis au premier lancement autorise l'ouverture une fois dans Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (l'application n'est pas encore signée par Apple)&nbsp;: <a href="/telecharger/mac/">le mode d'emploi en trois étapes</a>. Les nouvelles versions sont signalées dans l'application.</p>
+      <summary>Alixo existe sur Mac&nbsp;?</summary>
+      <p>Oui&nbsp;: une application universelle (Apple Silicon et Intel), avec le même compte et les mêmes cours que sur Windows et sur le web. <a href="/telecharger/mac/">Télécharge Alixo-Mac.dmg</a>, glisse Alixo dans Applications, puis au premier lancement autorise l'ouverture une fois dans Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (autorisation demandée une seule fois)&nbsp;: <a href="/telecharger/mac/">le mode d'emploi en trois étapes</a>. Les nouvelles versions sont signalées dans l'application.</p>
     </details>
     <details>
       <summary>Comment installer Alixo sur Windows&nbsp;?</summary>
       <p>Clique sur «&nbsp;Télécharger&nbsp;»&nbsp;: <strong>Alixo-Setup.exe</strong> arrive dans tes téléchargements. Double-clique, suis l'installation, c'est tout. Si Windows SmartScreen affiche un avertissement (fréquent pour les applications récentes), clique sur «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;». Une version portable, sans installation, est aussi disponible.</p>
-    </details>
-    <details>
-      <summary>Les mises à jour, ça marche comment&nbsp;?</summary>
-      <p>La version installée se met à jour automatiquement au démarrage. Tu n'as rien à faire. Avec la version portable, il suffit de retélécharger le fichier.</p>
-    </details>
-    <details>
-      <summary>Je suis en double licence, comment ça marche&nbsp;?</summary>
-      <p>Tu sélectionnes plusieurs filières (par exemple Droit + Économie) et Alixo active les blocs des deux mondes&nbsp;: fiches d'arrêt et graphiques d'équilibre cohabitent dans le même cours.</p>
     </details>
     <details>
       <summary>Mes notes sont-elles en sécurité&nbsp;?</summary>
@@ -731,7 +473,7 @@
       <span class="cta-mac"><a href="/telecharger/mac/">ou pour macOS →</a></span>
       <a class="cta-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">ou essayer dans le navigateur →</a>
     </div>
-    <div class="cta-note"><span class="js-version">Dernière version</span> · <span class="js-size">71 Mo</span> · le téléchargement démarre immédiatement</div>
+    <div class="cta-note"><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span> · le téléchargement démarre immédiatement</div>
   </div>
 </section>
 
@@ -787,6 +529,6 @@
   <button class="dl-toast-close" aria-label="Fermer">✕</button>
 </div>
 
-<script src="script.js?v=20261021b"></script>
+<script src="script.js?v=20261030a"></script>
 </body>
 </html>
