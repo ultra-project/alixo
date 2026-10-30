@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-30T11:10:32.657Z",
- "version": "1.47.0",
- "date": "2026-10-29T16:19:58Z",
- "notes": "Nouveautés 1.47.0 — Une bibliothèque en liste, un bloc « Reprendre » et un menu « Nouveau »\n\n\n- **Tout au même endroit.** Sous les cartes de cours, vos **séances, fichiers importés et éléments partagés** sont réunis dans **une même liste** : une puce de type colorée, le titre, un aperçu, le professeur (ou « par X » pour un partage), la date, et les boutons épingle et corbeille au bout de la ligne. Plus besoin de chercher dans trois blocs différents.\n- **Une 4e vue « Liste ».** À côté de Grille, Arbre et Galaxie, la vue **Liste** affiche tout en lignes, dossiers compris : pratique quand on a beaucoup de cours. Elle est en deuxième position dans la barre de vues, et dans Paramètres › Apparence.\n- **Reprendre là où vous en étiez.** En haut de Mes cours, un bloc **« Reprendre »** affiche le **cours en ce moment** d’après votre agenda, avec sa barre de progression, « reste N min » et un bouton **« Prendre des notes »** (ou « Reprendre les notes » si la séance du jour existe déjà) : il ouvre la séance du jour, ou la crée dans le dossier du cours. Hors cours, c’est le **prochain cours** qui s’affiche, avec « Préparer la séance » — ou « Choisir le cours » si l’événement de l’agenda n’est pas encore relié à un dossier. À côté, les **deux derniers documents ouverts**, pour y revenir d’un clic.\n- **Créer, en un clic.** La barre de création se résume à **« Importer »** et **« Nouveau ▾ »** : le menu propose Séance, Présentation, Tableur, Planche, Quiz, Dossier et Importer, chacun avec sa tuile-lettre. Un **clic droit sur le fond** de la bibliothèque (même à la racine) ouvre le même menu. Le menu contextuel d’un dossier est allégé : Ouvrir, Nouveau ▸, Importer, Ajouter à l’agenda, Renommer / couleur, Déplacer vers, Partager, Télécharger en .zip, Supprimer.\n- **Des puces de type colorées.** Nouvelles icônes pour chaque type : séance en bleu, présentation en orange, tableur en vert, planche en violet, quiz en rose ; les fichiers importés (PowerPoint, Excel, Word, PDF…) portent un trombone. On reconnaît un document avant même de lire son titre.\n- **Un formulaire de dossier plus compact.** Nom et professeur sur une ligne, **16 couleurs** plus une **couleur libre**, et **112 icônes** rangées par onglets. Le champ de recherche de la barre du haut est un peu plus étroit, et les puces des cartes de dossiers ne sautent plus au survol.\n- **Corrections** : « Supprimer » dans le menu contextuel d’un dossier ne faisait rien ; le clic droit sur le fond de la bibliothèque affichait une erreur ; la sécurité des partages est renforcée (les rôles, identifiants et couleurs reçus d’un partage sont contrôlés avant affichage, et les aperçus de texte sont rendus dans un document inerte).\n- Côté technique : `app/js/app.js`, `app/js/files.js`, `app/js/share.js`, `app/styles.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.0",
+ "generatedAt": "2026-10-30T11:19:56.300Z",
+ "version": "1.47.1",
+ "date": "2026-10-30T11:19:38Z",
+ "notes": "Nouveautés 1.47.1 — La barre du haut respire dans l’éditeur\n\n\n- **Le titre et le fil d’Ariane passent en premier.** Quand un document est ouvert, la barre du haut donne la priorité au **titre du document** (il ne descend jamais sous 240 px) et au chemin de ses dossiers. Quand le chemin est long, les dossiers intermédiaires se replient en **« … »** : un clic ouvre le dossier précédent, le survol affiche le chemin complet.\n- **Moins de choses qui prennent de la place.** Dans l’éditeur, le champ **« Rechercher… »** redevient une simple **loupe** (le champ complet revient au-delà de 1700 px, et Ctrl K marche toujours), la pastille du **cours en cours** reste bornée (220 px, 320 px sur très grand écran) avec un temps restant toujours entier, et le bouton **« Sauvegarde en ligne »** passe en icône seule sous 1440 px.\n- **Le logo tient sur une ligne.** « Alixo » et le badge « Business » ne passent plus l’un sous l’autre ; sous 1280 px, seul le logo reste. La bibliothèque, elle, ne change pas.\n- Côté technique : `app/styles.css`, `app/refonte.css`, `app/js/app.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Setup.exe",
-   "size": 89256544
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Setup.exe",
+   "size": 89256710
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Portable.exe",
-   "size": 88451726
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Portable.exe",
+   "size": 88451877
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-Mac.dmg",
-   "size": 206500695
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Mac.dmg",
+   "size": 206496148
   },
   "macZip": {
-   "name": "Alixo-1.47.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.0/Alixo-1.47.0-mac.zip",
-   "size": 199054188
+   "name": "Alixo-1.47.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-1.47.1-mac.zip",
+   "size": 199054585
   }
  },
  "history": [
+  {
+   "version": "1.47.1",
+   "date": "2026-10-30T11:19:38Z",
+   "notes": "Nouveautés 1.47.1 — La barre du haut respire dans l’éditeur\n\n\n- **Le titre et le fil d’Ariane passent en premier.** Quand un document est ouvert, la barre du haut donne la priorité au **titre du document** (il ne descend jamais sous 240 px) et au chemin de ses dossiers. Quand le chemin est long, les dossiers intermédiaires se replient en **« … »** : un clic ouvre le dossier précédent, le survol affiche le chemin complet.\n- **Moins de choses qui prennent de la place.** Dans l’éditeur, le champ **« Rechercher… »** redevient une simple **loupe** (le champ complet revient au-delà de 1700 px, et Ctrl K marche toujours), la pastille du **cours en cours** reste bornée (220 px, 320 px sur très grand écran) avec un temps restant toujours entier, et le bouton **« Sauvegarde en ligne »** passe en icône seule sous 1440 px.\n- **Le logo tient sur une ligne.** « Alixo » et le badge « Business » ne passent plus l’un sous l’autre ; sous 1280 px, seul le logo reste. La bibliothèque, elle, ne change pas.\n- Côté technique : `app/styles.css`, `app/refonte.css`, `app/js/app.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.1"
+  },
   {
    "version": "1.47.0",
    "date": "2026-10-29T16:19:58Z",
@@ -220,11 +225,6 @@
    "version": "1.23.3",
    "date": "2026-10-05T11:15:02Z",
    "notes": "Nouveautés 1.23.3 — vue par pages : fin de page visible dans un long bloc\n\n\n- **Vue par pages** : quand un bloc est plus haut qu'une page (long encadré où l'on saute des lignes, grand tableau), deux pages semblaient « regroupées » sans séparation alors que le compte de pages les comptait. Une **ligne pointillée** marque maintenant la fin de page à l'intérieur du bloc, avec son numéro (« 2 / 5 · suite page 3 ») : c'est là que le PDF se coupe."
-  },
-  {
-   "version": "1.23.2",
-   "date": "2026-10-05T08:13:46Z",
-   "notes": "Nouveautés 1.23.2 — mise à jour automatique : message réel et journal\n\n\n- **Mise à jour automatique (Windows)** : quand le téléchargement de la nouvelle version échoue, la cloche le dit clairement (serveur de téléchargement injoignable depuis ce réseau, ou le message d'erreur réel) au lieu de « Vérification des mises à jour impossible », et propose d'un clic la page de téléchargement du site pour installer la version par-dessus. Le téléchargement est toujours complet (le téléchargement différentiel échouait dès qu'un installateur avait été republié). Journal des mises à jour dans `%APPDATA%\\Alixo\\updater.log`, à joindre en cas de problème."
   }
  ]
 }
