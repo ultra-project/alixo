@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-31T17:34:21.572Z",
- "version": "1.47.2",
- "date": "2026-10-31T17:34:03Z",
- "notes": "Nouveautés 1.47.2 — Un peu d’air dans la barre du haut\n\n\n- **La recherche et l’agenda ne se touchent plus.** Dans la bibliothèque, le champ **« Rechercher… »** de la barre du haut était collé à la pastille **« Prochain 14:00 … »** de l’agenda ; un écart les sépare désormais, et la barre ne déborde pas, même sur un très grand écran.\n- Côté technique : `app/refonte.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.2",
+ "generatedAt": "2026-10-31T17:40:18.102Z",
+ "version": "1.48.0",
+ "date": "2026-10-31T17:39:59Z",
+ "notes": "Nouveautés 1.48.0 — De nouvelles icônes pour vos fichiers Alixo\n\n\n- **Chaque type de document a sa feuille.** Les fichiers Alixo enregistrés sur votre ordinateur (`.alx-docs`, `.alx-slide`, `.alx-sheet`, `.alx-quiz`, `.alx-planche`) portent de **nouvelles icônes** : une feuille au coin replié, en dégradé plein, avec le symbole du type — lignes de texte pour la **séance** (bleu), chevalet et camembert pour la **présentation** (orange), grille pour le **tableur** (vert), cases cochées pour le **quiz** (violet), deux cartes reliées pour la **planche** (rose). Sur le bureau, dans l’Explorateur ou le Finder, on reconnaît un document Alixo d’un coup d’œil, et on ne le confond plus avec l’application.\n- **La même icône dans le menu ⤓.** Quand vous téléchargez un document en « Fichier Alixo », le menu montre l’icône qu’il aura sur le bureau, un peu plus grande qu’avant pour qu’on en distingue le symbole.\n- Côté technique : les icônes sont dessinées en vectoriel (`build/file-icons-source/*.svg`) et rendues par `scripts/make-icon.js` en `.ico`, `.icns` et PNG (`app/img/fileicons/`) ; `app/styles.css`, `app/js/app.js`.\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.48.0",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Setup.exe",
-   "size": 89262620
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Setup.exe",
+   "size": 88957086
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Portable.exe",
-   "size": 88457802
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Portable.exe",
+   "size": 88586227
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Mac.dmg",
-   "size": 206479913
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Mac.dmg",
+   "size": 203917208
   },
   "macZip": {
-   "name": "Alixo-1.47.2-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-1.47.2-mac.zip",
-   "size": 199054769
+   "name": "Alixo-1.48.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-1.48.0-mac.zip",
+   "size": 196474263
   }
  },
  "history": [
+  {
+   "version": "1.48.0",
+   "date": "2026-10-31T17:39:59Z",
+   "notes": "Nouveautés 1.48.0 — De nouvelles icônes pour vos fichiers Alixo\n\n\n- **Chaque type de document a sa feuille.** Les fichiers Alixo enregistrés sur votre ordinateur (`.alx-docs`, `.alx-slide`, `.alx-sheet`, `.alx-quiz`, `.alx-planche`) portent de **nouvelles icônes** : une feuille au coin replié, en dégradé plein, avec le symbole du type — lignes de texte pour la **séance** (bleu), chevalet et camembert pour la **présentation** (orange), grille pour le **tableur** (vert), cases cochées pour le **quiz** (violet), deux cartes reliées pour la **planche** (rose). Sur le bureau, dans l’Explorateur ou le Finder, on reconnaît un document Alixo d’un coup d’œil, et on ne le confond plus avec l’application.\n- **La même icône dans le menu ⤓.** Quand vous téléchargez un document en « Fichier Alixo », le menu montre l’icône qu’il aura sur le bureau, un peu plus grande qu’avant pour qu’on en distingue le symbole.\n- Côté technique : les icônes sont dessinées en vectoriel (`build/file-icons-source/*.svg`) et rendues par `scripts/make-icon.js` en `.ico`, `.icns` et PNG (`app/img/fileicons/`) ; `app/styles.css`, `app/js/app.js`.\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.48.0"
+  },
   {
    "version": "1.47.2",
    "date": "2026-10-31T17:34:03Z",
@@ -220,11 +225,6 @@
    "version": "1.24.0",
    "date": "2026-10-05T15:18:35Z",
    "notes": "Nouveautés 1.24.0 — quiz (test et présentation en direct), plan modifiable, barre des tableaux flottante, filigrane\n\n\n- **Quiz** (`app/js/quiz.js`, `app/js/quizcore.js`, bouton **＋ Quiz** à côté de « Planche », aussi dans les menus « créer ici ») : **cinquième type de document** (`kind: 'quiz'`, `questions: [...]`, `results: [...]`, `blocks` vide : onglets, bibliothèque, corbeille, synchronisation et partage fonctionnent sans rien de nouveau). L'éditeur est inspiré de Kahoot : une **palette de types** à glisser dans la liste des questions (ou à cliquer) — **choix multiple** (2 à 6 propositions, une ou plusieurs bonnes réponses), **vrai / faux**, **curseur** (valeur sur une échelle, avec tolérance), **réponse écrite** (variantes acceptées, accents et majuscules ignorés), **ordre** (éléments à remettre dans le bon ordre, mélangés chez les participants) et **sondage** (sans points) ; questions réordonnables par glisser-déposer, dupliquer, supprimer, Ctrl+Z / Ctrl+Y, temps (sans limite à 3 min) et points par question. Les points suivent la règle Kahoot : la moitié pour la bonne réponse, l'autre moitié fond avec le temps écoulé.\n  - **Tester** (F5) joue le quiz sur l'appareil : chronomètre, retour immédiat, score ; le résultat est **enregistré** (bouton **Résultats** : tests et parties, suppression possible).\n  - **Présenter en direct** : l'écran du présentateur affiche un **code à 6 chiffres et un QR code** ; les participants ouvrent **alixoapp.com/quiz** sur leur téléphone ou ordinateur (sans compte), entrent le code et un pseudo, puis **répondent sur leur appareil** à chaque question (boutons colorés, curseur, texte, ordre). Côté présentateur : liste des participants, chronomètre, compteur de réponses (passage automatique à la révélation quand tout le monde a répondu), révélation avec histogramme des réponses et classement, podium final ; Espace / → passe à la suite, Échap arrête. Le classement est enregistré dans les résultats. Technique : collection Firestore `live/{code}` (état de la partie, question en cours sans la réponse, puis réponse, statistiques et classement) et `live/{code}/players/{pid}` (pseudo, réponses, score et retour posés par l'hôte) ; page des participants `app/quiz.html` + `app/js/quizplay.js` (publiée à `alixoapp.com/docs/quiz.html`, `alixoapp.com/quiz/` y redirige), sans compte Firebase (pas d'authentification anonyme). **Règles Firestore à republier une fois** (`npm run rules`, bloc « Quiz en direct » de `firestore.rules`) : sans elles, « Présenter en direct » affiche une erreur, l'éditeur et le test fonctionnent.\n  - Partage (Alixo Share) comme toute séance, recherche Ctrl+K dans les questions, carte de la bibliothèque avec les premières questions, galaxie (losange), export PDF des questions avec les bonnes réponses.\n- **Plan du cours modifiable** (Paramètres › Écriture › **Plan du cours**) : les niveaux de titres ne sont plus figés à I. / A. / 1. / a. Une **pyramide** présente les niveaux du plus général au plus fin ; on **glisse un niveau** pour le monter ou le descendre (ou ▲ ▼), on en **ajoute** (jusqu'à six : Chapitre, Titre, §…) ou on en retire, on choisit sa **numérotation** (I. II., A. B., 1. 2., a. b., i. ii., § 1, sans numéro). Chaque niveau accepte des **mots déclencheurs** : avec « Chapitre » sur le niveau placé au-dessus de « Section », taper « Chapitre 1 : Le contrat » en début de ligne crée un chapitre (le mot reste dans le titre), comme « I. », « A. », « 1. » et « a. » le font déjà (un numéro tapé prend le niveau du plan qui utilise ce style). Le menu « / », le bouton « Niveau de plan » (avec un lien « Modifier le plan… »), Tab / Maj+Tab, Ctrl+Alt+1…6, le volet plan, le sommaire du PDF et l'export Word suivent le plan ; le réglage suit le compte. Les séances existantes gardent leurs niveaux : seul l'affichage change.\n- **Barre d'outils des tableaux** : la barre (ligne, colonne, fusionner, scinder, en-tête, copier, dupliquer, supprimer) **flotte au-dessus du tableau** au lieu de s'insérer dans le cours — plus rien ne bouge quand on clique dans une case (en pages A4, la pagination ne se recalculait pas pour rien). Nouveau style : capsule translucide, icônes et libellés, groupes séparés ; sous le tableau quand il est en tête de page.\n- **Filigrane « Alixo »** sur les exports **sans Alixo+** : PDF (séances, présentations, tableurs, planches, quiz — version PC et navigateur), Word (filigrane de page en diagonale, comme Création › Filigrane), page web exportée et PDF des archives .zip portent un « Alixo » discret en diagonale et la mention « Fait avec Alixo · alixoapp.com ». Alixo+ exporte des documents vierges (`exportWatermark()` dans `app/js/app.js`, calque `#alixo-wm`)."
-  },
-  {
-   "version": "1.23.4",
-   "date": "2026-10-05T11:42:26Z",
-   "notes": "Nouveautés 1.23.4 — mise à jour automatique : installateur verrouillé\n\n\n- **Mise à jour automatique (Windows)** : l'erreur « EPERM: operation not permitted, rename …\\\\alixo-updater\\\\… » (installateur déjà téléchargé verrouillé par l'antivirus ou reste d'un téléchargement interrompu) est maintenant traitée : le dossier `pending` est vidé et le téléchargement recommence tout seul quelques secondes plus tard ; si cela échoue encore, la cloche explique quoi faire (fermer et rouvrir Alixo, ou supprimer `%LOCALAPPDATA%\\\\alixo-updater`) et renvoie vers le site."
   }
  ]
 }
