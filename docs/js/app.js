@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.47.1';
+const ALIXO_VERSION = '1.47.2';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -11631,7 +11631,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Barre du haut allégée dans l’éditeur : le titre du document et le fil d’Ariane passent en premier, la recherche devient une loupe, la pastille du cours en cours et le logo tiennent sur une ligne.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Dans la bibliothèque, le champ « Rechercher… » et la pastille du prochain cours ne sont plus collés : un écart les sépare, sans débordement même sur très grand écran.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

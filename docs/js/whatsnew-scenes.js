@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.47.1 (ou nouveautes.html?v=1.47.1 en page seule).
+   Aperçu : index.html?nouveautes=1.47.2 (ou nouveautes.html?v=1.47.2 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.47.2', {
+  scenes: [
+    { kind: 'intro', kicker: 'Correctif installé', title: 'Un peu d’<em>air</em><br>dans la barre du haut', text: 'Dans la bibliothèque, la recherche et la pastille de l’agenda ne se touchent plus.', dur: 6000 },
+    { title: 'Un peu d’<em>air</em>', text: 'Le champ « Rechercher… » était collé à la pastille du prochain cours de votre agenda.',
+      bullets: ['<b>Écart</b> net entre la recherche et le prochain cours', '<b>Lisible</b> d’un coup d’œil : chaque élément garde sa place', '<b>Grand écran</b> : la barre ne déborde pas, même très large'],
+      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 11000 },
+    { kicker: 'Rappel de la 1.47.1', title: 'La barre du haut <em>allégée</em>', text: 'Dans l’éditeur, le titre du document et son chemin passent en premier.',
+      bullets: ['<b>Titre</b> d’abord, jamais écrasé par le reste de la barre', '<b>Dossiers</b> repliés en « … » quand le chemin est long', '<b>Logo</b> sur une seule ligne, « Alixo » et son badge côte à côte'],
+      art: 'text', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 11000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 8000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.47.1', {
   scenes: [
@@ -49,23 +62,3 @@ AlixoWhatsNew.register('1.47.0', {
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
-
-AlixoWhatsNew.register('1.46.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Un nouveau <em>look</em>', text: 'Une interface plus claire et plus douce. Vos cours, eux, ne bougent pas.', dur: 5000 },
-    { title: 'Une nouvelle <em>apparence</em>', text: 'Nouvelle palette claire et sombre, accent bleu, coins arrondis : Alixo change de visage.',
-      bullets: ['<b>Palette</b> plus douce, en clair comme en sombre', '<b>Accent bleu</b> par défaut sur les boutons et les liens', '<b>Thèmes</b> de Paramètres › Apparence : toujours là, vos icônes aussi'],
-      art: 'palette', accent: '#3d6bb5', accent2: '#8a4b9c', dur: 7500 },
-    { title: 'La <em>recherche</em> sous les yeux', text: 'Le bouton loupe devient un vrai champ au centre de la barre du haut.',
-      bullets: ['<b>Rechercher…</b> : un clic, ou Ctrl K (⌘ K sur Mac)', '<b>Même recherche</b> qu’avant, simplement plus visible', '<b>Boutons</b> de droite plus grands, plus faciles à viser'],
-      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 7000 },
-    { title: 'Des dossiers à <em>initiales</em>', text: 'Dans la bibliothèque, chaque dossier se reconnaît à sa tuile et résume son contenu.',
-      bullets: ['<b>Tuile</b> « MA » pour Maths, « HG » pour Histoire-géo, dans sa couleur', '<b>Puces</b> : « 3 séances · 1 dossier · 2 fichiers »', '<b>Pastilles</b> de couleur sur les onglets et dans l’explorateur'],
-      art: 'cards', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
-    { title: 'Vos cours ne <em>changent</em> pas', text: 'Nouvelle police d’interface Geist, embarquée dans l’application : rien n’est téléchargé.',
-      bullets: ['<b>Éditeur</b>, présentations, tableurs et quiz : même rendu', '<b>PDF</b> exportés identiques', '<b>Hors ligne</b> : la police est dans Alixo, aucun appel à Google'],
-      art: 'text', accent: '#b3762a', accent2: '#2e8b6a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-

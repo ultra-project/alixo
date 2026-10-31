@@ -15,8 +15,8 @@
 /* ============================================================
    Barre supérieure — logo, fil d'Ariane, champ de recherche, boutons 44px
    ============================================================ */
-#topbar { background: var(--topbar-bg); padding: 0 16px 0 12px; }
-.tb-left { gap: 14px; flex: 1 1 auto; }
+#topbar { background: var(--topbar-bg); padding: 0 16px 0 12px; gap: 20px; }   /* 1.47.2 : un écart entre la recherche et la pastille de l’agenda */
+.tb-left { gap: 14px; flex: 1 1 auto; min-width: 0; }
 .logo { gap: 8px; padding: 4px 8px 4px 4px; border-radius: 8px; flex: none; white-space: nowrap; }   /* 1.47 : jamais sur deux lignes */
 .logo-mark img { width: 28px; height: 28px; }
 .logo-name { font-size: 16px; font-weight: 600; letter-spacing: -.01em; }
