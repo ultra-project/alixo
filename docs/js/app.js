@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.47.2';
+const ALIXO_VERSION = '1.48.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -10134,8 +10134,8 @@ const EXPORT_FORMAT_ICONS = {
   docx: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="m8 12 1.3 5 1.7-4 1.7 4 1.3-5"/></svg>',
   html: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>',
   /* 1.41 : le fichier Alixo prend l'icône qu'il aura sur le bureau, selon le type du document (séance, présentation,
-     tableur, quiz, planche — images tirées de build/file-icons-source, voir img/fileicons/) */
-  alx: k => `<img src="img/fileicons/${k || 'docs'}.png" alt="" class="po-ico po-ico-img po-ico-file">`,
+     tableur, quiz, planche — SVG de build/file-icons-source rendus en 64 px par scripts/make-icon.js, voir img/fileicons/) */
+  alx: k => `<img src="img/fileicons/${k || 'docs'}.png" alt="" class="po-ico po-ico-img po-ico-file" onerror="this.remove()">`,
   csv: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 12h7M8.5 15h7M8.5 18h7M12 12v6"/></svg>'
 };
 function openExportMenu(btn) {
@@ -11631,7 +11631,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Dans la bibliothèque, le champ « Rechercher… » et la pastille du prochain cours ne sont plus collés : un écart les sépare, sans débordement même sur très grand écran.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'De nouvelles icônes pour vos fichiers Alixo : une feuille colorée par type (séance, présentation, tableur, quiz, planche) sur le bureau comme dans le menu ⤓.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

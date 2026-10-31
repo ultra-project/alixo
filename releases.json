@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-10-31T17:25:47.236Z",
+ "generatedAt": "2026-10-31T17:31:19.799Z",
  "version": "1.47.1",
  "date": "2026-10-30T11:19:38Z",
  "notes": "Nouveautés 1.47.1 — La barre du haut respire dans l’éditeur\n\n\n- **Le titre et le fil d’Ariane passent en premier.** Quand un document est ouvert, la barre du haut donne la priorité au **titre du document** (il ne descend jamais sous 240 px) et au chemin de ses dossiers. Quand le chemin est long, les dossiers intermédiaires se replient en **« … »** : un clic ouvre le dossier précédent, le survol affiche le chemin complet.\n- **Moins de choses qui prennent de la place.** Dans l’éditeur, le champ **« Rechercher… »** redevient une simple **loupe** (le champ complet revient au-delà de 1700 px, et Ctrl K marche toujours), la pastille du **cours en cours** reste bornée (220 px, 320 px sur très grand écran) avec un temps restant toujours entier, et le bouton **« Sauvegarde en ligne »** passe en icône seule sous 1440 px.\n- **Le logo tient sur une ligne.** « Alixo » et le badge « Business » ne passent plus l’un sous l’autre ; sous 1280 px, seul le logo reste. La bibliothèque, elle, ne change pas.\n- Côté technique : `app/styles.css`, `app/refonte.css`, `app/js/app.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.1",
@@ -220,11 +220,6 @@
    "version": "1.23.4",
    "date": "2026-10-05T11:42:26Z",
    "notes": "Nouveautés 1.23.4 — mise à jour automatique : installateur verrouillé\n\n\n- **Mise à jour automatique (Windows)** : l'erreur « EPERM: operation not permitted, rename …\\\\alixo-updater\\\\… » (installateur déjà téléchargé verrouillé par l'antivirus ou reste d'un téléchargement interrompu) est maintenant traitée : le dossier `pending` est vidé et le téléchargement recommence tout seul quelques secondes plus tard ; si cela échoue encore, la cloche explique quoi faire (fermer et rouvrir Alixo, ou supprimer `%LOCALAPPDATA%\\\\alixo-updater`) et renvoie vers le site."
-  },
-  {
-   "version": "1.23.3",
-   "date": "2026-10-05T11:15:02Z",
-   "notes": "Nouveautés 1.23.3 — vue par pages : fin de page visible dans un long bloc\n\n\n- **Vue par pages** : quand un bloc est plus haut qu'une page (long encadré où l'on saute des lignes, grand tableau), deux pages semblaient « regroupées » sans séparation alors que le compte de pages les comptait. Une **ligne pointillée** marque maintenant la fin de page à l'intérieur du bloc, avec son numéro (« 2 / 5 · suite page 3 ») : c'est là que le PDF se coupe."
   }
  ]
 }

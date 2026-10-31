@@ -11,9 +11,25 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.47.2 (ou nouveautes.html?v=1.47.2 en page seule).
+   Aperçu : index.html?nouveautes=1.48.0 (ou nouveautes.html?v=1.48.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.48.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'De nouvelles <em>icônes</em>', text: 'Vos fichiers Alixo se reconnaissent d’un coup d’œil, sur le bureau comme dans l’application.', dur: 5000 },
+    { title: 'Une <em>feuille</em> par type', text: 'Chaque document enregistré sur votre ordinateur porte sa couleur et son symbole.',
+      bullets: ['<b>Séance</b> en bleu, <b>présentation</b> en orange, <b>tableur</b> en vert', '<b>Quiz</b> en violet, <b>planche</b> en rose', '<b>Symbole</b> du type au centre : lignes, chevalet, grille, cases, cartes'],
+      art: { image: 'nouveautes/1.48.0-icones.png', alt: 'Les cinq icônes de fichiers Alixo' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 8500 },
+    { title: 'Sur le <em>bureau</em>, sans confusion', text: 'Dans l’Explorateur Windows comme dans le Finder, un document Alixo ne ressemble plus à l’application.',
+      bullets: ['<b>Double-clic</b> : le document s’ouvre dans Alixo, comme avant', '<b>Windows</b> et <b>Mac</b> : les mêmes icônes des deux côtés', '<b>Netteté</b> à toutes les tailles, de la liste de fichiers aux grandes vignettes'],
+      art: 'cards', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 8000 },
+    { title: 'Dans le menu <em>Télécharger</em>', text: 'Le choix « Fichier Alixo » montre l’icône que le document aura sur le bureau.',
+      bullets: ['<b>Même icône</b> qu’à l’enregistrement, selon le type du document', '<b>Plus grande</b> : son symbole reste lisible', '<b>Rien d’autre</b> ne change : vos cours et vos réglages restent en place'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
+  ]
+});
 
 AlixoWhatsNew.register('1.47.2', {
   scenes: [
@@ -41,24 +57,5 @@ AlixoWhatsNew.register('1.47.1', {
       bullets: ['<b>Loupe</b> seule dans l’éditeur, Ctrl K (⌘ K) marche toujours', '<b>Cours en cours</b> : pastille bornée, temps restant toujours entier', '<b>Bibliothèque</b> : rien ne change, le champ de recherche y reste'],
       art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
-  ]
-});
-
-AlixoWhatsNew.register('1.47.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une bibliothèque<br>plus <em>simple</em>', text: 'Tout au même endroit, un bloc pour reprendre, un menu pour créer.', dur: 5000 },
-    { title: '<em>Reprendre</em> là où vous en étiez', text: 'En haut de Mes cours, le cours en ce moment d’après votre agenda, et vos deux derniers documents.',
-      bullets: ['<b>Cours en cours</b> : barre de progression et « reste N min »', '<b>Prendre des notes</b> : la séance du jour s’ouvre, ou se crée dans le dossier', '<b>Prochain cours</b> : « Préparer la séance » quand rien n’est en cours', '<b>Derniers ouverts</b> : deux documents, un clic pour y revenir'],
-      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 8500 },
-    { title: 'Tout au <em>même endroit</em>', text: 'Séances, fichiers importés et éléments partagés : une seule liste sous vos cartes de cours.',
-      bullets: ['<b>Une ligne</b> par document : puce colorée, titre, aperçu, professeur, date', '<b>Épingle</b> et corbeille au bout de chaque ligne', '<b>Vue Liste</b> : la 4e vue, à côté de Grille, Arbre et Galaxie'],
-      art: 'cards', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
-    { title: '<em>Nouveau</em>, en un clic', text: 'La barre se résume à « Importer » et « Nouveau ▾ » ; le clic droit sur le fond fait la même chose.',
-      bullets: ['<b>Menu Nouveau</b> : séance, présentation, tableur, planche, quiz, dossier…', '<b>Clic droit</b> sur le fond de la bibliothèque, même à la racine', '<b>Dossiers</b> : un menu contextuel allégé, du plus utile au plus rare'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>' }, accent: '#8a4b9c', accent2: '#2e8b6a', dur: 7500 },
-    { title: 'Dossiers et <em>puces</em> de couleur', text: 'Un formulaire de dossier plus compact, et des icônes de type qu’on reconnaît avant de lire.',
-      bullets: ['<b>Puces</b> : séance, présentation, tableur, planche, quiz, chacune sa couleur', '<b>Fichiers</b> PowerPoint, Excel, Word, PDF : un trombone', '<b>Formulaire</b> : 16 couleurs + couleur libre, 112 icônes par onglets'],
-      art: 'palette', accent: '#b3762a', accent2: '#c04343', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
