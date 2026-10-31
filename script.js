@@ -139,17 +139,26 @@ if (!root.dataset.theme) {
    src + srcset ne sont posés que sur la capture affichée (.on) et sur celles déjà chargées (data-loaded = thème),
    les autres sont chargées à la demande (showShot) ou en tâche de fond après le chargement de la page. */
 const SHOT_WIDTHS = [640, 1024, 1600];
-const shotReady = new Map();   /* img → { theme, promise } : promesse tenue quand la capture est décodée (ou après 1,5 s) */
+const shotReady = new Map();   /* img → { theme, promise } : promesse tenue quand la capture est décodée, ou après 1,5 s si elle est au moins chargée */
+/* Tenue dès que l'image a fini de charger (pixels présents, ou échec : on bascule quand même pour ne pas rester bloqué) */
+const shotLoaded = (img) => new Promise(resolve => {
+  if (img.complete) return resolve();
+  const done = () => { img.removeEventListener('load', done); img.removeEventListener('error', done); resolve(); };
+  img.addEventListener('load', done); img.addEventListener('error', done);
+});
 function loadShot(img) {
   const theme = root.dataset.theme === 'dark' ? 'dark' : 'light';
   const cur = shotReady.get(img);
   if (cur && cur.theme === theme) return cur.promise;
   const base = img.dataset.base + '-' + theme;
+  /* srcset avant src : le navigateur choisit le candidat en une fois (src seul = repli sans srcset, ou cas du HTML sans JS) */
   img.setAttribute('srcset', SHOT_WIDTHS.map(w => `${base}-${w}.jpg ${w}w`).join(', ') + `, ${base}.jpg 2880w`);
   img.setAttribute('src', base + '-1024.jpg');
   img.dataset.loaded = theme;
   const decoded = img.decode ? img.decode().catch(() => {}) : Promise.resolve();
-  const promise = Promise.race([decoded, new Promise(r => setTimeout(r, 1500))]);
+  /* plafond de 1,5 s pour le décodage, mais jamais de bascule vers une image encore vide : on attend au moins load (ou error) */
+  const capped = new Promise(r => setTimeout(r, 1500)).then(() => shotLoaded(img));
+  const promise = Promise.race([decoded, capped]);
   shotReady.set(img, { theme, promise });
   return promise;
 }
@@ -236,7 +245,13 @@ function showShot(key) {
     preloadNextShot(key);
   });
 }
-shotTabs.forEach(t => t.addEventListener('click', () => showShot(t.dataset.shot)));
+shotTabs.forEach(t => {
+  t.addEventListener('click', () => showShot(t.dataset.shot));
+  /* préchargement dès l'intention (doigt posé, focus clavier) : la capture est souvent déjà là au clic */
+  const warm = () => { const img = shotImgs.find(i => i.dataset.shot === t.dataset.shot); if (img) loadShot(img); };
+  t.addEventListener('pointerdown', warm, { passive: true });
+  t.addEventListener('focus', warm);
+});
 /* Première capture affichée : la suivante est préchargée ; les autres suivent en tâche de fond une fois la page chargée,
    sauf sur appareil faible ou avec l'économiseur de données */
 const firstShot = shotImgs.find(i => i.classList.contains('on'));
