@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-10-31T17:31:19.799Z",
- "version": "1.47.1",
- "date": "2026-10-30T11:19:38Z",
- "notes": "Nouveautés 1.47.1 — La barre du haut respire dans l’éditeur\n\n\n- **Le titre et le fil d’Ariane passent en premier.** Quand un document est ouvert, la barre du haut donne la priorité au **titre du document** (il ne descend jamais sous 240 px) et au chemin de ses dossiers. Quand le chemin est long, les dossiers intermédiaires se replient en **« … »** : un clic ouvre le dossier précédent, le survol affiche le chemin complet.\n- **Moins de choses qui prennent de la place.** Dans l’éditeur, le champ **« Rechercher… »** redevient une simple **loupe** (le champ complet revient au-delà de 1700 px, et Ctrl K marche toujours), la pastille du **cours en cours** reste bornée (220 px, 320 px sur très grand écran) avec un temps restant toujours entier, et le bouton **« Sauvegarde en ligne »** passe en icône seule sous 1440 px.\n- **Le logo tient sur une ligne.** « Alixo » et le badge « Business » ne passent plus l’un sous l’autre ; sous 1280 px, seul le logo reste. La bibliothèque, elle, ne change pas.\n- Côté technique : `app/styles.css`, `app/refonte.css`, `app/js/app.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.1",
+ "generatedAt": "2026-10-31T17:34:21.572Z",
+ "version": "1.47.2",
+ "date": "2026-10-31T17:34:03Z",
+ "notes": "Nouveautés 1.47.2 — Un peu d’air dans la barre du haut\n\n\n- **La recherche et l’agenda ne se touchent plus.** Dans la bibliothèque, le champ **« Rechercher… »** de la barre du haut était collé à la pastille **« Prochain 14:00 … »** de l’agenda ; un écart les sépare désormais, et la barre ne déborde pas, même sur un très grand écran.\n- Côté technique : `app/refonte.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.2",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Setup.exe",
-   "size": 89256710
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Setup.exe",
+   "size": 89262620
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Portable.exe",
-   "size": 88451877
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Portable.exe",
+   "size": 88457802
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-Mac.dmg",
-   "size": 206496148
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-Mac.dmg",
+   "size": 206479913
   },
   "macZip": {
-   "name": "Alixo-1.47.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.1/Alixo-1.47.1-mac.zip",
-   "size": 199054585
+   "name": "Alixo-1.47.2-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.47.2/Alixo-1.47.2-mac.zip",
+   "size": 199054769
   }
  },
  "history": [
+  {
+   "version": "1.47.2",
+   "date": "2026-10-31T17:34:03Z",
+   "notes": "Nouveautés 1.47.2 — Un peu d’air dans la barre du haut\n\n\n- **La recherche et l’agenda ne se touchent plus.** Dans la bibliothèque, le champ **« Rechercher… »** de la barre du haut était collé à la pastille **« Prochain 14:00 … »** de l’agenda ; un écart les sépare désormais, et la barre ne déborde pas, même sur un très grand écran.\n- Côté technique : `app/refonte.css`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.47.2"
+  },
   {
    "version": "1.47.1",
    "date": "2026-10-30T11:19:38Z",
