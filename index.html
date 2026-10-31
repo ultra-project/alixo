@@ -18,8 +18,14 @@
 <!-- Déjà connecté ? Direction l'application (alixoapp.com/docs). « ?site » force l'affichage de cette page. -->
 <script>(function(){try{if(/[?&]site(?=&|=|$)/.test(location.search))return;var app='/docs/';var abs=new URL(app,location.href).href;if(document.referrer&&document.referrer.indexOf(abs)===0)return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(s&&s.uid)location.replace(app);}catch(e){}})();</script>
 <link rel="stylesheet" href="/fonts/fonts.css">
-<script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css?v=20261030b">
+<script>(function(){var h=document.documentElement;try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';h.dataset.theme=t;}catch(e){}
+/* Appareil faible (téléphone + peu de mémoire, économiseur de données, réseau 2G ou peu de cœurs) : html.lite = animations réduites, pas de préchargement des captures */
+try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.userAgent)&&((n.deviceMemory&&n.deviceMemory<=2)||c.saveData||/^(slow-2g|2g)$/.test(c.effectiveType||'')||(n.hardwareConcurrency&&n.hardwareConcurrency<=4)))h.classList.add('lite');}catch(e){}
+/* Capture affichée en premier (image LCP) : annoncée dès le head, dans le thème déjà connu, avec les mêmes candidats que script.js */
+try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=document.createElement('link');l.rel='preload';l.as='image';l.href=b+'-1024.jpg';l.setAttribute('imagesrcset',b+'-640.jpg 640w, '+b+'-1024.jpg 1024w, '+b+'-1600.jpg 1600w, '+b+'.jpg 2880w');l.setAttribute('imagesizes','(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)');l.setAttribute('fetchpriority','high');document.head.appendChild(l);}catch(e){}})();</script>
+<link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="styles.css?v=20261031">
 <noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
@@ -33,7 +39,7 @@
 <header id="nav">
   <div class="nav-inner">
     <a class="logo" href="#top" aria-label="Alixo — accueil">
-      <img class="logo-img" src="img/logo.png" alt="" width="28" height="28"><span class="logo-name">Alixo</span>
+      <img class="logo-img" src="img/logo-96.png" alt="" width="28" height="28"><span class="logo-name">Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#alixo-plus">Alixo+</a>
@@ -135,11 +141,12 @@
     <div class="shots-frame" id="shots-frame">
       <div class="shots-bar"><span class="dots"><i></i><i></i><i></i></span><span class="shots-title" id="shots-title">Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt</span><span class="shots-theme-hint" id="shots-theme-hint">Les captures suivent le thème du site</span></div>
       <div class="shots-stage">
-        <img class="shot on timg" aria-hidden="false" data-shot="seance" data-light="img/shot-seance-light.jpg" data-dark="img/shot-seance-dark.jpg" width="2880" height="1800" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high">
-        <img class="shot timg" aria-hidden="true" data-shot="sheet" data-light="img/shot-sheet-light.jpg" data-dark="img/shot-sheet-dark.jpg" width="2880" height="1800" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" loading="lazy">
-        <img class="shot timg" aria-hidden="true" data-shot="board" data-light="img/shot-board-light.jpg" data-dark="img/shot-board-dark.jpg" width="2880" height="1800" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" loading="lazy">
-        <img class="shot timg" aria-hidden="true" data-shot="quiz" data-light="img/shot-quiz-light.jpg" data-dark="img/shot-quiz-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types de questions à glisser" loading="lazy">
-        <img class="shot timg" aria-hidden="true" data-shot="slides" data-light="img/shot-slides-light.jpg" data-dark="img/shot-slides-dark.jpg" width="2880" height="1800" alt="Alixo — éditeur de présentations : diapositives dans le style du cours, palette de blocs et notes" loading="lazy">
+        <!-- data-base : script.js pose src + srcset (img/shot-{clé}-{light|dark}-{640|1024|1600}.jpg et l'original 2880) selon le thème, seulement pour la capture affichée ; les autres sont chargées à la demande -->
+        <img class="shot on timg" aria-hidden="false" data-shot="seance" data-base="img/shot-seance" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high" decoding="async">
+        <img class="shot timg" aria-hidden="true" data-shot="sheet" data-base="img/shot-sheet" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" decoding="async">
+        <img class="shot timg" aria-hidden="true" data-shot="board" data-base="img/shot-board" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" decoding="async">
+        <img class="shot timg" aria-hidden="true" data-shot="quiz" data-base="img/shot-quiz" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types de questions à glisser" decoding="async">
+        <img class="shot timg" aria-hidden="true" data-shot="slides" data-base="img/shot-slides" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — éditeur de présentations : diapositives dans le style du cours, palette de blocs et notes" decoding="async">
       </div>
     </div>
   </div>
@@ -165,7 +172,7 @@
   </div>
   <div class="plans reveal">
     <div class="plan">
-      <div class="plan-head"><img src="img/logo.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Sans limite de durée, sans carte</span></div></div>
+      <div class="plan-head"><img src="img/logo-96.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Sans limite de durée, sans carte</span></div></div>
       <div class="plan-price">0 €<small>sans limite de temps</small></div>
       <ul class="plan-list">
         <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
@@ -178,7 +185,7 @@
       <a class="btn ghost full" href="#telecharger">Commencer gratuitement</a>
     </div>
     <div class="plan plus">
-      <div class="plan-head"><img src="img/logo-plus.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
+      <div class="plan-head"><img src="img/logo-plus-96.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
       <div class="plan-price">14,99&nbsp;€<small>TTC par mois · ou 149,99&nbsp;€ TTC par an</small></div>
       <p class="plan-sub">Dégressif avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois après 24 mois. Annuel reconduit tacitement, résiliable à tout moment.</p>
       <ul class="plan-list">
@@ -483,7 +490,7 @@
 <footer>
   <div class="foot-inner">
     <div class="foot-brand">
-      <img class="logo-img" src="img/logo.png" alt="" width="30" height="30">
+      <img class="logo-img" src="img/logo-96.png" alt="" width="30" height="30">
       <div>
         <div class="foot-name">Alixo</div>
         <div class="foot-tag">Le cockpit d'amphi des étudiants.</div>
@@ -531,6 +538,6 @@
   <button class="dl-toast-close" aria-label="Fermer">✕</button>
 </div>
 
-<script src="script.js?v=20261030b"></script>
+<script src="script.js?v=20261031"></script>
 </body>
 </html>

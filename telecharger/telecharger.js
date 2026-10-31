@@ -1,5 +1,5 @@
 /* Pages /telecharger/windows/, /windows-portable/, /mac/ : lance le téléchargement du fichier de la dernière
-   version (adresse lue dans /releases.json, généré à chaque publication) et affiche version, poids et date.
+   version (adresse lue dans /releases-latest.json, repli /releases.json, générés à chaque publication) et affiche version, poids et date.
    Le site ne montre jamais l'hébergement des fichiers : seules ces pages y renvoient, en arrière-plan. */
 (function () {
   var os = document.body.dataset.os || 'windows';
@@ -21,8 +21,10 @@
     var dot = document.querySelector('#dl-status .sys-dot'); if (dot) dot.style.display = 'none';
   }
 
-  fetch('/releases.json', { cache: 'no-cache' })
-    .then(function (r) { return r.ok ? r.json() : null; })
+  /* releases-latest.json : version, date et installateurs seulement (petit) ; repli sur releases.json (complet) s'il manque */
+  fetch('/releases-latest.json', { cache: 'no-cache' })
+    .then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+    .catch(function () { return fetch('/releases.json', { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : null; }); })
     .then(function (rel) {
       var a = rel && rel.assets && rel.assets[key];
       if (!a || !a.url) { fail(); return; }

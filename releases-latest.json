@@ -1,0 +1,27 @@
+{
+ "generatedAt": "2026-10-31T17:40:18.102Z",
+ "version": "1.48.0",
+ "date": "2026-10-31T17:39:59Z",
+ "assets": {
+  "setup": {
+   "name": "Alixo-Setup.exe",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Setup.exe",
+   "size": 88957086
+  },
+  "portable": {
+   "name": "Alixo-Portable.exe",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Portable.exe",
+   "size": 88586227
+  },
+  "mac": {
+   "name": "Alixo-Mac.dmg",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-Mac.dmg",
+   "size": 203917208
+  },
+  "macZip": {
+   "name": "Alixo-1.48.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.48.0/Alixo-1.48.0-mac.zip",
+   "size": 196474263
+  }
+ }
+}

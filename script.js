@@ -1,6 +1,6 @@
 /* ============================================================
    Alixo — Site vitrine (v4)
-   Téléchargement direct, version et poids live (/releases.json),
+   Téléchargement direct, version et poids live (/releases-latest.json, repli /releases.json),
    macOS auto-détecté (le bouton Mac passe en tête dans le hero, la carte Mac est mise en avant),
    mobile détecté (le bouton principal ouvre l'application), thème, menu mobile,
    apparition au défilement, captures (onglets, alternance automatique, inclinaison 3D du cadre),
@@ -12,7 +12,10 @@ const DL_PAGE = { setup: '/telecharger/windows/', portable: '/telecharger/window
 let EXE_URL = null;       // adresse directe du fichier Windows (lue dans releases.json) ; sinon la page /telecharger/windows/ s'en charge
 let MAC_URL_FILE = null;  // adresse directe du fichier Mac ; sinon la page /telecharger/mac/
 
-const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* html.lite : appareil faible détecté par le script du <head> (téléphone + peu de mémoire, économiseur de données, 2G ou peu de cœurs) */
+const isLite = document.documentElement.classList.contains('lite');
+const saveData = !!(navigator.connection && navigator.connection.saveData);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches || isLite;
 
 /* ---------- Détection de la plateforme ---------- */
 const isMac = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
@@ -91,11 +94,16 @@ if (isMobile) {
   if (mac) { mac.hidden = true; mac.style.display = 'none'; }   /* .btn est inline-flex : [hidden] seul ne suffit pas */
 }
 
-/* ---------- Version et poids (/releases.json) ---------- */
+/* ---------- Version et poids (/releases-latest.json, repli sur /releases.json) ---------- */
 const toMo = (bytes) => (bytes / 1048576).toFixed(bytes > 104857600 ? 0 : 1).replace('.', ',') + ' Mo';
 
-fetch('/releases.json', { cache: 'no-cache' })
-  .then(r => (r.ok ? r.json() : null))
+/* releases-latest.json ne contient que version, date et installateurs (quelques centaines d'octets) ;
+   releases.json, bien plus lourd (notes et historique), reste le repli si le petit fichier manque */
+const fetchReleases = () => fetch('/releases-latest.json', { cache: 'no-cache' })
+  .then(r => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
+  .catch(() => fetch('/releases.json', { cache: 'no-cache' }).then(r => (r.ok ? r.json() : null)));
+
+fetchReleases()
   .then(rel => {
     if (!rel) return;
     const assets = rel.assets || {};
@@ -126,12 +134,28 @@ if (!root.dataset.theme) {
   let saved = null; try { saved = localStorage.getItem('alixo-theme'); } catch (e) {}
   root.dataset.theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
 }
-/* Les captures de l'application suivent le thème du site : clair ↔ sombre */
+/* Les captures de l'application suivent le thème du site : clair ↔ sombre.
+   Chaque capture existe en 640, 1024 et 1600 px (img/shot-{clé}-{thème}-{largeur}.jpg) et en 2880 px (l'original) :
+   src + srcset ne sont posés que sur la capture affichée (.on) et sur celles déjà chargées (data-loaded = thème),
+   les autres sont chargées à la demande (showShot) ou en tâche de fond après le chargement de la page. */
+const SHOT_WIDTHS = [640, 1024, 1600];
+const shotReady = new Map();   /* img → { theme, promise } : promesse tenue quand la capture est décodée (ou après 1,5 s) */
+function loadShot(img) {
+  const theme = root.dataset.theme === 'dark' ? 'dark' : 'light';
+  const cur = shotReady.get(img);
+  if (cur && cur.theme === theme) return cur.promise;
+  const base = img.dataset.base + '-' + theme;
+  img.setAttribute('srcset', SHOT_WIDTHS.map(w => `${base}-${w}.jpg ${w}w`).join(', ') + `, ${base}.jpg 2880w`);
+  img.setAttribute('src', base + '-1024.jpg');
+  img.dataset.loaded = theme;
+  const decoded = img.decode ? img.decode().catch(() => {}) : Promise.resolve();
+  const promise = Promise.race([decoded, new Promise(r => setTimeout(r, 1500))]);
+  shotReady.set(img, { theme, promise });
+  return promise;
+}
 function applyThemeImages() {
-  const dark = root.dataset.theme === 'dark';
   document.querySelectorAll('img.timg').forEach(img => {
-    const want = dark ? img.dataset.dark : img.dataset.light;
-    if (want && img.getAttribute('src') !== want) img.setAttribute('src', want);
+    if (img.classList.contains('on') || img.dataset.loaded) loadShot(img);
   });
 }
 applyThemeImages();
@@ -193,12 +217,38 @@ const SHOT_TITLES = {
 const shotTabs = [...document.querySelectorAll('.shots-tab')];
 const shotImgs = [...document.querySelectorAll('.shot')];
 const shotTitle = document.getElementById('shots-title');
+/* Précharge la capture qui suit `key` dans l'ordre des onglets (alternance automatique ou clic suivant) */
+const preloadNextShot = (key) => {
+  const i = shotTabs.findIndex(t => t.dataset.shot === key);
+  const next = shotImgs.find(img => img.dataset.shot === shotTabs[(i + 1) % shotTabs.length].dataset.shot);
+  if (next) loadShot(next);
+};
+let showSeq = 0;
 function showShot(key) {
+  const seq = ++showSeq;
   shotTabs.forEach(t => { const on = t.dataset.shot === key; t.classList.toggle('active', on); t.setAttribute('aria-pressed', on ? 'true' : 'false'); });
-  shotImgs.forEach(i => { const on = i.dataset.shot === key; i.classList.toggle('on', on); i.setAttribute('aria-hidden', on ? 'false' : 'true'); });
-  shotTitle.textContent = SHOT_TITLES[key] || '';
+  const target = shotImgs.find(i => i.dataset.shot === key);
+  /* la capture est chargée et décodée avant la bascule (1,5 s au plus) : le fond de la scène ne se voit jamais */
+  (target ? loadShot(target) : Promise.resolve()).then(() => {
+    if (seq !== showSeq) return;   /* un autre onglet a été choisi entre-temps */
+    shotImgs.forEach(i => { const on = i.dataset.shot === key; i.classList.toggle('on', on); i.setAttribute('aria-hidden', on ? 'false' : 'true'); });
+    shotTitle.textContent = SHOT_TITLES[key] || '';
+    preloadNextShot(key);
+  });
 }
 shotTabs.forEach(t => t.addEventListener('click', () => showShot(t.dataset.shot)));
+/* Première capture affichée : la suivante est préchargée ; les autres suivent en tâche de fond une fois la page chargée,
+   sauf sur appareil faible ou avec l'économiseur de données */
+const firstShot = shotImgs.find(i => i.classList.contains('on'));
+if (firstShot) loadShot(firstShot).then(() => preloadNextShot(firstShot.dataset.shot));
+if (!isLite && !saveData) {
+  const preloadRest = () => {
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 1500));
+    idle(() => shotImgs.forEach(img => loadShot(img)));
+  };
+  if (document.readyState === 'complete') preloadRest();
+  else window.addEventListener('load', preloadRest, { once: true });
+}
 
 /* Alternance automatique : pas en mouvement réduit ; suspendue tant que la souris ou le focus est sur les captures ; stoppée au premier clic sur un onglet */
 const demoStage = document.getElementById('demo');
@@ -269,7 +319,7 @@ if (coco) {
     coco.classList.add('is-arrived');
     cocoLive.textContent = COCO_MSG;                   /* annoncé une seule fois, en entier */
     clearTimeout(typeTimer); clearTimeout(autoUpTimer);
-    if (cocoCalm.matches) { cocoTyped.textContent = COCO_MSG; typed(); return; }
+    if (cocoCalm.matches || isLite) { cocoTyped.textContent = COCO_MSG; typed(); return; }
     cocoTyped.textContent = '';
     typeTimer = setTimeout(() => typeFrom(1), 220);
   };

@@ -582,7 +582,7 @@ footer { padding: 72px 24px 40px; border-top: 1px solid var(--border); backgroun
   filter: drop-shadow(0 10px 12px rgba(15,18,22,.18)) drop-shadow(0 2px 3px rgba(15,18,22,.10));
 }
 html[data-theme="dark"] .coco-body { filter: drop-shadow(0 10px 14px rgba(0,0,0,.55)) drop-shadow(0 2px 3px rgba(0,0,0,.4)); }
-.coco:not(.is-down) .coco-body { transform-origin: 71.16% 55%; animation: coco-idle 4.8s ease-in-out infinite; }
+.coco:not(.is-down) .coco-body { transform-origin: 71.16% 55%; animation: coco-idle 4.8s ease-in-out infinite; will-change: transform; }
 /* Prolongement de la corde jusque sous la nav : même position (colonnes 250 à 262 de l'image, axe à 71,16 %),
    même épaisseur et même modelé que la corde dessinée, avec un léger torsadé */
 .coco-body::before {
@@ -652,6 +652,10 @@ html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border
   .coco-rig, .coco.is-down .coco-rig { transition: transform .01s linear; }
   .coco-bubble { transition: opacity .15s, visibility 0s .15s; transform: none; }
 }
+/* Appareil faible (html.lite, posé par le script du <head>) : mêmes règles que le mouvement réduit */
+html.lite .coco-body, html.lite .coco.is-down .coco-swing, html.lite .coco:not(.is-down) .coco-body, html.lite .coco-caret { animation: none !important; }
+html.lite .coco-rig, html.lite .coco.is-down .coco-rig { transition: transform .01s linear; }
+html.lite .coco-bubble { transition: opacity .15s, visibility 0s .15s; transform: none; }
 
 /* ---------- Apparition au défilement ---------- */
 .reveal { opacity: 0; transform: translateY(22px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
@@ -663,6 +667,11 @@ html[data-theme="dark"] .coco-bubble { background: rgba(26, 31, 40, .86); border
   .shots-frame { transform: none !important; }
   html { scroll-behavior: auto; }
 }
+/* Appareil faible (html.lite) : mêmes règles que le mouvement réduit */
+html.lite .reveal { opacity: 1; transform: none; transition: none; }
+html.lite .marquee, html.lite .v-doc .v-h, html.lite .v-graph .curve, html.lite .v-quiz-bar i::after { animation: none !important; opacity: 1; stroke-dashoffset: 0; }
+html.lite .shots-frame { transform: none !important; }
+html.lite { scroll-behavior: auto; }
 
 /* ---------- Réactif ---------- */
 @media (max-width: 1080px) {
