@@ -11,9 +11,25 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.48.0 (ou nouveautes.html?v=1.48.0 en page seule).
+   Aperçu : index.html?nouveautes=1.48.1 (ou nouveautes.html?v=1.48.1 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.48.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Correctif installé', title: 'Chaque bouton<br>à sa <em>place</em>', text: 'Partager et Télécharger rejoignent la barre d’outils du document.', dur: 5000 },
+    { title: 'La barre du haut, pour l’<em>application</em>', text: 'En haut, il ne reste que ce qui concerne Alixo dans son ensemble.',
+      bullets: ['<b>Recherche</b>, agenda, notifications, paramètres, apparence', '<b>Rien</b> qui dépende du document ouvert', '<b>Plus clair</b> : on sait où chercher quoi'],
+      art: { svg: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="4" rx="1.5"/><path d="M3 12h18M3 16h12"/></svg>' }, accent: '#33658a', accent2: '#b3762a', dur: 8000 },
+    { title: 'La barre d’outils, pour le <em>document</em>', text: 'Partager et Télécharger sont tout à droite des outils de la séance, avec les pastilles « qui a accès ».',
+      bullets: ['<b>Partager</b> : inviter, voir qui a accès', '<b>Télécharger</b> : fichier Alixo, PDF, Word, page web', '<b>Toujours visibles</b> au bord droit, même si la barre défile'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8500 },
+    { title: 'Le diaporama <em>télécharge</em> aussi', text: 'Dans la barre de la présentation, le bouton Télécharger remplace le petit « .alx ».',
+      bullets: ['<b>Fichier Alixo</b> ou <b>PDF</b>, au choix dans le menu', '<b>Même bouton</b> que dans le tableur et la planche', '<b>Word et OpenDocument</b> gardent leurs boutons Télécharger et Imprimer'],
+      art: 'quiz', accent: '#b3762a', accent2: '#8a4b9c', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
+  ]
+});
 
 AlixoWhatsNew.register('1.48.0', {
   scenes: [
@@ -41,21 +57,5 @@ AlixoWhatsNew.register('1.47.2', {
       bullets: ['<b>Titre</b> d’abord, jamais écrasé par le reste de la barre', '<b>Dossiers</b> repliés en « … » quand le chemin est long', '<b>Logo</b> sur une seule ligne, « Alixo » et son badge côte à côte'],
       art: 'text', accent: '#2e8b6a', accent2: '#8a4b9c', dur: 11000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 8000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.47.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Correctif installé', title: 'La barre du haut<br><em>respire</em>', text: 'Dans l’éditeur, le titre et le chemin du document passent en premier.', dur: 5000 },
-    { title: 'Le <em>titre</em> d’abord', text: 'Le titre du document et son fil d’Ariane gardent leur place, même sur un petit écran.',
-      bullets: ['<b>Titre</b> toujours lisible, jamais écrasé par le reste de la barre', '<b>Fil d’Ariane</b> : « Mes cours » et le dossier du document restent entiers', '<b>Sauvegarde en ligne</b> en icône seule sur les écrans moyens'],
-      art: 'text', accent: '#33658a', accent2: '#b3762a', dur: 8000 },
-    { title: 'Les dossiers repliés en <em>« … »</em>', text: 'Quand le chemin est long, les dossiers du milieu se replient ; rien n’est perdu.',
-      bullets: ['<b>Clic</b> sur « … » : retour au dossier précédent', '<b>Survol</b> : le chemin complet s’affiche', '<b>Logo</b> sur une seule ligne, « Alixo » et son badge côte à côte'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><circle cx="8.5" cy="13.5" r="1" fill="currentColor"/><circle cx="12" cy="13.5" r="1" fill="currentColor"/><circle cx="15.5" cy="13.5" r="1" fill="currentColor"/></svg>' }, accent: '#8a4b9c', accent2: '#33658a', dur: 8000 },
-    { title: 'Moins de <em>place</em> prise', text: 'La recherche devient une loupe et la pastille du cours en cours se fait plus discrète.',
-      bullets: ['<b>Loupe</b> seule dans l’éditeur, Ctrl K (⌘ K) marche toujours', '<b>Cours en cours</b> : pastille bornée, temps restant toujours entier', '<b>Bibliothèque</b> : rien ne change, le champ de recherche y reste'],
-      art: { svg: '<svg viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5 21 21"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
   ]
 });

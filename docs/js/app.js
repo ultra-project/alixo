@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.48.0';
+const ALIXO_VERSION = '1.48.1';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1252,9 +1252,17 @@ function sharedTreeHTML() {
 }
 
 /* ---------------- accès à la séance ouverte : qui la voit (1.15) ---------------- */
+/* 1.48 : les pastilles se montent dans la barre du document ouvert — #sl-bar .sl-access en diaporama (réécrit à chaque renderBar), sinon juste avant « Partager » dans #toolbar */
+function mountAccessChips(box) {
+  const sl = document.body.classList.contains('mode-slides') ? $('#sl-bar .sl-access') : null;
+  if (sl) { if (box.parentNode !== sl) sl.appendChild(box); return; }
+  const share = $('#btn-share'); if (!share) return;
+  if (box.nextElementSibling !== share) share.before(box);
+}
 function renderAccess() {
   let box = $('#access-chips');
-  if (!box) { box = document.createElement('button'); box.id = 'access-chips'; box.className = 'access-chips'; box.type = 'button'; $('#btn-share').before(box); box.addEventListener('click', () => { const a = window.AlixoShare && AlixoShare.enabled && currentDocId ? AlixoShare.accessFor(currentDocId) : null; if (!a) return; if (a.isOwner) AlixoShare.openShareManager(a.sid); else AlixoShare.openInfo(currentDocId); }); }
+  if (!box) { box = document.createElement('button'); box.id = 'access-chips'; box.className = 'access-chips'; box.type = 'button'; box.addEventListener('click', () => { const a = window.AlixoShare && AlixoShare.enabled && currentDocId ? AlixoShare.accessFor(currentDocId) : null; if (!a) return; if (a.isOwner) AlixoShare.openShareManager(a.sid); else AlixoShare.openInfo(currentDocId); }); }
+  mountAccessChips(box);
   const a = window.AlixoShare && AlixoShare.enabled && currentDocId ? AlixoShare.accessFor(currentDocId) : null;
   if (!a) { box.hidden = true; box.innerHTML = ''; return; }
   const peers = AlixoShare.peersFor(currentDocId);
@@ -11631,7 +11639,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'De nouvelles icônes pour vos fichiers Alixo : une feuille colorée par type (séance, présentation, tableur, quiz, planche) sur le bureau comme dans le menu ⤓.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Partager et Télécharger quittent la barre du haut pour la barre d’outils du document ; le diaporama gagne son bouton Télécharger (fichier Alixo, PDF).', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

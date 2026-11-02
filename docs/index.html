@@ -40,12 +40,6 @@
     <button id="btn-agenda" class="tbtn" title="Agenda : cours et événements (Ctrl+Maj+A)">
       <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h3M13 14h3M8 18h3"/></svg>
     </button>
-    <button id="btn-share" class="tbtn only-editor" title="Partager cette séance (Alixo Share)">
-      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
-    </button>
-    <button id="btn-export" class="tbtn only-editor" title="Télécharger ce document (PDF, Word, page web, fichier Alixo) · Ctrl+P : PDF">
-      <svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>
-    </button>
     <button id="btn-notif" class="tbtn" title="Notifications : mises à jour, partages, messages">
       <svg viewBox="0 0 24 24"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15Z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg><span id="notif-badge" class="nbadge" hidden></span>
     </button>
@@ -316,6 +310,17 @@
   <button data-act="dict"    title="Dictionnaire des définitions de tous les cours (Ctrl+Maj+D)"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2Z"/><path d="M4 21a2 2 0 0 1 2-2h14M9 7h7M9 11h5"/></svg></button>
   <button data-act="timer"   title="Chronomètre et compte à rebours (Ctrl+Maj+T)"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3"/></svg></button>
   <button data-act="viewer"  title="Afficher un PDF, un diaporama ou un document Word à côté du cours"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M13 4v16M15.5 9h3M15.5 12h3M15.5 15h2"/></svg></button>
+  <!-- 1.48 : Partager et Télécharger concernent le document ouvert — ils vivent dans sa barre d'outils, pas dans la barre supérieure.
+       Le groupe .tb-docacts reste collé au bord droit (sticky) quand la barre déborde et défile. -->
+  <span class="tb-docacts">
+  <span class="tb-sep"></span>
+  <button id="btn-share" class="tb-share" title="Partager cette séance (Alixo Share)" aria-label="Partager cette séance">
+    <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>
+  </button>
+  <button id="btn-export" class="dl-btn" aria-label="Télécharger" title="Télécharger : fichier Alixo, PDF, Word, page web (Ctrl+P : PDF)" aria-haspopup="menu">
+    <svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg><span class="bd-lbl">Télécharger</span>
+  </button>
+  </span>
   <input id="img-file" type="file" accept="image/*" multiple hidden>
 </div>
 

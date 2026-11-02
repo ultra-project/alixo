@@ -185,7 +185,11 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
   background: var(--surface);
   border: none; border-bottom: 1px solid var(--border);
   border-radius: 0;
+  /* 1.48 : les boutons se serrent d'abord comme avant ; si cela ne suffit plus (volets, mobile), la barre défile */
+  overflow-x: auto; overflow-y: hidden; scrollbar-width: none;
 }
+#toolbar::-webkit-scrollbar { display: none; }
+body.split #toolbar > *, body.pane #toolbar > * { flex: none; }
 /* 1.42 : barre toujours centrée — deux ressorts qui se replient à 0 quand les boutons débordent
    (pas de justify-content: center, qui rendrait le début de la barre inatteignable au défilement) */
 #toolbar::before, #toolbar::after { content: ""; flex: 1 1 0; min-width: 0; }
@@ -195,6 +199,13 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 }
 #toolbar button:hover { background: var(--hover); color: var(--ink); }
 #toolbar button svg { width: 19px; height: 19px; }
+/* 1.48 : Partager et Télécharger (anciennement dans la barre supérieure) — le bouton Télécharger est en ligne avec son libellé */
+#toolbar .dl-btn { display: inline-flex; align-items: center; width: auto; padding: 0 9px; gap: 6px; font-size: 13px; white-space: nowrap; }
+#toolbar .dl-btn svg { width: 17px; height: 17px; }
+@media (max-width: 1500px) { #toolbar .dl-btn .bd-lbl { display: none; } #toolbar .dl-btn { padding: 0 8px; } }   /* 1.48 : écran étroit — icône seule, le nom reste dans l'infobulle et l'aria-label */
+#toolbar .access-chips { display: inline-flex; width: auto; height: 30px; box-sizing: border-box; margin: 0 4px; flex: none; }
+/* 1.48 : actions du document (Partager, Télécharger, pastilles d'accès) toujours atteignables : collées au bord droit quand la barre défile */
+#toolbar .tb-docacts { position: sticky; right: 0; flex: none; display: inline-flex; align-items: center; gap: 2px; background: var(--surface); z-index: 1; padding-left: 2px; }
 #toolbar .tt { font-family: var(--font-ui); font-weight: 700; font-size: 14px; font-style: italic; }
 #toolbar .tlabel { font-size: 14px; }
 #toolbar b.tlabel, #toolbar i.tlabel, #toolbar u.tlabel, #toolbar s.tlabel { font-size: 14px; }
@@ -2596,9 +2607,8 @@ body:has(#lib-todo:not([hidden])) #mob-fab { display: none; }
 html[data-theme="dark"] .home-ico, html[data-theme="dark"] .tab.lib .home-ico { color: #6fa3cc; stroke: #6fa3cc; }
 html[data-theme="dark"] .tree-row.root .tree-label .home-ico path, html[data-theme="dark"] .tn-root .home-ico path { fill: rgba(111, 163, 204, .22); stroke: #6fa3cc; }
 
-/* --- barre supérieure en mode présentation : export + état d'enregistrement --- */
-body.mode-slides #btn-export, body.mode-slides #save-status { display: flex; }
-body.mode-slides #btn-export { display: grid; }
+/* --- barre supérieure en mode présentation : état d'enregistrement (le bouton Télécharger est dans la barre #sl-bar depuis 1.48) --- */
+body.mode-slides #save-status { display: flex; }
 
 /* ============================================================
    Paramètres — fenêtre centrale à catégories
@@ -3084,9 +3094,10 @@ html[data-theme="dark"] .gx-label { background: rgba(10, 13, 20, .78); }
 /* ============================================================
    1.15.0 — partage en direct : accès, présence, dossiers partagés dans la bibliothèque ; réglages IA
    ============================================================ */
-/* qui a accès (barre supérieure, séance ouverte) */
+/* qui a accès (séance ouverte : dans la barre d'outils du document, avant « Partager » ; diaporama : dans #sl-bar .sl-access) */
 .access-chips { display: none; align-items: center; gap: 0; padding: 3px 8px 3px 4px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); margin-right: 4px; cursor: pointer; }
 body.mode-editor .access-chips:not([hidden]), body.mode-slides .access-chips:not([hidden]) { display: inline-flex; }
+#sl-bar .access-chips { height: auto; min-width: 0; padding: 3px 8px 3px 4px; margin: 0 4px; }   /* 1.48 : dans la barre du diaporama, garder la forme « pastilles » malgré .sl-bar button */
 .access-chips:hover { background: var(--hover); border-color: var(--ink-3); }
 .acc-av { width: 24px; height: 24px; border-radius: 50%; background: var(--pc, var(--tint)); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--surface); margin-left: -6px; position: relative; }
 .acc-av:first-child { margin-left: 0; }
@@ -4583,9 +4594,8 @@ body.split #view-slides { grid-template-columns: minmax(0, 212px) 1fr minmax(0, 
 @media (max-width: 1400px) { body.split #view-slides { grid-template-columns: 0 1fr 0; } body.split #sl-strip, body.split #sl-side { display: none; } }
 #panes { position: fixed; top: calc(var(--topbar-h) + var(--tabbar-h)); left: 0; right: 0; bottom: 0; z-index: 52; pointer-events: none; }
 /* la barre d'outils de la zone principale (ou d'un volet étroit) défile au lieu de déborder sur le voisin */
-body.split #toolbar, body.pane #toolbar { overflow-x: auto; overflow-y: hidden; scrollbar-width: none; flex-wrap: nowrap; }
-body.split #toolbar::-webkit-scrollbar, body.pane #toolbar::-webkit-scrollbar { display: none; }
-body.split #toolbar > *, body.pane #toolbar > * { flex: none; }
+/* 1.48 : le défilement horizontal (overflow-x) est désormais porté par la règle générale de #toolbar ; flex: none sur les enfants est déclaré près de #toolbar */
+body.split #toolbar, body.pane #toolbar { flex-wrap: nowrap; }
 #panes .pane { position: absolute; pointer-events: auto; display: flex; flex-direction: column; background: var(--bg); box-sizing: border-box; border-left: 1px solid var(--border); border-top: 1px solid var(--border); }
 #panes .pane.focus { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--tint) 45%, transparent); }
 #panes .pane.flash { animation: paneflash .9s ease-out; }

@@ -1058,8 +1058,6 @@ window.AlixoDocEdit = (() => {
     dirty.forEach(x => saveNow(true, x));
     e.preventDefault(); e.returnValue = '';
   });
-  /* le bouton Exporter de la barre supérieure imprime le document affiché (PDF) */
-  { const b = document.getElementById('btn-export'); if (b) b.addEventListener('click', e => { if (ed && !ed.ov.hidden) { e.stopImmediatePropagation(); if (!ed.broken) print(); } }, true); }
 
   /* ---------------- enregistrement ---------------- */
   /* réécrit le document à partir de l'écran (synchrone), puis l'archive (asynchrone) */

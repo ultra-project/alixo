@@ -344,7 +344,8 @@ window.AlixoSlides = (() => {
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
       const n = slides(dd).length, idx = slides(dd).findIndex(x => x.id === curSlide) + 1;
-      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button></div>`;
+      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr"><span class="sl-access"></span>${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button><button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
+      if (typeof renderAccess === 'function') renderAccess();
       return;
     }
     const els = selEls(); const e = els.length === 1 ? els[0] : null;
@@ -392,11 +393,14 @@ window.AlixoSlides = (() => {
         ${tools}
       </div>
       <div class="sl-barr">
+        <span class="sl-access"></span>
         ${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}
         <button data-sl="undo" title="Annuler (Ctrl+Z)" ${hist.undo.length ? '' : 'disabled'}>${I.undo}</button>
         <button data-sl="redo" title="Rétablir (Ctrl+Y)" ${hist.redo.length ? '' : 'disabled'}>${I.redo}</button>
-        ${window.AlixoAlx ? '<button data-sl="alx" class="alx-btn" title="Enregistrer en fichier Alixo (.alx-slide) : se rouvre dans Alixo, sur n’importe quel appareil">.alx</button>' : ''}
+        <button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
       </div>`;
+    /* 1.48 : les pastilles d'accès (#access-chips) se remontent dans .sl-access à chaque réécriture de la barre */
+    if (typeof renderAccess === 'function') renderAccess();
   }
   function paletteHTML() {
     const q = palQuery.trim().toLowerCase();
@@ -667,6 +671,7 @@ window.AlixoSlides = (() => {
       if (a === 'present') { startPresent(0); return; }
       if (a === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
       if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
+      if (a === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }   // 1.48 : Télécharger (PDF, fichier Alixo) depuis la barre du diaporama
       if (readOnly) return;
       if (a === 'add') { openLayoutMenu(b); return; }
       if (a === 'undo') { undo(); return; }
