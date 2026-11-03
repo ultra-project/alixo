@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-11-03T16:37:49.528Z",
- "version": "1.49.0",
- "date": "2026-11-03T16:03:31Z",
- "notes": "Nouveautés 1.49.0 — Alixo AI : Coco vous répond, à côté du cours\n\n\n- **Alixo AI s’ouvre à côté du cours, plus dans un onglet.** Le bouton **Alixo AI** de la barre d’outils (ou **F8**), depuis une séance, une présentation ou un tableur, ouvre un panneau sur la moitié droite de l’écran, comme le panneau Document qui affiche un PDF. Le cours reste visible et modifiable à gauche ; le panneau se redimensionne en tirant son bord, et se referme d’un clic. Il ne remplace rien : vos quiz et vos fiches sont toujours là, à portée de clic en haut du panneau.\n- **Coco, la mascotte, lit votre cours et répond à vos questions.** Le panneau est un chat : posez une question (« C’est quoi la différence entre interruption et suspension ? », « Résume-moi la partie 2 »), Coco répond en s’appuyant d’abord sur ce qui est écrit dans le document ouvert, phrase par phrase pendant qu’elle écrit, avec les mots importants en gras. Un bouton **Stop** interrompt une réponse ; chaque document garde sa conversation tant que l’application est ouverte. Comme le reste d’AlixoAI, tout se passe sur l’ordinateur : rien n’est envoyé à un service d’IA, sans limite d’utilisation (Alixo+, application Windows et Mac).\n- **Coco se cache derrière la zone de saisie.** Sa tête et ses mains dépassent du champ de message ; elle cligne des yeux, se redresse quand elle réfléchit et respecte le réglage « réduire les animations » du système.\n- **Quiz : en fenêtre, sans quitter le cours.** La carte **Quiz** en haut du panneau ouvre une fenêtre avec le paramétrage habituel (type de questions, nombre, niveau) ; la première question se joue pendant que les suivantes s’écrivent, Entrée passe à la suivante, Échap referme. Le score revient ensuite dans le fil du chat, avec **Rejouer** et **Nouveau quiz** ; « Enregistrer comme document Quiz » et « Imprimer / PDF » sont toujours là.\n- **Des fiches de révision bien plus belles.** La carte **Fiche de révision** produit une fiche visuelle en cartes de couleur, à la manière d’une fiche faite à la main : **À retenir !** (avec des cases à cocher pour s’auto-évaluer), **Les grandes idées**, **Définitions**, **Dates clés** (sur une frise), **Formules**, **Mots-clés** (en pastilles), **Astuce** et **Pièges**, chaque carte avec son icône et son mot-clé en gras. Les cartes apparaissent une à une pendant que Coco rédige. On peut ensuite l’**insérer à la fin de la séance** (titres, listes, encadrés Définition / À retenir, tableau des dates), en faire une **nouvelle séance**, la **copier** ou l’**imprimer en couleur**. En sombre, la fiche garde ses teintes sans éblouir.\n- **Prochaine étape** : Coco pourra proposer des modifications du cours (compléter une définition, corriger un passage) — le panneau est déjà prêt à accueillir ces actions.\n- Côté technique : nouveaux `app/js/coco.js` (panneau et chat), `app/js/aifiche.js` (fiche) et `app/coco.css` ; `app/js/alixoai.js` (tâche « chat », nouveau format de fiche), `app/js/aiquiz.js` (quiz en fenêtre), `app/js/app.js`, `app/js/slides.js`, `app/js/sheets.js`, `app/index.html`, `app/mobile.html`, `app/styles.css`, `app/quiz.css`, `app/mobile.css`, `app/img/coco.png` ; tests `scripts/v1490-coco-test.js` et `scripts/v1370-alixoai-test.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.49.0",
+ "generatedAt": "2026-11-03T16:48:10.811Z",
+ "version": "1.49.1",
+ "date": "2026-11-03T16:47:44Z",
+ "notes": "Nouveautés 1.49.1 — Coco répond (correctif) et s’étonne pendant que vous écrivez\n\n\n- **Le chat de Coco fonctionne.** En 1.49.0, toute question posée à Coco répondait « Demande refusée » : le moteur d’AlixoAI sur l’ordinateur n’avait pas été prévenu de cette nouvelle demande et la rejetait avant même de lire le cours. C’est corrigé : les questions partent, les réponses arrivent. Le quiz et la fiche de révision n’étaient pas touchés.\n- **Coco s’étonne quand vous écrivez.** Dès que vous tapez dans le champ de message, la mascotte ouvre de grands yeux et la bouche en « o » ; elle reprend son sourire quand le champ se vide ou pendant qu’elle répond. Un fondu discret entre les deux, sans animation si le système demande de les réduire.\n- Côté technique : `engine/llm-host.js` (tâche « chat » autorisée), `app/js/coco.js`, `app/coco.css`, `app/img/coco-oh.png` ; tests `scripts/v1440-engine-test.js` (la tâche « chat » n’est plus « invalid ») et `scripts/v1490-coco-test.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.49.1",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.0/Alixo-Setup.exe",
-   "size": 89424113
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.1/Alixo-Setup.exe",
+   "size": 89688512
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.0/Alixo-Portable.exe",
-   "size": 89053273
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.1/Alixo-Portable.exe",
+   "size": 89317647
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.0/Alixo-Mac.dmg",
-   "size": 204370228
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.1/Alixo-Mac.dmg",
+   "size": 204648870
   },
   "macZip": {
-   "name": "Alixo-1.49.0-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.0/Alixo-1.49.0-mac.zip",
-   "size": 196949749
+   "name": "Alixo-1.49.1-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.49.1/Alixo-1.49.1-mac.zip",
+   "size": 197212898
   }
  },
  "history": [
+  {
+   "version": "1.49.1",
+   "date": "2026-11-03T16:47:44Z",
+   "notes": "Nouveautés 1.49.1 — Coco répond (correctif) et s’étonne pendant que vous écrivez\n\n\n- **Le chat de Coco fonctionne.** En 1.49.0, toute question posée à Coco répondait « Demande refusée » : le moteur d’AlixoAI sur l’ordinateur n’avait pas été prévenu de cette nouvelle demande et la rejetait avant même de lire le cours. C’est corrigé : les questions partent, les réponses arrivent. Le quiz et la fiche de révision n’étaient pas touchés.\n- **Coco s’étonne quand vous écrivez.** Dès que vous tapez dans le champ de message, la mascotte ouvre de grands yeux et la bouche en « o » ; elle reprend son sourire quand le champ se vide ou pendant qu’elle répond. Un fondu discret entre les deux, sans animation si le système demande de les réduire.\n- Côté technique : `engine/llm-host.js` (tâche « chat » autorisée), `app/js/coco.js`, `app/coco.css`, `app/img/coco-oh.png` ; tests `scripts/v1440-engine-test.js` (la tâche « chat » n’est plus « invalid ») et `scripts/v1490-coco-test.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.49.1"
+  },
   {
    "version": "1.49.0",
    "date": "2026-11-03T16:03:31Z",
@@ -220,11 +225,6 @@
    "version": "1.27.0",
    "date": "2026-10-06T10:57:00Z",
    "notes": "Nouveautés 1.27.0 — l'IA passe de Gemini (Google) à Grok (xAI)\n\n\n- **Nouveau fournisseur d'IA** : la correction d'orthographe / grammaire, l'analyse pendant la frappe et la mise en\n  forme suggérée s'appuient désormais sur **Grok** (xAI, `api.x.ai`, API compatible OpenAI) à la place de Gemini.\n  Motif : la politique de confidentialité de xAI pour son API (pas d'entraînement des modèles sur les données\n  envoyées). Modèles essayés dans l'ordre : relecture à la demande (F7) `grok-4-1-fast-reasoning` →\n  `grok-4-1-fast-non-reasoning` → `grok-4-fast-non-reasoning` ; pendant la frappe `grok-4-1-fast-non-reasoning` →\n  `grok-4-fast-non-reasoning` → `grok-4-1-fast-reasoning`. Réponse JSON forcée (`response_format`), effort de\n  raisonnement « low » sur les modèles qui l'acceptent. Un seul point d'entrée, `AlixoCorr.call`, comme avant.\n- **Clé API** : elle se crée sur <https://console.x.ai/> (*API Keys › Create API key*, préfixe `xai-`) ; l'usage\n  est facturé au compte xAI, il n'y a plus de « palier gratuit ». Le parcours guidé, le test de la clé et les\n  messages d'erreur (clé refusée, crédit épuisé, saturation) sont adaptés.\n- **Anciennes clés Google ignorées** : la clé personnelle est désormais lue dans `alixo.grokKey` (plus\n  `alixo.geminiKey`), et la clé attribuée par l'administrateur dans le champ `grok` de `keys/{uid}` (plus\n  `gemini`). Une clé Google ne fonctionnerait pas chez xAI : l'application repart donc « sans clé » et propose\n  le parcours de configuration ; l'administrateur doit **réattribuer** des clés xAI.\n- **Panneau d'administration** : l'onglet s'appelle « Clés API xAI (Grok) », le test en ligne interroge\n  `api.x.ai/v1/models`, une attribution antérieure à 1.27 (champ `gemini`) s'affiche « ancienne clé Google » et\n  compte comme « sans clé » pour la distribution et le tableau de bord.\n- **CLUF** (`LICENSE.txt` § 4 d) : les phrases analysées sont envoyées à l'API Grok de xAI. La politique de\n  confidentialité du site (`confidentialite.html`, hors de ce dépôt) est à mettre à jour dans le même sens :\n  sous-traitant xAI à la place de Google (Gemini) pour la correction par IA."
-  },
-  {
-   "version": "1.26.0",
-   "date": "2026-10-05T21:43:12Z",
-   "notes": "Nouveautés 1.26.0 — conformité : profils privés, vérification d'âge, journal d'administration, CLUF, Alixo+\n\n\n- **Profils privés** : `profiles/{uid}` (e-mail, nom, présence, statut) n'est plus lisible que par son titulaire et les\n  administrateurs. Avant, tout compte connecté pouvait lister tous les utilisateurs. La recherche par pseudo passe par la\n  nouvelle collection `handles` (un document par pseudo, lu un par un, jamais listé) ; l'invitation par e-mail ne cherche\n  plus l'adresse dans les profils. Le motif de suspension n'indique plus quel administrateur l'a posée.\n- **Vérification d'âge** : avec un compte, le questionnaire de bienvenue commence par la date de naissance ; sous 15 ans,\n  e-mail et accord d'un parent ou tuteur (loi Informatique et Libertés, art. 45). Les comptes existants répondent une fois\n  à cette seule question. La date reste dans les réglages du compte ; seule la tranche d'âge (`ageGroup`) est envoyée au\n  panneau admin. Paramètres › Compte affiche l'âge.\n- **Alixo+ avant paiement** : fenêtre d'informations précontractuelles (offre, durée, activation, vendeur, rétractation),\n  acceptation des CGV et renonciation expresse au droit de rétractation, enregistrées dans `profiles/{uid}.plusConsent` ;\n  un mineur est renvoyé vers un parent (lien à copier).\n- **Administrateurs sans accès au contenu** : `users/{uid}/**` et le contenu des partages ne sont plus lisibles par les\n  administrateurs ; l'application déclare elle-même les tailles (`profiles/{uid}.storage`, toutes les 10 min au plus) pour\n  l'onglet Stockage. Chaque action du panneau (suspension, Alixo+, clé IA, message, exports, consultation de la base…)\n  est inscrite dans la collection `audit`, jamais modifiable.\n- **CLUF 1.1** (`LICENSE.txt`) : description exacte de ce qui est transmis (mise à jour, synchronisation avec compte, IA),\n  renvoi aux CGU / CGV / politique de confidentialité, liste complète des composants tiers (Firebase, three.js, JSZip,\n  mammoth, qrcode, lexique CC BY-SA 4.0), garantie légale de conformité et médiation.\n- **Quiz en direct** : la page des participants indique ce qui est collecté et renvoie à la politique de confidentialité.\n- **À faire une fois** : republier `firestore.rules` (`npm run rules`) — sinon pseudo et invitations par pseudo échouent —\n  et mettre en ligne les pages du site (`cgv.html`, mentions légales complétées, CGU et politique mises à jour)."
   }
  ]
 }
