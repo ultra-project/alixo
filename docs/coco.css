@@ -101,7 +101,13 @@ html[data-theme="dark"] .coco-msg .coco-err { color: #e07070; }
    bordure haute d'environ 8 px) ; le corps dépasse au-dessus, d'où la marge réservée (≈ 61 px). */
 .coco-composer { position: relative; flex: none; padding: 0 14px 10px; margin-top: 46px; }
 .coco-mascot-wrap { position: absolute; right: 26px; bottom: calc(100% - 3px); width: 84px; z-index: 2; pointer-events: none; user-select: none; transform-origin: 50% 100%; animation: coco-peek .6s cubic-bezier(.2, .8, .2, 1) both; }
-.coco-mascot { display: block; width: 100%; height: auto; }
+.coco-mascot { display: block; width: 100%; height: auto; transition: opacity .18s ease; }
+/* 1.49.1 : pendant la frappe, Coco fait « oh » (img/coco-oh.png, 720 × 491, plus haute : feuilles sur la tête, bord inférieur plat lui aussi) : les deux images
+   sont dans la page (préchargées), superposées, calées par le bas, même largeur ; on ne joue que sur l'opacité */
+.coco-mascot-oh { position: absolute; left: 0; bottom: 0; opacity: 0; }
+.coco-mascot-wrap.oh .coco-mascot-oh { opacity: 1; }
+.coco-mascot-wrap.oh .coco-mascot:not(.coco-mascot-oh) { opacity: 0; }
+.coco-mascot-wrap.oh::before, .coco-mascot-wrap.oh::after { display: none; }   /* les yeux ne sont pas au même endroit : pas de paupières */
 /* clignement : deux paupières de la couleur de la peau posées sur les yeux (coordonnées en % de l'image) */
 .coco-mascot-wrap::before, .coco-mascot-wrap::after { content: ''; position: absolute; border-radius: 50%; transform: scaleY(0); transform-origin: 50% 0; animation: coco-blink 5.2s ease-in-out infinite; }
 .coco-mascot-wrap::before { left: 38.5%; top: 42.5%; width: 19.5%; height: 31.5%; background: #62c56d; }
@@ -132,7 +138,7 @@ html[data-theme="dark"] .coco-msg .coco-err { color: #e07070; }
 .coco-body[data-step="empty"] ~ .coco-composer .coco-mascot-wrap { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .coco-mascot-wrap, .coco-mascot-wrap::before, .coco-mascot-wrap::after, #cocopanel.busy .coco-mascot-wrap, .coco-msg, .coco-empty, #cocopanel .coco-state, .coco-msg.streaming .coco-md::after { animation: none !important; }
-  .coco-card, .coco-field { transition: none; }
+  .coco-card, .coco-field, .coco-mascot { transition: none; }
 }
 
 /* ---------------- 4. fenêtres Quiz et Fiche (openDialog) ---------------- */

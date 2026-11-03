@@ -177,7 +177,7 @@ window.AlixoCoco = (() => {
     inp.disabled = !can; send.disabled = !can;
     inp.placeholder = can ? 'Pose une question sur le cours…' : step === 'empty' ? 'Écris d’abord quelques lignes dans le document' : 'Indisponible pour le moment';
     p.classList.toggle('busy', !!s.gen);
-    syncSend(s);
+    syncSend(s); syncMascot();
     scrollBottom(true);
   }
   /* 1.44 : AlixoAI tourne sur l'ordinateur — modèle à installer, version web (lien vers l'application), désactivée ou en pause */
@@ -271,7 +271,9 @@ window.AlixoCoco = (() => {
     return out;
   }
   function stop(s) { if (!s.gen) return; AlixoAI.cancel(s.gen.token); s.gen = null; setBusy(s, false); }
-  function setBusy(s, on) { if (cur !== s) return; const p = panel(); p.classList.toggle('busy', on && !!s.gen); syncSend(s); }
+  function setBusy(s, on) { if (cur !== s) return; const p = panel(); p.classList.toggle('busy', on && !!s.gen); syncSend(s); syncMascot(); }
+  /* 1.49.1 : Coco fait « oh » pendant que l'étudiant écrit (champ actif et non vide, pas pendant une réponse) */
+  function syncMascot() { const p = panel(), inp = inputEl(), w = p && p.querySelector('.coco-mascot-wrap'); if (!w || !inp) return; w.classList.toggle('oh', !inp.disabled && !!S(inp.value) && document.activeElement === inp && !(cur && cur.gen)); }
   function rerenderMessage(s, m) { if (cur !== s) return; const el = bodyEl().querySelector(`.coco-msg[data-id="${CSS.escape(m.id)}"]`); if (!el) return; const atBottom = nearBottom(); el.outerHTML = messageHTML(m); scrollBottom(atBottom); }
   /* ajoute un message (note de résultat, par exemple) au fil de la session courante — ou de `session` si donnée */
   function post(message, s) {
@@ -299,7 +301,8 @@ window.AlixoCoco = (() => {
       if (e.key === 'Enter' && !e.shiftKey && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); form.requestSubmit(); return; }
       if (e.key === 'Escape' && cur && cur.gen) { e.preventDefault(); e.stopPropagation(); stop(cur); }
     });
-    inp.addEventListener('input', () => autosize(inp));
+    inp.addEventListener('input', () => { autosize(inp); syncMascot(); });
+    inp.addEventListener('focus', syncMascot); inp.addEventListener('blur', syncMascot);
     p.addEventListener('click', e => {
       const s = cur; if (!s) return;
       const card = e.target.closest('.coco-card[data-coco]');

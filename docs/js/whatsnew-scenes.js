@@ -11,9 +11,22 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.49.0 (ou nouveautes.html?v=1.49.0 en page seule).
+   Aperçu : index.html?nouveautes=1.49.1 (ou nouveautes.html?v=1.49.1 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.49.1', {
+  scenes: [
+    { kind: 'intro', kicker: 'Correctif installé', title: 'Coco vous <em>répond</em>', text: 'Le chat d’Alixo AI refusait toute question : c’est réparé.', dur: 6500 },
+    { title: 'Le chat <em>fonctionne</em>', text: 'Posez une question sur le cours : la réponse arrive, mot après mot.',
+      bullets: ['<b>Réparé</b> : plus de « Demande refusée »', '<b>Quiz</b> et <b>fiche</b> n’étaient pas touchés', '<b>Toujours</b> sur l’ordinateur, rien n’est envoyé'],
+      art: { image: 'nouveautes/1.49.0-coco.png', alt: 'Coco répond dans le panneau Alixo AI' }, accent: '#2e8b6a', accent2: '#33658a', dur: 11000 },
+    { title: 'Coco <em>s’étonne</em> quand vous écrivez', text: 'Dès que vous tapez un message, la mascotte ouvre de grands yeux.',
+      bullets: ['<b>Bouche en « o »</b> pendant la frappe', '<b>Sourire</b> retrouvé quand le champ se vide ou qu’elle répond', '<b>Fondu</b> discret, coupé si le système réduit les animations'],
+      art: { image: 'nouveautes/1.49.1-coco-oh.png', alt: 'Coco surprise, bouche en « o »' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 11000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 8000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.49.0', {
   scenes: [
@@ -46,22 +59,6 @@ AlixoWhatsNew.register('1.48.1', {
     { title: 'Le diaporama <em>télécharge</em> aussi', text: 'Dans la barre de la présentation, le bouton Télécharger remplace le petit « .alx ».',
       bullets: ['<b>Fichier Alixo</b> ou <b>PDF</b>, au choix dans le menu', '<b>Même bouton</b> que dans le tableur et la planche', '<b>Word et OpenDocument</b> gardent leurs boutons Télécharger et Imprimer'],
       art: 'quiz', accent: '#b3762a', accent2: '#8a4b9c', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
-  ]
-});
-
-AlixoWhatsNew.register('1.48.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'De nouvelles <em>icônes</em>', text: 'Vos fichiers Alixo se reconnaissent d’un coup d’œil, sur le bureau comme dans l’application.', dur: 5000 },
-    { title: 'Une <em>feuille</em> par type', text: 'Chaque document enregistré sur votre ordinateur porte sa couleur et son symbole.',
-      bullets: ['<b>Séance</b> en bleu, <b>présentation</b> en orange, <b>tableur</b> en vert', '<b>Quiz</b> en violet, <b>planche</b> en rose', '<b>Symbole</b> du type au centre : lignes, chevalet, grille, cases, cartes'],
-      art: { image: 'nouveautes/1.48.0-icones.png', alt: 'Les cinq icônes de fichiers Alixo' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 8500 },
-    { title: 'Sur le <em>bureau</em>, sans confusion', text: 'Dans l’Explorateur Windows comme dans le Finder, un document Alixo ne ressemble plus à l’application.',
-      bullets: ['<b>Double-clic</b> : le document s’ouvre dans Alixo, comme avant', '<b>Windows</b> et <b>Mac</b> : les mêmes icônes des deux côtés', '<b>Netteté</b> à toutes les tailles, de la liste de fichiers aux grandes vignettes'],
-      art: 'cards', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 8000 },
-    { title: 'Dans le menu <em>Télécharger</em>', text: 'Le choix « Fichier Alixo » montre l’icône que le document aura sur le bureau.',
-      bullets: ['<b>Même icône</b> qu’à l’enregistrement, selon le type du document', '<b>Plus grande</b> : son symbole reste lisible', '<b>Rien d’autre</b> ne change : vos cours et vos réglages restent en place'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
   ]
 });
