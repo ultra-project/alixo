@@ -84,10 +84,13 @@ body.mobile #toolbar { overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; 
 body.mobile #toolbar::-webkit-scrollbar { display: none; }
 body.mobile #toolbar > * { flex: none; }
 body.mobile #toolbar .tb-hint { display: none; }
-body.mobile .rpanel, body.mobile #mathpanel, body.mobile #viewpanel, body.mobile #calpanel, body.mobile #dictpanel, body.mobile #aipanel, body.mobile #timerpanel, body.mobile #calcpanel {
+body.mobile .rpanel, body.mobile #mathpanel, body.mobile #viewpanel, body.mobile #cocopanel, body.mobile #calpanel, body.mobile #dictpanel, body.mobile #aipanel, body.mobile #timerpanel, body.mobile #calcpanel {
   position: fixed !important; left: 0 !important; right: 0 !important; top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h)) !important; bottom: 0 !important; width: 100% !important; max-width: none !important; border-radius: 0; z-index: 59;
 }
-body.mobile #view-editor.math-open #docwrap, body.mobile #view-editor.calc-open #docwrap, body.mobile #view-editor.view-open #docwrap { padding-right: 8px; }
+body.mobile #view-editor.math-open #docwrap, body.mobile #view-editor.calc-open #docwrap, body.mobile #view-editor.view-open #docwrap, body.mobile #view-editor.coco-open #docwrap { padding-right: 8px; }
+body.mobile .coco-mascot-wrap { width: 56px; right: 18px; } body.mobile .coco-composer { margin-top: 30px; }
+body.mobile .coco-act { height: 36px; } body.mobile .coco-send { height: 40px; }
+body.mobile .coco-keys { display: none; }
 body.mobile #pp-pill { left: 8px; bottom: 16px; top: auto; }
 body.mobile #imgbar { flex-wrap: wrap; max-width: 96vw; }
 

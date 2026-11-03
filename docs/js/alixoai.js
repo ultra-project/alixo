@@ -1,8 +1,8 @@
 /* ============================================================
-   AlixoAI — l'intelligence artificielle d'Alixo (1.37 ; 1.43 : en ligne ; 1.44 : sur l'ordinateur)
+   AlixoAI — l'intelligence artificielle d'Alixo (1.37 ; 1.43 : en ligne ; 1.44 : sur l'ordinateur ; 1.49 : Coco)
    ------------------------------------------------------------
    Couche unique entre les fonctions de l'application (correction approfondie F7, mise en forme, quiz, fiche de
-   révision) et le moteur d'IA local (js/aiengine.js → alixoDesktop.llm → engine/llm-host.js, llama.cpp dans un
+   révision, conversation avec Coco dans le panneau Alixo AI) et le moteur d'IA local (js/aiengine.js → alixoDesktop.llm → engine/llm-host.js, llama.cpp dans un
    processus séparé). 1.44 : plus rien ne part en ligne, aucune limite d'usage ; le modèle est téléchargé une fois.
    Sur le web et le téléphone, pas d'IA générative (état « web ») ; la correction pendant la frappe, elle, reste
    partout, sans IA (js/grammaire.js, js/corr.js). Chaque demande reste optimisée pour que la réponse arrive vite :
@@ -21,8 +21,12 @@
      ready()                     prête à répondre
      state()                     'off' | 'web' | 'nomodel' | 'downloading' | 'loading' | 'ready' | 'busy' | 'unavailable'
      tier()                      'gpu' | 'cpu'
-     run(task, payload, opts)    → Promise<résultat> ; tâches : 'ping', 'correct', 'style', 'quiz', 'sheet'
+     run(task, payload, opts)    → Promise<résultat> ; tâches : 'ping', 'correct', 'style', 'quiz', 'sheet', 'chat'
                                   opts : { onItem(item, i), onProgress(k, n), onText(text), background, token }
+                                  1.49 : 'chat' = { title, text, history: [{ role: 'user' | 'assistant', content }], question }
+                                  → { text, tokIn, tokOut, model }, onText(texte cumulé) pendant la réponse ;
+                                  'sheet' renvoie des sections typées (retenir, idees, definitions, dates, formules,
+                                  mots, astuce, pieges, exemples, partie) — voir parse.sheet.
      cancel(token)               annule les requêtes portant ce jeton
      passages(text, n, size)     découpe un texte en n passages répartis (exposé pour les tests)
      parse.*                     analyseurs des formats de réponse (exposés pour les tests)
@@ -37,11 +41,12 @@ window.AlixoAI = (() => {
   /* ---------------- budgets (1.44 : selon le moteur local) ----------------
      chunk = caractères par passage (quiz) ; batch = questions par lot ; first = questions du premier lot (la première
      question doit arriver vite) ; sheet = caractères du document pour une fiche ; full = caractères par lot de
-     correction (F7, corr.js) ; style = paragraphes par lot de mise en forme ; sheetTokens = longueur de la fiche.
+     correction (F7, corr.js) ; style = paragraphes par lot de mise en forme ; sheetTokens = longueur de la fiche ;
+     chat = jetons d'une réponse de Coco ; chatDoc = caractères du cours confiés à Coco (1.49).
      Processeur : environ 6 à 10 jetons par seconde (modèle 4B) — lots et extraits plus courts. */
   const BUDGETS = {
-    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 1800 },
-    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1100 }
+    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 2200, chat: 360, chatDoc: 12000 },
+    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1300, chat: 240, chatDoc: 5000 }
   };
   function tier() { const l = L(); return l && l.status().tier === 'gpu' ? 'gpu' : 'cpu'; }
   const budget = () => BUDGETS[tier()];
@@ -162,10 +167,26 @@ window.AlixoAI = (() => {
     return { type: 'courte', question: q, reponses: answers.slice(0, 6), explication: unq(b.e) };
   }
 
-  /* Fiche —  # titre / R: résumé / ## partie / - point / = terme : définition / + à retenir / ! piège */
+  /* Fiche (1.49, sections typées) —  # titre / R: résumé / ## section / - ligne / = terme : définition
+     Chaque « ## » ouvre une section dont le type est déduit du titre (SECTION_TYPES) ; un titre inconnu donne une
+     section 'partie' (un modèle qui suit le plan du cours produit quand même des cartes). Lignes :
+       = terme : définition        → { term, def }           (dans toute section)
+       - date : événement          → { date, text }         (sections dates et formules : « clé : valeur »)
+       - texte                     → { text }               (peut contenir **gras**)
+       - a, b, c                   → éclaté sur les virgules dans la section mots
+     Anciens marqueurs gardés : « + … » → section retenir, « ! … » → section pieges.
+     complete = false : la dernière section, encore en cours d'écriture, est renvoyée dans `open` (lecture progressive). */
+  const SECTION_TYPES = [
+    ['retenir', /retenir|absolument|essentiel/i], ['idees', /id[ée]es?|notions?|plan/i], ['definitions', /d[ée]fini/i],
+    ['dates', /dates?|chronolog|rep[èe]res?/i], ['formules', /formule|chiffres?/i], ['mots', /mots?[- ]?cl[ée]s?|vocabulaire|lexique/i],
+    ['astuce', /astuce|mn[ée]mo|m[ée]thode|conseil/i], ['pieges', /pi[èe]ge|erreur|confusion/i], ['exemples', /exemple/i]
+  ];
+  const sectionType = t => { const f = SECTION_TYPES.find(([, re]) => re.test(t)); return f ? f[0] : 'partie'; };
+  const KV_RE = /^(.{1,28}?)\s*[:—–]\s+(.+)$/;
   parse.sheet = (text, complete) => {
-    const f = { title: '', resume: '', parties: [], retenir: [], pieges: [], open: null };
-    let part = null;
+    const f = { title: '', resume: '', sections: [], open: null };
+    let sec = null;
+    const section = type => { sec = f.sections.find(x => x.type === type && type !== 'partie') || null; if (!sec) { sec = { type, title: '', items: [] }; f.sections.push(sec); } return sec; };
     const lines = clean(text).split('\n');
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim(); if (!line) continue;
@@ -173,16 +194,21 @@ window.AlixoAI = (() => {
       let m;
       if ((m = /^#\s+(.+)$/.exec(line)) && !f.title) { f.title = unq(m[1]); continue; }
       if ((m = /^(?:R|Résumé|Resume)\s*:\s*(.+)$/i.exec(line))) { f.resume = unq(m[1]); continue; }
-      if ((m = /^##+\s*(.+)$/.exec(line))) { const t = unq(m[1]); if (/^(à retenir|a retenir|retenir)$/i.test(t)) { part = { retenir: true }; continue; } if (/^pi[èe]ges?/i.test(t)) { part = { pieges: true }; continue; } part = { titre: t, points: [], definitions: [] }; f.parties.push(part); continue; }
+      if ((m = /^##+\s*(.+)$/.exec(line))) { const t = unq(m[1]); sec = section(sectionType(t)); sec.title = sec.title || t; continue; }
       if (last) continue;
-      if ((m = /^=\s*(.+?)\s*[:—–-]\s+(.+)$/.exec(line)) && part && part.points) { part.definitions.push({ terme: unq(m[1]), definition: unq(m[2]) }); continue; }
-      if ((m = /^\+\s*(.+)$/.exec(line))) { f.retenir.push(unq(m[1])); continue; }
-      if ((m = /^!\s*(.+)$/.exec(line))) { f.pieges.push(unq(m[1])); continue; }
-      if ((m = /^[-•*]\s*(.+)$/.exec(line))) { if (part && part.retenir) f.retenir.push(unq(m[1])); else if (part && part.pieges) f.pieges.push(unq(m[1])); else if (part && part.points) part.points.push(unq(m[1])); else f.retenir.push(unq(m[1])); continue; }
-      if (part && part.points && !part.points.length && !part.definitions.length && !/^[A-Z#=+!-]/.test(line)) part.points.push(unq(line));
+      if ((m = /^=\s*(.+?)\s*[:—–-]\s+(.+)$/.exec(line))) { (sec || section('definitions')).items.push({ term: unq(m[1]), def: unq(m[2]) }); continue; }
+      if ((m = /^\+\s*(.+)$/.exec(line))) { section('retenir').items.push({ text: unq(m[1]) }); continue; }
+      if ((m = /^!\s*(.+)$/.exec(line))) { section('pieges').items.push({ text: unq(m[1]) }); continue; }
+      if ((m = /^[-•*]\s*(.+)$/.exec(line))) {
+        const s2 = sec || section('retenir'); const v = unq(m[1]);
+        if ((s2.type === 'dates' || s2.type === 'formules') && (m = KV_RE.exec(v))) { s2.items.push({ date: unq(m[1]), text: unq(m[2]) }); continue; }
+        if (s2.type === 'mots' && v.includes(',')) { v.split(/\s*,\s*/).map(unq).filter(Boolean).forEach(w => s2.items.push({ text: w })); continue; }
+        s2.items.push({ text: v }); continue;
+      }
+      if (sec && !sec.items.length && !/^[A-Z#=+!-]/.test(line)) sec.items.push({ text: unq(line) });
     }
-    f.parties = f.parties.filter(p => p.titre || p.points.length || p.definitions.length);
-    f.open = !complete && part && part.points ? part : null;   // partie encore en cours d'écriture
+    f.open = !complete && sec ? sec : null;   // section encore en cours d'écriture
+    f.sections = f.sections.filter(x => x.items.length || x === f.open);
     return f;
   };
 
@@ -271,21 +297,42 @@ D: Trente ans
 R: B
 E: Depuis la loi du 17 juin 2008, le délai de droit commun est de cinq ans.`;
   }
-  const SHEET_SYSTEM = `Tu es AlixoAI, un enseignant qui rédige une fiche de révision à partir des notes de cours d’un étudiant.
-Tout vient du document : n’invente aucune notion, aucun chiffre, aucune date. Phrases courtes et complètes. Français soigné.
-Format, exactement :
+  const SHEET_SYSTEM = `Tu es AlixoAI, un enseignant qui rédige une fiche de révision visuelle à partir des notes de cours d’un étudiant.
+Tout vient du document : n’invente aucune notion, aucun chiffre, aucune date. Lignes courtes. Français soigné.
+Mets le mot important de chaque ligne en **gras**. Format, exactement, dans cet ordre (saute une section si le cours ne donne rien) :
 # titre de la fiche
-R: résumé en deux phrases
-## titre de la première partie (suis le plan du cours, 3 à 6 parties)
-- point clé
-- point clé
-= terme : sa définition exacte (seulement si le cours la donne)
-## titre de la partie suivante
-- …
+R: résumé en une phrase
 ## À retenir
-- l’essentiel, 3 à 5 phrases
+- 3 à 5 lignes : l’essentiel, une idée par ligne
+## Les grandes idées
+- 4 à 8 lignes : **notion** : explication en une phrase
+## Définitions
+= terme : définition exacte du cours (2 à 6)
+## Dates clés
+- date : événement (seulement si le cours contient des dates)
+## Formules
+- nom : formule (seulement si le cours contient des formules ou des chiffres clés)
+## Mots-clés
+- 6 à 10 mots ou expressions, un par ligne
+## Astuce
+- 1 ou 2 moyens de retenir (moyen mnémotechnique, méthode, ordre à suivre)
 ## Pièges
-- confusion ou erreur fréquente (0 à 3)`;
+- 1 à 3 confusions ou erreurs fréquentes
+Exemple (cours sur la prescription) :
+# La prescription extinctive
+R: Un droit s’éteint quand son titulaire ne l’exerce pas pendant un certain délai.
+## À retenir
+- Délai de **droit commun : 5 ans** depuis la loi du 17 juin 2008.
+## Définitions
+= Délai butoir : limite maximale au-delà de laquelle l’action est fermée.
+## Dates clés
+- 17 juin 2008 : loi réformant la prescription civile
+## Pièges
+- Confondre **interruption** (nouveau délai) et **suspension** (pause).`;
+  /* 1.49 : Coco, la mascotte, répond aux questions de l'étudiant sur SON cours (panneau Alixo AI, js/coco.js) */
+  const CHAT_SYSTEM = `Tu es Coco, la mascotte d’Alixo : tu aides un étudiant à comprendre SON cours, donné ci-dessous.
+Réponds en français, court (3 à 8 lignes), avec des phrases simples, en le tutoyant. Appuie-toi d’abord sur le cours ; si le cours n’en parle pas, dis-le en une phrase puis réponds brièvement avec tes connaissances.
+Mise en forme : **gras** pour les mots importants, listes avec « - ». Pas de titres, pas de tableaux.`;
 
   /* ---------------- exécution ---------------- */
   let seq = 0;
@@ -307,6 +354,7 @@ R: résumé en deux phrases
     if (task === 'style') return runStyle(payload, opts, token, b);
     if (task === 'quiz') return runQuiz(payload, opts, token, b);
     if (task === 'sheet') return runSheet(payload, opts, token, b);
+    if (task === 'chat') return runChat(payload, opts, token, b);
     throw new Error('AlixoAI : tâche inconnue « ' + task + ' »');
   }
   /* délai de garde : processeur nettement plus lent que la carte graphique (et premier chargement du modèle compris) */
@@ -391,22 +439,40 @@ R: résumé en deux phrases
     if (!all.length) throw new Error(lastErr || 'AlixoAI n’a pas renvoyé de question — réessayez.');
     return { title: title || p.title || 'Quiz', questions: all, tokIn, tokOut, model, partial: all.length < n ? lastErr : '' };
   }
-  /* fiche : { title, text } → { title, resume, parties, retenir, pieges } ; onItem(partie, index) au fil de l'eau */
+  /* fiche : { title, text } → { title, resume, sections, tokIn, tokOut, model } ; onItem(section, index) dès qu'une
+     section est close (lecture progressive : la fiche se dessine carte par carte) */
   async function runSheet(p, opts, token, b) {
     const text = shortenTo(p.text, b.sheet);
     const user = `Titre du cours : ${p.title || 'Sans titre'}\n\n${text}`;
     let delivered = 0;
-    const r = await engineChat({ task: 'sheet', system: SHEET_SYSTEM, user, maxTokens: b.sheetTokens, temperature: 0.2, timeoutMs: slow(240000), token, quiet: true, onToken: t => {
+    const deliver = (f, all) => {
       if (!opts.onItem) return;
-      const f = parse.sheet(t, false);
-      const done = f.parties.filter(x => x !== f.open);
-      for (let i = delivered; i < done.length; i++) { delivered = i + 1; try { opts.onItem(done[i], i); } catch { /* */ } }
-    } });
+      const done = all ? f.sections : f.sections.filter(x => x !== f.open);
+      for (let i = delivered; i < done.length; i++) { delivered = i + 1; try { opts.onItem(done[i], i); } catch { /* interface */ } }
+    };
+    const r = await engineChat({ task: 'sheet', system: SHEET_SYSTEM, user, maxTokens: b.sheetTokens, temperature: 0.2, timeoutMs: slow(240000), token, quiet: true, onToken: t => deliver(parse.sheet(t, false), false) });
     if (!r.ok) throw fail(r);
     const f = parse.sheet(r.raw, true);
-    if (!f.parties.length && !f.retenir.length) throw new Error('AlixoAI n’a pas renvoyé de fiche lisible — réessayez.');
-    for (let i = delivered; i < f.parties.length; i++) if (opts.onItem) { try { opts.onItem(f.parties[i], i); } catch { /* */ } }
-    return { title: f.title || ('Fiche de révision — ' + (p.title || '')), resume: f.resume, parties: f.parties, retenir: f.retenir, pieges: f.pieges, tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+    if (!f.sections.length) throw new Error('AlixoAI n’a pas renvoyé de fiche lisible — réessayez.');
+    deliver(f, true);
+    return { title: f.title || ('Fiche de révision — ' + (p.title || '')), resume: f.resume, sections: f.sections, tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+  }
+  /* 1.49 — conversation avec Coco : { title, text, history, question } → { text, tokIn, tokOut, model } ; onText(texte cumulé)
+     pendant la réponse. Le cours (coupé au budget) ouvre la conversation ; les échanges précédents suivent, les plus
+     anciens oubliés d'abord quand le contexte du moteur ne suffit plus. */
+  async function runChat(p, opts, token, b) {
+    const docText = shortenTo(p.text, Math.min(b.chatDoc, Math.floor(ctxChars() * 0.5)));
+    const question = String(p.question || '').trim();
+    const messages = [{ role: 'system', content: CHAT_SYSTEM },
+      { role: 'user', content: `Cours « ${p.title || 'Sans titre'} » :\n${docText}` },
+      { role: 'assistant', content: 'J’ai lu le cours. Pose-moi tes questions.' }];
+    const hist = (p.history || []).filter(m => m && m.content && (m.role === 'user' || m.role === 'assistant')).map(m => ({ role: m.role, content: String(m.content) }));
+    const size = list => list.reduce((n, m) => n + m.content.length, 0);
+    while (hist.length && size(messages) + size(hist) + question.length > ctxChars() * 0.8) hist.shift();   // on oublie les plus anciens
+    messages.push(...hist, { role: 'user', content: question });
+    const r = await engineChat({ task: 'chat', messages, maxTokens: b.chat, temperature: 0.4, timeoutMs: slow(120000), token, quiet: true, onToken: t => { if (opts.onText) { try { opts.onText(clean(t)); } catch { /* interface */ } } } });
+    if (!r.ok) throw fail(r);
+    return { text: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
   }
   function cancel(token) { const l = L(); if (l && l.cancel) l.cancel(token); }
   const newToken = () => 'ai' + (++seq);

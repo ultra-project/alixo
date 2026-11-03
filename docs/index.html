@@ -6,6 +6,7 @@
 <title>Alixo — Cockpit d'amphi</title>
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="quiz.css">
+<link rel="stylesheet" href="coco.css">
 <link rel="stylesheet" href="whatsnew.css">
 <link rel="stylesheet" href="docedit.css">
 <link rel="stylesheet" href="alx.css">
@@ -265,8 +266,26 @@
 <div id="qz-play" class="qz-play" hidden></div>
 <div id="qz-print"></div>
 
-<!-- ===== Vue Quiz IA (1.35, js/aiquiz.js) : un onglet par document, paramétrage, génération animée, jeu, fiche ===== -->
-<section id="view-aiquiz" class="aq-view" hidden></section>
+<!-- ===== Alixo AI (1.49, js/coco.js) : panneau de droite au niveau du body (séance, présentation, tableur) — chat avec Coco,
+     cartes « Fiche de révision » (js/aifiche.js) et « Quiz » (js/aiquiz.js, fenêtre) ; contenu rendu par coco.js ===== -->
+<aside id="cocopanel" hidden>
+  <div class="vw-resizer coco-resizer" title="Glisser pour redimensionner"></div>
+  <div class="mp-tabs coco-head">
+    <span class="rp-title coco-title">Alixo AI <small class="coco-doc"></small></span>
+    <i class="coco-state" data-state="web" role="status" title="AlixoAI" aria-label="AlixoAI"></i>
+    <button id="coco-close" class="rp-close" type="button" title="Fermer (F8)" aria-label="Fermer Alixo AI"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+  </div>
+  <div class="coco-cards" hidden></div>
+  <div class="coco-body"></div>
+  <form class="coco-composer" autocomplete="off">
+    <span class="coco-mascot-wrap" aria-hidden="true"><img class="coco-mascot" src="img/coco.png" alt="" width="720" height="449" draggable="false"></span>
+    <div class="coco-field">
+      <textarea class="coco-input" rows="1" placeholder="Pose une question sur le cours…" aria-label="Question pour Coco" enterkeyhint="send"></textarea>
+      <button type="submit" class="coco-send">Envoyer</button>
+    </div>
+    <div class="coco-under"><p class="coco-privacy">AlixoAI répond sur cet ordinateur : rien n’est envoyé à un service d’IA. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a></p><span class="coco-keys"><kbd>Entrée</kbd> envoyer · <kbd>Maj+Entrée</kbd> retour à la ligne</span></div>
+  </form>
+</aside>
 
 <!-- ===== Barre d'outils de l'éditeur ===== -->
 <div id="toolbar" class="only-editor" hidden>
@@ -305,7 +324,7 @@
   <span class="tb-hint" title="Les blocs (titres, encadrés, fiches, formules, graphiques, tableaux, images, dessins) s’insèrent avec « / » sur une ligne vide">/ blocs</span>
   <span class="tb-sep"></span>
   <button data-act="ai"      title="Corriger l’orthographe et la grammaire avec l’IA (F7)"><svg viewBox="0 0 24 24"><path d="m4 15 4.5-9 4.5 9M5.5 12h6"/><path d="m14 15 2.2 2.2L21 12.5"/><path d="M18.5 3.5l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6Z"/></svg></button>
-  <button data-act="quizia"  class="tb-plus" title="Quiz IA et fiche de révision : QCM, vrai / faux, réponses courtes ou fiche générés par l’IA à partir de cette séance (Alixo+)"><svg viewBox="0 0 24 24"><path d="M9.5 5.5h-3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/><path d="M8 11h4M8 15h7"/><path d="m16.5 2.5 1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1Z"/></svg></button>
+  <button data-act="quizia"  class="tb-plus" title="Alixo AI (F8) : Coco répond à vos questions sur cette séance, quiz et fiche de révision générés par l’IA (Alixo+)"><svg viewBox="0 0 24 24"><path d="M9.5 5.5h-3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2v-3"/><path d="M8 11h4M8 15h7"/><path d="m16.5 2.5 1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1Z"/></svg></button>
   <button data-act="ti"      title="Calculatrices : TI-83 Premium CE et fx-92 Collège (émulateurs en ligne)"><span class="tt" style="font-style:normal">TI</span></button>
   <button data-act="dict"    title="Dictionnaire des définitions de tous les cours (Ctrl+Maj+D)"><svg viewBox="0 0 24 24"><path d="M4 5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2Z"/><path d="M4 21a2 2 0 0 1 2-2h14M9 7h7M9 11h5"/></svg></button>
   <button data-act="timer"   title="Chronomètre et compte à rebours (Ctrl+Maj+T)"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3"/></svg></button>
@@ -405,6 +424,8 @@
 <script src="js/docx.js"></script>
 <script src="js/odt.js"></script>
 <script src="js/aiquiz.js"></script>
+<script src="js/aifiche.js"></script>
+<script src="js/coco.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/export.js"></script>
 <script src="js/alx.js"></script>

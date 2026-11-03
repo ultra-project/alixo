@@ -1,0 +1,222 @@
+/* ============================================================
+   Alixo 1.49 — Alixo AI : le panneau Coco (js/coco.js), la fenêtre Quiz (js/aiquiz.js) et la fiche de révision
+   « sketchnote » (js/aifiche.js). Liée après quiz.css : les règles .aq-scope de quiz.css (génération, jeu, résultat)
+   s'appliquent dans la fenêtre Quiz ; ici : le panneau de droite, le fil de discussion, la zone de saisie avec la
+   mascotte qui se cache derrière, les cartes colorées de la fiche (clair / sombre / impression).
+   ============================================================ */
+
+/* ---------------- 1. le panneau (niveau body, décale la séance, la présentation et le tableur) ---------------- */
+:root { --coco-w: clamp(360px, 46vw, 720px); }
+#cocopanel {
+  position: fixed; right: 0; bottom: 0; width: var(--coco-w); min-width: 320px; z-index: 40;
+  top: calc(var(--topbar-h) + var(--tabbar-h));                              /* présentation, tableur : pas de #toolbar */
+  display: flex; flex-direction: column; background: var(--surface); border-left: 1px solid var(--border);
+  color: var(--ink); font-family: var(--font-ui);
+}
+#cocopanel[hidden] { display: none; }
+body.mode-editor #cocopanel { top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 2px); }   /* comme #viewpanel */
+/* vues où le panneau n'a pas de sens (planche, quiz, onglet Word, bibliothèque) : il reste « ouvert » mais invisible,
+   et revient tout seul en revenant à une séance, une présentation ou un tableur */
+body:not(.mode-editor):not(.mode-slides):not(.mode-sheet) #cocopanel { display: none; }
+/* décalage du contenu (classes posées par syncRightPanelClass, app.js) */
+#view-editor.coco-open #docwrap { padding-right: calc(var(--coco-w) + 20px); }
+body.coco-open #view-slides, body.coco-open #view-sheet { right: var(--coco-w); }
+body.coco-open #view-slides { grid-template-columns: minmax(0, 212px) 1fr minmax(0, 280px); }
+@media (max-width: 1500px) { body.coco-open #view-slides { grid-template-columns: minmax(0, 150px) 1fr minmax(0, 240px); } }
+/* petit écran (portable 1366 × 768) : panneau plus étroit, volet latéral de la présentation masqué, pellicule réduite */
+@media (max-width: 1440px) { :root { --coco-w: clamp(340px, 38vw, 720px); } body.coco-open #view-slides { grid-template-columns: minmax(0, 110px) 1fr 0; } body.coco-open #sl-side { display: none; } }
+@media (max-width: 1200px) { body.coco-open #view-slides { grid-template-columns: 0 1fr 0; } body.coco-open #sl-strip, body.coco-open #sl-side { display: none; } }
+/* écran partagé (js/split.js) : le panneau se replie sur la zone principale */
+body.split:not(.mode-editor) #cocopanel { right: var(--main-r); bottom: var(--main-b); top: calc(var(--topbar-h) + var(--tabbar-h) + var(--main-t)); }
+body.split.coco-open #view-slides, body.split.coco-open #view-sheet { right: calc(var(--main-r) + var(--coco-w)); }
+#cocopanel .coco-resizer { left: -4px; }
+
+/* en-tête */
+#cocopanel .coco-head { border-bottom: 1px solid var(--border); padding: 8px 10px; gap: 8px; flex: none; }
+#cocopanel .coco-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+#cocopanel .coco-doc { font-weight: 500; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#cocopanel .coco-state { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--ink-3); opacity: .55; }
+#cocopanel .coco-state[data-state="ready"] { background: var(--ok); opacity: 1; }
+#cocopanel .coco-state[data-state="busy"], #cocopanel .coco-state[data-state="loading"] { background: var(--warn); opacity: 1; animation: coco-pulse 1.2s ease-in-out infinite; }
+#cocopanel .coco-state[data-state="unavailable"], #cocopanel .coco-state[data-state="off"] { background: var(--danger); opacity: 1; }
+#cocopanel .rp-close { margin-left: 0; }
+@keyframes coco-pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.4); } }
+
+/* ---------------- 2. corps : cartes d'activité (hors du fil, toujours visibles) et fil ---------------- */
+.coco-body { flex: 1; overflow: auto; padding: 12px 14px 0; display: flex; flex-direction: column; gap: 12px; min-height: 0; scroll-padding-bottom: 12px; }
+.coco-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; flex: none; padding: 12px 14px 0; }
+.coco-cards[hidden] { display: none; }
+.coco-card { display: grid; grid-template-columns: 36px 1fr; gap: 10px; align-items: center; text-align: left; padding: 12px 14px; border: 1.5px solid var(--border); border-radius: 14px; background: var(--bg); color: var(--ink); cursor: pointer; transition: border-color .15s, box-shadow .15s, transform .15s; min-width: 0; }
+.coco-card[data-coco="fiche"] { --cc: #b3762a; }
+.coco-card[data-coco="quiz"] { --cc: var(--tint); }
+.coco-card .coco-cico { width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: color-mix(in srgb, var(--cc) 14%, transparent); color: var(--cc); }
+.coco-card .coco-cico svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.coco-card b { display: block; font-size: 14px; font-weight: 700; }
+.coco-card small { display: block; font-size: 11.5px; color: var(--ink-2); line-height: 1.35; margin-top: 2px; }
+.coco-card:hover:not(:disabled) { border-color: var(--cc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--cc) 18%, transparent); transform: translateY(-1px); }
+.coco-card:disabled { opacity: .5; cursor: default; }
+.coco-card:focus-visible { outline: 2px solid var(--cc); outline-offset: 2px; }
+/* version compacte dès que le fil dépasse deux messages : icône + libellé */
+.coco-cards.compact .coco-card { padding: 7px 12px; grid-template-columns: 28px 1fr; gap: 8px; border-radius: 11px; }
+.coco-cards.compact .coco-cico { width: 28px; height: 28px; border-radius: 8px; }
+.coco-cards.compact .coco-cico svg { width: 16px; height: 16px; }
+.coco-cards.compact .coco-card b { font-size: 13px; }
+.coco-cards.compact .coco-card small { display: none; }
+@media (max-width: 1100px) { .coco-cards:not(.compact) { grid-template-columns: 1fr; } }
+
+.coco-thread { display: flex; flex-direction: column; gap: 10px; padding-bottom: 8px; flex: 1; }
+.coco-msg { position: relative; max-width: 92%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5; overflow-wrap: anywhere; animation: coco-in .25s ease-out both; }
+.coco-msg.user { align-self: flex-end; background: var(--tint-soft); color: var(--ink); border-bottom-right-radius: 6px; white-space: pre-wrap; }
+.coco-msg.coco { align-self: flex-start; background: var(--bg); border: 1px solid var(--border); border-bottom-left-radius: 6px; }
+.coco-msg.note { align-self: center; max-width: 100%; font-size: 12.5px; color: var(--ink-2); background: transparent; border: 1px dashed var(--border); text-align: center; }
+.coco-msg.error { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.coco-msg .coco-err { display: block; color: var(--danger); font-size: 12.5px; margin-top: 4px; }
+html[data-theme="dark"] .coco-msg .coco-err { color: #e07070; }
+.coco-msg .coco-wait { color: var(--ink-3); font-style: italic; }
+.coco-msg.streaming .coco-md::after { content: '▍'; display: inline-block; margin-left: 1px; color: var(--tint); animation: coco-caret 1s steps(2) infinite; }
+.coco-msg p { margin: 0; } .coco-msg p + p, .coco-msg p + ul, .coco-msg p + ol, .coco-msg ul + p, .coco-msg ol + p { margin-top: 6px; }
+.coco-msg ul, .coco-msg ol { margin: 4px 0; padding-left: 20px; }
+.coco-msg li { margin: 2px 0; }
+.coco-msg code { font-family: var(--font-mono); font-size: .92em; background: color-mix(in srgb, var(--ink) 7%, transparent); padding: 0 4px; border-radius: 4px; }
+.coco-msg b { font-weight: 700; }
+.coco-acts { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; justify-content: center; }
+.coco-act { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: 600 12px var(--font-ui); cursor: pointer; }
+.coco-act:hover { background: var(--hover); border-color: var(--tint); color: var(--tint); }
+.coco-act svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+@keyframes coco-caret { 50% { opacity: 0; } }
+@keyframes coco-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* écran d'état : version web, modèle absent, désactivée, document vide */
+.coco-empty { margin: 30px auto 0; max-width: 420px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; animation: coco-in .3s ease-out both; }
+.coco-empty img { width: 150px; height: auto; margin-bottom: 4px; }
+.coco-empty b { font-size: 16px; }
+.coco-empty p { color: var(--ink-2); font-size: 13.5px; line-height: 1.5; margin: 0 0 8px; }
+.coco-empty .coco-eacts { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+.coco-empty .cta { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+.coco-empty .cta svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------------- 3. zone de saisie et mascotte ---------------- */
+/* L'image (720 × 449) a un bord inférieur plat : les mains de Coco sont posées en bas. Coco (110 px) est posée à droite,
+   au-dessus du champ, les mains accrochées DEVANT le bord supérieur (l'image passe par-dessus le champ et recouvre sa
+   bordure haute d'environ 8 px) ; le corps dépasse au-dessus, d'où la marge réservée (≈ 61 px). */
+.coco-composer { position: relative; flex: none; padding: 0 14px 10px; margin-top: 46px; }
+.coco-mascot-wrap { position: absolute; right: 26px; bottom: calc(100% - 3px); width: 84px; z-index: 2; pointer-events: none; user-select: none; transform-origin: 50% 100%; animation: coco-peek .6s cubic-bezier(.2, .8, .2, 1) both; }
+.coco-mascot { display: block; width: 100%; height: auto; }
+/* clignement : deux paupières de la couleur de la peau posées sur les yeux (coordonnées en % de l'image) */
+.coco-mascot-wrap::before, .coco-mascot-wrap::after { content: ''; position: absolute; border-radius: 50%; transform: scaleY(0); transform-origin: 50% 0; animation: coco-blink 5.2s ease-in-out infinite; }
+.coco-mascot-wrap::before { left: 38.5%; top: 42.5%; width: 19.5%; height: 31.5%; background: #62c56d; }
+.coco-mascot-wrap::after { left: 61%; top: 34.5%; width: 17.5%; height: 31%; background: #80df86; animation-delay: .03s; }
+@keyframes coco-peek { from { transform: translateY(30%); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes coco-blink { 0%, 93%, 100% { transform: scaleY(0); } 95.5%, 97.5% { transform: scaleY(1); } }
+#cocopanel.busy .coco-mascot-wrap { animation: coco-think 1.1s ease-in-out infinite; }
+@keyframes coco-think { 0%, 100% { transform: translateY(0) rotate(0); } 50% { transform: translateY(-6px) rotate(-3deg); } }
+.coco-field { position: relative; z-index: 1; display: flex; align-items: flex-end; gap: 8px; padding: 9px 9px 9px 14px; border: 1.5px solid var(--border); border-radius: 18px; background: var(--bg); box-shadow: 0 -8px 24px -16px rgba(0, 0, 0, .25); transition: border-color .15s, box-shadow .15s; }
+.coco-field:focus-within { border-color: var(--tint); box-shadow: 0 0 0 3px var(--tint-soft); }
+.coco-input { flex: 1; min-width: 0; resize: none; max-height: 140px; min-height: 22px; padding: 6px 0; margin: 0; border: none; background: transparent; font: inherit; font-size: 14px; line-height: 1.45; color: var(--ink); outline: none; box-shadow: none; }
+.coco-input::placeholder { color: var(--ink-3); }
+.coco-input:disabled { opacity: .6; }
+.coco-send { flex: none; height: 34px; padding: 0 14px; border-radius: 10px; border: none; background: var(--tint); color: #fff; font: 650 13px var(--font-ui); cursor: pointer; transition: filter .12s, background .15s; }
+.coco-send:hover:not(:disabled) { filter: brightness(1.08); }
+.coco-send:disabled { opacity: .45; cursor: default; }
+.coco-send.stop { background: var(--danger); }
+.coco-under { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin: 6px 2px 0; }
+.coco-privacy { margin: 0; font-size: 11px; color: var(--ink-3); line-height: 1.4; }
+.coco-privacy a { color: var(--ink-2); }
+.coco-keys { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 10.5px; color: var(--ink-3); line-height: 1.4; white-space: nowrap; padding-top: 1px; }
+.coco-keys kbd { font: 600 10px var(--font-ui); padding: 0 5px; border-radius: 4px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
+@media (max-width: 1100px) { .coco-keys { display: none; } }
+/* version web / sans modèle : pas de zone de saisie (l'écran d'état dit quoi faire) ; document vide : le champ reste, désactivé */
+.coco-body[data-step="noai"] ~ .coco-composer { display: none; }
+.coco-body[data-step="noai"] ~ .coco-composer .coco-mascot-wrap { display: none; }
+.coco-body[data-step="noai"] ~ .coco-composer, .coco-body[data-step="empty"] ~ .coco-composer { margin-top: 10px; }
+.coco-body[data-step="empty"] ~ .coco-composer .coco-mascot-wrap { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .coco-mascot-wrap, .coco-mascot-wrap::before, .coco-mascot-wrap::after, #cocopanel.busy .coco-mascot-wrap, .coco-msg, .coco-empty, #cocopanel .coco-state, .coco-msg.streaming .coco-md::after { animation: none !important; }
+  .coco-card, .coco-field { transition: none; }
+}
+
+/* ---------------- 4. fenêtres Quiz et Fiche (openDialog) ---------------- */
+.dlg-card.coco-dlg .dlg-body { padding: 0 26px 18px; }
+.coco-dlg .aq-scope { --ai: #b3762a; --ai2: #d9a441; }
+.coco-dlg .aq-stage { width: 100%; padding: 8px 0 20px; }
+.coco-dlg .dlg-eyebrow { color: #b3762a; }
+html[data-theme="dark"] .coco-dlg .dlg-eyebrow { color: #d9a441; }
+.coco-fiche-dlg.dlg-card { width: min(1100px, 96vw); max-height: 94vh; }
+.coco-dlg .aq-empty { margin-top: 24px; }
+.coco-dlg .dlg-foot .cta svg { width: 14px; height: 14px; margin-right: 5px; vertical-align: -2px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fiche-wrap { padding: 6px 0 10px; }
+.fiche-gen .aq-gen { padding-top: 10px; gap: 14px; }
+.fiche-gen .aq-orb { width: 110px; height: 110px; }
+.fiche-gen .aq-orb em { width: 56px; height: 56px; } .fiche-gen .aq-orb em svg { width: 26px; height: 26px; }
+.fiche-gen.partial { flex-direction: row; }
+.fiche-gen.partial .aq-gen { flex-direction: row; text-align: left; gap: 14px; padding: 0 0 14px; }
+.fiche-gen.partial .aq-orb { width: 54px; height: 54px; flex: none; } .fiche-gen.partial .aq-orb em { width: 32px; height: 32px; } .fiche-gen.partial .aq-orb em svg { width: 16px; height: 16px; }
+.fiche-gen.partial .aq-gtxt b { font-size: 14px; min-height: 0; } .fiche-gen.partial .aq-gsub { display: none; } .fiche-gen.partial .aq-gbar { display: none; } .fiche-gen.partial .aq-gen .aq-btn { margin: 0 0 0 auto; }
+.fiche-gen[hidden] { display: none; }
+
+/* ---------------- 5. la fiche colorée (sketchnote) ---------------- */
+.fiche { font-family: var(--font-ui); color: var(--ink); }
+.fiche[hidden] { display: none; }
+.fiche-title { text-align: center; margin: 6px auto 20px; max-width: 760px; }
+.fiche-title h2 { display: inline-block; margin: 0; padding: 8px 22px; border: 2.5px solid var(--ink); border-radius: 14px; box-shadow: 4px 4px 0 var(--tint); font-size: 24px; font-weight: 800; letter-spacing: -.01em; transform: rotate(-.6deg); background: var(--paper, var(--surface)); max-width: 100%; overflow-wrap: anywhere; }
+.fiche-resume { margin: 14px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+/* « À retenir ! » pleine largeur au-dessus (.fiche-top), puis les cartes en colonnes (pas de trous) */
+.fiche-top { margin-bottom: 14px; }
+.fiche-top:empty { display: none; }
+.fiche-grid { display: block; columns: 3; column-gap: 14px; }
+.fiche-grid .fiche-card { break-inside: avoid; margin-bottom: 14px; }
+.fiche-card { --fc: var(--fc-light); --fi: var(--fc-ink); background: var(--fc); color: var(--ink); border-radius: 16px; padding: 14px 16px 12px; border: 1.5px solid color-mix(in srgb, var(--fi) 30%, transparent); box-shadow: 3px 3px 0 color-mix(in srgb, var(--fi) 25%, transparent); animation: aq-in .35s ease-out both; animation-delay: calc(var(--i, 0) * 60ms); min-width: 0; overflow-wrap: anywhere; }
+html[data-theme="dark"] .fiche-card { --fc: var(--fc-dark); --fi: color-mix(in srgb, var(--fc-ink) 38%, #fff); }
+.fiche-card h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: 15px; font-weight: 800; color: var(--fi); text-transform: none; letter-spacing: 0; }
+.fiche-card h3 svg { width: 20px; height: 20px; flex: none; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.fiche-card[data-k="retenir"] { transform: rotate(-.3deg); }
+.fiche-card ul, .fiche-card ol { margin: 0; padding-left: 18px; }
+.fiche-card li { margin: 4px 0; line-height: 1.45; font-size: 13.5px; }
+.fiche-card b { color: var(--fi); }
+.fiche-card code { font-family: var(--font-mono); font-size: .92em; }
+.fiche-check { list-style: none; padding: 0; }
+.fiche-check li { display: flex; gap: 9px; align-items: flex-start; cursor: pointer; }
+.fiche-check li:focus-visible { outline: 2px solid var(--fi); outline-offset: 2px; border-radius: 6px; }
+.fiche-box { flex: none; width: 15px; height: 15px; margin-top: 3px; border: 2px solid var(--fi); border-radius: 4px; background: transparent; display: grid; place-items: center; }
+.fiche-check li.done .fiche-box { background: var(--fi); }
+.fiche-check li.done .fiche-box::after { content: ''; width: 4px; height: 8px; border: solid #fff; border-width: 0 2px 2px 0; transform: translateY(-1px) rotate(45deg); }
+.fiche-check li.done span { text-decoration: line-through; opacity: .65; }
+.fiche-timeline { list-style: none; padding: 0 0 0 6px; margin: 2px 0 0; border-left: 2px solid var(--fi); }
+.fiche-timeline li { position: relative; padding: 0 0 8px 14px; margin: 0; }
+.fiche-timeline li::before { content: ''; position: absolute; left: -7px; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--fi); box-shadow: 0 0 0 2px var(--fc); }
+.fiche-timeline b { display: block; color: var(--fi); font-size: 13px; }
+.fiche-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.fiche-chips span { padding: 3px 10px; border-radius: 999px; background: color-mix(in srgb, #fff 55%, var(--fc)); border: 1px solid color-mix(in srgb, var(--fi) 35%, transparent); font-size: 12.5px; font-weight: 650; color: var(--fi); cursor: pointer; transition: background .12s, border-color .12s; }
+.fiche-chips span:hover { border-color: var(--fi); background: color-mix(in srgb, #fff 75%, var(--fc)); }
+.fiche-chips span:focus-visible { outline: 2px solid var(--fi); outline-offset: 2px; }
+html[data-theme="dark"] .fiche-chips span { background: color-mix(in srgb, #000 25%, var(--fc)); }
+.fiche-formulas { list-style: none; padding: 0; }
+.fiche-formulas li { display: grid; gap: 3px; margin: 0 0 8px; }
+.fiche-formulas code { font-family: var(--font-mono); font-size: 13px; background: color-mix(in srgb, #fff 45%, var(--fc)); padding: 3px 8px; border-radius: 6px; width: fit-content; max-width: 100%; }
+html[data-theme="dark"] .fiche-formulas code { background: color-mix(in srgb, #000 25%, var(--fc)); }
+.fiche-card dl { margin: 0; }
+.fiche-card dt { font-weight: 800; color: var(--fi); margin-top: 6px; font-size: 13.5px; }
+.fiche-card dt:first-child { margin-top: 0; }
+.fiche-card dd { margin: 1px 0 4px; font-size: 13.5px; line-height: 1.45; }
+.fiche-card .fiche-astuce li { list-style: none; } .fiche-card .fiche-astuce { padding-left: 0; }
+.fiche-card .fiche-astuce li::before { content: '✦'; color: var(--fi); margin-right: 6px; }
+.fiche-foot { margin-top: 16px; font-size: 11px; color: var(--ink-3); text-align: center; }
+@media (max-width: 900px) { .fiche-grid { columns: 2; } }
+@media (max-width: 600px) { .fiche-grid { columns: 1; } .fiche-title h2 { font-size: 20px; } }
+@media (prefers-reduced-motion: reduce) { .fiche-card { animation: none; } }
+
+/* impression de la fiche (js/aifiche.js pose #coco-print dans body et la classe coco-printing) : palette claire forcée */
+@media screen { #coco-print { display: none; } }
+@media print {
+  body.coco-printing > *:not(#coco-print) { display: none !important; }
+  body.coco-printing { background: #fff !important; }
+  #coco-print { display: block; max-width: 100%; margin: 0 auto; }
+  #coco-print .fiche { font-family: Arial, Helvetica, sans-serif; color: #202124; }
+  #coco-print .fiche-title h2 { border-color: #202124; box-shadow: 4px 4px 0 #b3762a; background: #fff; }
+  #coco-print .fiche-resume, #coco-print .fiche-foot { color: #5f6368; }
+  #coco-print .fiche-card { --fc: var(--fc-light) !important; --fi: var(--fc-ink) !important; color: #202124; break-inside: avoid; box-shadow: none; animation: none; transform: none; }
+  #coco-print .fiche-grid { columns: 2; column-gap: 10px; }
+  #coco-print .fiche-grid .fiche-card { margin-bottom: 10px; } #coco-print .fiche-top { margin-bottom: 10px; }
+  #coco-print .fiche-chips span { background: #fff; }
+  #coco-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

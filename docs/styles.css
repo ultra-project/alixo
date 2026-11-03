@@ -1454,8 +1454,8 @@ body.tbl-resizing, body.tbl-resizing * { cursor: col-resize !important; user-sel
   .lnk-print .lq svg { width: 58px; height: 58px; flex: none; }
   .lnk-print .lq b { display: block; color: #1a1a1a; font-size: 11px; }
   .lnk-print .lq span { word-break: break-all; }
-  #dictpanel, #calpanel, #viewpanel, .cal-now, .tbl-rz { display: none !important; }
-  #view-editor.view-open #docwrap { padding: 0; }
+  #dictpanel, #calpanel, #viewpanel, #cocopanel, .cal-now, .tbl-rz { display: none !important; }
+  #view-editor.view-open #docwrap, #view-editor.coco-open #docwrap { padding: 0; }
   /* textes d'aide (« Écrivez, ou tapez / », « Titre… », champs de fiche…) : jamais dans le PDF */
   #blocks [data-ph]::before, #blocks .jref::before, #blocks .jval::before, #blocks figcaption::before, #blocks .qcite::before { content: none !important; }
 }
@@ -4443,7 +4443,7 @@ body.wall-on .bd-stage { background-color: transparent; }
 #toolbar .zoomctl { margin-left: 6px; }
 .sl-barr .zoomctl, .sh-barr .zoomctl { margin-right: 6px; }
 .sl-stage.zoomed { overflow: auto; }
-/* bouton Quiz IA (Alixo+) dans les barres */
+/* bouton Alixo AI (Alixo+, 1.49 : ouvre le panneau Coco, js/coco.js) dans les barres */
 #toolbar .tb-plus svg { color: #b3762a; }
 #toolbar .tb-plus:hover svg { color: #8d5a1c; }
 .sl-bar .sl-aiquiz, .sh-bar .sh-aiquiz { color: #b3762a !important; font-weight: 600; font-size: 12.5px !important; gap: 5px; }
@@ -4588,8 +4588,8 @@ body.split #toolbar { top: calc(var(--topbar-h) + var(--tabbar-h) + var(--main-t
 body.split #view-editor { top: var(--main-t); left: var(--main-l); right: var(--main-r); bottom: var(--main-b); }
 body.split #planpanel { left: var(--main-l); top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 2px + var(--main-t)); bottom: var(--main-b); }
 body.split #pp-pill { left: calc(10px + var(--main-l)); top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 12px + var(--main-t)); }
-body.split #mathpanel, body.split #aipanel, body.split #calcpanel, body.split #dictpanel, body.split #calpanel, body.split #timerpanel, body.split #viewpanel { right: var(--main-r); top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 2px + var(--main-t)); bottom: var(--main-b); }
-body.split #view-library, body.split #view-slides, body.split #view-sheet, body.split #view-board, body.split #view-quiz, body.split #view-aiquiz, body.split #view-word { top: calc(var(--topbar-h) + var(--tabbar-h) + var(--main-t)); left: var(--main-l); right: var(--main-r); bottom: var(--main-b); }
+body.split #mathpanel, body.split #aipanel, body.split #calcpanel, body.split #dictpanel, body.split #calpanel, body.split #timerpanel, body.split #viewpanel, body.split.mode-editor #cocopanel { right: var(--main-r); top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 2px + var(--main-t)); bottom: var(--main-b); }
+body.split #view-library, body.split #view-slides, body.split #view-sheet, body.split #view-board, body.split #view-quiz, body.split #view-word { top: calc(var(--topbar-h) + var(--tabbar-h) + var(--main-t)); left: var(--main-l); right: var(--main-r); bottom: var(--main-b); }
 body.split #view-slides { grid-template-columns: minmax(0, 212px) 1fr minmax(0, 280px); }
 @media (max-width: 1400px) { body.split #view-slides { grid-template-columns: 0 1fr 0; } body.split #sl-strip, body.split #sl-side { display: none; } }
 #panes { position: fixed; top: calc(var(--topbar-h) + var(--tabbar-h)); left: 0; right: 0; bottom: 0; z-index: 52; pointer-events: none; }

@@ -295,6 +295,7 @@ window.AlixoSlides = (() => {
     bind();
     const iids = [];
     for (const s of slides(dd)) for (const e of s.els || []) if (e.t === 'image' && e.iid && !AlixoImages.cache.has(e.iid)) iids.push(e.iid);
+    if (window.AlixoCoco) AlixoCoco.sync();   // 1.49 : le panneau Alixo AI suit le document affiché
     if (iids.length) { renderAll(); await Promise.all(iids.map(i => AlixoImages.get(i).catch(() => null))); if (currentDocId !== id) return; }
     renderAll();
   }
@@ -344,7 +345,7 @@ window.AlixoSlides = (() => {
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
       const n = slides(dd).length, idx = slides(dd).findIndex(x => x.id === curSlide) + 1;
-      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr"><span class="sl-access"></span>${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button><button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
+      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr"><span class="sl-access"></span>${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button><button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
       if (typeof renderAccess === 'function') renderAccess();
       return;
     }
@@ -389,7 +390,7 @@ window.AlixoSlides = (() => {
     bar.innerHTML = `<div class="sl-barl">
         <button data-sl="add" class="cta small" title="Nouvelle diapositive (Ctrl+M)">${I.plus} Diapositive</button>
         <button data-sl="present" class="cta ghost small" title="Présenter depuis le début (F5)">${I.play} Présenter</button>
-        ${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}
+        ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}
         ${tools}
       </div>
       <div class="sl-barr">
@@ -669,7 +670,7 @@ window.AlixoSlides = (() => {
       const a = b.dataset.sl; const id = sel();
       if (a === 'info') { if (window.AlixoShare) AlixoShare.openInfo(currentDocId); return; }
       if (a === 'present') { startPresent(0); return; }
-      if (a === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
+      if (a === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (a === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }   // 1.48 : Télécharger (PDF, fichier Alixo) depuis la barre du diaporama
       if (readOnly) return;
@@ -876,7 +877,7 @@ window.AlixoSlides = (() => {
       if (popOpen) return;
       if (window.AlixoZoom && !inText && !$('.dlgov') && AlixoZoom.handleKey(e, 'slides')) return;   // 1.34 : Ctrl + / − / 0
       if (e.key === 'F5') { e.preventDefault(); startPresent(e.shiftKey ? 'cur' : 0); return; }
-      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
+      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
       if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
       if (mod && e.key === 'Tab') { e.preventDefault(); cycleTab(e.shiftKey ? -1 : 1); return; }

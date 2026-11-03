@@ -621,8 +621,8 @@ window.AlixoSheets = (() => {
     sel = { r1: 0, c1: 0, r2: 0, c2: 0, ar: 0, ac: 0 };
     hist = { undo: [], redo: [] };
     chartOn = false;
+    if (window.AlixoSlides) AlixoSlides.leave();   // 1.49 : avant de retirer mode-slides (sinon leave() ne masque pas #view-slides)
     document.body.classList.remove('mode-editor', 'mode-slides');
-    if (window.AlixoSlides) AlixoSlides.leave();
     document.body.classList.add('mode-sheet');
     $('#view-library').style.display = 'none';
     $('#view-editor').hidden = true;
@@ -637,6 +637,7 @@ window.AlixoSheets = (() => {
     bind();
     renderAll();
     focusGrid();
+    if (window.AlixoCoco) AlixoCoco.sync();   // 1.49 : le panneau Alixo AI suit le document affiché
   }
   function leave() {
     if (!active()) return;
@@ -894,7 +895,7 @@ window.AlixoSheets = (() => {
     const cell = cellAt(s, sel.ar, sel.ac) || {};
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor((d() || {}).id) : null;
-      bar.innerHTML = `<div class="sh-barl"><span class="sh-barlabel">${esc(s.name)}</span><span class="sh-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}</div>
+      bar.innerHTML = `<div class="sh-barl"><span class="sh-barlabel">${esc(s.name)}</span><span class="sh-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}</div>
         <div class="sh-barr">${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}<button data-sh="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF, CSV (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
       return;
     }
@@ -930,7 +931,7 @@ window.AlixoSheets = (() => {
       <button data-sh="chart" class="${chartOn ? 'on' : ''}" title="Graphique de la sélection">${I.chart}</button>
       <button data-sh="import" title="Importer un fichier CSV dans cette feuille">${I.imp}</button>
       <span class="sh-sep"></span>
-      ${window.AlixoAIQuiz ? AlixoAIQuiz.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}
+      ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sh="quizia"', 'sh-aiquiz') : ''}
     </div>
     <div class="sh-barr">
       ${window.AlixoZoom ? AlixoZoom.controlHTML('sheet') : ''}
@@ -1337,7 +1338,7 @@ window.AlixoSheets = (() => {
       if (k === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else exportPDF(); return; }   // 1.40 : petite fenêtre des formats
       if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'chart') { chartOn = !chartOn; renderSide(); renderBar(); return; }
-      if (k === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
+      if (k === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (readOnly) return;
       if (k === 'b' || k === 'i' || k === 'u' || k === 'wrap') { toggleStyle(k === 'wrap' ? 'w' : k); focusGrid(); return; }
       if (k === 'al') { styleSel({ a: b.dataset.al }); focusGrid(); return; }
@@ -1476,7 +1477,7 @@ window.AlixoSheets = (() => {
       const popOpen = ($('#popover') && !$('#popover').hidden) || ($('#searchov') && !$('#searchov').hidden) || ($('#setov') && !$('#setov').hidden) || !!$('.dlgov');
       if (popOpen) return;
       if (window.AlixoZoom && AlixoZoom.handleKey(e, 'sheet')) return;   // 1.34 : Ctrl + / − / 0
-      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(d()); return; }
+      if (e.key === 'F8') { e.preventDefault(); if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
       if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
       if (mod && e.key === 'Tab') { e.preventDefault(); cycleTab(e.shiftKey ? -1 : 1); return; }

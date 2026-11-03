@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.48.1';
+const ALIXO_VERSION = '1.49.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -382,6 +382,7 @@ function openDoc(id) {
   renderPageTabs();
   renderAccess();
   if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPresence(id, null);
+  if (window.AlixoCoco) AlixoCoco.sync();   // 1.49 : le panneau Alixo AI suit le document affiché
 }
 
 /* ---------------- onglets dans une séance (façon Google Docs) ----------------
@@ -2508,7 +2509,7 @@ const PLUS_FEATURES = [
   { k: 'stockage', name: 'Plus de 3 Go de stockage', free: '3 Go', plus: 'Au-delà de 3 Go', text: 'Fichiers, images et cours au-delà de la limite de 3 Go du compte gratuit.' },
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
   { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI, sur votre ordinateur et sans limite, relit tout le cours (F7), propose la mise en forme et des reformulations.' },
-  { k: 'quizia', name: 'Quiz IA et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : QCM, vrai / faux et réponses courtes corrigés sur place, ou une fiche de révision (résumé, points clés, définitions, pièges), générés par l’IA à partir de vos notes.' },
+  { k: 'quizia', name: 'Alixo AI : Coco, quiz et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation ou un tableur : Coco, la mascotte, répond à vos questions sur le cours ; quiz (QCM, vrai / faux, réponses courtes) corrigés sur place ; fiches de révision colorées (à retenir, grandes idées, définitions, dates, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' }
@@ -3202,7 +3203,7 @@ const SHORTCUT_GROUPS = [
     [[['Ctrl', 'K']], 'Recherche universelle'], [[['Ctrl', 'P']], 'Exporter en PDF'], [[['Ctrl', 'W']], 'Fermer l’onglet'], [[['Ctrl', 'Tab']], 'Onglet suivant'],
     [[['Alt', '←']], 'Retour à la bibliothèque'], [[['Ctrl', 'Maj', 'A']], 'Agenda'], [[['Ctrl', 'Maj', 'K']], 'Tâches'], [[['Ctrl', 'Maj', 'D']], 'Dictionnaire'], [[['Ctrl', 'Maj', 'T']], 'Chronomètre']] },
   { name: 'Séances', keys: [
-    [[['/']], 'Insérer un bloc (ligne vide)'], [[['F7']], 'Correction par IA'], [[['F8']], 'Quiz IA / fiche de révision'], [[['Ctrl', 'Alt', '1…6']], 'Niveau de titre (selon le plan)'],
+    [[['/']], 'Insérer un bloc (ligne vide)'], [[['F7']], 'Correction par IA'], [[['F8']], 'Alixo AI (Coco, quiz, fiche)'], [[['Ctrl', 'Alt', '1…6']], 'Niveau de titre (selon le plan)'],
     [[['Ctrl', '~molette']], 'Zoom (aussi présentations, tableurs)'], [[['Ctrl', '+'], ['Ctrl', '−']], 'Zoom avant / arrière'], [[['Ctrl', '0']], 'Zoom à 100 %']] },
   { name: 'Présentations', keys: [[[['F5']], 'Présenter'], [[['Suppr']], 'Supprimer le bloc sélectionné']] },
   { name: 'Tableurs', keys: [[[['F2']], 'Modifier la cellule'], [[['Ctrl', '~flèches']], 'Bord de la zone remplie']] },
@@ -3380,7 +3381,7 @@ function settingsSectionHTML(k) {
       <div class="set-checks" id="set-ai2" ${aiIsWeb() ? 'hidden' : ''}>
         <label><input type="checkbox" role="switch" data-ai="rephrase" ${o.rephrase ? 'checked' : ''}><span><b>Proposer des reformulations (F7)</b><small>Avec parcimonie : une phrase lourde peut être reformulée plus clairement, sans changer le sens.</small></span></label>
         <label><input type="checkbox" role="switch" data-ai="multilang" ${o.multilang ? 'checked' : ''}><span><b>Corriger aussi les textes écrits dans une autre langue (F7)</b><small>Un bloc en anglais, espagnol, allemand, italien ou portugais est alors relu dans sa langue. Décoché : il est laissé tel quel.</small></span></label>
-      </div>` : `<div class="plus-lock">${PLUS_ICO.ia}<div><b>AlixoAI relit tout le cours, propose la mise en forme, crée des quiz et des fiches de révision</b><span>Relecture approfondie (✨ ou F7), encadrés et titres, reformulations, Quiz IA et fiches de révision (F8) depuis vos séances, présentations et tableurs. ${aiPrivacyHTML()}</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div>`}</div>
+      </div>` : `<div class="plus-lock">${PLUS_ICO.ia}<div><b>AlixoAI relit tout le cours, propose la mise en forme, crée des quiz et des fiches de révision</b><span>Relecture approfondie (✨ ou F7), encadrés et titres, reformulations, Alixo AI (F8) : Coco répond à vos questions, quiz et fiches de révision depuis vos séances, présentations et tableurs. ${aiPrivacyHTML()}</span></div></div>${plusCtaHTML()}<div id="plus-more" class="po-row" style="margin-top:12px"><button class="cta ghost small" id="set-plusmore" type="button">Voir tout ce que comprend Alixo+</button></div>`}</div>
     <div class="set-sect"><div class="po-label">Niveau de correction</div>
       <div class="set-tiles" id="set-ailevel">${AI_LEVELS.map(([v, l, h]) => `<button type="button" class="set-tile ${o.level === v ? 'on' : ''}" data-level="${v}"><b>${l}</b><span>${h}</span></button>`).join('')}</div>
       <div class="po-hint">Les abréviations juridiques et médicales, sigles, formules et mots latins ne sont jamais « corrigés ». « Strict » ajoute pendant la frappe l’espace avant ; : ! ?. Ces réglages suivent votre compte.${aiLastStatus ? `<br>Dernière relecture automatique — ${esc(aiLastStatus)}` : ''}</div></div>
@@ -7913,13 +7914,18 @@ const FORMULA_LIB = {
 };
 
 /* ---------------- panneaux de droite (un seul ouvert à la fois) ---------------- */
-const RIGHT_PANELS = ['#mathpanel', '#aipanel', '#calcpanel', '#dictpanel', '#calpanel', '#viewpanel', '#timerpanel'];
+const RIGHT_PANELS = ['#mathpanel', '#aipanel', '#calcpanel', '#dictpanel', '#calpanel', '#viewpanel', '#timerpanel', '#cocopanel'];
+/* 1.49 : #cocopanel (Alixo AI, js/coco.js) vit au niveau de <body> pour exister aussi depuis les présentations et les
+   tableurs : la classe coco-open est posée sur #view-editor (décalage de la feuille) ET sur body (décalage des vues
+   présentation / tableur). Cette fonction est la seule source de vérité de ces classes. */
 function syncRightPanelClass() {
   const ve = $('#view-editor');
   const open = RIGHT_PANELS.find(s => !$(s).hidden);
-  ve.classList.toggle('math-open', !!open && open !== '#calcpanel' && open !== '#viewpanel');
+  ve.classList.toggle('math-open', !!open && open !== '#calcpanel' && open !== '#viewpanel' && open !== '#cocopanel');
   ve.classList.toggle('calc-open', open === '#calcpanel');
   ve.classList.toggle('view-open', open === '#viewpanel');
+  ve.classList.toggle('coco-open', open === '#cocopanel');
+  document.body.classList.toggle('coco-open', open === '#cocopanel');
 }
 /* garde le même passage à l'écran quand la largeur de la feuille change (ouverture / fermeture d'un volet :
    la feuille se rétrécit, le texte se réorganise et le cours « remontait » légèrement) */
@@ -8663,22 +8669,25 @@ async function pptxToHtml(buf) {
   }
   return out.length ? out.join('') + '<div style="height:20px"></div>' : '<div class="vw-empty">Aucune diapositive lisible dans ce fichier.</div>';
 }
-/* largeur du panneau : poignée sur son bord gauche */
-(() => {
-  const rz = document.querySelector('#viewpanel .vw-resizer'); if (!rz) return;
+/* largeur d'un panneau droit : poignée sur son bord gauche (1.49 : partagé entre le lecteur de documents et le panneau
+   Alixo AI — chacun sa variable CSS et son réglage mémorisé) */
+function bindPanelResizer(sel, cssVar, key) {
+  const rz = document.querySelector(sel + ' .vw-resizer'); if (!rz) return;
   let drag = null;
-  rz.addEventListener('mousedown', e => { e.preventDefault(); drag = { x: e.clientX, w: $('#viewpanel').getBoundingClientRect().width }; rz.classList.add('on'); document.body.classList.add('tbl-resizing'); });
+  rz.addEventListener('mousedown', e => { e.preventDefault(); drag = { x: e.clientX, w: $(sel).getBoundingClientRect().width }; rz.classList.add('on'); document.body.classList.add('tbl-resizing'); });
   document.addEventListener('mousemove', e => {
     if (!drag) return;
     const w = Math.max(320, Math.min(innerWidth * 0.72, drag.w + (drag.x - e.clientX)));
-    document.documentElement.style.setProperty('--viewer-w', w + 'px');
+    document.documentElement.style.setProperty(cssVar, w + 'px');
   });
   document.addEventListener('mouseup', () => {
     if (!drag) return;
     drag = null; rz.classList.remove('on'); document.body.classList.remove('tbl-resizing');
-    state.settings.viewerW = Math.round($('#viewpanel').getBoundingClientRect().width); save();
+    state.settings[key] = Math.round($(sel).getBoundingClientRect().width); save();
   });
-})();
+}
+bindPanelResizer('#viewpanel', '--viewer-w', 'viewerW');
+bindPanelResizer('#cocopanel', '--coco-w', 'cocoW');
 
 /* calculatrices : émulateurs officiels en ligne, dans une vue intégrée — TI-83 Premium CE (Texas Instruments)
    et fx-92 Collège (Casio), la calculatrice scientifique simple du collège. Chaque émulateur n'est chargé
@@ -8849,7 +8858,7 @@ $('#toolbar').addEventListener('click', e => {
   if (act === 'phone') openPhoneImage(bid);
   if (act === 'draw') insertDrawing();
   if (act === 'ai') runAiCorrection();
-  if (act === 'quizia') { if (window.AlixoAIQuiz) AlixoAIQuiz.open(); return; }
+  if (act === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(); return; }
   if (act === 'ti') toggleCalcPanel();
   if (act === 'link') openLinkPopover({});
   if (act === 'refart') { if (!specAllowed('droit')) { toast('Les références d’articles ne sont pas disponibles avec vos spécialités (Paramètres › Modifier mon profil)'); return; } openArticlePopover(bid); }
@@ -8997,7 +9006,7 @@ function openAiModelDialog(preset) {
   return ov;
 }
 let aiInstalledShown = 0;
-function aiInstalledToast() { if (Date.now() - aiInstalledShown < 3000) return; aiInstalledShown = Date.now(); toast('AlixoAI est installée sur cet ordinateur — F7 pour relire le cours, F8 pour un quiz'); }
+function aiInstalledToast() { if (Date.now() - aiInstalledShown < 3000) return; aiInstalledShown = Date.now(); toast('AlixoAI est installée sur cet ordinateur — F7 pour relire le cours, F8 pour parler à Coco'); }
 /* moteur arrêté : repli sur le processeur, ou pause après deux arrêts (js/aiengine.js) */
 document.addEventListener('alixo-ai-crash', e => { const d = e.detail || {}; if (d.unavailable) aiToast(aiMsg('unavailable'), { duration: 9000 }); else if (d.fallback === 'cpu') aiToast(aiMsg('cpu'), { duration: 9000 }); });
 /* groupes de tuiles (role="radiogroup") : un seul arrêt de tabulation par groupe (la tuile choisie), flèches ←/→ (et ↑/↓)
@@ -10251,7 +10260,7 @@ document.addEventListener('keydown', e => {
   if (mod && e.key.toLowerCase() === 'p') { e.preventDefault(); exportPDF(); return; }
   if (window.AlixoZoom && !$('.dlgov') && AlixoZoom.handleKey(e, 'doc')) return;   // 1.34 : Ctrl + / − / 0 (aussi depuis le champ du titre)
   if (e.key === 'F7') { e.preventDefault(); runAiCorrection(); return; }
-  if (e.key === 'F8') { e.preventDefault(); if (window.AlixoAIQuiz) AlixoAIQuiz.open(); return; }
+  if (e.key === 'F8') { e.preventDefault(); if (window.AlixoCoco) AlixoCoco.toggle(); return; }
   if (mod && e.key.toLowerCase() === 'e') {
     e.preventDefault();
     const nb = insertSpecial({ type: 'formula', src: '' });
@@ -11639,7 +11648,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Partager et Télécharger quittent la barre du haut pour la barre d’outils du document ; le diaporama gagne son bouton Télécharger (fichier Alixo, PDF).', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Alixo AI s’ouvre à côté du cours : Coco, la mascotte, lit votre document et répond à vos questions ; quiz en fenêtre et fiches de révision en cartes colorées.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();
