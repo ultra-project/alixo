@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-03T16:48:10.811Z",
+ "generatedAt": "2026-11-14T22:20:59.130Z",
  "version": "1.49.1",
  "date": "2026-11-03T16:47:44Z",
  "notes": "Nouveautés 1.49.1 — Coco répond (correctif) et s’étonne pendant que vous écrivez\n\n\n- **Le chat de Coco fonctionne.** En 1.49.0, toute question posée à Coco répondait « Demande refusée » : le moteur d’AlixoAI sur l’ordinateur n’avait pas été prévenu de cette nouvelle demande et la rejetait avant même de lire le cours. C’est corrigé : les questions partent, les réponses arrivent. Le quiz et la fiche de révision n’étaient pas touchés.\n- **Coco s’étonne quand vous écrivez.** Dès que vous tapez dans le champ de message, la mascotte ouvre de grands yeux et la bouche en « o » ; elle reprend son sourire quand le champ se vide ou pendant qu’elle répond. Un fondu discret entre les deux, sans animation si le système demande de les réduire.\n- Côté technique : `engine/llm-host.js` (tâche « chat » autorisée), `app/js/coco.js`, `app/coco.css`, `app/img/coco-oh.png` ; tests `scripts/v1440-engine-test.js` (la tâche « chat » n’est plus « invalid ») et `scripts/v1490-coco-test.js`.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.49.1",

@@ -323,9 +323,17 @@ window.AlixoNest = (() => {
   let cmCell = null, cmNb = null;
   root.addEventListener('contextmenu', e => {
     const nb = e.target.closest && e.target.closest('.nb'); if (!nb || !root.contains(nb) || e.target.closest('a.lnk') || readOnly) return;
-    e.preventDefault(); e.stopPropagation();
-    cmNb = nb; cmCell = nb.matches('.nb-tbl') ? e.target.closest('td') : null;
-    if (cmCell && cmCell.closest('.nb-tbl') !== nb) cmCell = null;
+    e.stopPropagation();
+    let cell = nb.matches('.nb-tbl') ? e.target.closest('td') : null;
+    if (cell && cell.closest('.nb-tbl') !== nb) cell = null;
+    const x = e.clientX, y = e.clientY;
+    /* 1.50 : sur un mot souligné par le correcteur natif, son menu passe d'abord (app.js, nativeSpellMenu) */
+    if (typeof nativeSpellMenu === 'function' && nativeSpellMenu(e, nb.matches('.nb-tbl') ? 'table' : 'block', () => { if (nb.isConnected && !readOnly) openNbMenu(nb, cell && cell.isConnected ? cell : null, x, y); })) return;
+    e.preventDefault();
+    openNbMenu(nb, cell, x, y);
+  }, true);
+  function openNbMenu(nb, cell, x, y) {
+    cmNb = nb; cmCell = cell;
     const menu = $('#ctxmenu');
     const I = CM_ICO;
     if (nb.matches('.nb-tbl')) {
@@ -349,8 +357,8 @@ window.AlixoNest = (() => {
         <button data-ncm="del" class="danger">${I.trash}Supprimer</button>`;
     }
     menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-    placeCtxMenu(menu, e.clientX, e.clientY);
-  }, true);
+    placeCtxMenu(menu, x, y);
+  }
   $('#ctxmenu').addEventListener('click', e => {
     const b = e.target.closest('[data-ncm]'); if (!b) return;
     const op = b.dataset.ncm, nb = cmNb, cell = cmCell;

@@ -134,7 +134,16 @@ html[data-theme] .tree-row.root .tree-label .home-ico path, html[data-theme] .tn
 
 /* entête de la bibliothèque : fil d'Ariane 13px, H1 30px, actions 44px */
 .lib-head { padding: 0 0 22px; align-items: flex-start; flex-wrap: wrap; row-gap: 12px; }   /* place insuffisante : la barre d'actions passe sous le titre au lieu de le casser */
-.lib-head > div:first-child { padding-top: 2px; flex: 1 1 auto; min-width: 0; }
+.lib-head > div:first-of-type { padding-top: 2px; flex: 1 1 auto; min-width: 0; }
+/* 1.50 : bouton « masquer / afficher la barre latérale », dans la marge gauche de la bibliothèque (le contenu reste aligné) ;
+   enfant direct de #lib-main : présent dans tous les modes (documents, agenda, tâches, partagés). Sur téléphone la barre est un tiroir (bouton ☰). */
+#lib-main { position: relative; }
+.ln-toggle { position: absolute; left: 4px; top: 66px; z-index: 2; width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; color: var(--ink-2); }
+#view-library:not(.nav-hidden) .ln-toggle { background: var(--hover); }   /* barre affichée : bouton « enfoncé » */
+.ln-toggle:hover { background: var(--hover); color: var(--ink); }
+.ln-toggle:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.ln-toggle svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+body:not(.mobile) #view-library.nav-hidden #libnav { display: none; }
 .lib-head .lib-actions { margin-left: auto; flex: 0 1 auto; min-width: 0; max-width: 100%; }   /* peut rétrécir : ses boutons passent à la ligne (styles.css, ≤ 1100px) au lieu de déborder */
 .lib-path { font-size: 13px; color: var(--ink-3); margin-bottom: 14px; }
 .lib-path:has(> :only-child) { visibility: hidden; }   /* à la racine, le fil d'Ariane ne répète pas « Mes cours » (la hauteur est gardée) */

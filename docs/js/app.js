@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.49.1';
+const ALIXO_VERSION = '1.50.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -446,8 +446,10 @@ function addPage() {
 }
 /* 1.40 : renommer un onglet sur place (double-clic sur son nom) — un champ se pose exactement sur l'onglet ;
    Entrée ou clic ailleurs : valider ; Échap : annuler. Sert aux onglets de documents, aux onglets d'une séance
-   et aux feuilles du tableur (js/sheets.js, par AlixoApp.inlineRename). */
-function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titre', onCommit, onDone, onInput } = {}) {
+   et aux feuilles du tableur (js/sheets.js, par AlixoApp.inlineRename).
+   1.50 : `label` = nom accessible du champ ; `fill` = élément dont le champ prend la largeur (de la gauche du titre jusqu'à
+   son bord droit intérieur — la colonne du titre), jamais moins de `floor` px ni au-delà du bord droit de `clip` (la ligne). */
+function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titre', label = '', fill = null, clip = null, floor = 320, onCommit, onDone, onInput } = {}) {
   if (!el || !el.isConnected) return;
   document.querySelectorAll('.inline-rename').forEach(x => x.remove());
   const r = el.getBoundingClientRect();
@@ -455,10 +457,26 @@ function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titr
   const inp = document.createElement('input');
   inp.className = 'inline-rename'; inp.value = value; inp.maxLength = maxLength; inp.placeholder = placeholder;
   inp.spellcheck = false; inp.autocomplete = 'off';
+  inp.setAttribute('aria-label', label || 'Nouveau nom');
   Object.assign(inp.style, { left: r.left + 'px', top: r.top + 'px', height: r.height + 'px', minWidth: Math.max(r.width, 90) + 'px', font: cs.font, borderRadius: cs.borderRadius });
-  const fit = () => { inp.style.width = Math.max(r.width, 90, Math.min(360, inp.value.length * (parseFloat(cs.fontSize) * 0.62) + 34)) + 'px'; };
-  fit();
+  /* bord droit intérieur d'un élément (sans sa bordure ni sa marge intérieure) */
+  const innerRight = x => { const b = x.getBoundingClientRect(), c = getComputedStyle(x); return b.right - (parseFloat(c.paddingRight) || 0) - (parseFloat(c.borderRightWidth) || 0); };
+  let fit;
+  if (fill && fill.isConnected) {
+    /* la largeur de la colonne du titre ; un titre plus long l'élargit jusqu'au bout de la ligne, pour rester lisible en entier */
+    const lim = Math.min(clip && clip.isConnected ? innerRight(clip) : Infinity, window.innerWidth - 8) - r.left;
+    const base = Math.max(90, Math.min(lim, Math.max(innerRight(fill) - r.left, floor)));
+    Object.assign(inp.style, { minWidth: '0', maxWidth: 'none', width: base + 'px' });
+    fit = () => {
+      inp.style.width = base + 'px';
+      const over = inp.scrollWidth - inp.clientWidth;   // mesuré une fois le champ dans la page
+      if (over > 0) inp.style.width = Math.max(90, Math.min(lim, base + over + 12)) + 'px';
+    };
+  } else {
+    fit = () => { inp.style.width = Math.max(r.width, 90, Math.min(360, inp.value.length * (parseFloat(cs.fontSize) * 0.62) + 34)) + 'px'; };
+  }
   document.body.appendChild(inp);
+  fit();
   let done = false;
   const finish = ok => {
     if (done) return; done = true;
@@ -555,7 +573,7 @@ $('#page-tabs').addEventListener('contextmenu', e => {
   const d = doc(); const pages = docPages(d); const i = pages.findIndex(p => p.id === t.dataset.page);
   const menu = $('#ctxmenu');
   menu.innerHTML = `<div class="cm-title">${esc(pages[i].titre)}</div>
-    <button data-cm="pgrename">${CM_ICO.pen}Renommer…</button>
+    <button data-cm="pgrename">${CM_ICO.pen}Renommer</button>
     <button data-cm="pgleft" ${i === 0 ? 'disabled' : ''}>${CM_ICO.move}Déplacer à gauche</button>
     <button data-cm="pgright" ${i === pages.length - 1 ? 'disabled' : ''}>${CM_ICO.move}Déplacer à droite</button>
     <button data-cm="pgadd">${CM_ICO.dup}Nouvel onglet</button>
@@ -597,11 +615,27 @@ function renderTabs() {
   if (openTabs.length > 1) bar.insertAdjacentHTML('beforeend', `<button class="tab-more" data-tabmore type="button" title="Tous les onglets ouverts (${openTabs.length})"><span>${openTabs.length}</span> ▾</button>`);
   bar.classList.toggle('crowded', openTabs.length > 6);
 }
-function openTabsMenu(btn) {
-  const rows = openTabs.map(id => { const vt = vtabs.get(id); if (vt) return `<button data-tabgo="${esc(id)}" class="${id === currentDocId ? 'on' : ''}">${vt.icon || ''}<span>${esc(vt.title || 'Document')}</span><i class="po-tabx" data-tabx="${esc(id)}" title="Fermer">✕</i></button>`; const d = findDoc(id); return d ? `<button data-tabgo="${id}" class="${id === currentDocId ? 'on' : ''}">${docIcon(d)}<span>${esc(d.titre || 'Sans titre')}</span><i class="po-tabx" data-tabx="${id}" title="Fermer">✕</i></button>` : ''; }).join('');
-  showPopover(`<h4>Onglets ouverts (${openTabs.length})</h4><div class="po-list po-tabs">${rows}</div><div class="po-row" style="justify-content:flex-end; margin-top:8px"><button class="cta ghost small" id="po-tabs-closeall" type="button">Tout fermer</button></div>`, btn.getBoundingClientRect(), pop => {
+/* 1.50 : fermer un onglet depuis ce menu redessine la barre (le bouton « ▾ » d'origine est détaché, son rectangle vaut 0 :
+   le menu sautait à gauche). On mémorise donc l'ancre à l'ouverture, et le menu se rouvre au même endroit, liste défilée
+   comme avant, pour pouvoir fermer plusieurs onglets de suite sans déplacer la souris. */
+let tabsMenuRect = null;
+function openTabsMenu(btn, fallbackRect) {
+  if (btn && btn.isConnected) { const r = btn.getBoundingClientRect(); tabsMenuRect = { left: r.left, top: r.top, bottom: r.bottom }; }
+  else if (fallbackRect) tabsMenuRect = fallbackRect;
+  const anchor = tabsMenuRect || centerRect();
+  const rows = openTabs.map(id => { const vt = vtabs.get(id); if (vt) return `<button data-tabgo="${esc(id)}" class="${id === currentDocId ? 'on' : ''}">${vt.icon || ''}<span>${esc(vt.title || 'Document')}</span><i class="po-tabx" data-tabx="${esc(id)}" aria-label="Fermer l’onglet" title="Fermer l’onglet">✕</i></button>`; const d = findDoc(id); return d ? `<button data-tabgo="${esc(id)}" class="${id === currentDocId ? 'on' : ''}">${docIcon(d)}<span>${esc(d.titre || 'Sans titre')}</span><i class="po-tabx" data-tabx="${esc(id)}" aria-label="Fermer l’onglet" title="Fermer l’onglet">✕</i></button>` : ''; }).join('');
+  showPopover(`<h4>Onglets ouverts (${openTabs.length})</h4><div class="po-list po-tabs">${rows}</div><div class="po-row" style="justify-content:flex-end; margin-top:8px"><button class="cta ghost small" id="po-tabs-closeall" type="button">Tout fermer</button></div>`, anchor, pop => {
     pop.addEventListener('click', e => {
-      const x = e.target.closest('[data-tabx]'); if (x) { e.stopPropagation(); closeTab(x.dataset.tabx); if (openTabs.length) openTabsMenu(btn); else hidePopover(); return; }
+      const x = e.target.closest('[data-tabx]');
+      if (x) {
+        e.stopPropagation();
+        const list = pop.querySelector('.po-tabs'); const st = list ? list.scrollTop : 0;
+        closeTab(x.dataset.tabx);   // redessine la barre ; fermer l'onglet courant passe par openDoc / showLibrary, qui ferment le menu
+        if (!openTabs.length) { hidePopover(); return; }
+        openTabsMenu(null, anchor);
+        const again = $('#popover .po-tabs'); if (again) again.scrollTop = st;
+        return;
+      }
       const g = e.target.closest('[data-tabgo]'); if (g) { hidePopover(); openDoc(g.dataset.tabgo); return; }
       if (e.target.closest('#po-tabs-closeall')) { hidePopover(); for (const id of openTabs.slice()) closeTab(id); }
     });
@@ -638,16 +672,80 @@ $('#tabbar').addEventListener('click', e => {
 $('#tabbar').addEventListener('click', e => {
   if (e.detail !== 2) return;   // 2e clic d'un double-clic (le 1er a pu redessiner la barre)
   const t = e.target.closest('.tab[data-tab]'); if (!t || e.target.closest('.tab-x')) return;
-  const d = findDoc(t.dataset.tab);
-  if (!d || !state.docs.includes(d) || isSharedDoc(d.id)) return;   // onglet « vue » ou document partagé : pas de renommage ici
+  if (!canRenameTab(t.dataset.tab)) return;
   e.preventDefault();
-  const live = $(`#tabbar .tab[data-tab="${d.id}"]`);   // le premier clic a pu redessiner la barre
+  renameTabInline(t.dataset.tab);
+});
+/* onglet « vue » ou document partagé : pas de renommage ici */
+function canRenameTab(id) { const d = findDoc(id); return !!d && state.docs.includes(d) && !isSharedDoc(d.id); }
+/* 1.50 : sert au double-clic et au menu contextuel de l'onglet */
+function renameTabInline(id) {
+  if (!canRenameTab(id)) return;
+  const d = findDoc(id);
+  const live = $(`#tabbar .tab[data-tab="${CSS.escape(d.id)}"]`);   // la barre a pu être redessinée
   if (!live) return;
-  inlineRename(live, { value: d.titre || '', maxLength: 120, onCommit: v => {
+  inlineRename(live, { value: d.titre || '', maxLength: 120, label: 'Nom de la séance', onCommit: v => {
     d.titre = v; d.updatedAt = Date.now(); save(); renderTabs();
     if (currentDocId === d.id) { renderCrumbs(); if (pagesActive()) schedulePaginate(true); } else if (!currentDocId) renderLibrary();
-  } });
+  },
+  /* validé ou annulé au clavier : le focus revient sur l'onglet (redessiné entre-temps), pas sur la page */
+  onDone: ({ how }) => { if (how !== 'key') return; const t = $(`#tabbar .tab[data-tab="${CSS.escape(d.id)}"]`); if (t) t.focus({ preventScroll: true }); } });
+}
+/* 1.50 : clic droit sur un onglet → Renommer · Afficher dans la bibliothèque · Afficher à côté · Fermer l'onglet (actions « tab… » du menu) */
+const TAB_ICO = {
+  side: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M12 4v16"/></svg>',
+  close: '<svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg>'
+};
+$('#tabbar').addEventListener('contextmenu', e => {
+  const t = e.target.closest('.tab[data-tab]'); if (!t) return;
+  e.preventDefault();
+  const id = t.dataset.tab; if (!id) return;   // onglet « Bibliothèque » : pas de menu
+  const vt = vtabs.get(id), d = vt ? null : findDoc(id);
+  if (!vt && !d) return;
+  const mine = !!d && state.docs.includes(d);
+  const sp = window.AlixoSplit;
+  const canSide = !!sp && !sp.isPane && typeof sp.openInPane === 'function' && !ALIXO_AUX && !document.body.classList.contains('mobile');
+  const inPane = canSide && sp.panes().some(p => p.id === id);
+  const menu = $('#ctxmenu');
+  menu.classList.remove('cm-create'); menu.removeAttribute('role');
+  menu.innerHTML = `
+    <div class="cm-title">${esc(vt ? (vt.title || 'Document') : (d.titre || 'Sans titre'))}</div>
+    ${canRenameTab(id) ? `<button data-cm="tabrename">${CM_ICO.pen}Renommer</button>` : ''}
+    ${mine && !ALIXO_AUX ? `<button data-cm="tabreveal">${CM_ICO.folder}Afficher dans la bibliothèque</button>` : ''}
+    ${canSide ? `<button data-cm="tabside" ${inPane ? 'disabled title="Ce document est déjà affiché à côté"' : ''}>${TAB_ICO.side}Afficher à côté</button>` : ''}
+    ${canRenameTab(id) || (mine && !ALIXO_AUX) || canSide ? '<div class="cm-sep"></div>' : ''}
+    <button data-cm="tabclose">${TAB_ICO.close}Fermer l’onglet</button>`;
+  for (const k of ['fid', 'did', 'tbl', 'img', 'root', 'page', 'cfid', 'dref', 'quote']) menu.dataset[k] = '';
+  menu.dataset.tab = id;
+  /* menu ouvert au clavier (touche Menu, Maj+F10) : sous l'onglet */
+  const kb = !e.clientX && !e.clientY, r = t.getBoundingClientRect();
+  placeCtxMenu(menu, kb ? r.left : e.clientX, kb ? r.bottom + 4 : e.clientY);
 });
+/* « Afficher à côté » : la zone principale est coupée en deux, à droite si elle a toute la largeur, sinon en bas */
+function openTabAside(id) {
+  const sp = window.AlixoSplit; if (!sp || sp.isPane) return;
+  const m = sp.mainRect();
+  const dir = m.c1 - m.c0 === 2 ? 'r' : m.r1 - m.r0 === 2 ? 'b' : 'r';   // ni l'un ni l'autre : openInPane explique pourquoi
+  sp.openInPane(id, 'main', dir);
+}
+/* « Afficher dans la bibliothèque » : la bibliothèque s'ouvre sur le dossier du document, sa ligne mise en avant */
+function revealDocInLibrary(id) {
+  const d = state.docs.find(x => x.id === id); if (!d) return;
+  libMode = 'docs'; sharedNav = null;
+  currentFolderId = d.folderId && folder(d.folderId) ? d.folderId : null;
+  for (const f of folderPath(currentFolderId)) expandedFolders.add(f.id);
+  if (currentDocId) showLibrary(); else renderLibrary();
+  requestAnimationFrame(() => {
+    if (currentDocId) return;
+    const f = folder(currentFolderId), q = CSS.escape(id);
+    const shown = el => !!el && el.getClientRects().length > 0;
+    const el = [`#doc-grid .row-doc[data-id="${q}"]`, `#lib-tree [data-tdoc="${q}"]`, `#folder-tree [data-doc="${q}"]`].map(sel => $(sel)).find(shown);
+    if (!el) { toast(`Ce document se trouve dans « ${f ? f.nom : 'Mes cours'} »`); return; }   // vue galaxie, séance masquée… : on dit au moins où elle est
+    el.scrollIntoView({ block: 'center' });
+    try { el.focus({ preventScroll: true }); } catch { /* élément non focalisable */ }
+    el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1600);
+  });
+}
 $('#tabbar').addEventListener('auxclick', e => {
   const t = e.target.closest('[data-tab]');
   if (t && t.dataset.tab && e.button === 1) { e.preventDefault(); closeTab(t.dataset.tab); }
@@ -928,7 +1026,18 @@ function treeHTML(pid, depth) {
   }).join('');
 }
 
+/* 1.50 : barre latérale de l'accueil masquable (bouton dans la marge de la bibliothèque) — réglage state.settings.libNavHidden.
+   Sur téléphone, la barre est un tiroir : le réglage est ignoré (CSS). */
+function applyLibNav() {
+  const hidden = !!state.settings.libNavHidden;   // le bouton est dans tous les modes (agenda, tâches, partagés compris) : on n'y est jamais coincé
+  $('#view-library').classList.toggle('nav-hidden', hidden);
+  const b = $('#ln-toggle'); if (!b) return;
+  const label = hidden ? 'Afficher la barre latérale' : 'Masquer la barre latérale';
+  b.setAttribute('aria-expanded', String(!hidden)); b.title = label; b.setAttribute('aria-label', label);
+}
+{ const b = $('#ln-toggle'); if (b) b.addEventListener('click', () => { state.settings.libNavHidden = !state.settings.libNavHidden; save(); renderLibrary(); }); }
 function renderLibrary() {
+  applyLibNav();
   // arbre
   $('#folder-tree').innerHTML = `
     <div class="tree-row root ${currentFolderId === null && libMode === 'docs' ? 'active' : ''}">
@@ -1170,16 +1279,17 @@ function resumeSectionHTML() {
       ? `<button type="button" class="rs-cta" data-rsnotes="${esc(f.id)}" title="Ouvre la séance d’aujourd’hui dans « ${esc(f.nom)} » (ou la crée)">${label}${RS_ARROW}</button>`
       : `<button type="button" class="rs-cta" data-rslink="${esc(ev.id || '')}" title="Choisir le dossier de ce cours : la séance du jour ira dedans">Choisir le cours${RS_ARROW}</button>`);
     const mc = esc(safeTint(f ? f.couleur : DEFAULT_TINT));
+    const rsfid = f ? ` data-rsfid="${esc(f.id)}"` : '';   // 1.50 : clic droit → menu du dossier relié
     if (st.kind === 'now') {
       const pct = Math.max(2, Math.min(100, Math.round((now - st.o.start) / (st.o.end - st.o.start) * 100)));
-      live = `<div class="rs-live now" style="--mc:${mc}"><div class="rs-body">
+      live = `<div class="rs-live now"${rsfid} style="--mc:${mc}"><div class="rs-body">
           <div class="rs-kicker"><i></i>Cours en ce moment</div>
           <div class="rs-title">${esc(title)}</div>
           <div class="rs-sub">${sub}</div>
           <div class="rs-prog"><div class="rs-bar"><i style="--p:${pct}%"></i></div><span class="rs-left">reste ${fmtLeft(st.left)}</span></div>
         </div>${cta(sess ? 'Reprendre les notes' : 'Prendre des notes')}</div>`;
     } else {
-      live = `<div class="rs-live next" style="--mc:${mc}"><div class="rs-body">
+      live = `<div class="rs-live next"${rsfid} style="--mc:${mc}"><div class="rs-body">
           <div class="rs-kicker"><i></i>Prochain cours · dans ${fmtLeft(st.in)}</div>
           <div class="rs-title">${esc(title)}</div>
           <div class="rs-sub">${sub}</div>
@@ -1204,6 +1314,7 @@ function resumeSectionHTML() {
 /* rafraîchit seulement le bloc Reprendre (toutes les 30 s avec renderCalNow : temps restant, progression) */
 function renderResume() {
   if (currentDocId || libMode !== 'docs' || currentFolderId !== null) return;
+  if ($('.inline-rename')) return;   // 1.50 : un titre est en cours de saisie sur place — on ne redessine pas sous le champ
   const grid = $('#doc-grid'); if (!grid || grid.hidden) return;
   const html = resumeSectionHTML(), el = $('#lib-resume');
   if (el) { if (html) el.outerHTML = html; else el.remove(); }
@@ -1372,7 +1483,7 @@ $('#lib-tree').addEventListener('click', e => {
 });
 $('#lib-tree').addEventListener('contextmenu', e => {
   const dBtn = e.target.closest('.tn-doc');
-  if (dBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, dBtn.dataset.tdoc); return; }
+  if (dBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, dBtn.dataset.tdoc, dBtn); return; }
   const fBtn = e.target.closest('.tn-folder');
   if (fBtn) { e.preventDefault(); openFolderCtxMenu(e.clientX, e.clientY, fBtn.dataset.tfid); return; }
   /* 1.47 : fond de l'arbre (ou racine « Mes cours ») → menu du dossier courant */
@@ -1474,8 +1585,21 @@ function openLibBgMenu(x, y) {
 $('#doc-grid').addEventListener('contextmenu', e => {
   const shc = e.target.closest('.shared-card');
   if (shc) { e.preventDefault(); if (shc.dataset.id && window.AlixoShare) AlixoShare.openInfo(shc.dataset.id); return; }
+  /* 1.50 : bloc « Reprendre » — carte d'un document récent : son menu (ou la fiche du partage) ; carte du cours en ce
+     moment / prochain cours : le menu de son dossier, quand il y en a un */
+  const rsd = e.target.closest('[data-rsdoc]');
+  if (rsd) {
+    e.preventDefault();
+    const id = rsd.dataset.rsdoc;
+    if (state.docs.some(d => d.id === id)) openDocCtxMenu(e.clientX, e.clientY, id, rsd);
+    else if (isSharedDoc(id) && window.AlixoShare) AlixoShare.openInfo(id);
+    return;
+  }
+  const rsf = e.target.closest('.rs-live[data-rsfid]');
+  if (rsf && folder(rsf.dataset.rsfid)) { e.preventDefault(); openFolderCtxMenu(e.clientX, e.clientY, rsf.dataset.rsfid); return; }
+  if (e.target.closest('.rs-live')) { e.preventDefault(); return; }   // cours sans dossier relié : rien à proposer (surtout pas le menu « Nouveau » du fond)
   const card = e.target.closest(SEL_DOC);
-  if (card) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, card.dataset.id); return; }
+  if (card) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, card.dataset.id, card); return; }
   const fc = e.target.closest(SEL_FOLDER);
   if (fc) { e.preventDefault(); openFolderCtxMenu(e.clientX, e.clientY, fc.dataset.fid); return; }
   if (e.target.closest('[data-file], [data-shfile]')) return;   // les fichiers ont leur menu (js/files.js)
@@ -1622,14 +1746,16 @@ function placeCtxMenu(menu, x, y) {
   menu.style.top = Math.max(6, Math.min(y, innerHeight - menu.offsetHeight - 10)) + 'px';
 }
 
-function openDocCtxMenu(x, y, did) {
+let docCtxSrc = null;   // 1.50 : élément sur lequel le menu d'un document a été ouvert (son titre se renomme sur place)
+function openDocCtxMenu(x, y, did, srcEl) {
   const d = state.docs.find(v => v.id === did); if (!d) return;
+  docCtxSrc = srcEl || null;
   const menu = $('#ctxmenu');
   menu.classList.remove('cm-create');
   menu.innerHTML = `
     <div class="cm-title">${esc(d.titre || 'Sans titre')}</div>
     <button data-cm="dopen">${CM_ICO.open}Ouvrir</button>
-    <button data-cm="drename">${CM_ICO.pen}Renommer…</button>
+    <button data-cm="drename">${CM_ICO.pen}Renommer</button>
     <button data-cm="dpin">${CM_ICO.pin}${d.pinned ? 'Désépingler' : 'Épingler'}</button>
     <button data-cm="dmove">${CM_ICO.move}Déplacer vers…</button>
     <button data-cm="ddup">${CM_ICO.dup}Dupliquer</button>
@@ -1639,6 +1765,54 @@ function openDocCtxMenu(x, y, did) {
   menu.dataset.fid = ''; menu.dataset.did = did; menu.dataset.tbl = ''; menu.dataset.img = '';
   placeCtxMenu(menu, x, y);
 }
+
+/* 1.50 : renommer un document de l'accueil sur place — le champ se pose sur son titre (ligne de la liste, carte « Reprendre »,
+   arbre, explorateur de gauche). Entrée ou clic ailleurs : valider ; Échap : annuler. Sans titre à l'écran (vue galaxie,
+   document ouvert…) : la petite fenêtre d'avant. Les dossiers gardent leur fiche (nom, couleur, icône). */
+const DOC_TTL_SEL = '.row-ttl, .rs-name, .tn-name, .tree-name';
+function renameDocInline(did, srcEl) {
+  const d = state.docs.find(x => x.id === did); if (!d) return;
+  const shown = el => !!el && el.isConnected && el.getClientRects().length > 0;
+  let el = null;
+  if (!currentDocId) {
+    if (srcEl && srcEl.isConnected) el = srcEl.matches(DOC_TTL_SEL) ? srcEl : srcEl.querySelector(DOC_TTL_SEL);
+    if (!shown(el)) {
+      const q = CSS.escape(did);
+      el = [`#doc-grid .row-doc[data-id="${q}"] .row-ttl`, `#lib-resume [data-rsdoc="${q}"] .rs-name`, `#lib-tree [data-tdoc="${q}"] .tn-name`, `#folder-tree [data-doc="${q}"] .tree-name`].map(sel => $(sel)).find(shown) || null;
+    }
+  }
+  if (!shown(el)) { openRenameDocPopover(did); return; }
+  const host = el.closest('button');   // la ligne / la carte : reprend le focus après une saisie au clavier
+  const back = host ? ['data-id', 'data-rsdoc', 'data-tdoc', 'data-doc'].map(a => (host.hasAttribute(a) ? `#${host.closest('#doc-grid, #lib-tree, #folder-tree').id} [${a}="${CSS.escape(did)}"]` : '')).find(Boolean) : '';
+  /* largeur du champ : la colonne du titre (ligne de la liste), la carte « Reprendre », la ligne de l'explorateur ; dans
+     l'arbre, la carte est à la taille du titre → au moins 320 px, sans sortir de la zone de l'arbre */
+  const fill = el.closest('.row-main') || host || el;
+  const clip = host && host.matches('.tn-card') ? $('#lib-tree') : host && host.closest('#folder-tree') ? $('#libnav') : host;
+  inlineRename(el, { value: d.titre || '', maxLength: 120, placeholder: 'Sans titre', label: 'Nom de la séance', fill, clip,
+    onCommit: v => {
+      if (!state.docs.includes(d)) return;   // supprimé pendant la saisie
+      d.titre = v; d.updatedAt = Date.now(); save(); renderTabs();
+      if (currentDocId) renderCrumbs(); else renderLibrary();
+    },
+    onDone: ({ how }) => { if (how === 'key' && back && !currentDocId) { const b = $(back); if (b) b.focus({ preventScroll: true }); } } });
+}
+/* le champ est en position fixe : il ne suit pas le défilement → la saisie est validée dès que la liste bouge */
+for (const sel of ['#doc-grid', '#lib-tree', '#libnav']) $(sel).addEventListener('scroll', () => { const i = $('.inline-rename'); if (i) i.blur(); }, { passive: true });
+window.addEventListener('resize', () => { const i = $('.inline-rename'); if (i) i.blur(); });   // même raison : la page se réorganise sous le champ
+/* F2 sur une séance focalisée de l'accueil : la renommer ; sur un dossier : sa fiche (nom, couleur, icône) */
+$('#view-library').addEventListener('keydown', e => {
+  if (e.key !== 'F2' || e.ctrlKey || e.metaKey || e.altKey || !e.target.closest) return;
+  const fb = e.target.closest('#doc-grid [data-fid], #lib-tree [data-tfid], #folder-tree [data-open]');
+  if (fb && !fb.closest('.shared-card')) {
+    const f = folder(fb.dataset.fid || fb.dataset.tfid || fb.dataset.open);   // « Mes cours » (identifiant vide) : pas de fiche
+    if (f) { e.preventDefault(); openFolderPopover(f); }
+    return;
+  }
+  const b = e.target.closest('.row-doc, [data-rsdoc], [data-tdoc], #folder-tree [data-doc]'); if (!b) return;
+  const id = b.dataset.id || b.dataset.rsdoc || b.dataset.tdoc || b.dataset.doc;
+  if (!state.docs.some(x => x.id === id)) return;   // partagé : pas de renommage ici
+  e.preventDefault(); renameDocInline(id, b);
+});
 
 function openRenameDocPopover(did) {
   const d = state.docs.find(x => x.id === did); if (!d) return;
@@ -2057,6 +2231,11 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'pgrename') renamePageInline(pid); else if (cm === 'pgleft') movePage(pid, -1); else if (cm === 'pgright') movePage(pid, 1); else if (cm === 'pgadd') addPage(); else if (cm === 'pgdelete') deletePage(pid);
     return;
   }
+  if (cm.startsWith('tab') && menu.dataset.tab) {   // 1.50 : menu d'un onglet (avant le test « t… » des tableaux)
+    const tid = menu.dataset.tab; menu.dataset.tab = '';
+    if (cm === 'tabrename') renameTabInline(tid); else if (cm === 'tabreveal') revealDocInLibrary(tid); else if (cm === 'tabside') openTabAside(tid); else if (cm === 'tabclose') closeTab(tid);
+    return;
+  }
   const cfid = menu.dataset.cfid || null;   // 1.47 : dossier visé par le menu « Nouveau »
   if (cm === 'cnewdoc') { createDocIn(cfid); return; }
   if (cm === 'cnewslides') { createSlidesIn(cfid); return; }
@@ -2095,7 +2274,7 @@ $('#ctxmenu').addEventListener('click', e => {
   if (cm.startsWith('d') && did) {
     const d = state.docs.find(x => x.id === did); if (!d) return;
     if (cm === 'dopen') openDoc(d.id);
-    if (cm === 'drename') openRenameDocPopover(d.id);
+    if (cm === 'drename') renameDocInline(d.id, docCtxSrc);
     if (cm === 'dpin') togglePin(d.id);
     if (cm === 'dmove') openMovePopover('doc', d.id);
     if (cm === 'ddup') duplicateDoc(d.id);
@@ -2129,7 +2308,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtxMenu
 
 $('#folder-tree').addEventListener('contextmenu', e => {
   const docBtn = e.target.closest('[data-doc]');
-  if (docBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, docBtn.dataset.doc); return; }
+  if (docBtn) { e.preventDefault(); openDocCtxMenu(e.clientX, e.clientY, docBtn.dataset.doc, docBtn); return; }
   const row = e.target.closest('.tree-row'); if (!row) return;
   const openBtn = row.querySelector('[data-open]');
   if (!openBtn) return;
@@ -2203,7 +2382,7 @@ function docExportHTML(d, cssText) {
 <style>${cssText}
 body { overflow: auto; background: #fff; padding: 40px 16px; }
 #doc { margin: 0 auto; border: 1px solid #dadce0; }
-.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dsel, .dref-tools, .dref-go, .q-src { display: none !important; }
+.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dhz, .dsel, .draw-textedit, .dref-tools, .dref-go, .q-src { display: none !important; }
 .block.draw.empty .draw-wrap::after { content: none; }
 .block.li.cl .cbox { pointer-events: none; }
 .tbl .tcell:focus { box-shadow: none; }
@@ -3201,7 +3380,8 @@ let settingsCat = 'compte';
 const SHORTCUT_GROUPS = [
   { name: 'Partout', keys: [
     [[['Ctrl', 'K']], 'Recherche universelle'], [[['Ctrl', 'P']], 'Exporter en PDF'], [[['Ctrl', 'W']], 'Fermer l’onglet'], [[['Ctrl', 'Tab']], 'Onglet suivant'],
-    [[['Alt', '←']], 'Retour à la bibliothèque'], [[['Ctrl', 'Maj', 'A']], 'Agenda'], [[['Ctrl', 'Maj', 'K']], 'Tâches'], [[['Ctrl', 'Maj', 'D']], 'Dictionnaire'], [[['Ctrl', 'Maj', 'T']], 'Chronomètre']] },
+    [[['Alt', '←']], 'Retour à la bibliothèque'], [[['Ctrl', 'Maj', 'A']], 'Agenda'], [[['Ctrl', 'Maj', 'K']], 'Tâches'], [[['Ctrl', 'Maj', 'D']], 'Dictionnaire'], [[['Ctrl', 'Maj', 'T']], 'Chronomètre'], [[['Maj', '~clic droit']], 'Menu du système']] },
+  { name: 'Bibliothèque', keys: [[[['F2']], 'Renommer la séance sélectionnée']] },
   { name: 'Séances', keys: [
     [[['/']], 'Insérer un bloc (ligne vide)'], [[['F7']], 'Correction par IA'], [[['F8']], 'Alixo AI (Coco, quiz, fiche)'], [[['Ctrl', 'Alt', '1…6']], 'Niveau de titre (selon le plan)'],
     [[['Ctrl', '~molette']], 'Zoom (aussi présentations, tableurs)'], [[['Ctrl', '+'], ['Ctrl', '−']], 'Zoom avant / arrière'], [[['Ctrl', '0']], 'Zoom à 100 %']] },
@@ -4118,8 +4298,8 @@ function renderBlocks(focusId, caretPos, caretKey) {
   const numMap = computeNumbers(d.blocks);
   blocksEl.innerHTML = d.blocks.map(b => {
     const html = blockHTML(b, numMap);
-    const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b);
-    return extra ? html.replace(/<\/(div|figure)>\s*$/, extra + '</$1>') : html;
+    const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b) + (window.AlixoDraw ? AlixoDraw.layerHTML(b) : '');   // 1.50 : + calque des objets de dessin posés sur le bloc
+    return extra ? html.replace(/<\/(div|figure)>\s*$/, (m, tag) => extra + '</' + tag + '>') : html;   // fonction : un « $ » dans le texte d'un objet de dessin n'est pas un motif de remplacement
   }).join('');
   if (window.AlixoNest) AlixoNest.fixTails(blocksEl);
   renderPlan();
@@ -4313,12 +4493,15 @@ function cleanHTML(h) {
   for (let k = 0; k < 4 && /<(span|font|b|i|u|s|sup|sub)[^>]*><\/\1>/.test(t); k++) t = t.replace(/<(span|font|b|i|u|s|sup|sub)[^>]*><\/\1>/g, '');
   return stripCorr(t);
 }
-const EXTRA_SEL = '.corr-notes, .lnk-print, .ai-sug, .mv-handle';
+const EXTRA_SEL = '.corr-notes, .lnk-print, .ai-sug, .mv-handle, .fl-layer';
 /* remet l'écran dans une forme lisible après une opération native du navigateur :
    texte hors bloc → paragraphe ; blocs imbriqués → remontés ; bloc de texte vidé → retiré ; ids en double → renouvelés */
 function normalizeDom() {
   const root = blocksEl;
   let changed = false;
+  /* 1.50 : un calque de dessin (.fl-layer) n'a sa place qu'à la racine de son bloc ; déplacé par une opération native
+     (fusion de blocs, collage), il est retiré avant toute lecture du texte — le modèle le redessine (AlixoDraw.syncLayers) */
+  root.querySelectorAll('.fl-layer').forEach(l => { const p = l.parentElement; if (!(p && p.parentElement === root && p.classList.contains('block'))) l.remove(); });
   if (window.AlixoNest) AlixoNest.normalize(root);   // blocs imbriqués : grille complète, ligne libre après
   let run = [];
   const flushRun = before => {
@@ -4381,7 +4564,7 @@ function syncAllFromDom() {
     const type = blockElType(el);
     let b = old.get(id);
     if (!b || (b.type !== type && TEXT_TYPES.includes(type))) {
-      b = Object.assign({ id, type, text: '' }, b && b.day ? { day: b.day } : {});
+      b = Object.assign({ id, type, text: '' }, b && b.day ? { day: b.day } : {}, b && Array.isArray(b.fl) && b.fl.length ? { fl: b.fl } : {});   // 1.50 : les objets de dessin restent sur leur bloc
       if (type === 'h') b.level = levelOfEl(el);
       if (type === 'li') { b.lt = el.classList.contains('ol') ? 'ol' : el.classList.contains('cl') ? 'cl' : 'ul'; const m = el.className.match(/\bind([1-3])\b/); if (m) b.ind = +m[1]; if (el.classList.contains('done')) b.done = true; }
       if (type === 'callout') b.ct = el.dataset.ct || 'retenir';
@@ -4430,6 +4613,7 @@ function removeBlock(id, focusPrev = true) {
 function touch(opts) {
   const d = doc(); if (!d) return;
   if (readOnly) return;   // séance partagée en lecture seule : rien n'est enregistré
+  if (window.AlixoDraw) AlixoDraw.afterTouch(hist.baseline && hist.baseline.blocks);   // 1.50 : objets de dessin d'un bloc disparu → rattachés au bloc voisin (avant la photo d'historique)
   d.updatedAt = Date.now(); save();
   recordHistory(opts);
 }
@@ -4935,11 +5119,84 @@ blocksEl.addEventListener('click', e => {
   const td = e.target.closest('.tbl td'); if (!td || e.target.closest('.tcell, .tbl-rz')) return;
   const cell = td.querySelector('.tcell'); if (cell) placeCaretAtPoint(cell, e.clientX, e.clientY);
 });
+/* ---------------- 1.50 : clic droit sur un mot souligné en rouge, là où Alixo a son propre menu ----------------
+   Le soulignement est celui du correcteur natif (version PC) : la page ne voit pas ses marques, et son menu de suggestions
+   ne s'ouvre que si la page ne retient pas le clic droit. Règle : sur un mot que le correcteur juge fautif → menu de
+   correction, avec une entrée « Actions du tableau… » qui rouvre le menu d'Alixo au même endroit ; ailleurs → menu d'Alixo.
+   Maj + clic droit : toujours le menu du système / du navigateur (échappatoire, version web comprise). */
+const WORD_CH = /[\p{L}\p{M}\p{N}'’\-]/u, WORD_LET = /[\p{L}\p{M}\p{N}]/u;
+/* mot sous le point (x, y) : { word: le mot entier, apostrophes et traits d'union compris, part: le segment sous le pointeur } ou null */
+function wordAtPoint(x, y) {
+  let node = null, off = 0;
+  try {
+    if (document.caretRangeFromPoint) { const r = document.caretRangeFromPoint(x, y); if (r) { node = r.startContainer; off = r.startOffset; } }
+    else if (document.caretPositionFromPoint) { const p = document.caretPositionFromPoint(x, y); if (p) { node = p.offsetNode; off = p.offset; } }
+  } catch { return null; }
+  if (!node || node.nodeType !== 3) return null;
+  const t = node.data;
+  let a = off, b = off;
+  while (a > 0 && WORD_CH.test(t[a - 1])) a--;
+  while (b < t.length && WORD_CH.test(t[b])) b++;
+  while (a < b && !WORD_LET.test(t[a])) a++;          // pas d'apostrophe ni de tiret en bordure
+  while (b > a && !WORD_LET.test(t[b - 1])) b--;
+  if (a >= b || off < a || off > b) return null;
+  // le point est-il vraiment sur le mot ? (un clic dans le vide d'une case donne le caret le plus proche)
+  const wr = document.createRange(); wr.setStart(node, a); wr.setEnd(node, b);
+  if (![...wr.getClientRects()].some(q => x >= q.left - 1 && x <= q.right + 1 && y >= q.top - 1 && y <= q.bottom + 1)) return null;
+  let sa = off, sb = off;
+  while (sa > a && WORD_LET.test(t[sa - 1])) sa--;
+  while (sb < b && WORD_LET.test(t[sb])) sb++;
+  return { word: t.slice(a, b), part: t.slice(sa, sb) };
+}
+/* pont du correcteur natif : absent en version web ; dans un volet de la vue partagée (iframe), celui de la fenêtre */
+function deskSpell() {
+  try { const d = window.alixoDesktop || (window.parent !== window ? window.parent.alixoDesktop : null); return d && d.spell && typeof d.spell.isMisspelled === 'function' ? d.spell : null; }
+  catch { return null; }
+}
+/* fautif = le mot entier ET le segment sous le pointeur (« aujourd’hui » n'est pas une faute parce que « hui » en serait une) */
+function misspelledAtPoint(x, y) {
+  const sp = deskSpell(); if (!sp) return false;
+  const w = wordAtPoint(x, y); if (!w || !w.part || w.word.length > 60) return false;
+  try { return !!sp.isMisspelled(w.word) && (w.part === w.word || !!sp.isMisspelled(w.part)); } catch { return false; }
+}
+/* À appeler en tête d'un écouteur « contextmenu » qui ouvre un menu d'Alixo dans du texte corrigé. Renvoie true s'il faut
+   laisser passer le clic droit (ne pas appeler preventDefault) : `reopen()` rouvrira le menu d'Alixo si l'utilisateur
+   choisit « Actions du tableau… » (kind 'table') ou « Actions du bloc… » (kind 'block') dans le menu de correction. */
+let nativeCtxPending = null;   // { t, reopen }
+function nativeSpellMenu(e, kind, reopen) {
+  if (e.shiftKey) return true;
+  if (!misspelledAtPoint(e.clientX, e.clientY)) return false;
+  const sp = deskSpell();
+  try { if (!sp.hintTable(kind === 'block' ? 'block' : 'table')) return false; } catch { return false; }   // synchrone : le signal précède le menu natif
+  nativeCtxPending = { t: Date.now(), reopen };
+  return true;
+}
+{ const sp = deskSpell();
+  if (sp && typeof sp.onTableMenu === 'function') { try {
+    const off = sp.onTableMenu(() => {
+      const p = nativeCtxPending; nativeCtxPending = null;
+      if (p && Date.now() - p.t < 60000) { try { p.reopen(); } catch (err) { console.error(err); } }
+    });
+    /* page ou volet qui se ferme : son écouteur est retiré du pont (celui de la fenêtre, pour un volet) */
+    if (typeof off === 'function') window.addEventListener('pagehide', () => { try { off(); } catch { /* pont déjà parti */ } });
+  } catch { /* pont indisponible */ } } }
+
 /* menu contextuel d'une case (façon Google Docs) */
 blocksEl.addEventListener('contextmenu', e => {
   const cell = e.target.closest('.tcell'); if (!cell || e.target.closest('a.lnk')) return;
   const bl = cell.closest('.block'); const b = getBlock(bl.dataset.id); if (!b || b.type !== 'table') return;
+  const x = e.clientX, y = e.clientY, bid = b.id, r = +cell.dataset.r, c = +cell.dataset.c;
+  /* case prise dans une sélection de plusieurs cases : le menu du tableau garde la main (fusionner, vider…) */
+  const multi = !!tsel && tsel.bid === bid && tselCells().length > 1 && tselCells().some(q => q.r === r && q.c === c);
+  if (!multi && nativeSpellMenu(e, 'table', () => {
+    const el = $(`#blocks > .block[data-id="${CSS.escape(bid)}"] .tcell[data-r="${r}"][data-c="${c}"]`);
+    if (el && doc() && getBlock(bid)) openTableCtxMenu(el, x, y);
+  })) return;
   e.preventDefault();
+  openTableCtxMenu(cell, x, y);
+});
+function openTableCtxMenu(cell, x, y) {
+  const bl = cell.closest('.block'); const b = bl && getBlock(bl.dataset.id); if (!b || b.type !== 'table') return;
   lastCell = { r: +cell.dataset.r, c: +cell.dataset.c };
   const inSel = tsel && tsel.bid === b.id && tselCells().some(x => x.r === lastCell.r && x.c === lastCell.c);
   if (tsel && !inSel) clearTsel();
@@ -4962,8 +5219,8 @@ blocksEl.addEventListener('contextmenu', e => {
     <button data-cm="tdup">${CM_ICO.dup}Dupliquer le tableau</button>
     <button data-cm="tdel" class="danger">${CM_ICO.trash}Supprimer le tableau</button>`;
   menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = b.id; menu.dataset.img = '';
-  placeCtxMenu(menu, e.clientX, e.clientY);
-});
+  placeCtxMenu(menu, x, y);
+}
 blocksEl.addEventListener('pointerdown', e => {
   if (e.target.closest('.tbl-tools button')) e.preventDefault();   // garde le curseur dans la case
 });
@@ -4999,7 +5256,7 @@ function tableOp(b, op) {
   if (op === 'head') b.head = !b.head;
   if (op === 'copy') { if (window.AlixoNest) AlixoNest.copyTable(b); return; }
   if (op === 'dup') {
-    const copy = JSON.parse(JSON.stringify(b)); copy.id = uid(); delete copy.notes; delete copy.day; delete copy.mod;
+    const copy = JSON.parse(JSON.stringify(b)); copy.id = uid(); delete copy.notes; delete copy.day; delete copy.mod; delete copy.fl;
     doc().blocks.splice(blockIndex(b.id) + 1, 0, copy);
     clearTsel(); touch(); renderBlocks('__none'); focusTableCell(copy.id, 0, 0);
     toast('Tableau dupliqué — Ctrl+Z pour annuler');
@@ -5154,7 +5411,7 @@ function htmlToLines(html) {
   flush();
   return lines;
 }
-function fragHTML(frag) { const t = document.createElement('div'); t.appendChild(frag); return t.innerHTML; }
+function fragHTML(frag) { const t = document.createElement('div'); t.appendChild(frag); t.querySelectorAll('.fl-layer').forEach(n => n.remove()); return t.innerHTML; }   // 1.50 : sans les calques de dessin
 
 /* insère des blocs à la position du curseur : le premier se fond dans le paragraphe courant (découpé au curseur),
    les suivants prennent place après ; renvoie l'id du dernier bloc inséré */
@@ -5278,6 +5535,7 @@ function selectionPayload() {
   for (const el of els) {
     const b = getBlock(el.dataset.id); if (!b) continue;
     const copy = JSON.parse(JSON.stringify(b)); delete copy.notes; delete copy.day; delete copy.mod;
+    delete copy.fl;   // 1.50 : les objets de dessin ne voyagent que par leur propre Ctrl+C (sinon couper-coller les dédoublerait)
     if (isTextBlock(b)) {
       const f = el.querySelector(':scope > .btxt'); if (!f) continue;
       const rr = r.cloneRange(); const fr = document.createRange(); fr.selectNodeContents(f);
@@ -6116,7 +6374,7 @@ function deleteObj(id) {
   toast(`${{ img: 'Image', graph: 'Graphique', formula: 'Formule', table: 'Tableau', juris: 'Fiche d’arrêt', fiche: 'Fiche', draw: 'Dessin', chart: 'Graphique', score: 'Score', mcalc: 'Calculateur', timer: 'Minuteur', tree: 'Arbre', hr: 'Séparateur', cards: 'Cartes' }[b.type] || 'Bloc'} supprimé${b.type === 'img' || b.type === 'formula' || b.type === 'fiche' ? 'e' : ''} — Ctrl+Z pour annuler`);
 }
 document.addEventListener('pointerdown', e => {
-  if (objSel && !e.target.closest('#blocks, #toolbar, #popover, #aipanel, #mathpanel, #ctxmenu, #imgbar')) clearObjSel();
+  if (objSel && !e.target.closest('#blocks, #toolbar, #popover, #aipanel, #mathpanel, #drawpanel, #ctxmenu, #imgbar')) clearObjSel();   // 1.50 : + #drawpanel (un ancien bloc Dessin se règle dans le panneau)
   if (objSel && e.target.closest('#blocks') && !e.target.closest(`#blocks > .block[data-id="${objSel}"]`) && !cropCtx) clearObjSel();
 });
 document.addEventListener('keydown', e => {
@@ -7076,7 +7334,7 @@ const SLASH_ITEMS = [
   { id: 'table', ico: '▦', name: 'Tableau', sub: 'Choisissez sa taille dans un quadrillage, modifiable ensuite', kw: 'tableau table grille colonnes lignes' },
   { id: 'image', icon: 'camera', name: 'Image', sub: 'Photo, schéma, capture — recadrable, déplaçable', kw: 'image photo schema capture illustration figure' },
   { id: 'phoneimg', icon: 'smartphone', name: 'Photo depuis le téléphone', sub: 'QR code à scanner : la photo prise apparaît ici', kw: 'telephone portable smartphone qr code photo scanner mobile image envoyer' },
-  { id: 'draw', icon: 'pen-line', name: 'Dessin', sub: 'Formes, flèches, zones de texte, main levée', kw: 'dessin dessiner schema forme fleche croquis rectangle cercle texte' },
+  { id: 'draw', icon: 'pen-line', name: 'Dessin', sub: 'Panneau d’objets à glisser sur le document : formes, flèches, texte, main levée', kw: 'dessin dessiner schema forme fleche croquis rectangle cercle texte objet' },
   { id: 'link', icon: 'link', name: 'Lien', sub: 'Bouton cliquable, QR code à l’export PDF', kw: 'lien url site web adresse', inline: true },
   { id: 'timer', icon: 'clock', name: 'Minuteur', sub: 'Compte à rebours ou chronomètre dans le cours', kw: 'minuteur chrono chronometre compte a rebours timer temps', },
   { id: 'tree', icon: 'wave', name: 'Arbre', sub: 'Arborescence : racine, branches, feuilles (plan, arbre de décision, généalogie, organigramme)', kw: 'arbre arborescence hierarchie organigramme decision branches noeud genealogique schema' },
@@ -7253,7 +7511,7 @@ function applySlash(sid) {
   if (sid === 'quote') { transform({ type: 'quote' }); return; }
   if (sid === 'image') { restore(); pickImages(); return; }
   if (sid === 'phoneimg') { restore(); openPhoneImage(bid); return; }
-  if (sid === 'draw') { restore(); insertDrawing(); return; }
+  if (sid === 'draw') { restore(); if (window.AlixoDraw) AlixoDraw.openPanel(); return; }
   if (sid.startsWith('c-')) { transform({ type: 'callout', ct: sid.slice(2) }); return; }
   if (sid === 'juris') { const nb = transform({ type: 'juris', fields: {} }); focusBlock(nb.id, 'start', 'f:ref'); toast('Fiche d’arrêt — Entrée ou Tab pour passer au champ suivant'); return; }
   if (sid.startsWith('f-')) { const fk = sid.slice(2); const nb = transform({ type: 'fiche', fk, fields: {} }); focusBlock(nb.id, 'start', 'f:ref'); toast(`${AlixoMed.FICHES[fk].name} — Entrée ou Tab pour passer au champ suivant`); return; }
@@ -7914,7 +8172,7 @@ const FORMULA_LIB = {
 };
 
 /* ---------------- panneaux de droite (un seul ouvert à la fois) ---------------- */
-const RIGHT_PANELS = ['#mathpanel', '#aipanel', '#calcpanel', '#dictpanel', '#calpanel', '#viewpanel', '#timerpanel', '#cocopanel'];
+const RIGHT_PANELS = ['#mathpanel', '#aipanel', '#calcpanel', '#dictpanel', '#calpanel', '#viewpanel', '#timerpanel', '#cocopanel', '#drawpanel'];   // 1.50 : + panneau Dessin (js/draw.js)
 /* 1.49 : #cocopanel (Alixo AI, js/coco.js) vit au niveau de <body> pour exister aussi depuis les présentations et les
    tableurs : la classe coco-open est posée sur #view-editor (décalage de la feuille) ET sur body (décalage des vues
    présentation / tableur). Cette fonction est la seule source de vérité de ces classes. */
@@ -7962,6 +8220,7 @@ $('#calc-close').addEventListener('click', closeRightPanels);
 $('#dict-close').addEventListener('click', closeRightPanels);
 $('#cal-close').addEventListener('click', closeRightPanels);
 $('#timer-close').addEventListener('click', closeRightPanels);
+$('#draw-close').addEventListener('click', closeRightPanels);
 $('#vw-close').addEventListener('click', () => { const d = doc(); if (d && d.vwOpen) { d.vwOpen = false; save(); } closeRightPanels(); });
 
 /* ============================================================
@@ -8856,7 +9115,7 @@ $('#toolbar').addEventListener('click', e => {
   }
   if (act === 'image') pickImages();
   if (act === 'phone') openPhoneImage(bid);
-  if (act === 'draw') insertDrawing();
+  if (act === 'draw') toggleDrawPanel();
   if (act === 'ai') runAiCorrection();
   if (act === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(); return; }
   if (act === 'ti') toggleCalcPanel();
@@ -8866,13 +9125,8 @@ $('#toolbar').addEventListener('click', e => {
   if (act === 'viewer') { if (!$('#viewpanel').hidden) { const d = doc(); if (d && d.vwOpen) { d.vwOpen = false; save(); } closeRightPanels(); } else { openViewer(); const d = doc(); if (d && $('#vw-body').dataset.loaded === '1') { d.vwOpen = true; save(); } } }
 });
 function togglePanel(sel, open) { if (!$(sel).hidden) closeRightPanels(); else open(); }
-/* nouveau dessin (formes, flèches, zones de texte) à la position du curseur */
-function insertDrawing() {
-  const nb = insertSpecial({ type: 'draw', h: 300, shapes: [] });
-  selectObj(nb.id);
-  if (window.AlixoDraw) AlixoDraw.start(nb.id);
-  toast('Dessin — choisissez un outil dans la barre du dessin (formes, flèche, texte, main levée)');
-}
+/* 1.50 : le dessin n'est plus un bloc « page blanche » — le bouton ouvre le panneau Dessin, dont on glisse les objets sur le document */
+function toggleDrawPanel() { if (window.AlixoDraw) togglePanel('#drawpanel', AlixoDraw.openPanel); }
 
 /* ============================================================
    Correction orthographe / grammaire, mise en forme, quiz et fiches : AlixoAI (1.37 ; 1.44 : sur l'ordinateur)
@@ -9776,7 +10030,7 @@ function blockPlain(b) {
   if (b.type === 'formula') return b.src || '';
   if (b.type === 'graph') return (AlixoGraphs.TYPES[b.gtype] || {}).name || '';
   if (b.type === 'img') return stripTags(b.cap || b.alt || '');
-  if (b.type === 'draw') return (b.shapes || []).filter(s => s.t === 'text' && s.text).map(s => s.text).join(' ');
+  if (b.type === 'draw') return window.AlixoDraw ? AlixoDraw.shapesText(b) : '';
   return stripTags(b.text);
 }
 
@@ -9816,7 +10070,8 @@ function doSearch(q) {
       continue;
     }
     for (const b of allPageBlocks(d, false)) {
-      const txt = blockPlain(b);
+      const flt = b.fl && window.AlixoDraw ? AlixoDraw.floatsText(b) : '';   // 1.50 : texte des objets de dessin posés sur le bloc
+      const txt = flt ? (blockPlain(b) + ' ' + flt).trim() : blockPlain(b);
       const i = norm(txt).indexOf(nq);
       if (i >= 0) {
         const start = Math.max(0, i - 40);
@@ -11648,7 +11903,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Coco répond de nouveau à vos questions (le chat refusait toute demande en 1.49.0) et s’étonne pendant que vous écrivez.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les dessins se glissent maintenant sur le cours depuis un panneau à droite ; clic droit sur les onglets et les cours récents, renommage sur place, barre latérale masquable, et la correction des fautes fonctionne dans les tableaux.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

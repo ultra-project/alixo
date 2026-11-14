@@ -42,6 +42,7 @@ body.mobile.drawer-open #libnav { transform: none; box-shadow: 0 0 40px rgba(0, 
 #mob-backdrop { position: fixed; inset: 0; z-index: 65; background: rgba(0, 0, 0, .35); }
 .mob-full { display: block; margin: 18px 8px 8px; font-size: 12px; color: var(--ink-3); text-decoration: underline; }
 body.mobile #lib-main { padding: 12px 12px 0; border-radius: 10px; }
+body.mobile #ln-toggle { display: none; }   /* 1.50 : sur téléphone la barre latérale est le tiroir (bouton ☰) — pas de bouton « masquer » */
 body.mobile .lib-head { flex-direction: column; align-items: stretch; gap: 8px; padding-bottom: 10px; }
 body.mobile #lib-title { font-size: 20px; }
 body.mobile .lib-actions { justify-content: flex-start; }

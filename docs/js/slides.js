@@ -858,14 +858,21 @@ window.AlixoSlides = (() => {
       document.execCommand('insertText', false, txt);
     });
     stage.addEventListener('contextmenu', e => {
-      const n = e.target.closest('.sl-el'); if (!n || readOnly) return; e.preventDefault();
-      if (!selSet.has(n.dataset.id)) select(n.dataset.id);
-      const menu = $('#ctxmenu'); const many = selSet.size > 1;
-      menu.innerHTML = `<div class="cm-title">${many ? selSet.size + ' blocs' : esc((BLOCKS.find(b => b.t === (el(n.dataset.id) || {}).t) || {}).name || 'Bloc')}</div>${many ? '' : '<button data-slcm="edit">Modifier</button>'}<button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="front">${I.front}Passer devant</button><button data-slcm="back">${I.back}Passer derrière</button><button data-slcm="del" class="danger">${I.trash}Retirer</button>`;
-      menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const a = b.dataset.slcm; if (a === 'dup') duplicateSel(); if (a === 'del') deleteSel(); if (a === 'front') bringSel(true); if (a === 'back') bringSel(false); if (a === 'edit') openEditor(n.dataset.id); };
-      placeCtxMenu(menu, e.clientX, e.clientY);
+      const n = e.target.closest('.sl-el'); if (!n || readOnly) return;
+      const x = e.clientX, y = e.clientY, nid = n.dataset.id;
+      /* 1.50 : sur un mot souligné par le correcteur natif (texte en cours de saisie), son menu passe d'abord (app.js, nativeSpellMenu) */
+      if (typeof nativeSpellMenu === 'function' && e.target.closest('.sl-text[contenteditable="true"]') && nativeSpellMenu(e, 'block', () => { if (!readOnly && document.body.classList.contains('mode-slides') && el(nid)) openElMenu(nid, x, y); })) return;
+      e.preventDefault();
+      openElMenu(nid, x, y);
     });
+    function openElMenu(nid, x, y) {
+      if (!selSet.has(nid)) select(nid);
+      const menu = $('#ctxmenu'); const many = selSet.size > 1;
+      menu.innerHTML = `<div class="cm-title">${many ? selSet.size + ' blocs' : esc((BLOCKS.find(b => b.t === (el(nid) || {}).t) || {}).name || 'Bloc')}</div>${many ? '' : '<button data-slcm="edit">Modifier</button>'}<button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="front">${I.front}Passer devant</button><button data-slcm="back">${I.back}Passer derrière</button><button data-slcm="del" class="danger">${I.trash}Retirer</button>`;
+      menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
+      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const a = b.dataset.slcm; if (a === 'dup') duplicateSel(); if (a === 'del') deleteSel(); if (a === 'front') bringSel(true); if (a === 'back') bringSel(false); if (a === 'edit') openEditor(nid); };
+      placeCtxMenu(menu, x, y);
+    }
 
     /* --- clavier --- */
     document.addEventListener('keydown', e => {

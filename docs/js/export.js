@@ -56,12 +56,33 @@
     return rasterizeSvg(svg, W, H, mime, scale);
   }
   /* bloc Dessin → image (largeur logique 640) */
+  let drawFails = 0;   // dessins impossibles à convertir en image pendant l'export en cours
   async function rasterizeDraw(b, mime = 'image/png', scale = 2) {
     if (!window.AlixoDraw) return null;
-    const svg = AlixoDraw.svg(b);
-    const m = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
-    const W = m ? +m[1] : 640, H = m ? +m[2] : 300;
-    return rasterizeSvg(svg, W, H, mime, scale);
+    try {
+      const svg = AlixoDraw.svg(b);
+      const m = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+      const W = m ? +m[1] : 640, H = m ? +m[2] : 300;
+      return await rasterizeSvg(svg, W, H, mime, scale);
+    } catch { drawFails++; return null; }   // image impossible à produire : le reste du cours sort quand même
+  }
+  /* un dessin omis n'est jamais passé sous silence */
+  function warnDrawFails() {
+    if (!drawFails) return;
+    const n = drawFails; drawFails = 0;
+    if (typeof toast === 'function') toast(n > 1 ? `${n} dessins n’ont pas pu être exportés` : 'Un dessin n’a pas pu être exporté');
+  }
+  /* 1.50 : objets de dessin posés sur un bloc (b.fl) → image recadrée sur leur boîte englobante ; fx = position
+     horizontale dans le bloc (unités logiques, 640 = largeur du bloc). Hors impression, les objets sortent en
+     image sous leur paragraphe. */
+  async function rasterizeFloats(b, mime = 'image/png', scale = 2) {
+    if (!window.AlixoDraw || !AlixoDraw.floatsSVG || !b || !Array.isArray(b.fl) || !b.fl.length) return null;
+    try {
+      const f = AlixoDraw.floatsSVG(b); if (!f) return null;
+      const img = await rasterizeSvg(f.svg, f.w, f.h, mime, Math.min(scale, 6000 / Math.max(f.w, f.h)));
+      img.fx = f.x;
+      return img;
+    } catch { drawFails++; return null; }   // image impossible à produire : le texte du cours sort quand même
   }
   /* graphique de données → image (640 × 360) */
   async function rasterizeChart(b, mime = 'image/png', scale = 2) {
@@ -320,6 +341,7 @@
   }
 
   async function exportDocPdf(d) {
+    drawFails = 0;
     const pdf = new Pdf();
     const numMap = computeNumbers(d.blocks);
     layoutRuns(pdf, [{ text: d.titre || 'Sans titre', b: true }], { size: 20, x: pdf.M, width: pdf.cw, lineH: 26 });
@@ -581,6 +603,17 @@
           layoutRuns(pdf, htmlRuns(b.text), { size: 11, x: pdf.M, width: pdf.cw, align: ALIGN_OF(b) });
           pdf.y += 5;
       }
+      {   // 1.50 : objets de dessin du bloc, en image sous lui
+        const fimg = await rasterizeFloats(b, 'image/jpeg');
+        if (fimg) {
+          let w = pdf.cw * Math.min(1, fimg.w / 640), h = w * fimg.h / fimg.w;
+          const maxH = pdf.H - pdf.M - pdf.MB - 12;
+          if (h > maxH) { w *= maxH / h; h = maxH; }
+          pdf.y += 4; pdf.ensure(h + 6);
+          pdf.image(fimg, pdf.M + Math.max(0, Math.min(pdf.cw - w, pdf.cw * fimg.fx / 640)), pdf.y, w, h);
+          pdf.y += h + 6;
+        }
+      }
       drawLinksPdf(pdf, b);
     }
     // pied de page (et filigrane « Alixo » sans Alixo+, 1.24 : texte gris clair en diagonale au centre de chaque page)
@@ -637,6 +670,7 @@
     for (const off of offsets) x += String(off).padStart(10, '0') + ' 00000 n \n';
     x += `trailer\n<< /Size ${objs.length + 1} /Root ${catalogId} 0 R >>\nstartxref\n${xref}\n%%EOF\n`;
     push(latin1(x));
+    warnDrawFails();
     return new Blob(chunks, { type: 'application/pdf' });
   }
 
@@ -746,6 +780,7 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
 </w:styles>`;
 
   async function exportDocDocx(d) {
+    drawFails = 0;
     const numMap = computeNumbers(d.blocks);
     const images = [];
     let body = para(runXml({ text: d.titre || 'Sans titre' }), '<w:pStyle w:val="Title"/>');
@@ -829,6 +864,10 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         }
         default: body += para(runsXml(htmlRuns(b.text)), jcXml(ALIGN_OF(b)));
       }
+      {   // 1.50 : objets de dessin du bloc, en image sous lui
+        const fimg = await rasterizeFloats(b, 'image/png');
+        if (fimg) { images.push(fimg); body += imageParaXml(images.length, fimg, Math.max(0.05, Math.min(1, fimg.w / 640)), 'center'); }
+      }
       for (const l of linksOf(b)) {
         const img = await qrPng(l.url, 200); if (!img) continue;
         images.push(img);
@@ -860,8 +899,9 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
       ...images.map((im, i) => ({ name: `word/media/graph${i + 1}.png`, data: im.data }))
     ];
     const blob = makeZip(files);
+    warnDrawFails();
     return new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   }
 
-  window.AlixoExport = { exportDocPdf, exportDocDocx, rasterizeGraph, rasterizeImage, rasterizeDraw, rasterizeChart, htmlRuns };
+  window.AlixoExport = { exportDocPdf, exportDocDocx, rasterizeGraph, rasterizeImage, rasterizeDraw, rasterizeFloats, rasterizeChart, htmlRuns };
 })();
