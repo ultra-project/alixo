@@ -327,6 +327,7 @@ mark.hit { background: #ffe79a; color: var(--ink); border-radius: 3px; padding: 
   .sys-404-scene .sys-404 { font-size: clamp(76px, 25vw, 112px); }
   .sys-404-coco { --coco-w: clamp(112px, 36vw, 140px); }
   .sys-actions .btn { flex: 1 1 100%; }
+  .sys-status { padding: 10px 16px; border-radius: var(--r-m); font-size: 14.5px; }   /* le texte passe sur deux lignes : carte plutôt que pastille */
   .st-banner { flex-wrap: wrap; padding: 18px; }
   .st-banner-text { flex: 1 1 0; }
   .st-banner .btn { flex: 1 1 100%; }
