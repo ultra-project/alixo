@@ -1,0 +1,100 @@
+<!--
+  GABARIT — navigation flottante et pied de page des pages du site (hors accueil).
+  Fichier de référence, jamais lié ni chargé par une page : on en COPIE les deux blocs.
+
+  Usage
+  1. Copier le bloc « NAV » juste après <body> et le bloc « PIED » juste après </main> (ou le conteneur du contenu).
+  2. Ne rien changer aux libellés, à l'ordre ni aux adresses : ils sont identiques à ceux de index.html.
+     Seule différence avec l'accueil : les liens sont ABSOLUS, donc valables à toute profondeur (/status/, /telecharger/mac/…).
+     Les sections de l'accueil s'écrivent /index.html?site#ancre : « ?site » est obligatoire, sans lui un compte
+     connecté est renvoyé vers l'application.
+  3. Page courante : ajouter aria-current="page" sur CHAQUE lien qui pointe vers la page affichée
+     (barre .nav-links, volet #nav-sheet, pied de page). Exemple pour /tarifs.html :
+       <a href="/tarifs.html" aria-current="page">Tarifs</a>   (trois fois : barre, volet, pied)
+     Une page absente de la barre (CGV, contact…) n'est marquée que dans le pied de page.
+     Les liens vers une section de l'accueil ne reçoivent jamais aria-current.
+  4. Le lien d'évitement vise #contenu : poser id="contenu" sur l'en-tête de page (section.page-head),
+     ou sur <main> si la page n'a pas d'en-tête séparé.
+  5. Feuilles et scripts attendus : /site.css (barre, pied), /pages.css, /site.js (menu mobile). Pas de bouton de thème.
+
+  Toute modification de la barre ou du pied se fait d'abord dans index.html, puis ici, puis dans chaque page.
+-->
+
+<!-- ================= NAV : début ================= -->
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="nav" id="nav">
+  <div class="nav-pill">
+    <a class="nav-logo" href="/index.html?site" aria-label="Alixo — accueil">
+      <img src="/img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
+    </a>
+    <nav class="nav-links" aria-label="Sections">
+      <a href="/index.html?site#fonctions">Fonctionnalités</a>
+      <a href="/index.html?site#ia">IA</a>
+      <a href="/index.html?site#alixo-plus">Alixo+</a>
+      <a href="/tarifs.html">Tarifs</a>
+      <a href="/index.html?site#telecharger">Télécharger</a>
+      <a href="/documentation.html">Documentation</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">Se connecter</a>
+      <a class="btn btn-ink btn-s" href="/index.html?site#telecharger">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+        Télécharger
+      </a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+  <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
+    <a href="/index.html?site#fonctions">Fonctionnalités</a>
+    <a href="/index.html?site#ia">IA</a>
+    <a href="/index.html?site#alixo-plus">Alixo+</a>
+    <a href="/tarifs.html">Tarifs</a>
+    <a href="/index.html?site#telecharger">Télécharger</a>
+    <a href="/documentation.html">Documentation</a>
+    <a href="/index.html?site#faq">Questions fréquentes</a>
+    <a href="https://alixoapp.com/docs/?login">Se connecter</a>
+  </nav>
+</header>
+<!-- ================= NAV : fin ================= -->
+
+
+<!-- ================= PIED : début ================= -->
+<footer class="foot">
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <img src="/img/logo-96.png" alt="" width="34" height="34" loading="lazy">
+      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
+    </div>
+    <nav class="foot-cols" aria-label="Pied de page">
+      <div class="foot-col">
+        <h2>Produit</h2>
+        <a href="/index.html?site#fonctions">Fonctionnalités</a>
+        <a href="/index.html?site#ia">IA</a>
+        <a href="/index.html?site#alixo-plus">Alixo+</a>
+        <a href="/tarifs.html">Tarifs</a>
+        <a href="/index.html?site#telecharger">Télécharger</a>
+        <a href="/documentation.html">Documentation</a>
+        <a href="/versions/">Versions</a>
+        <a href="/status/">État des services</a>
+      </div>
+      <div class="foot-col">
+        <h2>Utiliser</h2>
+        <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Application web<span class="sr-only"> (nouvel onglet)</span></a>
+        <a href="https://alixoapp.com/docs/?login">Se connecter</a>
+        <a href="/quiz/">Rejoindre un quiz</a>
+        <a href="/index.html?site#faq">Questions fréquentes</a>
+      </div>
+      <div class="foot-col">
+        <h2>Alixo</h2>
+        <a href="/contact.html">Contact</a>
+        <a href="/confidentialite.html">Confidentialité</a>
+        <a href="/conditions.html">Conditions</a>
+        <a href="/cgv.html">CGV</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
+      </div>
+    </nav>
+    <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
+  </div>
+</footer>
+<!-- ================= PIED : fin ================= -->
