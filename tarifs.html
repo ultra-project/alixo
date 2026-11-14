@@ -12,65 +12,60 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alixoapp.com/tarifs.html">
 <link rel="canonical" href="https://alixoapp.com/tarifs.html">
-<meta name="theme-color" content="#33658a">
+<meta name="theme-color" content="#f7f8fa">
 <link rel="stylesheet" href="/fonts/fonts.css">
-<script>(function(){try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';document.documentElement.dataset.theme=t;}catch(e){}})();</script>
-<link rel="stylesheet" href="styles.css?v=20261021c">
-<link rel="stylesheet" href="tarifs.css">
+<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css?v=20261115">
+<link rel="stylesheet" href="tarifs.css?v=20261115">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/logo.png">
 <meta property="og:image" content="https://alixoapp.com/img/shot-seance-light.jpg">
 <script defer src="/protection.js"></script>
+<script defer src="/site.js?v=20261115"></script>
+<script defer src="tarifs.js?v=20261115"></script>
 </head>
 <body class="tarifs-page">
 
-<!-- ================= Navigation flottante ================= -->
-<header id="nav">
-  <div class="nav-inner">
-    <a class="logo" href="index.html?site" aria-label="Alixo — accueil">
-      <img class="logo-img" src="img/logo-96.png" alt="" width="28" height="28"><span class="logo-name">Alixo</span>
+<a class="skip" href="#contenu">Aller au contenu</a>
+
+<header class="nav" id="nav">
+  <div class="nav-pill">
+    <a class="nav-logo" href="/index.html?site" aria-label="Alixo — accueil">
+      <img src="/img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
-      <a href="index.html?site#fonctions">Fonctionnalités</a>
-      <a href="index.html?site#ia">IA</a>
-      <a href="index.html?site#alixo-plus">Alixo+</a>
-      <a href="tarifs.html" class="on" aria-current="page">Tarifs</a>
-      <a href="index.html?site#telecharger">Télécharger</a>
-      <a href="documentation.html">Documentation</a>
+      <a href="/index.html?site#fonctions">Fonctionnalités</a>
+      <a href="/index.html?site#ia">IA</a>
+      <a href="/index.html?site#alixo-plus">Alixo+</a>
+      <a href="/tarifs.html" aria-current="page">Tarifs</a>
+      <a href="/index.html?site#telecharger">Télécharger</a>
+      <a href="/documentation.html">Documentation</a>
     </nav>
     <div class="nav-actions">
-      <button id="btn-theme" class="icon-btn" title="Apparence claire / sombre" aria-label="Changer de thème">
-        <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg>
-        <svg class="ico-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>
-      </button>
-      <a class="btn ghost small btn-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-        <span>Se connecter</span>
-      </a>
-      <a class="btn primary small" href="index.html?site#telecharger">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+      <a class="nav-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">Se connecter</a>
+      <a class="btn btn-ink btn-s" href="/index.html?site#telecharger">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
         Télécharger
       </a>
-      <button class="icon-btn nav-burger" id="nav-burger" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
     </div>
   </div>
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
-    <a href="index.html?site#fonctions">Fonctionnalités</a>
-    <a href="index.html?site#ia">Intelligence artificielle</a>
-    <a href="index.html?site#alixo-plus">Alixo+</a>
-    <a href="tarifs.html" aria-current="page">Tarifs</a>
-    <a href="index.html?site#telecharger">Télécharger</a>
-    <a href="documentation.html">Documentation</a>
-    <a href="#faq">Questions fréquentes</a>
+    <a href="/index.html?site#fonctions">Fonctionnalités</a>
+    <a href="/index.html?site#ia">IA</a>
+    <a href="/index.html?site#alixo-plus">Alixo+</a>
+    <a href="/tarifs.html" aria-current="page">Tarifs</a>
+    <a href="/index.html?site#telecharger">Télécharger</a>
+    <a href="/documentation.html">Documentation</a>
+    <a href="/index.html?site#faq">Questions fréquentes</a>
     <a href="https://alixoapp.com/docs/?login">Se connecter</a>
   </nav>
 </header>
 
-<main>
+<main id="contenu">
 <!-- ================= En-tête et formules ================= -->
 <section class="tf-hero" id="top">
-  <div class="hero-bg" aria-hidden="true"><span class="grid"></span><span class="orb o1"></span><span class="orb o2"></span></div>
   <div class="tf-hero-inner">
     <div class="eyebrow reveal">Tarifs</div>
     <h1 class="reveal d1">Gratuit pour l'essentiel.<br><em>Alixo+ de moins en moins cher.</em></h1>
@@ -84,7 +79,7 @@
   </div>
 
   <div class="tf-plans plans reveal">
-    <div class="plan">
+    <div class="plan plan-free">
       <div class="plan-head"><img src="img/logo-96.png" alt="" width="40" height="40"><div><h2 class="tf-plan-name">Gratuit</h2><span>Pour toujours, sans carte</span></div></div>
       <div class="plan-price">0 €<small>sans limite de temps</small></div>
       <ul class="plan-list">
@@ -95,7 +90,7 @@
         <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
         <li>Thèmes clair, sombre, automatique · 3 polices</li>
       </ul>
-      <a class="btn ghost full" href="index.html?site#telecharger">Commencer gratuitement</a>
+      <a class="btn btn-line btn-full" href="index.html?site#telecharger">Commencer gratuitement</a>
     </div>
 
     <div class="plan plus tf-plus" id="tf-plus">
@@ -136,14 +131,15 @@
         <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
         <li><strong>Stockage au-delà de 3 Go</strong></li>
       </ul>
-      <a class="btn brand full" href="https://alixoapp.com/docs/?login">Passer à Alixo+ <span id="tf-cta-billing">mensuel</span></a>
+      <a class="btn btn-white btn-full tf-cta" href="https://alixoapp.com/docs/?login">Passer à Alixo+ <span id="tf-cta-billing">mensuel</span></a>
       <div class="plan-note">Abonnement mensuel sans engagement ou annuel reconduit tacitement, résiliable à tout moment en ligne (effet à la fin de la période payée). Paiement sécurisé par Stripe. Droit de rétractation de 14&nbsp;jours&nbsp;: voir les <a href="cgv.html">CGV</a>.</div>
     </div>
   </div>
 </section>
 
 <!-- ================= Prix dégressif ================= -->
-<section id="degressif" class="section alt" data-billing-view="monthly">
+<section id="degressif" class="section" data-billing-view="monthly">
+<div class="wrap">
   <div class="section-head reveal">
     <div class="eyebrow">Prix dégressif</div>
     <h2>Plus tu restes,<br><em>moins tu paies.</em></h2>
@@ -244,10 +240,12 @@
   </ul>
 
   <p class="tf-legal reveal">Prix en euros, toutes taxes comprises. Abonnement mensuel sans engagement, ou annuel reconduit tacitement chaque année&nbsp;; résiliable en ligne à tout moment, avec effet à la fin de la période payée. Les paliers s'appliquent automatiquement au renouvellement&nbsp;; ton prix actuel et le prochain sont toujours affichés dans Paramètres › Alixo+. Droit de rétractation de 14&nbsp;jours&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</p>
+</div>
 </section>
 
 <!-- ================= FAQ ================= -->
 <section id="faq" class="section">
+<div class="wrap tf-faq-layout">
   <div class="section-head reveal">
     <div class="eyebrow">Questions</div>
     <h2>Les prix, <em>sans détour.</em></h2>
@@ -270,51 +268,47 @@
       <p>Oui. Alixo+ suit ton compte&nbsp;: un seul abonnement pour le PC, le Mac, le web et le téléphone.</p>
     </details>
   </div>
+</div>
 </section>
 </main>
 
-<!-- ================= Pied de page ================= -->
-<footer>
-  <div class="foot-inner">
+<footer class="foot">
+  <div class="wrap foot-in">
     <div class="foot-brand">
-      <img class="logo-img" src="img/logo-96.png" alt="" width="30" height="30">
-      <div>
-        <div class="foot-name">Alixo</div>
-        <div class="foot-tag">Le cockpit d'amphi des étudiants.</div>
-      </div>
+      <img src="/img/logo-96.png" alt="" width="34" height="34" loading="lazy">
+      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
     </div>
-    <div class="foot-cols">
+    <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
-        <h5>Produit</h5>
-        <a href="index.html?site#fonctions">Fonctionnalités</a>
-        <a href="index.html?site#ia">Intelligence artificielle</a>
-        <a href="index.html?site#alixo-plus">Alixo+</a>
-        <a href="tarifs.html" aria-current="page">Tarifs</a>
-        <a href="index.html?site#telecharger">Télécharger</a>
+        <h2>Produit</h2>
+        <a href="/index.html?site#fonctions">Fonctionnalités</a>
+        <a href="/index.html?site#ia">IA</a>
+        <a href="/index.html?site#alixo-plus">Alixo+</a>
+        <a href="/tarifs.html" aria-current="page">Tarifs</a>
+        <a href="/index.html?site#telecharger">Télécharger</a>
+        <a href="/documentation.html">Documentation</a>
         <a href="/versions/">Versions</a>
         <a href="/status/">État des services</a>
       </div>
       <div class="foot-col">
-        <h5>Utiliser</h5>
-        <a href="https://alixoapp.com/docs/">Application web</a>
+        <h2>Utiliser</h2>
+        <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Application web<span class="sr-only"> (nouvel onglet)</span></a>
         <a href="https://alixoapp.com/docs/?login">Se connecter</a>
         <a href="/quiz/">Rejoindre un quiz</a>
-        <a href="documentation.html">Documentation</a>
-        <a href="index.html?site#faq">Questions fréquentes</a>
+        <a href="/index.html?site#faq">Questions fréquentes</a>
       </div>
       <div class="foot-col">
-        <h5>Alixo</h5>
-        <a href="contact.html">Contact</a>
-        <a href="confidentialite.html">Confidentialité</a>
-        <a href="conditions.html">Conditions</a>
-        <a href="cgv.html">CGV</a>
-        <a href="mentions-legales.html">Mentions légales</a>
+        <h2>Alixo</h2>
+        <a href="/contact.html">Contact</a>
+        <a href="/confidentialite.html">Confidentialité</a>
+        <a href="/conditions.html">Conditions</a>
+        <a href="/cgv.html">CGV</a>
+        <a href="/mentions-legales.html">Mentions légales</a>
       </div>
-    </div>
-    <div class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span class="foot-made">Fait pour les amphis.</span></div>
+    </nav>
+    <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
   </div>
 </footer>
 
-<script src="tarifs.js"></script>
 </body>
 </html>

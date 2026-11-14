@@ -1,56 +1,40 @@
 /* ============================================================
    Alixo — Page Tarifs
-   Thème, navigation (fond au défilement, menu mobile), apparition au défilement,
-   bascule mensuel / annuel, et Coco assis sur la carte Alixo+ qui parle au survol.
+   Apparition au défilement, bascule mensuel / annuel, et Coco assis sur la carte Alixo+
+   qui parle au survol. Mode clair seul ; le menu mobile est dans /site.js.
    Chaque bloc vérifie ses éléments : la page reste utilisable si l'un manque.
    ============================================================ */
 (function () {
   'use strict';
 
-  /* ---------- Thème (déjà posé par le script inline du <head>) ---------- */
+  /* ---------- Apparition au défilement (les barres du prix dégressif poussent avec) ----------
+     Sans ce script, tout le contenu est visible : le masquage ne s'applique que sous html.js,
+     classe posée ici, une fois les blocs déjà à l'écran marqués « in » (aucun clignotement au chargement).
+     Le menu mobile est géré par /site.js. */
   const root = document.documentElement;
-  if (!root.dataset.theme) {
-    let saved = null; try { saved = localStorage.getItem('alixo-theme'); } catch (e) {}
-    root.dataset.theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
-  }
-  const btnTheme = document.getElementById('btn-theme');
-  if (btnTheme) btnTheme.addEventListener('click', () => {
-    const next = root.dataset.theme === 'dark' ? 'light' : 'dark';
-    root.dataset.theme = next;
-    try { localStorage.setItem('alixo-theme', next); } catch (e) {}
-  });
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
-    let saved = null; try { saved = localStorage.getItem('alixo-theme'); } catch (err) {}
-    if (!saved) root.dataset.theme = e.matches ? 'dark' : 'light';
-  });
-
-  /* ---------- Nav : fond au défilement, menu mobile ---------- */
-  const nav = document.getElementById('nav');
-  if (nav) {
-    const onScroll = () => nav.classList.toggle('scrolled', window.scrollY > 8);
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    const burger = document.getElementById('nav-burger');
-    if (burger) {
-      const setOpen = (open) => { nav.classList.toggle('open', open); burger.setAttribute('aria-expanded', open ? 'true' : 'false'); };
-      burger.addEventListener('click', () => setOpen(!nav.classList.contains('open')));
-      document.querySelectorAll('.nav-sheet a').forEach(a => a.addEventListener('click', () => setOpen(false)));
-      document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
-      document.addEventListener('click', (e) => { if (!nav.contains(e.target)) setOpen(false); });
+  const reveals = Array.from(document.querySelectorAll('.reveal'));
+  const showAll = () => reveals.forEach(el => el.classList.add('in'));
+  try {
+    if ('IntersectionObserver' in window) {
+      const vh = window.innerHeight || root.clientHeight;
+      reveals.forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < vh && r.bottom > 0) el.classList.add('in');
+      });
+      root.classList.add('js');
+      const revealObs = new IntersectionObserver((entries) => {
+        for (const e of entries) {
+          if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); }
+        }
+      }, { threshold: 0.08, rootMargin: '0px 0px -40px' });
+      reveals.forEach(el => { if (!el.classList.contains('in')) revealObs.observe(el); });
+      window.addEventListener('beforeprint', showAll);
+    } else {
+      showAll();
     }
-  }
-
-  /* ---------- Apparition au défilement (les barres du prix dégressif poussent avec) ---------- */
-  const reveals = document.querySelectorAll('.reveal');
-  if ('IntersectionObserver' in window) {
-    const revealObs = new IntersectionObserver((entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) { e.target.classList.add('in'); revealObs.unobserve(e.target); }
-      }
-    }, { threshold: 0.08, rootMargin: '0px 0px -40px' });
-    reveals.forEach(el => revealObs.observe(el));
-  } else {
-    reveals.forEach(el => el.classList.add('in'));
+  } catch (err) {
+    root.classList.remove('js');
+    showAll();
   }
 
   /* ---------- Bascule mensuel / annuel ----------
@@ -98,7 +82,7 @@
 
   /* ---------- Coco, assis sur la carte Alixo+ ----------
      Survol de la carte à la souris, focus clavier dans la carte, ou tap : Coco sursaute et tape sa phrase
-     dans une bulle terminal (mêmes classes que la bulle de l'accueil). Plusieurs raisons peuvent le faire
+     dans une bulle terminal (styles dans tarifs.css). Plusieurs raisons peuvent le faire
      parler (survol, focus, tap) : il se tait quand il n'en reste aucune, après un petit délai de grâce. */
   const coco = document.getElementById('tf-coco');
   const card = document.getElementById('tf-plus');
