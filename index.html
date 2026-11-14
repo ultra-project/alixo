@@ -13,33 +13,34 @@
 <meta property="og:url" content="https://alixoapp.com/">
 <link rel="canonical" href="https://alixoapp.com/">
 <script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"Alixo App","alternateName":["Alixo","alixoapp.com"],"url":"https://alixoapp.com/"},{"@type":"Organization","name":"Alixo","url":"https://alixoapp.com/","logo":"https://alixoapp.com/img/logo.png"}]}</script>
-<meta name="theme-color" content="#33658a">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0a0b0e">
+<meta name="theme-color" content="#f7f8fa">
 <!-- Déjà connecté ? Direction l'application (alixoapp.com/docs). « ?site » force l'affichage de cette page. -->
 <script>(function(){try{if(/[?&]site(?=&|=|$)/.test(location.search))return;var app='/docs/';var abs=new URL(app,location.href).href;if(document.referrer&&document.referrer.indexOf(abs)===0)return;var s=JSON.parse(localStorage.getItem('alixo.session.v1')||'null');if(s&&s.uid)location.replace(app);}catch(e){}})();</script>
+<!-- La classe « js » n'est posée que si le script s'exécute : sans elle, tout le contenu est visible (filet de sécurité : retirée si accueil.js n'a pas démarré). -->
+<script>(function(){var h=document.documentElement;h.className+=' js';setTimeout(function(){if(!window.__alixoAccueil)h.className=h.className.replace(/\bjs\b/,'');},2500);
+/* Appareil faible (téléphone + peu de mémoire, économiseur de données, réseau 2G, ou peu de cœurs ET peu de mémoire — le nombre de cœurs seul est plafonné par WebKit, y compris sur iPhone récent) : html.lite = animations coupées, comme en mouvement réduit */
+try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.userAgent)&&((n.deviceMemory&&n.deviceMemory<=2)||c.saveData||/^(slow-2g|2g)$/.test(c.effectiveType||'')||(n.hardwareConcurrency&&n.hardwareConcurrency<=4&&n.deviceMemory&&n.deviceMemory<=4)))h.classList.add('lite');}catch(e){}})();</script>
 <link rel="stylesheet" href="/fonts/fonts.css">
-<script>(function(){var h=document.documentElement;try{var t=localStorage.getItem('alixo-theme');if(!t)t=matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';h.dataset.theme=t;}catch(e){}
-/* Appareil faible (téléphone + peu de mémoire, économiseur de données, réseau 2G, ou peu de cœurs ET peu de mémoire — le nombre de cœurs seul est plafonné par WebKit, y compris sur iPhone récent) : html.lite = animations réduites, pas de préchargement des captures */
-try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.userAgent)&&((n.deviceMemory&&n.deviceMemory<=2)||c.saveData||/^(slow-2g|2g)$/.test(c.effectiveType||'')||(n.hardwareConcurrency&&n.hardwareConcurrency<=4&&n.deviceMemory&&n.deviceMemory<=4)))h.classList.add('lite');}catch(e){}
-/* Capture affichée en premier (image LCP) : annoncée dès le head, dans le thème déjà connu, avec les mêmes candidats que script.js */
-try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=document.createElement('link');l.rel='preload';l.as='image';l.href=b+'-1024.jpg';l.setAttribute('imagesrcset',b+'-640.jpg 640w, '+b+'-1024.jpg 1024w, '+b+'-1600.jpg 1600w, '+b+'.jpg 2880w');l.setAttribute('imagesizes','(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)');l.setAttribute('fetchpriority','high');document.head.appendChild(l);}catch(e){}})();</script>
+<!-- Capture affichée en premier (image LCP) : mêmes candidats que l'<img> du héros. Page en mode clair seul. -->
+<link rel="preload" as="image" href="img/shot-seance-light-1600.jpg" imagesrcset="img/shot-seance-light-640.jpg 640w, img/shot-seance-light-1024.jpg 1024w, img/shot-seance-light-1600.jpg 1600w" imagesizes="(max-width: 999px) calc(100vw - 68px), 720px" fetchpriority="high">
+<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/fonts/inter-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css?v=20261031">
-<noscript><style>.reveal{opacity:1;transform:none}</style></noscript>
+<link rel="stylesheet" href="accueil.css?v=20261114">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/logo.png">
 <meta property="og:image" content="https://alixoapp.com/img/shot-seance-light.jpg">
 <script defer src="/protection.js"></script>
 </head>
-<body class="home">
+<body>
+
+<a class="skip" href="#contenu">Aller au contenu</a>
 
 <!-- ================= Navigation flottante ================= -->
-<header id="nav">
-  <div class="nav-inner">
-    <a class="logo" href="#top" aria-label="Alixo — accueil">
-      <img class="logo-img" src="img/logo-96.png" alt="" width="28" height="28"><span class="logo-name">Alixo</span>
+<header class="nav" id="nav">
+  <div class="nav-pill">
+    <a class="nav-logo" href="#top" aria-label="Alixo — accueil">
+      <img src="img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#alixo-plus">Alixo+</a>
@@ -50,19 +51,12 @@ try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=documen
       <a href="documentation.html">Documentation</a>
     </nav>
     <div class="nav-actions">
-      <button id="btn-theme" class="icon-btn" title="Apparence claire / sombre" aria-label="Changer de thème">
-        <svg class="ico-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.5"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M18.7 5.3l-1.8 1.8M7.1 16.9l-1.8 1.8"/></svg>
-        <svg class="ico-moon" viewBox="0 0 24 24"><path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z"/></svg>
-      </button>
-      <a class="btn ghost small btn-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M15 12H3"/></svg>
-        <span>Se connecter</span>
-      </a>
-      <a class="btn primary small" href="#telecharger">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
+      <a class="nav-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">Se connecter</a>
+      <a class="btn btn-ink btn-s" href="#telecharger">
+        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
         Télécharger
       </a>
-      <button class="icon-btn nav-burger" id="nav-burger" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
     </div>
   </div>
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
@@ -77,428 +71,466 @@ try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=documen
   </nav>
 </header>
 
-<!-- ================= Coco, le compagnon (pend sous la navigation, descend en rappel au survol) ================= -->
-<div class="coco" id="coco">
-  <div class="coco-swing">
-    <div class="coco-rig">
-      <div class="coco-body">
-        <button type="button" class="coco-btn" id="coco-btn" aria-label="Coco, le compagnon Alixo — dis bonjour">
-          <picture>
-            <source srcset="img/coco.webp" type="image/webp">
-            <img class="coco-img" src="img/coco.png" alt="" width="360" height="649" decoding="async" draggable="false">
-          </picture>
-          <span class="coco-hit coco-hit-rope" aria-hidden="true"></span>
-          <span class="coco-hit coco-hit-body" aria-hidden="true"></span>
-          <span class="coco-hit coco-hit-feet" aria-hidden="true"></span>
-        </button>
+<main id="contenu">
+
+<!-- ================= 1. Héros ================= -->
+<section class="hero" id="top">
+  <div class="hero-panel">
+    <span class="quad" aria-hidden="true"></span>
+
+    <div class="wrap hero-layout">
+      <div class="hero-head">
+        <h1><span class="h1-line">Ton cours va vite.</span> <span class="h1-line">Alixo va <span class="nw"><mark class="hl">plus vite</mark>.</span></span></h1>
       </div>
-      <div class="coco-bubble" aria-hidden="true">
-        <div class="coco-term-bar"><i></i><i></i><i></i><span>coco@alixo:~</span></div>
-        <p class="coco-term-body"><span class="coco-term-ghost"><b>$</b> Salut moi c'est coco, ton compagnon pour tes cours !</span><span class="coco-term-live"><b>$</b> <span class="coco-typed"></span><span class="coco-caret"></span></span></p>
+
+      <div class="hero-copy">
+        <p class="hero-sub">L'application de prise de notes conçue pour l'amphi&nbsp;: cours, tableurs, planches, quiz et présentations. Tout au clavier, même hors ligne. Gratuit, Alixo+ en option.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-ink btn-dl" id="hero-win" href="/telecharger/windows/" data-download>
+            <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
+            <span class="btn-dl-txt">Télécharger pour Windows<small>Gratuit · <span class="js-size">85 Mo</span></small></span>
+          </a>
+          <a class="btn btn-line btn-dl" id="hero-mac" href="/telecharger/mac/">
+            <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
+            <span class="btn-dl-txt">Télécharger pour macOS<small>Gratuit<span id="mac-size-hero"></span></small></span>
+          </a>
+        </div>
+        <a class="hero-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">ou ouvrir dans le navigateur <span aria-hidden="true">→</span><span class="sr-only"> (nouvel onglet)</span></a>
       </div>
-    </div>
-  </div>
-  <p class="coco-sr" id="coco-live" aria-live="polite"></p>
-</div>
 
+      <!-- Captures réelles de l'application -->
+      <div class="hero-stage" id="demo">
+        <div class="tabs" role="tablist" aria-label="Choisir un écran de l'application">
+          <button class="tab" type="button" role="tab" id="tab-seance" aria-selected="true" aria-controls="shot-panel" data-shot="seance" data-title="Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt">Séance</button>
+          <button class="tab" type="button" role="tab" id="tab-sheet" aria-selected="false" aria-controls="shot-panel" tabindex="-1" data-shot="sheet" data-title="Tableur — formules et graphique de la sélection">Tableur</button>
+          <button class="tab" type="button" role="tab" id="tab-board" aria-selected="false" aria-controls="shot-panel" tabindex="-1" data-shot="board" data-title="Planche — zones, post-it, formes et flèches">Planche</button>
+          <button class="tab" type="button" role="tab" id="tab-quiz" aria-selected="false" aria-controls="shot-panel" tabindex="-1" data-shot="quiz" data-title="Quiz — déroulé des questions, propositions A B C D">Quiz</button>
+          <button class="tab" type="button" role="tab" id="tab-slides" aria-selected="false" aria-controls="shot-panel" tabindex="-1" data-shot="slides" data-title="Présentation — diapositives dans le style du cours">Présentation</button>
+        </div>
 
-<!-- ================= Hero ================= -->
-<section id="top" class="hero">
-  <div class="hero-bg" aria-hidden="true"><span class="grid"></span><span class="orb o1"></span><span class="orb o2"></span><span class="orb o3"></span></div>
-  <div class="hero-inner">
-    <a class="pill reveal" href="#ia">
-      <span class="pill-txt">Alixo <span class="js-version">dernière version</span> · Découvrir AlixoAI</span>
-      <span class="pill-arrow">→</span>
-    </a>
-    <h1 class="reveal d1">Ton cours va vite.<br><em>Alixo va plus vite.</em></h1>
-    <p class="hero-sub reveal d2">
-      L'application de prise de notes conçue pour l'amphi&nbsp;: cours, tableurs, planches, quiz et présentations. Tout au clavier, même hors ligne. Gratuit, Alixo+ en option.
-    </p>
-    <div class="hero-ctas reveal d3">
-      <a class="btn primary big" id="hero-win" href="#telecharger" data-download>
-        <svg class="win-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
-        Télécharger pour Windows
-        <small class="btn-meta">Gratuit · <span class="js-size">85 Mo</span></small>
-      </a>
-      <a class="btn ghost big" id="hero-mac" href="/telecharger/mac/">
-        <svg class="apple-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
-        Télécharger pour macOS
-        <small class="btn-meta">Gratuit<span id="mac-size-hero"></span></small>
-      </a>
-    </div>
-  </div>
+        <div class="shot-scene" id="shot-scene">
+          <div class="shot-win" id="shot-win">
+            <div class="shot-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="shot-title" id="shot-title">Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt</span></div>
+            <div class="shot-stage" id="shot-panel" role="tabpanel" aria-labelledby="tab-seance">
+              <img class="shot on" data-shot="seance" src="img/shot-seance-light-1600.jpg" srcset="img/shot-seance-light-640.jpg 640w, img/shot-seance-light-1024.jpg 1024w, img/shot-seance-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high" decoding="async">
+              <img class="shot" data-shot="sheet" data-src="img/shot-sheet-light-1600.jpg" data-srcset="img/shot-sheet-light-640.jpg 640w, img/shot-sheet-light-1024.jpg 1024w, img/shot-sheet-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" decoding="async" hidden>
+              <img class="shot" data-shot="board" data-src="img/shot-board-light-1600.jpg" data-srcset="img/shot-board-light-640.jpg 640w, img/shot-board-light-1024.jpg 1024w, img/shot-board-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" decoding="async" hidden>
+              <img class="shot" data-shot="quiz" data-src="img/shot-quiz-light-1600.jpg" data-srcset="img/shot-quiz-light-640.jpg 640w, img/shot-quiz-light-1024.jpg 1024w, img/shot-quiz-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types de questions à glisser" decoding="async" hidden>
+              <img class="shot" data-shot="slides" data-src="img/shot-slides-light-1600.jpg" data-srcset="img/shot-slides-light-640.jpg 640w, img/shot-slides-light-1024.jpg 1024w, img/shot-slides-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — éditeur de présentations : diapositives dans le style du cours, palette de blocs et notes" decoding="async" hidden>
+            </div>
+          </div>
 
-  <!-- Captures réelles de l'application -->
-  <div class="shots reveal" id="demo">
-    <div class="shots-tabs" aria-label="Choisir un écran de l'application">
-      <button class="shots-tab active" data-shot="seance" aria-pressed="true">Séance</button>
-      <button class="shots-tab" data-shot="sheet" aria-pressed="false">Tableur</button>
-      <button class="shots-tab" data-shot="board" aria-pressed="false">Planche</button>
-      <button class="shots-tab" data-shot="quiz" aria-pressed="false">Quiz</button>
-      <button class="shots-tab" data-shot="slides" aria-pressed="false">Présentation</button>
-    </div>
-    <div class="shots-glow" aria-hidden="true"></div>
-    <div class="shots-frame" id="shots-frame">
-      <div class="shots-bar"><span class="dots"><i></i><i></i><i></i></span><span class="shots-title" id="shots-title">Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt</span><span class="shots-theme-hint" id="shots-theme-hint">Les captures suivent le thème du site</span></div>
-      <div class="shots-stage">
-        <!-- data-base : script.js pose src + srcset (img/shot-{clé}-{light|dark}-{640|1024|1600}.jpg et l'original 2880) selon le thème, seulement pour la capture affichée ; les autres sont chargées à la demande -->
-        <img class="shot on timg" aria-hidden="false" data-shot="seance" data-base="img/shot-seance" src="img/shot-seance-light-1024.jpg" srcset="img/shot-seance-light-640.jpg 640w, img/shot-seance-light-1024.jpg 1024w, img/shot-seance-light-1600.jpg 1600w, img/shot-seance-light.jpg 2880w" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high" decoding="async">
-        <img class="shot timg" aria-hidden="true" data-shot="sheet" data-base="img/shot-sheet" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" decoding="async">
-        <img class="shot timg" aria-hidden="true" data-shot="board" data-base="img/shot-board" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" decoding="async">
-        <img class="shot timg" aria-hidden="true" data-shot="quiz" data-base="img/shot-quiz" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — éditeur de quiz : déroulé des questions, propositions A B C D, palette de types de questions à glisser" decoding="async">
-        <img class="shot timg" aria-hidden="true" data-shot="slides" data-base="img/shot-slides" sizes="(max-width: 640px) calc(100vw - 32px), min(100vw - 48px, 1180px)" width="2880" height="1800" alt="Alixo — éditeur de présentations : diapositives dans le style du cours, palette de blocs et notes" decoding="async">
+          <!-- Fragments d'interface flottants (décoratifs) -->
+          <div class="frag frag-quiz" aria-hidden="true"><div class="frag-in">
+            <div class="fq-opts"><b class="qa">A</b><b class="qb">B</b><b class="qc">C</b><b class="qd">D</b></div>
+            <div class="fq-meta"><span>28 réponses</span><i></i><span>72 %</span></div>
+          </div></div>
+          <div class="frag frag-juris" aria-hidden="true"><div class="frag-in">
+            <div class="fj-head"><svg viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7Zm14 0-3 7a3 3 0 0 0 6 0l-3-7Z"/></svg>Cass. ass. plén., 9 mai 1984, Derguini</div>
+            <div class="fj-row"><span>Faits</span><em>Une enfant de cinq ans, renversée…</em></div>
+            <div class="fj-row"><span>Solution</span><em>Faute retenue sans discernement.</em></div>
+          </div></div>
+          <div class="frag frag-cmd" aria-hidden="true"><div class="frag-in">
+            <kbd>Ctrl</kbd><kbd>K</kbd><span>nullité relative</span>
+          </div></div>
+          <div class="frag frag-math" aria-hidden="true"><div class="frag-in">
+            <span class="math"><span class="var">ε<sub>p</sub></span> = <span class="frac"><span>ΔQ / Q</span><span>ΔP / P</span></span></span>
+          </div></div>
+        </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ================= Filières (défilement) ================= -->
-<section class="strip" id="filieres">
-  <div class="strip-label">Conçu pour les filières qui vont vite</div>
-  <div class="marquee-wrap">
-    <div class="marquee">
-      <span class="chip on"><span aria-hidden="true">⚖️</span> Droit</span><span class="chip on"><span aria-hidden="true">📈</span> Économie</span><span class="chip on"><span aria-hidden="true">🩺</span> Médecine</span><span class="chip on"><span aria-hidden="true">💊</span> Pharmacie</span><span class="chip on"><span aria-hidden="true">🦷</span> Odontologie</span><span class="chip on"><span aria-hidden="true">🤰</span> Maïeutique</span><span class="chip on"><span aria-hidden="true">🦵</span> Kinésithérapie</span><span class="chip on"><span aria-hidden="true">🎓</span> Double licence</span><span class="chip soon"><span aria-hidden="true">📊</span> Gestion · bientôt</span><span class="chip soon"><span aria-hidden="true">🛍️</span> Commerce · bientôt</span>
-      <span class="chip on" aria-hidden="true"><span aria-hidden="true">⚖️</span> Droit</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">📈</span> Économie</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">🩺</span> Médecine</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">💊</span> Pharmacie</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">🦷</span> Odontologie</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">🤰</span> Maïeutique</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">🦵</span> Kinésithérapie</span><span class="chip on" aria-hidden="true"><span aria-hidden="true">🎓</span> Double licence</span><span class="chip soon" aria-hidden="true"><span aria-hidden="true">📊</span> Gestion · bientôt</span><span class="chip soon" aria-hidden="true"><span aria-hidden="true">🛍️</span> Commerce · bientôt</span>
+<!-- ================= 2. Filières ================= -->
+<section class="fil" id="filieres" aria-labelledby="fil-titre">
+  <div class="wrap fil-in">
+    <h2 class="fil-label" id="fil-titre">Conçu pour les filières qui vont vite</h2>
+    <ul class="fil-list">
+      <li style="--c:#214ffa">Droit</li>
+      <li style="--c:#2f7d68">Économie</li>
+      <li style="--c:#b0483f">Médecine</li>
+      <li style="--c:#9439fc">Pharmacie</li>
+      <li style="--c:#b3762a">Odontologie</li>
+      <li style="--c:#c2559d">Maïeutique</li>
+      <li style="--c:#1f8fa8">Kinésithérapie</li>
+      <li style="--c:#6d5bfa">Double licence</li>
+      <li class="soon">Gestion · bientôt</li>
+      <li class="soon">Commerce · bientôt</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= 3. Fonctionnalités ================= -->
+<section class="sec" id="fonctions" aria-labelledby="fn-titre">
+  <div class="wrap">
+    <header class="head head-split reveal">
+      <h2 id="fn-titre"><span class="h2-line">Tout ce dont tu as besoin.</span> <span class="h2-line">Rien qui <span class="nw"><mark class="hl">te ralentit</mark>.</span></span></h2>
+      <p>Chaque bloc, chaque raccourci est pensé pour que tes mains restent sur le clavier et tes yeux sur le prof.</p>
+    </header>
+
+    <div class="mosaic">
+      <!-- A — Structure automatique -->
+      <article class="tile t-a c7 reveal">
+        <div class="demo" aria-hidden="true">
+          <div class="plan-demo" id="plan-demo">
+            <div class="pl l1"><b>I.</b><span class="pl-t">La formation du contrat</span></div>
+            <div class="pl l2"><b>A.</b><span class="pl-t">L'offre et l'acceptation</span></div>
+            <div class="pl l3"><b>1.</b><span class="pl-t">Les caractères de l'offre</span></div>
+            <div class="pl l4"><b>a.</b><span class="pl-t">La fermeté</span></div>
+            <div class="pl-hint"><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>4</kbd><span>→ niveau a.</span></div>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Structure automatique I. A. 1. a.</h3>
+          <p>La numérotation juridique se gère toute seule. Le plan du cours se construit en direct dans le volet de gauche, avec ta progression.</p>
+        </div>
+      </article>
+
+      <!-- B — Recherche universelle -->
+      <article class="tile t-b c5 reveal" style="--i:1">
+        <div class="demo" aria-hidden="true">
+          <div class="cmd">
+            <div class="cmd-bar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="cmd-q">nullité relative</span><kbd>Ctrl K</kbd></div>
+            <div class="cmd-hit sel"><span class="chip">Contrats · S4</span><span class="cmd-x">…sanctionnée par la <mark>nullité relative</mark>…</span><span class="ret">↵</span></div>
+            <div class="cmd-hit"><span class="chip">Famille · S2</span><span class="cmd-x">…invoquer la <mark>nullité relative</mark> du…</span></div>
+            <div class="cmd-hit"><span class="chip pdf">Fiche TD.pdf</span><span class="cmd-x">…cas de <mark>nullité relative</mark>…</span></div>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Recherche universelle</h3>
+          <p>Une notion, un arrêt, une formule, un PDF&nbsp;? <kbd>Ctrl</kbd><kbd>K</kbd> fouille tous tes cours, planches, tableurs et fichiers en un instant.</p>
+        </div>
+      </article>
+
+      <!-- C — Fiches d'arrêt -->
+      <article class="tile t-c c4 reveal">
+        <div class="demo" aria-hidden="true">
+          <div class="juris">
+            <div class="juris-head"><svg viewBox="0 0 24 24"><path d="M12 4v16M7 20h10M5 7h14M5 7l-3 7a3 3 0 0 0 6 0L5 7Zm14 0-3 7a3 3 0 0 0 6 0l-3-7Z"/></svg>Cass. ass. plén., 9 mai 1984, Derguini</div>
+            <div class="juris-row"><span>Faits</span><em>Une enfant de cinq ans, renversée…</em></div>
+            <div class="juris-row"><span>Solution</span><em>Faute retenue sans discernement.</em></div>
+            <div class="juris-row"><span>Portée</span><em>Objectivation de la faute civile.</em></div>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Fiches d'arrêt guidées</h3>
+          <p>Faits, procédure, problème, solution, portée&nbsp;: la trame est prête. Tape «&nbsp;art. 1240 C. civ.&nbsp;» et Alixo propose le lien Légifrance.</p>
+        </div>
+      </article>
+
+      <!-- D — Formules -->
+      <article class="tile t-d c4 reveal" style="--i:1">
+        <div class="demo" aria-hidden="true">
+          <div class="fx">
+            <code class="fx-src">e_p = (ΔQ/Q) / (ΔP/P)</code>
+            <span class="fx-out math"><span class="var">ε<sub>p</sub></span> = <span class="frac"><span>ΔQ / Q</span><span>ΔP / P</span></span></span>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Formules en direct</h3>
+          <p><kbd>Ctrl</kbd><kbd>E</kbd> et tu écris naturellement&nbsp;: fractions, racines, matrices, limites, sommes, lettres grecques. Rendu instantané.</p>
+        </div>
+      </article>
+
+      <!-- E — Graphiques -->
+      <article class="tile t-e c4 reveal" style="--i:2">
+        <div class="demo" aria-hidden="true">
+          <svg class="graph" id="graph" viewBox="0 0 220 124">
+            <path class="g-axis" d="M20 8v96h192"/>
+            <path class="g-dash" id="g-dash" d="M20 59H110V104"/>
+            <path class="g-supply" d="M30 96 190 22"/>
+            <g id="g-demand"><path class="g-demand" d="M30 22 190 96"/><text class="g-lab" x="196" y="102">D</text></g>
+            <text class="g-lab" x="196" y="24">O</text>
+            <circle class="g-pt" id="g-pt" cx="110" cy="59" r="5"/>
+            <text class="g-lab" id="g-p" x="3" y="63">P*</text><text class="g-lab" id="g-q" x="103" y="119">Q*</text>
+          </svg>
+        </div>
+        <div class="tile-txt">
+          <h3>Graphiques économiques</h3>
+          <p>Offre, demande, équilibre, taxe, prix plafond&nbsp;: des courbes que tu déplaces à la souris, directement dans la page.</p>
+        </div>
+      </article>
+
+      <!-- F — Quiz -->
+      <article class="tile t-f c7 reveal">
+        <div class="demo" aria-hidden="true">
+          <div class="quiz">
+            <div class="quiz-q"><span>Quel arrêt objective la faute civile&nbsp;?</span><span class="quiz-timer">00:12</span></div>
+            <div class="quiz-opts">
+              <span><b class="qa">A</b>Lemaire</span>
+              <span class="win"><b class="qb">B</b>Derguini<svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></span>
+              <span><b class="qc">C</b>Blieck</span>
+              <span><b class="qd">D</b>Jand'heur</span>
+            </div>
+            <div class="quiz-bar"><span>28 réponses</span><i><u></u></i><span>72 %</span></div>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Quiz en direct, dans l'amphi</h3>
+          <p>Transforme ton cours en quiz, révise seul avec chrono et score, ou affiche un code&nbsp;: chacun répond depuis son téléphone, le classement bouge, les stats restent.</p>
+        </div>
+      </article>
+
+      <!-- G — Correction -->
+      <article class="tile t-g c5 reveal" style="--i:1">
+        <div class="demo" aria-hidden="true">
+          <div class="fix">
+            <p>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>.</p>
+            <div class="fix-pop"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3ZM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg><b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
+          </div>
+        </div>
+        <div class="tile-txt">
+          <h3>Correction pendant que tu tapes</h3>
+          <p>Orthographe et grammaire, gratuites pour tous&nbsp;: les corrections sont proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore.</p>
+        </div>
+      </article>
+    </div>
+
+    <ul class="also">
+      <li class="reveal">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v5h5M6 3h8l5 5v13H6z"/></svg>
+        <h3>Tes fichiers à côté du cours</h3><p>PDF, Word, PowerPoint, Excel, images, audio&nbsp;: glissés dans un dossier, ouverts dans Alixo, synchronisés, partagés.</p>
+      </li>
+      <li class="reveal" style="--i:1">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>
+        <h3>Agenda intégré</h3><p>Tes cours dans un calendrier façon Apple. Pendant le cours, «&nbsp;+ séance&nbsp;» ouvre la prise de notes du jour.</p>
+      </li>
+      <li class="reveal" style="--i:2">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg>
+        <h3>Export impeccable</h3><p>PDF propre avec sommaire, en-tête et date&nbsp;; export Word fidèle&nbsp;; fichiers .alx pour tout emporter.</p>
+      </li>
+      <li class="reveal" style="--i:3">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8a4.5 4.5 0 0 1 .5 9H7Z"/></svg>
+        <h3>Hors ligne &amp; synchronisé</h3><p>Tes notes vivent sur ta machine. Elles se synchronisent avec ton compte dès que tu retrouves du réseau.</p>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================= 4. AlixoAI ================= -->
+<section class="ai" id="ia" aria-labelledby="ia-titre">
+  <div class="ai-panel reveal">
+    <span class="quad" aria-hidden="true"></span>
+    <div class="wrap ai-layout">
+      <div class="ai-copy">
+        <h2 id="ia-titre"><span class="h2-line">AlixoAI.</span> <span class="nw">Rapide, <span class="stroke">sûre<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 13C52 5 96 15 148 9s98-5 148 3"/></svg></span>, utile.</span></h2>
+        <p class="ai-lead">AlixoAI relit ton cours, corrige tes fautes et te prépare à l'examen, directement dans Alixo. Elle répond vite, et tes notes ne sont partagées avec personne&nbsp;: aucun texte n'est envoyé à Alixo ni à un service tiers.</p>
+        <ul class="ai-points">
+          <li><strong>Correction</strong>&nbsp;: orthographe et grammaire proposées sous le paragraphe, <kbd>Tab</kbd> pour accepter</li>
+          <li><strong>Quiz IA</strong>&nbsp;: des questions générées depuis ton cours, la première apparaît en quelques secondes</li>
+          <li><strong>Fiches de révision</strong>&nbsp;: l'essentiel de la séance résumé, prêt à relire</li>
+        </ul>
+        <p class="ai-note">Comprise dans <a href="#alixo-plus">Alixo+</a>, sans quota, dans l'application PC (Windows et Mac). La correction pendant la frappe est gratuite pour tous, sur tous les appareils.</p>
+      </div>
+      <div class="ai-demo" aria-hidden="true">
+        <div class="ai-card">
+          <div class="ai-card-bar"><span class="dots"><i></i><i></i><i></i></span><span>Séance 6 — La formation du contrat</span></div>
+          <div class="ai-card-body">
+            <div class="ai-h"><b>A.</b> L'offre et l'acceptation</div>
+            <p>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>. L'offre doit être ferme et précise.</p>
+            <div class="fix-pop"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3ZM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></svg><b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </section>
 
-<!-- ================= Gratuit / Alixo+ ================= -->
-<section id="alixo-plus" class="section">
-  <div class="section-head reveal">
-    <div class="eyebrow">Formules</div>
-    <h2>L'essentiel est gratuit.<br><em>Alixo+ pour aller plus loin.</em></h2>
-    <p>Le compte gratuit suffit pour prendre tes cours. Alixo+ suit ton compte sur PC, Mac, web et téléphone&nbsp;; AlixoAI, elle, travaille dans l'application PC (Windows et Mac).</p>
-  </div>
-  <div class="plans reveal">
-    <div class="plan">
-      <div class="plan-head"><img src="img/logo-96.png" alt="" width="40" height="40"><div><h3>Gratuit</h3><span>Sans limite de durée, sans carte</span></div></div>
-      <div class="plan-price">0 €<small>sans limite de temps</small></div>
-      <ul class="plan-list">
-        <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
-        <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
-        <li>Agenda, dictionnaire, export PDF et Word</li>
-        <li>Partage de cours (Alixo Share) et travail à plusieurs en direct</li>
-        <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
-        <li>Thèmes clair, sombre, automatique · 3 polices</li>
-      </ul>
-      <a class="btn ghost full" href="#telecharger">Commencer gratuitement</a>
+<!-- ================= 5. Tarifs ================= -->
+<section class="sec" id="alixo-plus" aria-labelledby="tarifs-titre">
+  <div class="wrap">
+    <header class="head head-narrow reveal">
+      <h2 id="tarifs-titre"><span class="h2-line">L'essentiel est <span class="nw"><mark class="hl">gratuit</mark>.</span></span> <span class="h2-line">Alixo+ pour aller plus loin.</span></h2>
+      <p>Le compte gratuit suffit pour prendre tes cours. Alixo+ suit ton compte sur PC, Mac, web et téléphone&nbsp;; AlixoAI, elle, travaille dans l'application PC (Windows et Mac).</p>
+    </header>
+
+    <div class="plans">
+      <article class="plan plan-free reveal">
+        <div class="plan-head"><img src="img/logo-96.png" alt="" width="44" height="44" loading="lazy"><div><h3>Gratuit</h3><span>Sans limite de durée, sans carte</span></div></div>
+        <p class="plan-price"><span class="amount">0&nbsp;€</span><small>sans limite de temps</small></p>
+        <ul class="plan-list">
+          <li>Cours, quiz, planches, présentations, tableurs, fichiers</li>
+          <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
+          <li>Agenda, dictionnaire, export PDF et Word</li>
+          <li>Partage de cours (Alixo Share) et travail à plusieurs en direct</li>
+          <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
+          <li>Thèmes clair, sombre, automatique · 3 polices</li>
+        </ul>
+        <a class="btn btn-line btn-full" href="#telecharger">Commencer gratuitement</a>
+      </article>
+
+      <article class="plan plan-plus reveal" style="--i:1">
+        <div class="plan-head"><img src="img/logo-plus-96.png" alt="" width="44" height="44" loading="lazy"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
+        <p class="plan-price"><span class="amount">14,99&nbsp;€</span><small>TTC par mois · ou 149,99&nbsp;€ TTC par an</small></p>
+        <p class="plan-sub">Dégressif avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois après 24 mois. Annuel reconduit tacitement, résiliable à tout moment.</p>
+        <ul class="plan-list">
+          <li><strong>AlixoAI</strong>&nbsp;: relecture approfondie, mise en forme, Quiz IA et fiches de révision, sans quota, dans l'application PC (Windows et Mac)</li>
+          <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
+          <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
+          <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
+          <li><strong>Stockage au-delà de 3 Go</strong></li>
+        </ul>
+        <a class="plan-more" href="tarifs.html">Voir les tarifs <span aria-hidden="true">→</span></a>
+        <a class="btn btn-white btn-full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application<span class="sr-only"> (nouvel onglet)</span></a>
+      </article>
     </div>
-    <div class="plan plus">
-      <div class="plan-head"><img src="img/logo-plus-96.png" alt="" width="40" height="40"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
-      <div class="plan-price">14,99&nbsp;€<small>TTC par mois · ou 149,99&nbsp;€ TTC par an</small></div>
-      <p class="plan-sub">Dégressif avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois après 24 mois. Annuel reconduit tacitement, résiliable à tout moment.</p>
-      <ul class="plan-list">
-        <li><strong>AlixoAI</strong>&nbsp;: relecture approfondie, mise en forme, Quiz IA et fiches de révision, sans quota, dans l'application PC (Windows et Mac)</li>
-        <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
-        <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
-        <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
-        <li><strong>Stockage au-delà de 3 Go</strong></li>
-      </ul>
-      <a class="btn brand full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application<span class="sr-only"> (nouvel onglet)</span></a>
-      <a class="dl-alt" href="tarifs.html">Voir les tarifs →</a>
-      <details class="plan-note">
-        <summary>Conditions de l'abonnement</summary>
-        <p>AlixoAI fonctionne dans l'application PC (Windows et Mac) et télécharge une seule fois, avec ton accord, un fichier de 1,1 à 2,5&nbsp;Go&nbsp;; sa rapidité dépend de l'ordinateur. Alixo+&nbsp;: 14,99&nbsp;€ par mois ou 149,99&nbsp;€ par an (TTC), puis de moins en moins cher avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois ou 99,99&nbsp;€ par an&nbsp;: voir les <a href="tarifs.html">tarifs</a>. Abonnement mensuel sans engagement, ou annuel reconduit tacitement chaque année&nbsp;; résiliable à tout moment en ligne dans Paramètres › Alixo+, avec effet à la fin de la période payée. Droit de rétractation de 14&nbsp;jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</p>
+
+    <p class="legal">AlixoAI fonctionne dans l'application PC (Windows et Mac) et télécharge une seule fois, avec ton accord, un fichier de 1,1 à 2,5&nbsp;Go&nbsp;; sa rapidité dépend de l'ordinateur. Alixo+&nbsp;: 14,99&nbsp;€ par mois ou 149,99&nbsp;€ par an (TTC), puis de moins en moins cher avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois ou 99,99&nbsp;€ par an&nbsp;: voir les <a href="tarifs.html">tarifs</a>. Abonnement mensuel sans engagement, ou annuel reconduit tacitement chaque année&nbsp;; résiliable à tout moment en ligne dans Paramètres › Alixo+, avec effet à la fin de la période payée. Droit de rétractation de 14&nbsp;jours, garantie légale de conformité et médiation&nbsp;: voir les <a href="cgv.html">conditions générales de vente</a>.</p>
+  </div>
+</section>
+
+<!-- ================= 6. Télécharger ================= -->
+<section class="sec" id="telecharger" aria-labelledby="dl-titre">
+  <div class="wrap">
+    <header class="head head-split reveal">
+      <h2 id="dl-titre"><span class="h2-line">Alixo sur ton ordinateur.</span> <span class="h2-line"><span class="nw"><mark class="hl hl-blue">En un clic</mark>.</span></span></h2>
+      <p>Tu cliques, le fichier se télécharge. Ou tu ouvres Alixo dans ton navigateur.</p>
+    </header>
+
+    <div class="dl">
+      <article class="dl-card dl-win reveal" id="dl-card-win">
+        <div class="dl-head">
+          <svg class="dl-os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
+          <div><h3>Windows</h3><span>Windows 10 / 11</span></div>
+        </div>
+        <p class="dl-desc">Installation en une minute, mises à jour automatiques au démarrage.</p>
+        <a class="btn btn-white btn-full btn-stack" href="/telecharger/windows/" data-download>
+          <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Setup.exe</span>
+          <small><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small>
+        </a>
+        <a class="dl-alt" href="/telecharger/windows-portable/">Version portable, sans installation <span aria-hidden="true">→</span></a>
+      </article>
+
+      <article class="dl-card reveal" id="dl-card-mac" style="--i:1">
+        <div class="dl-head">
+          <svg class="dl-os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
+          <div><h3>macOS</h3><span>macOS 12 et plus, Intel et Apple Silicon</span></div>
+        </div>
+        <p class="dl-desc">Même application, même compte&nbsp;: tes cours pris ailleurs sont déjà là.</p>
+        <a class="btn btn-ink btn-full btn-stack" id="btn-mac" href="/telecharger/mac/">
+          <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Mac.dmg</span>
+          <small><span class="js-version">Dernière version</span><span id="mac-size"></span></small>
+        </a>
+        <a class="dl-alt" href="/telecharger/mac/">Première ouverture sur Mac <span aria-hidden="true">→</span></a>
+      </article>
+
+      <article class="dl-card reveal" style="--i:2">
+        <div class="dl-head">
+          <svg class="dl-os line" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
+          <div><h3>Navigateur</h3><span>Chrome, Edge, Firefox, Safari</span></div>
+        </div>
+        <p class="dl-desc">Rien à installer&nbsp;: la même application, idéale pour essayer ou pour la BU.</p>
+        <a class="btn btn-line btn-full btn-stack" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">
+          <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>Ouvrir Alixo dans le navigateur<span class="sr-only"> (nouvel onglet)</span></span>
+          <small>Rien à installer · avec ou sans compte</small>
+        </a>
+        <a class="dl-alt" href="https://alixoapp.com/docs/?login">Se connecter <span aria-hidden="true">→</span></a>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 7. Comparatif ================= -->
+<section class="sec" id="pourquoi" aria-labelledby="cmp-titre">
+  <div class="wrap">
+    <header class="head head-split reveal">
+      <h2 id="cmp-titre">Pourquoi pas <span class="nw">juste <mark class="hl">Word</mark>&nbsp;?</span></h2>
+      <p>Un traitement de texte ne connaît ni ta filière, ni le rythme d'un amphi.</p>
+    </header>
+    <div class="cmp reveal" tabindex="0" role="region" aria-label="Tableau comparatif, défilement horizontal">
+      <table>
+        <thead>
+          <tr><td></td><th scope="col" class="me"><img src="img/logo-96.png" alt="" width="22" height="22" loading="lazy">Alixo</th><th scope="col">Word / Docs</th><th scope="col">Notion / OneNote</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Numérotation I. A. 1. a. automatique</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td>Manuel</td><td><span class="no" role="img" aria-label="Non"></span></td></tr>
+          <tr><th scope="row">Fiches d'arrêt et fiches cliniques guidées</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td><span class="no" role="img" aria-label="Non"></span></td><td><span class="no" role="img" aria-label="Non"></span></td></tr>
+          <tr><th scope="row">Graphiques éco manipulables</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td><span class="no" role="img" aria-label="Non"></span></td><td><span class="no" role="img" aria-label="Non"></span></td></tr>
+          <tr><th scope="row">Formules tapées en langage naturel</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td>Éditeur d'équations</td><td>LaTeX</td></tr>
+          <tr><th scope="row">Quiz en direct depuis le cours</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td><span class="no" role="img" aria-label="Non"></span></td><td><span class="no" role="img" aria-label="Non"></span></td></tr>
+          <tr><th scope="row">Recherche dans tous les cours et fichiers</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td>Fichier par fichier</td><td><span class="yes alt" role="img" aria-label="Oui"></span></td></tr>
+          <tr><th scope="row">Travail à plusieurs en direct</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td><span class="yes alt" role="img" aria-label="Oui"></span></td><td><span class="yes alt" role="img" aria-label="Oui"></span></td></tr>
+          <tr><th scope="row">Hors ligne complet</th><td class="me"><span class="yes" role="img" aria-label="Oui"></span></td><td>Selon l'abonnement</td><td>Partiel</td></tr>
+          <tr><th scope="row">Prix</th><td class="me"><strong>Gratuit · Alixo+ en option</strong></td><td>Abonnement</td><td>Freemium</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 8. FAQ ================= -->
+<section class="sec" id="faq" aria-labelledby="faq-titre">
+  <div class="wrap faq-layout">
+    <header class="faq-head reveal">
+      <h2 id="faq-titre">Tout ce qu'on nous <span class="nw"><mark class="hl">demande</mark>.</span></h2>
+      <p>Une autre question&nbsp;? <a href="contact.html">Écris-nous</a> ou parcours la <a href="documentation.html">documentation</a>.</p>
+    </header>
+    <div class="faq reveal" style="--i:1">
+      <details open>
+        <summary>Alixo est-il vraiment gratuit&nbsp;?</summary>
+        <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
+      </details>
+      <details>
+        <summary>L'IA lit-elle mes notes&nbsp;?</summary>
+        <p>Oui, uniquement le passage que tu lui soumets, au moment où tu demandes une correction, un quiz ou une fiche. Aucun texte n'est envoyé à Alixo ni à un service tiers, et tu peux désactiver AlixoAI dans Paramètres › IA. <a href="/confidentialite.html#alixoai">En savoir plus</a></p>
+      </details>
+      <details>
+        <summary>Peut-on essayer sans rien installer&nbsp;?</summary>
+        <p>Oui. <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">La version web<span class="sr-only"> (nouvel onglet)</span></a> est la même application, dans ton navigateur, toujours au niveau de la version PC. Sur téléphone, la version mobile s'ouvre automatiquement. Avec un compte, tes cours sont partagés entre le web, le mobile et l'application PC.</p>
+      </details>
+      <details>
+        <summary>Alixo existe-t-il sur Mac&nbsp;?</summary>
+        <p>Oui&nbsp;: une application universelle (Apple Silicon et Intel), avec le même compte et les mêmes cours que sur Windows et sur le web. <a href="/telecharger/mac/">Télécharge Alixo-Mac.dmg</a>, glisse Alixo dans Applications, puis au premier lancement autorise l'ouverture une fois dans Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (autorisation demandée une seule fois). Les nouvelles versions sont signalées dans l'application.</p>
+      </details>
+      <details>
+        <summary>Comment installer Alixo sur Windows&nbsp;?</summary>
+        <p>Clique sur «&nbsp;Télécharger&nbsp;»&nbsp;: <strong>Alixo-Setup.exe</strong> arrive dans tes téléchargements. Double-clique, suis l'installation, c'est tout. Si Windows SmartScreen affiche un avertissement (fréquent pour les applications récentes), clique sur «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;». Une version portable, sans installation, est aussi disponible.</p>
+      </details>
+      <details>
+        <summary>Mes notes sont-elles en sécurité&nbsp;?</summary>
+        <p>Tes cours restent les tiens. L'application travaille hors ligne sur ta machine, se synchronise avec ton compte, et tu peux exporter tes cours en PDF, Word ou .alx à tout moment.</p>
       </details>
     </div>
   </div>
 </section>
 
-<!-- ================= Fonctionnalités (bento) ================= -->
-<section id="fonctions" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">Fonctionnalités</div>
-    <h2>Tout ce dont tu as besoin.<br><em>Rien qui te ralentit.</em></h2>
-    <p>Chaque bloc, chaque raccourci est pensé pour que tes mains restent sur le clavier et tes yeux sur le prof.</p>
-  </div>
-
-  <div class="bento">
-    <article class="card span4 reveal">
-      <div class="card-visual">
-        <div class="v-doc">
-          <div class="v-h l1"><span class="hnum">I.</span> La formation du contrat</div>
-          <div class="v-h l2"><span class="hnum">A.</span> L'offre et l'acceptation</div>
-          <div class="v-h l3"><span class="hnum">1.</span> Les caractères de l'offre</div>
-          <div class="v-h l4"><span class="hnum">a.</span> La fermeté<span class="v-caret"></span></div>
-          <div class="v-hint">Ctrl + Alt + 4 → niveau a.</div>
-        </div>
-      </div>
-      <h3>Structure automatique I. A. 1. a.</h3>
-      <p>La numérotation juridique se gère toute seule. Le plan du cours se construit en direct dans le volet de gauche, avec ta progression.</p>
-    </article>
-
-    <article class="card span2 brand reveal d1">
-      <div class="card-visual">
-        <div class="v-ai">
-          <div>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>.</div>
-          <div class="v-ai-pop">✨ <b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
-        </div>
-      </div>
-      <h3>Correction pendant que tu tapes</h3>
-      <p>Orthographe et grammaire, gratuites pour tous&nbsp;: les corrections sont proposées sous le paragraphe. <kbd>Tab</kbd> accepte, <kbd>Échap</kbd> ignore.</p>
-    </article>
-
-    <article class="card span2 reveal">
-      <div class="card-visual">
-        <div class="v-juris">
-          <div class="v-juris-head">⚖️ Cass. ass. plén., 9 mai 1984, Derguini</div>
-          <div class="v-juris-row"><span>Faits</span><i>Une enfant de cinq ans, renversée…</i></div>
-          <div class="v-juris-row"><span>Solution</span><i>Faute retenue sans discernement.</i></div>
-          <div class="v-juris-row"><span>Portée</span><i>Objectivation de la faute civile.</i></div>
-        </div>
-      </div>
-      <h3>Fiches d'arrêt guidées</h3>
-      <p>Faits, procédure, problème, solution, portée&nbsp;: la trame est prête. Tape «&nbsp;art. 1240 C. civ.&nbsp;» et Alixo propose le lien Légifrance.</p>
-    </article>
-
-    <article class="card span2 reveal d1">
-      <div class="card-visual">
-        <div class="v-formula">
-          <code class="v-src">e_p = (ΔQ/Q) / (ΔP/P)</code>
-          <span class="v-eq">→</span>
-          <span class="v-render">ε<sub>p</sub> = <span class="frac"><span class="num">ΔQ / Q</span><span class="den">ΔP / P</span></span></span>
-        </div>
-      </div>
-      <h3>Formules en direct</h3>
-      <p><kbd>Ctrl</kbd><kbd>E</kbd> et tu écris naturellement&nbsp;: fractions, racines, matrices, limites, sommes, lettres grecques. Rendu instantané.</p>
-    </article>
-
-    <article class="card span2 reveal d2">
-      <div class="card-visual">
-        <svg class="v-graph" viewBox="0 0 220 120" aria-hidden="true">
-          <path class="axis" d="M20 8v96h192"/>
-          <path class="curve demand" d="M30 22c48 10 92 44 160 74"/>
-          <path class="curve supply" d="M30 96c48-10 92-44 160-74"/>
-          <path class="dash" d="M110 59H20M110 59v45"/>
-          <circle class="pt" cx="110" cy="59" r="4.5"/>
-          <text x="200" y="30">O</text><text x="200" y="104">D</text>
-          <text x="6" y="63">P*</text><text x="104" y="116">Q*</text>
-        </svg>
-      </div>
-      <h3>Graphiques économiques</h3>
-      <p>Offre, demande, équilibre, taxe, prix plafond&nbsp;: des courbes que tu déplaces à la souris, directement dans la page.</p>
-    </article>
-
-    <article class="card span3 reveal">
-      <div class="card-visual">
-        <div class="v-cmd">
-          <div class="v-cmd-bar"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><span class="typed">nullité relative</span><kbd>Ctrl K</kbd></div>
-          <div class="v-hit sel"><span class="hit-chip">Contrats · S4</span> …sanctionnée par la <mark>nullité relative</mark>…<span class="ret">↵</span></div>
-          <div class="v-hit"><span class="hit-chip">Famille · S2</span> …invoquer la <mark>nullité relative</mark> du…</div>
-          <div class="v-hit"><span class="hit-chip pdf">Fiche TD.pdf</span> …cas de <mark>nullité relative</mark>…</div>
-        </div>
-      </div>
-      <h3>Recherche universelle</h3>
-      <p>Une notion, un arrêt, une formule, un PDF&nbsp;? <kbd>Ctrl</kbd><kbd>K</kbd> fouille tous tes cours, planches, tableurs et fichiers en un instant.</p>
-    </article>
-
-    <article class="card span3 reveal d1">
-      <div class="card-visual">
-        <div class="v-quiz">
-          <div class="v-quiz-q">Quel arrêt objective la faute civile&nbsp;? <span class="timer">00:12</span></div>
-          <div class="v-quiz-opts"><span class="a" data-k="A">Lemaire</span><span class="b win" data-k="B">Derguini</span><span class="c" data-k="C">Blieck</span><span class="d" data-k="D">Jand'heur</span></div>
-          <div class="v-quiz-bar">28 réponses <i></i> 72 %</div>
-        </div>
-      </div>
-      <h3>Quiz en direct, dans l'amphi</h3>
-      <p>Transforme ton cours en quiz, révise seul avec chrono et score, ou affiche un code&nbsp;: chacun répond depuis son téléphone, le classement bouge, les stats restent.</p>
-    </article>
-  </div>
-
-  <div class="also reveal">
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M14 3v5h5M6 3h8l5 5v13H6z"/></svg></div>
-      <h4>Tes fichiers à côté du cours</h4><p>PDF, Word, PowerPoint, Excel, images, audio&nbsp;: glissés dans un dossier, ouverts dans Alixo, synchronisés, partagés.</p>
+<!-- ================= 9. Bandeau final ================= -->
+<section class="end" id="cta" aria-labelledby="end-titre">
+  <div class="end-panel reveal">
+    <div class="hero-decor" aria-hidden="true">
+      <span class="quad"></span>
+      <svg class="arcs" viewBox="0 0 800 800" fill="none">
+        <circle cx="400" cy="400" r="130"/><circle cx="400" cy="400" r="250"/><circle cx="400" cy="400" r="380"/>
+      </svg>
     </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M3 10h18M8 3v4M16 3v4"/></svg></div>
-      <h4>Agenda intégré</h4><p>Tes cours dans un calendrier façon Apple. Pendant le cours, «&nbsp;+ séance&nbsp;» ouvre la prise de notes du jour.</p>
-    </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3v12m0 0 4-4m-4 4-4-4M5 21h14"/></svg></div>
-      <h4>Export impeccable</h4><p>PDF propre avec sommaire, en-tête et date&nbsp;; export Word fidèle&nbsp;; fichiers .alx pour tout emporter.</p>
-    </div>
-    <div class="also-item">
-      <div class="ic"><svg viewBox="0 0 24 24"><path d="M7 17a4 4 0 0 1-.6-7.96A5.5 5.5 0 0 1 17 8a4.5 4.5 0 0 1 .5 9H7Z"/></svg></div>
-      <h4>Hors ligne &amp; synchronisé</h4><p>Tes notes vivent sur ta machine. Elles se synchronisent avec ton compte dès que tu retrouves du réseau.</p>
-    </div>
-  </div>
-</section>
-
-<!-- ================= AlixoAI ================= -->
-<section id="ia" class="section tight">
-  <div class="ai-band reveal">
-    <div>
-      <div class="eyebrow">Intelligence artificielle</div>
-      <h2>AlixoAI.<br><em>Rapide, sûre, utile.</em></h2>
-      <p>AlixoAI relit ton cours, corrige tes fautes et te prépare à l'examen, directement dans Alixo. Elle répond vite, et tes notes ne sont partagées avec personne&nbsp;: aucun texte n'est envoyé à Alixo ni à un service tiers.</p>
-      <ul class="ai-points">
-        <li><strong>Correction</strong>&nbsp;: orthographe et grammaire proposées sous le paragraphe, <kbd>Tab</kbd> pour accepter</li>
-        <li><strong>Quiz IA</strong>&nbsp;: des questions générées depuis ton cours, la première apparaît en quelques secondes</li>
-        <li><strong>Fiches de révision</strong>&nbsp;: l'essentiel de la séance résumé, prêt à relire</li>
-      </ul>
-      <p class="ai-note">Comprise dans <a href="#alixo-plus">Alixo+</a>, sans quota, dans l'application PC (Windows et Mac). La correction pendant la frappe est gratuite pour tous, sur tous les appareils.</p>
-    </div>
-    <div class="ai-demo" aria-hidden="true">
-      <div class="ai-demo-head"><span class="hnum">A.</span> L'offre et l'acceptation</div>
-      <div class="v-ai">
-        <div>Le contrat est formé par la rencontre d'une offre et d'une <s>acceptasion</s> <mark>acceptation</mark>. L'offre doit être ferme et précise.</div>
-        <div class="v-ai-pop">✨ <b>Orthographe</b> · <kbd>Tab</kbd> pour corriger</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- ================= Téléchargement ================= -->
-<section id="telecharger" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">Télécharger</div>
-    <h2>Alixo sur ton ordinateur.<br><em>En un clic.</em></h2>
-    <p>Tu cliques, le fichier se télécharge. Ou tu ouvres Alixo dans ton navigateur.</p>
-  </div>
-
-  <div class="dl-grid reveal">
-    <div class="dl-card win">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
-        <div><h3>Windows</h3><span class="dl-sub">Windows 10 / 11</span></div>
-      </div>
-      <p class="dl-desc">Installation en une minute, mises à jour automatiques au démarrage.</p>
-      <div class="dl-cta">
-        <a class="btn primary big full" href="/telecharger/windows/" data-download>
-          <span class="btn-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Setup.exe</span>
-          <small class="btn-meta"><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small>
+    <div class="wrap end-in">
+      <h2 id="end-titre">Prêt pour ton <span class="nw">prochain <span class="stroke">amphi<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 13C52 5 96 15 148 9s98-5 148 3"/></svg></span>&nbsp;?</span></h2>
+      <p>L'essentiel est gratuit, sans limite de temps. Compte gratuit sans engagement, tes notes t'appartiennent.</p>
+      <div class="end-ctas">
+        <a class="btn btn-white btn-dl" href="/telecharger/windows/">
+          <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
+          <span class="btn-dl-txt">Télécharger pour Windows<small><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small></span>
         </a>
+        <a class="end-link" href="/telecharger/mac/">aussi pour macOS <span aria-hidden="true">→</span></a>
+        <a class="end-link" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Essayer dans le navigateur <span aria-hidden="true">→</span><span class="sr-only"> (nouvel onglet)</span></a>
       </div>
-      <div class="dl-more"><a class="dl-alt" href="/telecharger/windows-portable/">Version portable, sans installation →</a></div>
-    </div>
-
-    <div class="dl-card mac">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" stroke="none" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
-        <div><h3>macOS</h3><span class="dl-sub">macOS 12 et plus, Intel et Apple Silicon</span></div>
-      </div>
-      <p class="dl-desc">Même application, même compte&nbsp;: tes cours pris ailleurs sont déjà là.</p>
-      <div class="dl-cta">
-        <a class="btn primary big full" id="btn-mac" href="/telecharger/mac/">
-          <span class="btn-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Mac.dmg</span>
-          <small class="btn-meta"><span class="js-version">Dernière version</span><span id="mac-size"></span></small>
-        </a>
-      </div>
-      <div class="dl-more"><a class="dl-alt" href="/telecharger/mac/">Première ouverture sur Mac&nbsp;→</a></div>
-    </div>
-
-    <div class="dl-card web">
-      <div class="dl-head">
-        <svg class="os-logo" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.8 3 2.8 15 0 18M12 3c-2.8 3-2.8 15 0 18"/></svg>
-        <div><h3>Navigateur</h3><span class="dl-sub">Chrome, Edge, Firefox, Safari</span></div>
-      </div>
-      <p class="dl-desc">Rien à installer&nbsp;: la même application, idéale pour essayer ou pour la BU.</p>
-      <div class="dl-cta">
-        <a class="btn ghost big full" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">
-          <span class="btn-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M8 7h9v9"/></svg>Ouvrir Alixo dans le navigateur<span class="sr-only"> (nouvel onglet)</span></span>
-          <small class="btn-meta">Rien à installer · avec ou sans compte</small>
-        </a>
-      </div>
-      <div class="dl-more"><a class="dl-alt" href="https://alixoapp.com/docs/?login">Se connecter →</a></div>
     </div>
   </div>
 </section>
 
-<!-- ================= Comparatif ================= -->
-<section id="pourquoi" class="section">
-  <div class="section-head reveal">
-    <div class="eyebrow">Comparatif</div>
-    <h2>Pourquoi pas juste <em>Word&nbsp;?</em></h2>
-    <p>Un traitement de texte ne connaît ni ta filière, ni le rythme d'un amphi.</p>
-  </div>
-  <div class="compare reveal" tabindex="0" aria-label="Tableau comparatif, défilement horizontal">
-    <table>
-      <thead>
-        <tr><th></th><th class="me">Alixo</th><th>Word / Docs</th><th>Notion / OneNote</th></tr>
-      </thead>
-      <tbody>
-        <tr><td>Numérotation I. A. 1. a. automatique</td><td class="me"><span aria-label="Oui">✓</span></td><td class="part">Manuel</td><td class="no"><span aria-label="Non">✕</span></td></tr>
-        <tr><td>Fiches d'arrêt et fiches cliniques guidées</td><td class="me"><span aria-label="Oui">✓</span></td><td class="no"><span aria-label="Non">✕</span></td><td class="no"><span aria-label="Non">✕</span></td></tr>
-        <tr><td>Graphiques éco manipulables</td><td class="me"><span aria-label="Oui">✓</span></td><td class="no"><span aria-label="Non">✕</span></td><td class="no"><span aria-label="Non">✕</span></td></tr>
-        <tr><td>Formules tapées en langage naturel</td><td class="me"><span aria-label="Oui">✓</span></td><td class="part">Éditeur d'équations</td><td class="part">LaTeX</td></tr>
-        <tr><td>Quiz en direct depuis le cours</td><td class="me"><span aria-label="Oui">✓</span></td><td class="no"><span aria-label="Non">✕</span></td><td class="no"><span aria-label="Non">✕</span></td></tr>
-        <tr><td>Recherche dans tous les cours et fichiers</td><td class="me"><span aria-label="Oui">✓</span></td><td class="part">Fichier par fichier</td><td class="part"><span aria-label="Oui">✓</span></td></tr>
-        <tr><td>Travail à plusieurs en direct</td><td class="me"><span aria-label="Oui">✓</span></td><td class="part"><span aria-label="Oui">✓</span></td><td class="part"><span aria-label="Oui">✓</span></td></tr>
-        <tr><td>Hors ligne complet</td><td class="me"><span aria-label="Oui">✓</span></td><td class="part">Selon l'abonnement</td><td class="part">Partiel</td></tr>
-        <tr><td>Prix</td><td class="me">Gratuit · Alixo+ en option</td><td class="part">Abonnement</td><td class="part">Freemium</td></tr>
-      </tbody>
-    </table>
-  </div>
-</section>
+</main>
 
-<!-- ================= FAQ ================= -->
-<section id="faq" class="section alt">
-  <div class="section-head reveal">
-    <div class="eyebrow">Questions</div>
-    <h2>Tout ce qu'on nous <em>demande.</em></h2>
-  </div>
-  <div class="faq reveal">
-    <details open>
-      <summary>Alixo est-il vraiment gratuit&nbsp;?</summary>
-      <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
-    </details>
-    <details>
-      <summary>L'IA lit-elle mes notes&nbsp;?</summary>
-      <p>Oui, uniquement le passage que tu lui soumets, au moment où tu demandes une correction, un quiz ou une fiche. Aucun texte n'est envoyé à Alixo ni à un service tiers, et tu peux désactiver AlixoAI dans Paramètres › IA. <a href="/confidentialite.html#alixoai">En savoir plus</a></p>
-    </details>
-    <details>
-      <summary>Peut-on essayer sans rien installer&nbsp;?</summary>
-      <p>Oui. <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">La version web<span class="sr-only"> (nouvel onglet)</span></a> est la même application, dans ton navigateur, toujours au niveau de la version PC. Sur téléphone, la version mobile s'ouvre automatiquement. Avec un compte, tes cours sont partagés entre le web, le mobile et l'application PC.</p>
-    </details>
-    <details>
-      <summary>Alixo existe-t-il sur Mac&nbsp;?</summary>
-      <p>Oui&nbsp;: une application universelle (Apple Silicon et Intel), avec le même compte et les mêmes cours que sur Windows et sur le web. <a href="/telecharger/mac/">Télécharge Alixo-Mac.dmg</a>, glisse Alixo dans Applications, puis au premier lancement autorise l'ouverture une fois dans Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (autorisation demandée une seule fois). Les nouvelles versions sont signalées dans l'application.</p>
-    </details>
-    <details>
-      <summary>Comment installer Alixo sur Windows&nbsp;?</summary>
-      <p>Clique sur «&nbsp;Télécharger&nbsp;»&nbsp;: <strong>Alixo-Setup.exe</strong> arrive dans tes téléchargements. Double-clique, suis l'installation, c'est tout. Si Windows SmartScreen affiche un avertissement (fréquent pour les applications récentes), clique sur «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;». Une version portable, sans installation, est aussi disponible.</p>
-    </details>
-    <details>
-      <summary>Mes notes sont-elles en sécurité&nbsp;?</summary>
-      <p>Tes cours restent les tiens. L'application travaille hors ligne sur ta machine, se synchronise avec ton compte, et tu peux exporter tes cours en PDF, Word ou .alx à tout moment.</p>
-    </details>
-  </div>
-</section>
-
-<!-- ================= CTA final ================= -->
-<section id="cta" class="section">
-  <div class="cta-card reveal">
-    <div class="cta-glow" aria-hidden="true"></div>
-    <div class="cta-grid" aria-hidden="true"></div>
-    <h2>Le prochain cours<br>se prend en notes avec <em>Alixo.</em></h2>
-    <p>L'essentiel est gratuit, sans limite de temps. Compte gratuit sans engagement, tes notes t'appartiennent.</p>
-    <div class="cta-btns">
-      <a class="btn invert big" href="#telecharger">
-        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
-        Télécharger pour Windows
-      </a>
-      <span class="cta-mac"><a href="/telecharger/mac/">aussi pour macOS →</a></span>
-      <a class="cta-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Essayer dans le navigateur →<span class="sr-only"> (nouvel onglet)</span></a>
-    </div>
-    <div class="cta-note"><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span> · le téléchargement démarre immédiatement</div>
-  </div>
-</section>
-
-<!-- ================= Pied de page ================= -->
-<footer>
-  <div class="foot-inner">
+<!-- ================= 10. Pied de page ================= -->
+<footer class="foot">
+  <div class="wrap foot-in">
     <div class="foot-brand">
-      <img class="logo-img" src="img/logo-96.png" alt="" width="30" height="30">
-      <div>
-        <div class="foot-name">Alixo</div>
-        <div class="foot-tag">Le cockpit d'amphi des étudiants.</div>
-      </div>
+      <img src="img/logo-96.png" alt="" width="34" height="34" loading="lazy">
+      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
     </div>
-    <div class="foot-cols">
+    <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
-        <h5>Produit</h5>
+        <h2>Produit</h2>
         <a href="#alixo-plus">Alixo+</a>
         <a href="#fonctions">Fonctionnalités</a>
         <a href="#ia">IA</a>
@@ -509,22 +541,22 @@ try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=documen
         <a href="/status/">État des services</a>
       </div>
       <div class="foot-col">
-        <h5>Utiliser</h5>
+        <h2>Utiliser</h2>
         <a href="https://alixoapp.com/docs/">Application web</a>
         <a href="https://alixoapp.com/docs/?login">Se connecter</a>
         <a href="/quiz/">Rejoindre un quiz</a>
         <a href="#faq">Questions fréquentes</a>
       </div>
       <div class="foot-col">
-        <h5>Alixo</h5>
+        <h2>Alixo</h2>
         <a href="contact.html">Contact</a>
         <a href="confidentialite.html">Confidentialité</a>
         <a href="conditions.html">Conditions</a>
         <a href="cgv.html">CGV</a>
         <a href="mentions-legales.html">Mentions légales</a>
       </div>
-    </div>
-    <div class="foot-copy"><span id="foot-copy">© 2026 Alixo · Windows, macOS et web.</span><span class="foot-made">Fait pour les amphis.</span></div>
+    </nav>
+    <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
   </div>
 </footer>
 
@@ -535,9 +567,9 @@ try{var b='img/shot-seance-'+(h.dataset.theme==='dark'?'dark':'light'),l=documen
     <strong>Le téléchargement d'Alixo démarre…</strong>
     <span>Si rien ne se passe, <a id="dl-fallback" href="/telecharger/windows/">clique ici</a>.</span>
   </div>
-  <button class="dl-toast-close" aria-label="Fermer">✕</button>
+  <button class="dl-toast-close" type="button" aria-label="Fermer">✕</button>
 </div>
 
-<script src="script.js?v=20261031"></script>
+<script src="accueil.js?v=20261114" defer></script>
 </body>
 </html>

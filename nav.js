@@ -1,5 +1,5 @@
 /* alixoapp.com — menu mobile des pages annexes (documentation, versions, téléchargement, pages légales).
-   Ajoute un bouton « menu » et un volet reprenant les liens de la barre ; la page d'accueil a le sien dans script.js. */
+   Ajoute un bouton « menu » et un volet reprenant les liens de la barre ; la page d'accueil a le sien dans accueil.js. */
 (function () {
   'use strict';
   var nav = document.getElementById('nav');
