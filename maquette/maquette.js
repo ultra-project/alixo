@@ -6,7 +6,6 @@
   var root = document.documentElement;
   window.__alixoMaquette = true;                  /* signale au filet de sécurité de la page que le script a bien démarré */
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
-  var fine = window.matchMedia('(hover: hover) and (pointer: fine)');
   var $ = function (s, el) { return (el || document).querySelector(s); };
   var $$ = function (s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); };
 
@@ -87,8 +86,8 @@
       });
     });
 
-    /* ---------- Héros : la capture se redresse au scroll, parallaxe souris sur les fragments ---------- */
-    var win = $('#shot-win'), hero = $('.hero-panel'), frags = $$('.frag');
+    /* ---------- Héros : la capture se redresse au scroll ---------- */
+    var win = $('#shot-win');
     var ticking = false;
     function onScroll() {
       if (ticking) return;
@@ -97,58 +96,11 @@
         ticking = false;
         var y = window.scrollY || 0;
         if (win) win.style.setProperty('--tilt', Math.max(0, 1 - y / 420).toFixed(3));
-        if (nav) nav.classList.toggle('scrolled', y > 24);
       });
     }
     if (!reduce.matches) {
       window.addEventListener('scroll', onScroll, { passive: true });
       onScroll();
-    }
-    if (hero && frags.length && fine.matches && !reduce.matches) {
-      var px = 0, py = 0, raf = 0;
-      var place = function () {
-        raf = 0;
-        frags.forEach(function (f) {
-          var d = parseFloat(f.dataset.depth) || 20;
-          f.style.transform = 'translate3d(' + (px * d).toFixed(1) + 'px,' + (py * d).toFixed(1) + 'px,0)';
-        });
-      };
-      frags.forEach(function (f) { f.style.transition = 'transform .5s cubic-bezier(.2,.7,.2,1)'; });
-      hero.addEventListener('pointermove', function (e) {
-        var r = hero.getBoundingClientRect();
-        px = (e.clientX - r.left) / r.width - 0.5;
-        py = (e.clientY - r.top) / r.height - 0.5;
-        if (!raf) raf = requestAnimationFrame(place);
-      });
-      hero.addEventListener('pointerleave', function () { px = py = 0; if (!raf) raf = requestAnimationFrame(place); });
-    }
-
-    /* ---------- Tuiles : inclinaison 3D suivant la souris (4° au plus) ---------- */
-    if (fine.matches && !reduce.matches) {
-      $$('.tilt').forEach(function (el) {
-        var r = null, f = 0, cx = 0, cy = 0;
-        function apply() {
-          f = 0;
-          if (!r) return;
-          var x = Math.min(1, Math.max(0, (cx - r.left) / r.width)) - 0.5;
-          var y = Math.min(1, Math.max(0, (cy - r.top) / r.height)) - 0.5;
-          el.style.setProperty('--ry', (x * 8).toFixed(2) + 'deg');
-          el.style.setProperty('--rx', (-y * 8).toFixed(2) + 'deg');
-        }
-        el.addEventListener('pointerenter', function () {
-          if (el.classList.contains('reveal') && !el.classList.contains('in')) return;
-          r = el.getBoundingClientRect(); el.classList.add('is-tilt');
-        });
-        el.addEventListener('pointermove', function (e) {
-          if (!r) return;
-          cx = e.clientX; cy = e.clientY;
-          if (!f) f = requestAnimationFrame(apply);
-        });
-        el.addEventListener('pointerleave', function () {
-          r = null; el.classList.remove('is-tilt');
-          el.style.removeProperty('--rx'); el.style.removeProperty('--ry');
-        });
-      });
     }
 
     /* ---------- Démos vivantes : ne tournent que lorsqu'elles sont à l'écran ---------- */
