@@ -2,8 +2,8 @@
    Alixo — Page d'accueil. Vanilla, sans dépendance.
    1. Téléchargement : version et poids live (/releases-latest.json, repli /releases.json), téléchargement direct
       avec toast, macOS détecté (bouton et carte Mac mis en avant), mobile détecté (le bouton principal ouvre l'application).
-      Le site ne nomme jamais l'hébergement des fichiers : les pages /telecharger/… s'en chargent en arrière-plan,
-      et tous les liens y mènent sans ce script.
+      Les pages ne nomment jamais l'hébergement des fichiers (seul ce script le connaît, pour valider les adresses) :
+      les pages /telecharger/… s'en chargent en arrière-plan, et tous les liens y mènent sans ce script.
    2. Décor : apparitions au défilement, menu mobile, onglets des captures, démos vivantes.
    Sans ce script (ou s'il échoue), la page reste entièrement lisible.
    Mode clair seul : ce script ne lit ni n'écrit aucune préférence de thème.
@@ -27,15 +27,42 @@
     var exeUrl = null;       /* adresse directe du fichier Windows (lue dans releases-latest.json) ; sinon la page /telecharger/windows/ s'en charge */
     var macUrl = null;       /* adresse directe du fichier Mac ; sinon la page /telecharger/mac/ */
 
-    /* ---------- Détection de la plateforme ---------- */
-    var isMac = /Macintosh/.test(navigator.userAgent) && !('ontouchend' in document);
-    var isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || ('ontouchend' in document && window.innerWidth < 900);
+    /* Les adresses lues dans le JSON ne sont suivies que si elles sont en https et pointent vers le site
+       ou vers l'hébergement des installateurs ; sinon la page /telecharger/… prend le relais. */
+    var DL_HOSTS = [location.hostname, 'github.com'];
+    var safeUrl = function (value) {
+      try {
+        var u = new URL(String(value), location.href);
+        return u.protocol === 'https:' && DL_HOSTS.indexOf(u.hostname) !== -1 ? u.href : null;
+      } catch (e) { return null; }
+    };
+
+    /* ---------- Détection de la plateforme ----------
+       iPadOS se présente comme « Macintosh » avec un écran tactile : il est traité comme un mobile, jamais comme un Mac. */
+    var ua = navigator.userAgent, touch = 'ontouchend' in document;
+    var isIPad = /Macintosh/.test(ua) && touch;
+    var isMobile = /Android|iPhone|iPad|iPod/i.test(ua) || isIPad || (touch && window.innerWidth < 900);
+    var isMac = /Macintosh/.test(ua) && !isIPad;
 
     var heroWin = $('#hero-win'), heroMac = $('#hero-mac');
+    var endDl = $('#end-dl'), endAlt = $('#end-alt'), endWeb = $('#end-web');   /* bandeau final : même logique que le héros */
+    var ARROW = ' <span aria-hidden="true">→</span>';
+    var OPEN_APP = '<svg class="os" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>' +
+      '<span class="btn-dl-txt">Ouvrir Alixo sur ton téléphone<small>Rien à installer · avec ou sans compte</small></span>';
+    var macBtns = [heroMac, $('#btn-mac')];        /* boutons qui téléchargent le fichier Mac */
 
     /* ---------- macOS : le bouton Mac devient le bouton principal (encre plein) et passe en premier dans le héros ;
-       la carte Mac prend la place et l'habillage de la carte mise en avant ---------- */
+       la carte Mac prend la place et l'habillage de la carte mise en avant ; le bandeau final propose macOS ---------- */
     if (isMac) {
+      if (endDl && heroMac) {
+        var apple = $('svg', heroMac);
+        endDl.removeAttribute('data-download');
+        endDl.href = DL_PAGE.mac;
+        endDl.innerHTML = (apple ? apple.outerHTML : '') +
+          '<span class="btn-dl-txt">Télécharger pour macOS<small><span class="js-version">Dernière version</span><span class="js-mac-size"></span></small></span>';
+        macBtns.push(endDl);
+        if (endAlt) { endAlt.href = DL_PAGE.setup; endAlt.innerHTML = 'Aussi pour Windows' + ARROW; }
+      }
       if (heroWin && heroMac) {
         heroWin.classList.remove('btn-ink'); heroWin.classList.add('btn-line');
         heroMac.classList.remove('btn-line'); heroMac.classList.add('btn-ink');
@@ -59,53 +86,95 @@
       if (heroWin) {
         heroWin.removeAttribute('data-download');
         heroWin.href = APP_URL;
-        heroWin.innerHTML = '<svg class="os" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>' +
-          '<span class="btn-dl-txt">Ouvrir Alixo sur ton téléphone<small>Rien à installer · avec ou sans compte</small></span>';
+        heroWin.innerHTML = OPEN_APP;
       }
       if (heroMac) heroMac.hidden = true;
       var heroWeb = $('.hero-web');                 /* même destination que le bouton principal : inutile en double */
       if (heroWin && heroWeb) heroWeb.hidden = true;
+      if (endDl) {
+        endDl.removeAttribute('data-download');
+        endDl.href = APP_URL;
+        endDl.innerHTML = OPEN_APP;
+        if (endAlt) endAlt.hidden = true;
+        if (endWeb) endWeb.hidden = true;
+      }
     }
 
-    /* ---------- Téléchargement direct + toast ---------- */
-    var toast = $('#dl-toast'), fallback = $('#dl-fallback'), toastTimer = 0;
-    var hideToast = function () { clearTimeout(toastTimer); if (toast) toast.hidden = true; };
+    /* ---------- Téléchargement direct + toast ----------
+       #dl-toast est une région role=status toujours présente et vide au repos : le message y est injecté au clic
+       (annonce fiable par les lecteurs d'écran), puis retiré après 15 s. La minuterie est suspendue tant que le
+       toast est survolé ou contient le focus ; Échap ou « Fermer » le retirent tout de suite. */
+    var toast = $('#dl-toast'), TOAST_MS = 15000;
+    var toastTimer = 0, toastEnd = 0, toastLeft = 0, toastFrom = null;
+    var toastOpen = function () { return !!(toast && toast.firstChild); };
+    var hideToast = function () {
+      clearTimeout(toastTimer); toastTimer = 0;
+      if (!toastOpen()) return;
+      var hadFocus = toast.contains(document.activeElement);
+      toast.textContent = '';
+      if (hadFocus && toastFrom && document.body.contains(toastFrom)) toastFrom.focus();   /* le focus revient au bouton d'origine */
+    };
+    var runToast = function (ms) {
+      clearTimeout(toastTimer);
+      toastLeft = ms; toastEnd = Date.now() + ms;
+      toastTimer = setTimeout(hideToast, ms);
+    };
+    var holdToast = function () {
+      if (!toastTimer) return;
+      clearTimeout(toastTimer); toastTimer = 0;
+      toastLeft = Math.max(2000, toastEnd - Date.now());
+    };
+    var resumeToast = function () {
+      if (toastOpen() && !toastTimer && !toast.matches(':hover') && !toast.contains(document.activeElement)) runToast(toastLeft);
+    };
+    var showToast = function (fallbackPage, fallbackLabel, from) {
+      if (!toast) return;
+      toastFrom = from || null;
+      toast.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>' +
+        '<div><strong>Le téléchargement d\'Alixo démarre…</strong><span>Si rien ne se passe, <a></a>.</span></div>' +
+        '<button class="dl-toast-close" type="button" aria-label="Fermer">✕</button>';
+      var link = $('a', toast);
+      link.href = fallbackPage; link.textContent = fallbackLabel;
+      $('.dl-toast-close', toast).addEventListener('click', hideToast);
+      runToast(TOAST_MS);
+    };
+    if (toast) {
+      toast.addEventListener('pointerenter', holdToast);
+      toast.addEventListener('focusin', holdToast);
+      toast.addEventListener('pointerleave', function () { setTimeout(resumeToast, 0); });
+      toast.addEventListener('focusout', function () { setTimeout(resumeToast, 0); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && toastOpen()) hideToast(); });
+    }
     /* Lance le téléchargement d'un fichier via un lien invisible, puis affiche le toast ;
        le lien de secours du toast pointe vers la page /telecharger/… de la plateforme. */
-    var triggerFile = function (url, fallbackPage, fallbackLabel) {
+    var triggerFile = function (url, fallbackPage, fallbackLabel, from) {
       var a = document.createElement('a');
       a.href = url; a.rel = 'noopener';
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
-      if (!toast) return;
-      if (fallback) { fallback.href = fallbackPage; fallback.textContent = fallbackLabel; }
-      toast.hidden = false;
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(hideToast, 8000);
+      showToast(fallbackPage, fallbackLabel, from);
     };
-    /* Sans adresse directe connue, le lien suit simplement son href (/telecharger/…/). */
+    /* Sans adresse directe connue (ou refusée par safeUrl), le lien suit simplement son href (/telecharger/…/).
+       Un bouton « Windows » télécharge toujours Windows, y compris sur un Mac. */
     var startDownload = function (e) {
-      if (isMac) { e.preventDefault(); location.href = DL_PAGE.mac; return; }
       if (!exeUrl) return;
       e.preventDefault();
-      triggerFile(exeUrl, DL_PAGE.setup, 'clique ici pour la version Windows');
+      triggerFile(exeUrl, DL_PAGE.setup, 'clique ici pour la version Windows', e.currentTarget);
     };
     var startMacDownload = function (e) {
       if (!macUrl) return;
       e.preventDefault();
-      triggerFile(macUrl, DL_PAGE.mac, 'clique ici pour la version Mac');
+      triggerFile(macUrl, DL_PAGE.mac, 'clique ici pour la version Mac', e.currentTarget);
     };
-    /* [data-download] ne vit que sur les deux boutons explicitement Windows (héros et carte Windows) */
+    /* [data-download] ne vit que sur les boutons explicitement Windows (héros, carte Windows, bandeau final) */
     $$('[data-download]').forEach(function (el) { el.addEventListener('click', startDownload); });
-    /* Boutons Mac (héros et carte) : téléchargement direct dès que l'adresse du fichier est connue */
-    [heroMac, $('#btn-mac')].forEach(function (el) { if (el) el.addEventListener('click', startMacDownload); });
-    var toastClose = toast && $('.dl-toast-close', toast);
-    if (toastClose) toastClose.addEventListener('click', hideToast);
+    /* Boutons Mac (héros, carte, bandeau final sur un Mac) : téléchargement direct dès que l'adresse du fichier est connue */
+    macBtns.forEach(function (el) { if (el) el.addEventListener('click', startMacDownload); });
 
     /* ---------- Version et poids (/releases-latest.json, repli sur /releases.json) ----------
        releases-latest.json ne contient que version, date et installateurs (quelques centaines d'octets) ;
        releases.json, bien plus lourd (notes et historique), reste le repli si le petit fichier manque.
        Les valeurs écrites dans la page (« Dernière version », « 85 Mo ») restent affichées si rien ne répond. */
-    var toMo = function (bytes) { return (bytes / 1048576).toFixed(bytes > 104857600 ? 0 : 1).replace('.', ',') + ' Mo'; };
+    var toMo = function (bytes) { return (bytes / 1048576).toFixed(bytes > 104857600 ? 0 : 1).replace('.', ',') + ' Mo'; };   /* espace insécable */
     var getJson = function (url) {
       return fetch(url, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); });
     };
@@ -120,17 +189,17 @@
             $$('.js-version').forEach(function (el) { el.textContent = v; });
           }
           var setup = assets.setup;
-          if (setup && setup.url) exeUrl = setup.url;
+          if (setup && setup.url) exeUrl = safeUrl(setup.url);
           if (setup && setup.size) {
             var mo = toMo(setup.size);
             $$('.js-size').forEach(function (el) { el.textContent = mo; });
           }
           var mac = assets.mac;
-          if (mac && mac.url) macUrl = mac.url;
+          if (mac && mac.url) macUrl = safeUrl(mac.url);
           if (mac && mac.size) {
             /* le séparateur vit dans le span : rien ne traîne tant que le poids n'est pas connu */
             var macMo = ' · ' + toMo(mac.size);
-            ['#mac-size', '#mac-size-hero'].forEach(function (id) { var el = $(id); if (el) el.textContent = macMo; });
+            $$('.js-mac-size').forEach(function (el) { el.textContent = macMo; });
           }
         })
         .catch(function () {});
@@ -197,7 +266,8 @@
           img.srcset = img.dataset.srcset; img.src = img.dataset.src;
           delete img.dataset.src; delete img.dataset.srcset;
         }
-        if (on) img.hidden = false;
+        /* une capture masquée est en display:none : on force sa mise en page pour que le fondu parte bien de 0 */
+        if (on && img.hidden) { img.hidden = false; void img.offsetWidth; }
         /* laisse le navigateur prendre en compte l'affichage avant le fondu */
         requestAnimationFrame(function () { img.classList.toggle('on', on); });
         if (!on) setTimeout(function () { if (!img.classList.contains('on')) img.hidden = true; }, 380);
@@ -219,6 +289,20 @@
         selectTab(tabs[j], true);
       });
     });
+
+    /* ---------- Comparatif : la région n'est focalisable (défilement au clavier) que si elle défile vraiment ;
+       l'indication « Fais glisser… » suit le même critère ---------- */
+    var cmp = $('#cmp'), cmpHint = $('#cmp-hint');
+    if (cmp) {
+      var cmpSync = function () {
+        var scrolls = cmp.scrollWidth > cmp.clientWidth + 1;
+        if (scrolls) cmp.setAttribute('tabindex', '0'); else cmp.removeAttribute('tabindex');
+        if (cmpHint) { cmpHint.hidden = !scrolls; cmpHint.style.display = scrolls ? 'block' : ''; }
+      };
+      cmpSync();
+      window.addEventListener('resize', cmpSync);
+      window.addEventListener('load', cmpSync);
+    }
 
     /* ---------- Héros : la capture se redresse au scroll ---------- */
     var win = $('#shot-win');
@@ -245,7 +329,10 @@
       }, { threshold: 0.25 }).observe(el);
     }
 
-    /* Tuile A — le plan se tape tout seul, ligne par ligne, en boucle */
+    /* Les démos sont bornées (WCAG 2.2.2) : rien ne bouge indéfiniment. Les démos CSS (formule, correction,
+       curseur de recherche, fragments du héros) portent leur nombre d'itérations dans accueil.css. */
+
+    /* Tuile A — le plan se tape tout seul, ligne par ligne : 2 passages, puis le plan complet reste affiché */
     var planBox = $('#plan-demo');
     if (planBox && !still) {
       var lines = $$('.pl', planBox).map(function (el) {
@@ -255,7 +342,7 @@
       var hint = $('.pl-hint', planBox);
       var caret = document.createElement('span');
       caret.className = 'caret';
-      var timer = 0, running = false, li = 0, ci = 0;
+      var timer = 0, running = false, li = 0, ci = 0, passes = 0, MAX_PASSES = 2;
       var reset = function () {
         lines.forEach(function (l) { l.t.textContent = ''; l.el.classList.add('off'); });
         hint.classList.add('off'); li = 0; ci = 0;
@@ -266,9 +353,10 @@
       };
       var step = function () {
         if (!running) return;
-        if (li >= lines.length) {                     /* fin : on laisse lire, puis on recommence */
+        if (li >= lines.length) {                     /* fin : on laisse lire, puis on recommence une fois */
           hint.classList.remove('off');
-          timer = setTimeout(function () { reset(); step(); }, 3200);
+          if (passes >= MAX_PASSES) { running = false; restore(); return; }   /* terminé : plan complet, curseur retiré */
+          timer = setTimeout(function () { passes++; reset(); step(); }, 3200);
           return;
         }
         var l = lines[li];
@@ -282,31 +370,35 @@
         }
       };
       whenVisible(planBox, function () {
-        if (running) return;
-        running = true; reset(); timer = setTimeout(step, 500);
+        if (running || passes >= MAX_PASSES) return;
+        running = true; passes++; reset(); timer = setTimeout(step, 500);
       }, function () {
         running = false; clearTimeout(timer); restore();
       });
     }
 
-    /* Tuile E — la demande se déplace, l'équilibre suit le long de la courbe d'offre */
+    /* Tuile E — la demande se déplace, l'équilibre suit le long de la courbe d'offre :
+       un aller-retour complet (12 s environ, temps à l'écran), puis arrêt sur l'équilibre de départ */
     var graph = $('#graph');
     if (graph && !still) {
       var gD = $('#g-demand'), gPt = $('#g-pt'), gDash = $('#g-dash'), gP = $('#g-p'), gQ = $('#g-q');
-      var gRun = false, gRaf = 0, t0 = 0;
+      var gRun = false, gRaf = 0, gLast = 0, gElapsed = 0, gDone = false;
+      var G_MS = 2 * Math.PI * 1900;                  /* une période complète du mouvement */
       var SLOPE = 74 / 160;                           /* pente (en valeur absolue) des deux droites */
       var frame = function (now) {
         if (!gRun) return;
-        if (!t0) t0 = now;
-        var dx = 22 * Math.sin((now - t0) / 1900);
+        if (gLast) gElapsed += now - gLast;
+        gLast = now;
+        if (gElapsed >= G_MS) { gDone = true; gRun = false; }
+        var dx = gDone ? 0 : 22 * Math.sin(gElapsed / 1900);
         var x = 110 + dx / 2, y = 59 - SLOPE * dx / 2;
         gD.setAttribute('transform', 'translate(' + dx.toFixed(2) + ' 0)');
         gPt.setAttribute('cx', x.toFixed(2)); gPt.setAttribute('cy', y.toFixed(2));
         gDash.setAttribute('d', 'M20 ' + y.toFixed(2) + 'H' + x.toFixed(2) + 'V104');
         gP.setAttribute('y', (y + 4).toFixed(2)); gQ.setAttribute('x', (x - 7).toFixed(2));
-        gRaf = requestAnimationFrame(frame);
+        if (!gDone) gRaf = requestAnimationFrame(frame);
       };
-      whenVisible(graph, function () { if (!gRun) { gRun = true; gRaf = requestAnimationFrame(frame); } },
+      whenVisible(graph, function () { if (!gRun && !gDone) { gRun = true; gLast = 0; gRaf = requestAnimationFrame(frame); } },
         function () { gRun = false; cancelAnimationFrame(gRaf); });
     }
   } catch (err) {

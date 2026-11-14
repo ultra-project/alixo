@@ -43,11 +43,11 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
       <img src="img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
-      <a href="#alixo-plus">Alixo+</a>
       <a href="#fonctions">Fonctionnalités</a>
       <a href="#ia">IA</a>
-      <a href="#telecharger">Télécharger</a>
+      <a href="#alixo-plus">Alixo+</a>
       <a href="tarifs.html">Tarifs</a>
+      <a href="#telecharger">Télécharger</a>
       <a href="documentation.html">Documentation</a>
     </nav>
     <div class="nav-actions">
@@ -60,11 +60,11 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
     </div>
   </div>
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
-    <a href="#alixo-plus">Alixo+</a>
     <a href="#fonctions">Fonctionnalités</a>
     <a href="#ia">IA</a>
-    <a href="#telecharger">Télécharger</a>
+    <a href="#alixo-plus">Alixo+</a>
     <a href="tarifs.html">Tarifs</a>
+    <a href="#telecharger">Télécharger</a>
     <a href="documentation.html">Documentation</a>
     <a href="#faq">Questions fréquentes</a>
     <a href="https://alixoapp.com/docs/?login">Se connecter</a>
@@ -88,11 +88,11 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
         <div class="hero-ctas">
           <a class="btn btn-ink btn-dl" id="hero-win" href="/telecharger/windows/" data-download>
             <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
-            <span class="btn-dl-txt">Télécharger pour Windows<small>Gratuit · <span class="js-size">85 Mo</span></small></span>
+            <span class="btn-dl-txt">Télécharger pour Windows<small>Gratuit · <span class="js-size">85&nbsp;Mo</span></small></span>
           </a>
           <a class="btn btn-line btn-dl" id="hero-mac" href="/telecharger/mac/">
             <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M16.4 12.7c0-2.4 2-3.6 2.1-3.7-1.1-1.7-2.9-1.9-3.5-1.9-1.5-.2-2.9.9-3.7.9-.8 0-1.9-.9-3.2-.8-1.6 0-3.1 1-4 2.4-1.7 3-.4 7.3 1.2 9.7.8 1.2 1.8 2.5 3 2.4 1.2 0 1.7-.8 3.2-.8s1.9.8 3.2.8 2.1-1.2 2.9-2.4c.9-1.4 1.3-2.7 1.3-2.8 0 0-2.5-1-2.5-3.8ZM14 5.5c.7-.8 1.1-1.9 1-3-1 0-2.1.7-2.8 1.5-.6.7-1.2 1.8-1 2.9 1.1.1 2.2-.6 2.8-1.4Z"/></svg>
-            <span class="btn-dl-txt">Télécharger pour macOS<small>Gratuit<span id="mac-size-hero"></span></small></span>
+            <span class="btn-dl-txt">Télécharger pour macOS<small>Gratuit<span class="js-mac-size" id="mac-size-hero"></span></small></span>
           </a>
         </div>
         <a class="hero-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">ou ouvrir dans le navigateur <span aria-hidden="true">→</span><span class="sr-only"> (nouvel onglet)</span></a>
@@ -111,7 +111,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
         <div class="shot-scene" id="shot-scene">
           <div class="shot-win" id="shot-win">
             <div class="shot-bar"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="shot-title" id="shot-title">Séance de cours — plan I. A. 1. a., encadré définition, fiche d'arrêt</span></div>
-            <div class="shot-stage" id="shot-panel" role="tabpanel" aria-labelledby="tab-seance">
+            <div class="shot-stage" id="shot-panel" role="tabpanel" tabindex="0" aria-labelledby="tab-seance">
               <img class="shot on" data-shot="seance" src="img/shot-seance-light-1600.jpg" srcset="img/shot-seance-light-640.jpg 640w, img/shot-seance-light-1024.jpg 1024w, img/shot-seance-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — séance de cours avec plan automatique I. A. 1. a. dans le volet de gauche, encadré définition et fiche d'arrêt" fetchpriority="high" decoding="async">
               <img class="shot" data-shot="sheet" data-src="img/shot-sheet-light-1600.jpg" data-srcset="img/shot-sheet-light-640.jpg 640w, img/shot-sheet-light-1024.jpg 1024w, img/shot-sheet-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — tableur avec formules SOMME et graphique de la sélection" decoding="async" hidden>
               <img class="shot" data-shot="board" data-src="img/shot-board-light-1600.jpg" data-srcset="img/shot-board-light-640.jpg 640w, img/shot-board-light-1024.jpg 1024w, img/shot-board-light-1600.jpg 1600w" sizes="(max-width: 999px) calc(100vw - 68px), 720px" width="1600" height="1000" alt="Alixo — planche de révision : zones, post-it, formes et flèches sur un tableau blanc infini" decoding="async" hidden>
@@ -354,7 +354,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
           <li>Structure I. A. 1. a., fiches d'arrêt, formules, graphiques</li>
           <li>Agenda, dictionnaire, export PDF et Word</li>
           <li>Partage de cours (Alixo Share) et travail à plusieurs en direct</li>
-          <li>Synchronisation PC, Mac, web, mobile · 3 Go</li>
+          <li>Synchronisation PC, Mac, web, mobile · 3&nbsp;Go</li>
           <li>Thèmes clair, sombre, automatique · 3 polices</li>
         </ul>
         <a class="btn btn-line btn-full" href="#telecharger">Commencer gratuitement</a>
@@ -363,13 +363,13 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
       <article class="plan plan-plus reveal" style="--i:1">
         <div class="plan-head"><img src="img/logo-plus-96.png" alt="" width="44" height="44" loading="lazy"><div><h3>Alixo+</h3><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
         <p class="plan-price"><span class="amount">14,99&nbsp;€</span><small>TTC par mois · ou 149,99&nbsp;€ TTC par an</small></p>
-        <p class="plan-sub">Dégressif avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois après 24 mois. Annuel reconduit tacitement, résiliable à tout moment.</p>
+        <p class="plan-sub">Dégressif avec l'ancienneté, jusqu'à 9,99&nbsp;€ par mois après 24&nbsp;mois. Annuel reconduit tacitement, résiliable à tout moment.</p>
         <ul class="plan-list">
           <li><strong>AlixoAI</strong>&nbsp;: relecture approfondie, mise en forme, Quiz IA et fiches de révision, sans quota, dans l'application PC (Windows et Mac)</li>
           <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
           <li><strong>Tous les thèmes</strong>&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Azur…</li>
           <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
-          <li><strong>Stockage au-delà de 3 Go</strong></li>
+          <li><strong>Stockage au-delà de 3&nbsp;Go</strong></li>
         </ul>
         <a class="plan-more" href="tarifs.html">Voir les tarifs <span aria-hidden="true">→</span></a>
         <a class="btn btn-white btn-full" href="https://alixoapp.com/docs/?login" target="_blank" rel="noopener">Activer Alixo+ dans l'application<span class="sr-only"> (nouvel onglet)</span></a>
@@ -397,7 +397,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
         <p class="dl-desc">Installation en une minute, mises à jour automatiques au démarrage.</p>
         <a class="btn btn-white btn-full btn-stack" href="/telecharger/windows/" data-download>
           <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Setup.exe</span>
-          <small><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small>
+          <small><span class="js-version">Dernière version</span> · <span class="js-size">85&nbsp;Mo</span></small>
         </a>
         <a class="dl-alt" href="/telecharger/windows-portable/">Version portable, sans installation <span aria-hidden="true">→</span></a>
       </article>
@@ -410,7 +410,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
         <p class="dl-desc">Même application, même compte&nbsp;: tes cours pris ailleurs sont déjà là.</p>
         <a class="btn btn-ink btn-full btn-stack" id="btn-mac" href="/telecharger/mac/">
           <span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>Télécharger Alixo-Mac.dmg</span>
-          <small><span class="js-version">Dernière version</span><span id="mac-size"></span></small>
+          <small><span class="js-version">Dernière version</span><span class="js-mac-size" id="mac-size"></span></small>
         </a>
         <a class="dl-alt" href="/telecharger/mac/">Première ouverture sur Mac <span aria-hidden="true">→</span></a>
       </article>
@@ -438,7 +438,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
       <h2 id="cmp-titre">Pourquoi pas <span class="nw">juste <mark class="hl">Word</mark>&nbsp;?</span></h2>
       <p>Un traitement de texte ne connaît ni ta filière, ni le rythme d'un amphi.</p>
     </header>
-    <div class="cmp reveal" tabindex="0" role="region" aria-label="Tableau comparatif, défilement horizontal">
+    <div class="cmp reveal" id="cmp" role="region" aria-label="Tableau comparatif">
       <table>
         <thead>
           <tr><td></td><th scope="col" class="me"><img src="img/logo-96.png" alt="" width="22" height="22" loading="lazy">Alixo</th><th scope="col">Word / Docs</th><th scope="col">Notion / OneNote</th></tr>
@@ -456,6 +456,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
         </tbody>
       </table>
     </div>
+    <p class="cmp-hint" id="cmp-hint">Fais glisser le tableau pour voir Word et Notion <span aria-hidden="true">→</span></p>
   </div>
 </section>
 
@@ -469,7 +470,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
     <div class="faq reveal" style="--i:1">
       <details open>
         <summary>Alixo est-il vraiment gratuit&nbsp;?</summary>
-        <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
+        <p>Oui, l'essentiel l'est, sans limite de temps et sans carte&nbsp;: cours, quiz, planches, présentations, tableurs, dossiers, fichiers jusqu'à 3&nbsp;Go, agenda, partage, dictionnaire, export PDF, synchronisation. <a href="#alixo-plus">Alixo+</a>, en option, ajoute l'intelligence artificielle, les tâches, tous les thèmes et toutes les polices, et lève la limite de stockage.</p>
       </details>
       <details>
         <summary>L'IA lit-elle mes notes&nbsp;?</summary>
@@ -508,12 +509,12 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
       <h2 id="end-titre">Prêt pour ton <span class="nw">prochain <span class="stroke">amphi<svg viewBox="0 0 300 20" preserveAspectRatio="none" aria-hidden="true"><path d="M4 13C52 5 96 15 148 9s98-5 148 3"/></svg></span>&nbsp;?</span></h2>
       <p>L'essentiel est gratuit, sans limite de temps. Compte gratuit sans engagement, tes notes t'appartiennent.</p>
       <div class="end-ctas">
-        <a class="btn btn-white btn-dl" href="/telecharger/windows/">
+        <a class="btn btn-white btn-dl" id="end-dl" href="/telecharger/windows/" data-download>
           <svg class="os" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M3 5.1 10.6 4v7.6H3V5.1Zm0 13.8L10.6 20v-7.5H3v6.4ZM11.6 3.9 21 2.5v9.1h-9.4V3.9Zm0 16.2L21 21.5v-9h-9.4v7.6Z"/></svg>
-          <span class="btn-dl-txt">Télécharger pour Windows<small><span class="js-version">Dernière version</span> · <span class="js-size">85 Mo</span></small></span>
+          <span class="btn-dl-txt">Télécharger pour Windows<small><span class="js-version">Dernière version</span> · <span class="js-size">85&nbsp;Mo</span></small></span>
         </a>
-        <a class="end-link" href="/telecharger/mac/">aussi pour macOS <span aria-hidden="true">→</span></a>
-        <a class="end-link" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Essayer dans le navigateur <span aria-hidden="true">→</span><span class="sr-only"> (nouvel onglet)</span></a>
+        <a class="end-link" id="end-alt" href="/telecharger/mac/">Aussi pour macOS <span aria-hidden="true">→</span></a>
+        <a class="end-link" id="end-web" href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Essayer dans le navigateur <span aria-hidden="true">→</span><span class="sr-only"> (nouvel onglet)</span></a>
       </div>
     </div>
   </div>
@@ -531,18 +532,18 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
     <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
         <h2>Produit</h2>
-        <a href="#alixo-plus">Alixo+</a>
         <a href="#fonctions">Fonctionnalités</a>
         <a href="#ia">IA</a>
-        <a href="#telecharger">Télécharger</a>
+        <a href="#alixo-plus">Alixo+</a>
         <a href="tarifs.html">Tarifs</a>
+        <a href="#telecharger">Télécharger</a>
         <a href="documentation.html">Documentation</a>
         <a href="/versions/">Versions</a>
         <a href="/status/">État des services</a>
       </div>
       <div class="foot-col">
         <h2>Utiliser</h2>
-        <a href="https://alixoapp.com/docs/">Application web</a>
+        <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Application web<span class="sr-only"> (nouvel onglet)</span></a>
         <a href="https://alixoapp.com/docs/?login">Se connecter</a>
         <a href="/quiz/">Rejoindre un quiz</a>
         <a href="#faq">Questions fréquentes</a>
@@ -561,14 +562,8 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
 </footer>
 
 <!-- ================= Toast téléchargement ================= -->
-<div id="dl-toast" class="dl-toast" role="status" hidden>
-  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
-  <div>
-    <strong>Le téléchargement d'Alixo démarre…</strong>
-    <span>Si rien ne se passe, <a id="dl-fallback" href="/telecharger/windows/">clique ici</a>.</span>
-  </div>
-  <button class="dl-toast-close" type="button" aria-label="Fermer">✕</button>
-</div>
+<!-- Région d'annonce toujours présente et vide au repos : accueil.js y injecte le message au clic sur un bouton de téléchargement. -->
+<div id="dl-toast" class="dl-toast" role="status"></div>
 
 <script src="accueil.js?v=20261114" defer></script>
 </body>

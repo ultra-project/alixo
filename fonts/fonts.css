@@ -2,7 +2,10 @@
    Inter (The Inter Project Authors) et JetBrains Mono (The JetBrains Mono Project Authors),
    SIL Open Font License 1.1 : voir OFL-Inter.txt et OFL-JetBrainsMono.txt.
    Fichiers issus de @fontsource/inter 5.3.0 et @fontsource/jetbrains-mono 5.3.0
-   (sous-ensembles latin et latin-ext). */
+   (sous-ensembles latin et latin-ext).
+   Bricolage Grotesque (The Bricolage Grotesque Project Authors), police variable des titres de la page d'accueil,
+   SIL Open Font License 1.1 : voir OFL-BricolageGrotesque.txt. Ses @font-face sont dans /accueil.css
+   (fichiers bricolage-grotesque-latin[-ext]-wght-normal.woff2, sous-ensembles latin et latin-ext). */
 
 /* inter-latin-ext-400-normal */
 @font-face {

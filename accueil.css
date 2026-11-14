@@ -6,7 +6,8 @@
    Mode clair uniquement. Aucune ressource externe.
    ============================================================ */
 
-/* Bricolage Grotesque (variable, axe wght 200–800) — SIL OFL 1.1, voir /fonts/OFL-BricolageGrotesque.txt */
+/* Bricolage Grotesque (The Bricolage Grotesque Project Authors), police variable (axe wght 200–800), hébergée sur le site.
+   SIL Open Font License 1.1 : voir /fonts/OFL-BricolageGrotesque.txt. Sous-ensembles latin et latin-ext. */
 @font-face {
   font-family: "Bricolage Grotesque"; font-style: normal; font-display: swap; font-weight: 200 800;
   src: url(/fonts/bricolage-grotesque-latin-ext-wght-normal.woff2) format("woff2-variations"), url(/fonts/bricolage-grotesque-latin-ext-wght-normal.woff2) format("woff2");
@@ -20,7 +21,7 @@
 
 :root {
   --blue: #214ffa; --indigo: #6d5bfa; --violet: #9439fc; --lilac: #c67ffc;
-  --ink: #0f1216; --ink-2: #4f5661; --ink-3: #6b7380;
+  --ink: #0f1216; --ink-2: #4f5661;
   --bg: #f7f8fa; --surface: #fff; --border: #e4e7ec;
   --tile-lilac: #efeaff; --tile-blue: #e6ecff; --tile-ink: #0d0e1a; --night: #0b0a24;
   --grad: linear-gradient(120deg, #214ffa 0%, #6d5bfa 45%, #9439fc 100%);
@@ -56,6 +57,8 @@ h1, h2, h3, p, ul, figure { margin: 0; }
 ul { padding: 0; list-style: none; }
 img, svg { display: block; max-width: 100%; }
 img { height: auto; }
+/* l'attribut hidden l'emporte toujours, même sur un display explicite (img, .btn…) */
+[hidden] { display: none !important; }
 a { color: inherit; }
 button { font: inherit; color: inherit; }
 h1, h2 { font-family: var(--font-display); font-weight: 800; text-wrap: balance; }
@@ -120,7 +123,7 @@ html.js .reveal:not(.in) { opacity: 0; translate: 0 24px; }
 .btn-dl { justify-content: flex-start; gap: 14px; padding: 12px 22px 12px 18px; min-height: 62px; border-radius: 18px; text-align: left; }
 .btn-dl .os { width: 24px; height: 24px; flex: none; }
 .btn-dl-txt { display: grid; gap: 3px; }
-.btn-dl small, .btn-stack small { font-family: var(--font-mono); font-size: 11.5px; font-weight: 500; letter-spacing: 0; }
+.btn-dl small, .btn-stack small { font-family: var(--font-mono); font-size: 12px; font-weight: 500; letter-spacing: 0; }
 .btn-white small, .btn-line small { color: var(--ink-2); }
 .btn-stack { flex-direction: column; gap: 5px; padding-block: 14px; }
 .btn-stack > span { display: inline-flex; align-items: center; gap: 10px; }
@@ -149,6 +152,7 @@ html.js .reveal:not(.in) { opacity: 0; translate: 0 24px; }
 .nav-sheet {
   display: none; pointer-events: auto; max-width: 1180px; margin: 8px auto 0; padding: 10px; border-radius: 24px;
   background: #fff; border: 1px solid var(--border); box-shadow: var(--shadow-nav);
+  max-height: calc(100vh - 96px); max-height: calc(100dvh - 96px); overflow-y: auto;
 }
 .nav-sheet a { display: block; padding: 13px 16px; border-radius: 14px; font-weight: 600; font-size: 16px; text-decoration: none; }
 .nav-sheet a:hover { background: var(--tile-lilac); }
@@ -208,7 +212,7 @@ html:not(.js) .tabs { display: none; }
 .frag { position: absolute; z-index: 2; display: none; pointer-events: none; }
 .frag-in {
   background: #fff; color: var(--ink); border-radius: 18px; box-shadow: var(--shadow-frag);
-  transform: rotate(var(--rot, 0deg)); animation: float 7s ease-in-out infinite; animation-delay: var(--fd, 0s);
+  transform: rotate(var(--rot, 0deg)); animation: float 7s ease-in-out 2; animation-delay: var(--fd, 0s);   /* 2 allers-retours (14 s au plus), puis posé */
 }
 @keyframes float { 0%, 100% { transform: translateY(0) rotate(var(--rot, 0deg)); } 50% { transform: translateY(-10px) rotate(var(--rot, 0deg)); } }
 
@@ -294,7 +298,7 @@ html:not(.js) .tabs { display: none; }
 .pl.l3 { font-size: clamp(.98rem, 1.4vw, 1.12rem); font-weight: 600; margin-left: 3.4em; }
 .pl.l4 { font-size: clamp(.95rem, 1.3vw, 1.05rem); font-weight: 500; font-style: italic; margin-left: 5.4em; }
 .pl.off { visibility: hidden; }
-.pl .caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -.16em; background: var(--violet); animation: blink 1s steps(2, jump-none) infinite; }
+.pl .caret { display: inline-block; width: 2px; height: 1.05em; margin-left: 2px; vertical-align: -.16em; background: var(--violet); animation: blink 1s steps(2, jump-none) infinite; }   /* retiré par accueil.js à la fin de la démo */
 @keyframes blink { 0% { opacity: 1; } 100% { opacity: 0; } }
 .pl-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 12px; padding-top: 14px; border-top: 1px dashed #d8cffa; font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; color: var(--ink-2); transition: opacity .3s; }
 .pl-hint span { margin-left: 6px; }
@@ -305,7 +309,8 @@ html:not(.js) .tabs { display: none; }
 .cmd-bar { display: flex; align-items: center; gap: 10px; padding: 10px 10px 14px; border-bottom: 1px solid rgba(255,255,255,.1); margin-bottom: 6px; }
 .cmd-bar svg { width: 18px; height: 18px; flex: none; fill: none; stroke: #b3a6ff; stroke-width: 2; stroke-linecap: round; }
 .cmd-q { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; }
-.cmd-q::after { content: ""; display: inline-block; width: 2px; height: 1.1em; margin-left: 3px; vertical-align: -.18em; background: #b3a6ff; animation: blink 1s steps(2, jump-none) infinite; }
+.cmd-q::after { content: ""; display: inline-block; width: 2px; height: 1.1em; margin-left: 3px; vertical-align: -.18em; background: #b3a6ff; }
+.reveal.in .cmd-q::after { animation: blink 1s steps(2, jump-none) 12; }
 .cmd-hit { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 11px; font-size: 13.5px; color: #c9c7e6; min-width: 0; }
 .cmd-hit.sel { background: rgba(109,91,250,.3); color: #fff; }
 .cmd-x { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -323,8 +328,11 @@ html:not(.js) .tabs { display: none; }
 /* D — formule : la saisie se fond en fraction rendue */
 .fx { display: grid; place-items: center; }
 .fx > * { grid-area: 1 / 1; }
-.fx-src { font-family: var(--font-mono); font-size: clamp(13px, 1.25vw, 15.5px); font-weight: 500; padding: 12px 16px; border-radius: 12px; background: #fff; border: 1px solid #c9d4fb; color: var(--ink); white-space: nowrap; animation: fx-a 7s ease-in-out infinite; }
-.fx-out { font-size: clamp(2rem, 3.4vw, 2.7rem); color: #1535b8; animation: fx-b 7s ease-in-out infinite; }
+.fx-src { font-family: var(--font-mono); font-size: clamp(13px, 1.25vw, 15.5px); font-weight: 500; padding: 12px 16px; border-radius: 12px; background: #fff; border: 1px solid #c9d4fb; color: var(--ink); white-space: nowrap; opacity: 0; }
+.fx-out { font-size: clamp(2rem, 3.4vw, 2.7rem); color: #1535b8; }
+/* 3 passages ; le dernier s'arrête sur la fraction rendue (2,6 cycles), qui est aussi l'état au repos */
+.reveal.in .fx-src { animation: fx-a 7s ease-in-out 2.6 forwards; }
+.reveal.in .fx-out { animation: fx-b 7s ease-in-out 2.6 forwards; }
 @keyframes fx-a { 0%, 38% { opacity: 1; transform: none; } 48%, 90% { opacity: 0; transform: scale(.94); } 100% { opacity: 1; transform: none; } }
 @keyframes fx-b { 0%, 38% { opacity: 0; transform: scale(.94); } 48%, 90% { opacity: 1; transform: none; } 100% { opacity: 0; transform: scale(.94); } }
 
@@ -356,11 +364,15 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
 .fix { display: grid; gap: 14px; justify-items: start; padding: 22px; border-radius: 20px; background: var(--bg); border: 1px solid var(--border); }
 .fix p, .ai-card-body p { font-size: 16.5px; line-height: 1.65; color: var(--ink); }
 .fix s, .ai-card-body s { position: relative; text-decoration: none; color: #a13d35; white-space: nowrap; }
-.fix s::after, .ai-card-body s::after { content: ""; position: absolute; left: -1px; right: -1px; top: 54%; height: 2px; border-radius: 2px; background: #b0483f; transform-origin: 0 50%; animation: fix-strike 8s var(--ease) infinite; }
-.fix mark, .ai-card-body mark { display: inline-block; background: #cdf0de; color: #0f4f39; font-weight: 600; padding: 0 6px; border-radius: 6px; line-height: 1.45; animation: fix-mark 8s var(--ease) infinite; }
-.fix-pop { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px 8px 11px; border-radius: 999px; background: #fff; border: 1px solid var(--border); font-size: 13.5px; line-height: 1.4; white-space: nowrap; color: var(--ink-2); animation: fix-pop 8s var(--ease) infinite; }
+.fix s::after, .ai-card-body s::after { content: ""; position: absolute; left: -1px; right: -1px; top: 54%; height: 2px; border-radius: 2px; background: #b0483f; transform-origin: 0 50%; }
+.fix mark, .ai-card-body mark { display: inline-block; background: #cdf0de; color: #0f4f39; font-weight: 600; padding: 0 6px; border-radius: 6px; line-height: 1.45; }
+.fix-pop { display: inline-flex; align-items: center; gap: 7px; padding: 8px 13px 8px 11px; border-radius: 999px; background: #fff; border: 1px solid var(--border); font-size: 13.5px; line-height: 1.4; white-space: nowrap; color: var(--ink-2); }
 .fix-pop b { color: var(--ink); font-weight: 600; }
 .fix-pop svg { width: 16px; height: 16px; flex: none; fill: var(--violet); }
+/* 3 passages, puis la correction reste affichée (état au repos = état final) */
+.reveal.in .fix s::after, .reveal.in .ai-card-body s::after { animation: fix-strike 8s var(--ease) 3; }
+.reveal.in .fix mark, .reveal.in .ai-card-body mark { animation: fix-mark 8s var(--ease) 3; }
+.reveal.in .fix-pop { animation: fix-pop 8s var(--ease) 3; }
 @keyframes fix-strike { 0%, 12% { transform: scaleX(0); } 22%, 100% { transform: scaleX(1); } }
 @keyframes fix-pop { 0%, 20% { opacity: 0; transform: translateY(6px); } 28%, 100% { opacity: 1; transform: none; } }
 @keyframes fix-mark { 0%, 40% { opacity: 0; transform: translateY(4px); } 48%, 100% { opacity: 1; transform: none; } }
@@ -459,6 +471,7 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
 .cmp thead .me { border-radius: 24px 24px 0 0; font-size: 1.3rem; }
 .cmp thead .me img { display: inline-block; vertical-align: -4px; margin-right: 8px; }
 .cmp tbody tr:last-child .me { border-radius: 0 0 24px 24px; padding-bottom: 24px; }
+.cmp-hint { display: none; margin-top: 14px; font-size: 13.5px; line-height: 1.4; color: var(--ink-2); }
 .yes, .no { display: inline-block; width: 26px; height: 26px; border-radius: 50%; vertical-align: middle; background: center / 14px no-repeat; }
 .yes { background-color: var(--violet); background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23fff' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4 8-9'/%3E%3C/svg%3E"); }
 .yes.alt { background-color: #e4e7ec; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f1216' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 12.5 4 4 8-9'/%3E%3C/svg%3E"); }
@@ -504,13 +517,14 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
 .foot-col a:hover { text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--indigo); text-decoration-thickness: 2px; }
 .foot-copy { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px 24px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13.5px; color: var(--ink-2); }
 
-/* ---------- Toast de téléchargement (affiché par accueil.js après un clic sur un bouton de téléchargement) ---------- */
+/* ---------- Toast de téléchargement (région role=status toujours présente ; accueil.js y injecte le message) ---------- */
 .dl-toast {
   position: fixed; z-index: 70; left: 50%; bottom: 16px; transform: translateX(-50%);
   display: flex; align-items: center; gap: 12px; width: max-content; max-width: calc(100vw - 24px);
   padding: 12px 10px 12px 16px; border-radius: 12px; background: var(--ink); color: #fff;
   font-size: 14px; line-height: 1.45;
 }
+.dl-toast:empty { padding: 0; }   /* au repos : région d'annonce vide, sans surface visible */
 .dl-toast > svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .dl-toast > div { display: grid; gap: 1px; min-width: 0; }
 .dl-toast strong { font-weight: 600; }
@@ -520,8 +534,6 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
 .dl-toast-close { flex: none; display: grid; place-items: center; width: 36px; height: 36px; padding: 0; border: 0; border-radius: 8px; background: none; color: #fff; font-size: 14px; line-height: 1; cursor: pointer; transition: background-color .15s; }
 .dl-toast-close:hover { background: #2b3038; }
 .dl-toast :focus-visible { outline-color: #fff; }
-/* [hidden] ne suffit pas face à un display explicite (toast, boutons masqués par accueil.js selon l'appareil) */
-.dl-toast[hidden], .btn[hidden], .hero-web[hidden] { display: none; }
 
 /* ============================================================
    Paliers
@@ -549,6 +561,9 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
   .cmp .me { width: 148px; }
   .cmp thead .me { font-size: 1.15rem; border-radius: 20px 20px 0 0; }
   .cmp tbody tr:last-child .me { border-radius: 0 0 20px 20px; }
+  /* la première colonne reste en place pendant le défilement horizontal */
+  .cmp tbody th, .cmp thead td { position: sticky; left: 0; z-index: 1; background: var(--bg); }
+  .cmp-hint { display: block; }
 }
 @media (max-width: 479px) {
   .hero-ctas .btn { width: 100%; }
@@ -593,7 +608,7 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
   .foot-in { grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr); gap: 56px 72px; }
 }
 @media (min-width: 1000px) and (max-width: 1319px) {
-  .frag-juris { width: 236px; left: -44px; bottom: 14px; }
+  .frag-juris { display: none; }   /* couvrirait la moitié de la capture à ces largeurs */
   .frag-math .frag-in { font-size: 19px; padding: 10px 16px 12px; }
   .frag-math { right: -22px; }
 }
@@ -611,6 +626,7 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
   html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(.72); }
   .shot-win { transform: none; }
   .fx > * { grid-area: auto; }
+  .fx-src { opacity: 1; }
   .fx { gap: 18px; }
 }
 /* Appareil faible (html.lite, posé par le script du <head>) : même traitement que le mouvement réduit */
@@ -622,6 +638,7 @@ html.lite.js .reveal:not(.in) .stroke svg { transform: none; }
 html.lite.js .reveal:not(.in) .quiz-bar u { transform: scaleX(.72); }
 html.lite .shot-win { transform: none; }
 html.lite .fx > * { grid-area: auto; }
+html.lite .fx-src { opacity: 1; }
 html.lite .fx { gap: 18px; }
 @media print {
   html.js .reveal:not(.in) { opacity: 1; translate: none; }
