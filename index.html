@@ -25,7 +25,7 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
 <link rel="preload" as="image" href="img/shot-seance-light-1600.jpg" imagesrcset="img/shot-seance-light-640.jpg 640w, img/shot-seance-light-1024.jpg 1024w, img/shot-seance-light-1600.jpg 1600w" imagesizes="(max-width: 999px) calc(100vw - 68px), 720px" fetchpriority="high">
 <link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="accueil.css?v=20261115">
+<link rel="stylesheet" href="accueil.css?v=20261117">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/logo.png">
@@ -70,6 +70,30 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
     <a href="https://alixoapp.com/docs/?login">Se connecter</a>
   </nav>
 </header>
+
+<!-- ================= Coco, le compagnon (pend sous la navigation, descend en rappel au survol) ================= -->
+<div class="coco" id="coco">
+  <div class="coco-swing">
+    <div class="coco-rig">
+      <div class="coco-body">
+        <button type="button" class="coco-btn" id="coco-btn" aria-label="Coco, le compagnon Alixo — dis bonjour">
+          <picture>
+            <source srcset="img/coco.webp" type="image/webp">
+            <img class="coco-img" src="img/coco.png" alt="" width="360" height="649" decoding="async" draggable="false">
+          </picture>
+          <span class="coco-hit coco-hit-rope" aria-hidden="true"></span>
+          <span class="coco-hit coco-hit-body" aria-hidden="true"></span>
+          <span class="coco-hit coco-hit-feet" aria-hidden="true"></span>
+        </button>
+      </div>
+      <div class="coco-bubble" aria-hidden="true">
+        <div class="coco-term-bar"><i></i><i></i><i></i><span>coco@alixo:~</span></div>
+        <p class="coco-term-body"><span class="coco-term-ghost"><b>$</b> Salut moi c'est coco, ton compagnon pour tes cours !</span><span class="coco-term-live"><b>$</b> <span class="coco-typed"></span><span class="coco-caret"></span></span></p>
+      </div>
+    </div>
+  </div>
+  <p class="coco-sr" id="coco-live" aria-live="polite"></p>
+</div>
 
 <main id="contenu">
 
@@ -565,6 +589,6 @@ try{var n=navigator,c=n.connection||{};if(/Android|iPhone|iPad|iPod/i.test(n.use
 <!-- Région d'annonce toujours présente et vide au repos : accueil.js y injecte le message au clic sur un bouton de téléchargement. -->
 <div id="dl-toast" class="dl-toast" role="status"></div>
 
-<script src="accueil.js?v=20261114" defer></script>
+<script src="accueil.js?v=20261117" defer></script>
 </body>
 </html>

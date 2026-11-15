@@ -5,6 +5,7 @@
       Les pages ne nomment jamais l'hébergement des fichiers (seul ce script le connaît, pour valider les adresses) :
       les pages /telecharger/… s'en chargent en arrière-plan, et tous les liens y mènent sans ce script.
    2. Décor : apparitions au défilement, menu mobile, onglets des captures, démos vivantes.
+   3. Coco, le compagnon : pend sous la navigation, descend en rappel au survol, au focus ou au tap.
    Sans ce script (ou s'il échoue), la page reste entièrement lisible.
    Mode clair seul : ce script ne lit ni n'écrit aucune préférence de thème.
    ============================================================ */
@@ -404,6 +405,116 @@
   } catch (err) {
     /* En cas d'erreur, on retire la classe « js » : plus rien n'est masqué. */
     root.classList.remove('js');
+    if (window.console) console.error(err);
+  }
+
+  /* ============================================================
+     Coco, le compagnon
+     Au repos, Coco pend sous la nav (seuls ses pieds dépassent). Survol à la souris, focus au clavier ou tap :
+     il descend en rappel ; une fois en bas, il dit bonjour dans une bulle terminal tapée caractère par caractère.
+     Plusieurs raisons peuvent le garder en bas (survol, focus, tap) : il remonte quand il n'en reste aucune.
+     ============================================================ */
+  try {
+    var coco = $('#coco');
+    if (coco) {
+      var cocoBtn = $('.coco-btn', coco), cocoRig = $('.coco-rig', coco), cocoTyped = $('.coco-typed', coco);
+      var cocoLive = $('#coco-live');
+      var COCO_MSG = "Salut moi c'est coco, ton compagnon pour tes cours !";
+      var cocoCalm = window.matchMedia('(prefers-reduced-motion: reduce)');
+      var cocoLite = root.classList.contains('lite');
+      var reasons = {};
+      var hasReason = function () { return Object.keys(reasons).length > 0; };
+      var clearReasons = function () { reasons = {}; };
+      var arriveTimer, enterTimer, leaveTimer, typeTimer, autoUpTimer, lastPointer = '';
+      var cocoUpdate;
+
+      /* durée de la descente, lue dans le CSS (nulle en mouvement réduit) */
+      var descentMs = function () {
+        var d = (getComputedStyle(cocoRig).transitionDuration || '0s').split(',')[0].trim();
+        return parseFloat(d) * (/ms$/.test(d) ? 1 : 1000) || 0;
+      };
+      /* En tactile, rien ne « quitte » Coco : il remonte de lui-même 5 s après avoir fini sa phrase */
+      var cocoTypedDone = function () {
+        clearTimeout(autoUpTimer);
+        if (reasons.tap) autoUpTimer = setTimeout(function () { delete reasons.tap; cocoUpdate(); }, 5000);
+      };
+      var typeFrom = function (i) {
+        cocoTyped.textContent = COCO_MSG.slice(0, i);
+        if (i >= COCO_MSG.length) { cocoTypedDone(); return; }
+        typeTimer = setTimeout(function () { typeFrom(i + 1); }, COCO_MSG.charAt(i - 1) === ',' ? 220 : 34);   /* petite pause après la virgule */
+      };
+      var cocoArrive = function () {
+        if (!coco.classList.contains('is-down')) return;
+        coco.classList.add('is-arrived');
+        cocoLive.textContent = COCO_MSG;                   /* annoncé une seule fois, en entier */
+        clearTimeout(typeTimer); clearTimeout(autoUpTimer);
+        if (cocoCalm.matches || cocoLite) { cocoTyped.textContent = COCO_MSG; cocoTypedDone(); return; }
+        cocoTyped.textContent = '';
+        typeTimer = setTimeout(function () { typeFrom(1); }, 220);
+      };
+      cocoUpdate = function () {
+        var down = hasReason();
+        if (down === coco.classList.contains('is-down')) return;
+        clearTimeout(arriveTimer); clearTimeout(autoUpTimer);
+        if (down) {
+          coco.classList.add('is-down');
+          arriveTimer = setTimeout(cocoArrive, descentMs() + 40);
+        } else {
+          clearTimeout(typeTimer);                         /* la bulle s'efface avec le texte figé ; remis à zéro à la prochaine arrivée */
+          coco.classList.remove('is-down', 'is-arrived');
+          cocoLive.textContent = '';
+        }
+      };
+      var cocoToggle = function (why) { if (reasons[why]) delete reasons[why]; else reasons[why] = true; cocoUpdate(); };
+      /* Déjà en bas : il redit bonjour (la phrase est retapée et annoncée à nouveau) */
+      var cocoReplay = function () {
+        if (!coco.classList.contains('is-arrived')) return;
+        cocoArrive();
+        cocoLive.textContent = '';                         /* vidée puis remplie : la région live annonce de nouveau */
+        setTimeout(function () { if (coco.classList.contains('is-arrived')) cocoLive.textContent = COCO_MSG; }, 60);
+      };
+
+      /* Souris : petit délai d'intention avant de descendre (on ne fait que passer en quittant la nav),
+         la zone sensible (pieds, puis corps et corde) suit Coco, délai de grâce en sortant */
+      cocoRig.addEventListener('pointerenter', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        clearTimeout(leaveTimer); clearTimeout(enterTimer);
+        if (coco.classList.contains('is-down')) { reasons.hover = true; cocoUpdate(); return; }
+        enterTimer = setTimeout(function () { reasons.hover = true; cocoUpdate(); }, 200);
+      });
+      cocoRig.addEventListener('pointerleave', function (e) {
+        if (e.pointerType !== 'mouse') return;
+        clearTimeout(leaveTimer); clearTimeout(enterTimer);
+        leaveTimer = setTimeout(function () { delete reasons.hover; cocoUpdate(); }, 400);
+      });
+      cocoRig.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType; });
+
+      /* Tactile : un tap le fait descendre, un autre (sur lui, sa bulle ou ailleurs) le fait remonter.
+         Clavier (Entrée / Espace) et clic souris : le fait descendre, ou lui fait redire bonjour s'il est déjà en bas.
+         Échap le fait remonter. */
+      cocoBtn.addEventListener('click', function (e) {
+        if (lastPointer === 'touch' || lastPointer === 'pen') cocoToggle('tap');
+        else if (coco.classList.contains('is-down')) cocoReplay();
+        else { reasons[e.detail === 0 ? 'focus' : 'hover'] = true; cocoUpdate(); }
+        lastPointer = '';
+      });
+      document.addEventListener('pointerdown', function (e) {
+        if (reasons.tap && !cocoBtn.contains(e.target)) { delete reasons.tap; cocoUpdate(); }
+      });
+      cocoBtn.addEventListener('focus', function () {
+        var kb = true; try { kb = cocoBtn.matches(':focus-visible'); } catch (err) {}   /* focus clavier seulement */
+        if (kb) { reasons.focus = true; cocoUpdate(); }
+      });
+      cocoBtn.addEventListener('blur', function () { delete reasons.focus; cocoUpdate(); });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && hasReason()) { clearReasons(); cocoUpdate(); }
+      });
+      /* Le menu mobile passe devant : Coco remonte (et le CSS le masque tant que le menu est ouvert) */
+      var cocoBurger = $('#nav-burger');
+      if (cocoBurger) cocoBurger.addEventListener('click', function () { clearReasons(); cocoUpdate(); });
+    }
+  } catch (err) {
+    /* Coco n'est qu'un décor : sans lui, la page reste entière. */
     if (window.console) console.error(err);
   }
 })();
