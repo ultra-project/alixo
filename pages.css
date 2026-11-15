@@ -3,7 +3,7 @@
    À charger après /site.css. Trois blocs :
    1. en-tête de page (.page-head) ;
    2. prose : contenus longs (.doc-main, .prose) ;
-   3. composants hérités de systeme.css et documentation.css, mêmes noms de classes et mêmes ids
+   3. composants des pages système et de la documentation, sous leurs noms de classes et ids d'origine
       (.sys-*, .defi-*, .st-*, .vs-*, .doc-*), redessinés : cartes blanches bordées, sans ombre.
    Aucun effet de survol autre que couleur, fond, opacité ou soulignement.
    ============================================================ */
@@ -18,7 +18,7 @@
   --ok-ink: #1c6a4f; --warn-ink: #7f5113; --down-ink: #93372f;
   --ok-bg: #e7f4ee; --warn-bg: #f8eedd; --down-bg: #f9e9e7;
 
-  /* Ancien vocabulaire (styles.css) encore lu par des pages ou des scripts : ramené sur la nouvelle palette */
+  /* Ancien vocabulaire de variables, encore lu par des pages ou des scripts : ramené sur la nouvelle palette */
   --tint: #6d3fe0; --tint-ink: #5a2fc9; --tint-soft: var(--tile-lilac);
   --bg-alt: var(--fill); --border-strong: var(--line-strong); --hover: var(--tile-lilac);
   --c-ret: var(--warn); --c-demand: var(--down); --c-supply: var(--ok);
@@ -159,7 +159,7 @@
   border: 1px solid var(--border); border-radius: 999px; background: #fff; font-weight: 600; font-size: 15px; line-height: 1.4; color: var(--ink);
 }
 .sys-status strong { font-weight: 700; }
-.sys-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); animation: sys-pulse 1.6s ease-in-out infinite; }
+.sys-dot { flex: none; width: 10px; height: 10px; border-radius: 50%; background: var(--warn); animation: sys-pulse 1.6s ease-in-out 3; }   /* 3 pulsations, puis posé */
 @keyframes sys-pulse { 50% { opacity: .3; } }
 
 /* 404 : le nombre en aplat lilas, Coco et sa loupe posés à côté (décor, aria-hidden) */
@@ -188,7 +188,7 @@
 .sys-versions summary::before { content: "›"; align-self: center; color: var(--ink-2); font-size: 20px; line-height: 1; transition: transform .15s; }
 .sys-versions details[open] summary::before { transform: rotate(90deg); }
 .sys-versions .vs-ver { font-family: var(--font-display); font-weight: 700; font-size: 1.1rem; letter-spacing: -.02em; color: var(--ink); }
-.sys-versions .vs-title { flex: 1 1 auto; color: var(--ink-2); font-size: 14.5px; }
+.sys-versions .vs-title { flex: 1 1 0; min-width: 12em; color: var(--ink-2); font-size: 14.5px; }
 .sys-versions .vs-date { margin-left: auto; font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; color: var(--ink-2); }
 .sys-versions .vs-notes { padding: 4px 20px 18px; border-top: 1px solid var(--border); }
 .sys-versions .vs-notes h4 { margin: 16px 0 6px; }
@@ -260,7 +260,7 @@ html[data-automation="1"] .defi-zone { border-style: dashed; border-color: var(-
 .st-card:focus:not(:focus-visible):not(:target) { outline: none; }
 
 /* ============================================================
-   3d. Documentation (documentation.css) : recherche, sommaire, cartes, étapes
+   3d. Documentation : recherche, sommaire, cartes, étapes (base ; /doc.css affine pour /documentation.html)
    ============================================================ */
 .doc-search { position: relative; max-width: 560px; margin: 28px 0 0; }
 .doc-search input {

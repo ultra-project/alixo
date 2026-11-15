@@ -1,7 +1,7 @@
 /* ============================================================
    Alixo — pages du site (hors accueil). Vanilla, sans dépendance.
    Un seul rôle : le menu mobile de la navigation flottante (même logique que accueil.js).
-   Le bouton #nav-burger et le volet #nav-sheet sont écrits dans la page (voir /tools/gabarit-nav-pied.html) :
+   Le bouton #nav-burger et le volet #nav-sheet sont écrits dans la page (voir /tools/gabarit-nav-pied.txt) :
    sans ce script, la barre et tous les liens du pied de page restent utilisables.
    Mode clair seul : ce script ne lit ni n'écrit aucune préférence de thème.
    ============================================================ */

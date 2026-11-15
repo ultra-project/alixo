@@ -1,7 +1,7 @@
 /* ============================================================
    Alixo — Documentation (/documentation.html uniquement)
    À charger après /site.css et /pages.css : cette feuille SURCHARGE les styles .doc-* provisoires de pages.css.
-   Mêmes classes et mêmes ids que l'ancienne documentation.css (lus par documentation.js) :
+   Classes et ids lus par documentation.js :
    #doc-q, #doc-noresult, .doc-main > section, .doc-side a, .doc-side-toggle, .grp, .on, .open, mark.hit.
    Règles du site : cartes blanches bordées 1 px, aucune ombre, rayons 20 / 32 px,
    survol = couleur, fond ou soulignement uniquement.
@@ -33,7 +33,9 @@
 .doc-search input:focus, .doc-search input:focus-visible { outline: none; border: 0; border-radius: 0; }
 .doc-search kbd { position: static; flex: none; margin: 0; min-width: 26px; padding: 2px 8px; font-size: 13px; text-align: center; color: var(--ink-2); }
 
-.doc-quick { gap: 8px; margin-top: 20px; }
+/* Résultat de la recherche (role=status, rempli par documentation.js) : la ligne garde sa place, vide ou non */
+.doc-count { min-height: 20px; margin-top: 8px; font-size: 13.5px; line-height: 20px; color: var(--ink-2); }
+.doc-quick { gap: 8px; margin-top: 6px; }
 .doc-quick a { min-height: 38px; padding: 7px 15px; font-weight: 500; color: var(--ink-2); transition: background-color .15s, border-color .15s, color .15s; }
 .doc-quick a:hover { background: var(--tile-lilac); border-color: #d8cffa; color: var(--ink); }
 
@@ -158,9 +160,13 @@ mark.hit { background: var(--hl-lilac); color: var(--ink); border-radius: 4px; p
   .doc-layout { grid-template-columns: 232px minmax(0, 1fr); }
 }
 @media (max-width: 900px) {
-  .doc-layout { grid-template-columns: minmax(0, 1fr); gap: 28px; }
-  /* Sommaire : une carte repliée en tête de page, ouverte par .doc-side-toggle */
-  .doc-side { position: static; max-height: none; padding: 6px; border: 1px solid var(--border); border-radius: var(--r-m); background: #fff; overflow: visible; }
+  /* Une colonne, en flux simple (pas de grille) : le sommaire peut ainsi rester collé sur toute la hauteur de la page */
+  .doc-layout { display: block; }
+  /* Sommaire : une carte repliée, collée sous la barre de navigation, ouverte par .doc-side-toggle.
+     Barre : 16 + 58 px ; sommaire replié : 84 → 146 px ; une ancre s'arrête donc sous les deux. */
+  html { scroll-padding-top: 156px; }
+  .doc-side { position: sticky; top: 84px; z-index: 5; max-height: none; margin-bottom: 28px; padding: 6px; border: 1px solid var(--border); border-radius: var(--r-m); background: #fff; overflow: visible; }
+  .doc-side.open { max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow: auto; }
   .doc-side-toggle { -webkit-tap-highlight-color: transparent; min-height: 48px; padding: 8px 14px; border-radius: 14px; font-size: 15.5px; color: var(--ink); transition: background-color .15s; }
   .doc-side-toggle:hover { background: var(--fill); }
   .doc-side-toggle span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--tile-lilac); font-size: 15px; line-height: 1; }

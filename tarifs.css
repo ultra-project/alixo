@@ -105,7 +105,7 @@ html.js .reveal:not(.in) { opacity: 0; translate: 0 24px; }
 .tf-plans .plan-list strong { font-weight: 700; color: var(--ink); }
 .tf-plans .tf-plus .plan-list strong { color: #fff; }
 .tf-cta { gap: .3em; }
-.tf-plans .plan-note { margin-top: -6px; font-size: 13.5px; line-height: 1.55; color: #fff; }
+.tf-plans .plan-note { margin-top: -6px; font-size: 14px; line-height: 1.55; color: #fff; }
 .tf-plans .plan-note a { color: #fff; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 .tf-plans .plan-note a:hover { text-decoration-thickness: 2px; }
 
@@ -136,7 +136,7 @@ html.js .reveal:not(.in) { opacity: 0; translate: 0 24px; }
 .tf-coco.is-talking .tf-coco-body { animation: tf-hop .62s cubic-bezier(.3, .7, .3, 1) both; }
 .tf-coco.is-talking::before { animation: tf-shadow-hop .62s cubic-bezier(.3, .7, .3, 1) both; }
 
-/* Bulle terminal (rapatriée de styles.css) : aplat sombre, sans ombre ni flou.
+/* Bulle terminal : aplat sombre, sans ombre ni flou.
    À gauche de Coco, posée juste au-dessus du bord de la carte : elle ne couvre ni la bascule, ni le titre, ni le prix. */
 .coco-bubble {
   position: absolute; right: calc(100% + 4px); bottom: calc(var(--tf-coco-sink) + 12px);
@@ -291,8 +291,9 @@ html.js .tf-ladder:not(.in) .tf-bar-price { opacity: 0; }
 .faq details strong { color: var(--ink); }
 
 /* ---------- Réactif ---------- */
-/* Deux colonnes : les rangées (titre, prix, liste, bouton, mention) sont partagées par les deux cartes,
-   titres, prix, listes et boutons tombent donc à la même hauteur. */
+/* Deux colonnes : les rangées (titre, prix, liste, bouton, mention) sont partagées par les deux cartes ;
+   titres, prix et listes tombent donc à la même hauteur. La carte gratuite n'a pas de mention : son bouton
+   occupe les deux dernières rangées et se cale en bas de carte (il n'est pas aligné sur celui d'Alixo+). */
 @media (min-width: 900px) {
   .tf-plans { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
   @supports (grid-template-rows: subgrid) {

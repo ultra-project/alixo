@@ -180,6 +180,12 @@ mark.hl-blue::before { background: var(--hl-blue); }
   .nav-links + .nav-actions { margin-left: auto; }
   .nav-burger { display: block; }
 }
+@media (max-width: 350px) {
+  /* très petit écran : le logo et le bouton tiennent sur une ligne */
+  .nav-pill { gap: 8px; padding-left: 14px; }
+  .nav-actions .btn-s { padding-inline: 12px; }
+  .nav-actions .btn-s .ico { display: none; }
+}
 @media (min-width: 640px) {
   .foot-cols { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

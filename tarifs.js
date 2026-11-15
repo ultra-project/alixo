@@ -90,6 +90,7 @@
     const typedEl = coco.querySelector('.coco-typed');
     const live = document.getElementById('tf-coco-live');
     const MSG = "Alixo+ n'attend plus que toi 😝";
+    const MSG_SR = "Alixo+ n'attend plus que toi";   /* version annoncée : le texte seul, sans l'emoji */
     /* découpe en graphèmes : l'emoji s'affiche entier, jamais à moitié */
     const CHARS = (typeof Intl !== 'undefined' && Intl.Segmenter)
       ? Array.from(new Intl.Segmenter('fr', { granularity: 'grapheme' }).segment(MSG), s => s.segment)
@@ -111,7 +112,7 @@
     };
     const start = () => {
       coco.classList.add('is-talking');
-      if (live && !announced) { live.textContent = MSG; announced = true; }   /* annoncé une seule fois, en entier */
+      if (live && !announced) { live.textContent = MSG_SR; announced = true; }   /* annoncé une seule fois, en entier */
       clearTimeout(typeTimer); clearTimeout(autoTimer);
       if (calm.matches) { if (typedEl) typedEl.textContent = MSG; typed(); return; }
       typing = true;

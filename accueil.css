@@ -2,7 +2,7 @@
    Alixo — Page d'accueil : « aplats francs »
    Le bleu et le violet du logo deviennent de grandes surfaces
    pleines ; le texte et l'interface du produit se posent dessus.
-   Feuille autonome : l'accueil ne charge pas styles.css (les autres pages, si).
+   Feuille autonome : l'accueil ne charge que celle-ci (les autres pages chargent /site.css, qui en reprend le socle).
    Mode clair uniquement. Aucune ressource externe.
    ============================================================ */
 
@@ -564,6 +564,12 @@ html.js .reveal:not(.in) .quiz-bar u { transform: scaleX(0); }
   /* la première colonne reste en place pendant le défilement horizontal */
   .cmp tbody th, .cmp thead td { position: sticky; left: 0; z-index: 1; background: var(--bg); }
   .cmp-hint { display: block; }
+}
+@media (max-width: 350px) {
+  /* très petit écran : le logo et le bouton tiennent sur une ligne */
+  .nav-pill { gap: 8px; padding-left: 14px; }
+  .nav-actions .btn-s { padding-inline: 12px; }
+  .nav-actions .btn-s .ico { display: none; }
 }
 @media (max-width: 479px) {
   .hero-ctas .btn { width: 100%; }

@@ -16,14 +16,14 @@
 <meta name="theme-color" content="#f7f8fa">
 <link rel="stylesheet" href="/fonts/fonts.css">
 <link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css?v=20261115">
-<link rel="stylesheet" href="/pages.css?v=20261115">
-<link rel="stylesheet" href="/doc.css?v=20261115">
+<link rel="stylesheet" href="/site.css?v=20261116">
+<link rel="stylesheet" href="/pages.css?v=20261116">
+<link rel="stylesheet" href="/doc.css?v=20261116">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <script defer src="/protection.js"></script>
-<script defer src="/site.js?v=20261115"></script>
-<script defer src="/documentation.js?v=20261115"></script>
+<script defer src="/site.js?v=20261116"></script>
+<script defer src="/documentation.js?v=20261116"></script>
 </head>
 <body>
 
@@ -73,6 +73,7 @@
       <input id="doc-q" type="search" placeholder="Rechercher dans la documentation… (fiche d'arrêt, formule, Ctrl+K, export)" aria-label="Rechercher dans la documentation" autocomplete="off">
       <kbd aria-hidden="true">/</kbd>
     </div>
+    <p id="doc-count" class="doc-count" role="status"></p>
     <div class="doc-quick">
       <a href="#demarrer">Premiers pas</a><a href="#menu-slash">Menu « / »</a><a href="#titres">Titres et plan</a><a href="#droit">Droit</a><a href="#formules">Formules</a><a href="#tableur">Tableurs</a><a href="#partage">Partage</a><a href="#export">Export</a><a href="#raccourcis">Raccourcis</a>
     </div>
@@ -209,7 +210,7 @@
       <h2>Titres et <em>plan automatique</em></h2>
       <p>La numérotation juridique I. A. 1. a. se gère toute seule, et le plan du cours se construit dans le volet de gauche.</p>
       <figure class="doc-video"><video controls preload="none" poster="videos/02-titres-plan.jpg"><source src="videos/02-titres-plan.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Titres et plan automatique</b><span class="dur">0:36</span></figcaption></figure>
-      <div class="doc-table-wrap"><table class="doc-table">
+      <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Titres et plan automatique"><table class="doc-table">
         <tr><th>Niveau</th><th>En début de ligne</th><th>Raccourci</th><th>Menu « / »</th></tr>
         <tr><td>Partie</td><td>«&nbsp;I.&nbsp;» ou «&nbsp;I)&nbsp;» puis un espace</td><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1</kbd></td><td>Partie (niveau I.)</td></tr>
         <tr><td>Section</td><td>«&nbsp;A.&nbsp;»</td><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>2</kbd></td><td>Section (niveau A.)</td></tr>
@@ -308,7 +309,7 @@
       <h2><em>Formules</em></h2>
       <figure class="doc-video"><video controls preload="none" poster="videos/07-formule.jpg"><source src="videos/07-formule.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Formules et bibliothèque de formules</b><span class="dur">0:37</span></figcaption></figure>
       <p>/formule (ou <kbd>Ctrl</kbd><kbd>E</kbd>)&nbsp;: on tape la formule <strong>en ligne</strong>, <kbd>Entrée</kbd> la compose. Cliquer sur la formule pour la modifier, <kbd>Maj</kbd><kbd>Entrée</kbd> pour une seconde ligne, <kbd>Échap</kbd> pour annuler.</p>
-      <div class="doc-table-wrap"><table class="doc-table">
+      <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Formules"><table class="doc-table">
         <tr><th>Tu tapes</th><th>Tu obtiens</th></tr>
         <tr><td><code>e_p = (dQ/Q)/(dP/P)</code></td><td>Fraction de fractions, indice p</td></tr>
         <tr><td><code>x_i^2</code> · <code>P_(x)^2</code></td><td>Indice et exposant empilés</td></tr>
@@ -603,7 +604,7 @@
     <section id="plateformes">
       <div class="eyebrow">Réglages</div>
       <h2>PC, web et <em>mobile</em></h2>
-      <div class="doc-table-wrap"><table class="doc-table">
+      <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : PC, web et mobile"><table class="doc-table">
         <tr><th>Version</th><th>Où</th><th>Particularités</th></tr>
         <tr><td>Windows</td><td><a href="/telecharger/windows/">Alixo-Setup.exe</a>, <a href="/telecharger/windows-portable/">version portable</a></td><td>Mises à jour automatiques au démarrage, export PDF natif, liens Légifrance dans le navigateur, document à côté mémorisé par séance, protocole alixo:// pour les liens de partage. SmartScreen&nbsp;: «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».</td></tr>
         <tr><td>macOS</td><td><a href="/telecharger/mac/">Alixo-Mac.dmg</a> (universel)</td><td>Application non signée par Apple&nbsp;: au premier lancement, Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (<a href="/telecharger/mac/">mode d'emploi</a>). Les mises à jour sont signalées par une notification.</td></tr>
@@ -615,7 +616,7 @@
     <section id="raccourcis">
       <div class="eyebrow">Réglages</div>
       <h2>Raccourcis <em>clavier</em></h2>
-      <div class="doc-table-wrap"><table class="doc-table">
+      <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Raccourcis clavier"><table class="doc-table">
         <tr><th>Raccourci</th><th>Action</th></tr>
         <tr><td><kbd>/</kbd></td><td>Insérer un bloc (sur une ligne vide) ou un élément en ligne (après un espace)</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>K</kbd></td><td>Recherche universelle</td></tr>

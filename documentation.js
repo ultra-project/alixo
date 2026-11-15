@@ -17,6 +17,8 @@ function reveal(a) {
 /* La barre de navigation est fixe (pilule flottante) : la zone d'observation commence dessous, juste après la ligne
    où s'arrête une section visée par une ancre (scroll-padding-top 96 px + scroll-margin-top 8 px = 104 px).
    Section courante = la première, dans l'ordre de la page, qui traverse cette zone. */
+/* Sur téléphone, le sommaire replié reste collé sous la barre : la zone commence sous lui (voir doc.css, scroll-padding-top). */
+const SPY_TOP = matchMedia('(max-width: 900px)').matches ? 172 : 112;
 const seen = new Set();
 const spy = new IntersectionObserver(entries => {
   for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
@@ -28,7 +30,7 @@ const spy = new IntersectionObserver(entries => {
     a.classList.toggle('on', on);
     if (on) { a.setAttribute('aria-current', 'location'); reveal(a); } else a.removeAttribute('aria-current');
   });
-}, { rootMargin: '-112px 0px -70% 0px', threshold: 0 });
+}, { rootMargin: '-' + SPY_TOP + 'px 0px -70% 0px', threshold: 0 });
 targets.forEach(t => spy.observe(t));
 
 /* Sommaire : groupes repliables (clic ou Entrée / Espace sur le titre du groupe) */
@@ -45,11 +47,13 @@ const toggle = document.querySelector('.doc-side-toggle');
 const setSide = open => { side.classList.toggle('open', open); if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false'); };
 if (toggle) toggle.addEventListener('click', () => setSide(!side.classList.contains('open')));
 links.forEach(a => a.addEventListener('click', () => setSide(false)));
+addEventListener('keydown', e => { if (e.key === 'Escape' && side.classList.contains('open')) { setSide(false); if (toggle) toggle.focus(); } });
 
 /* Recherche dans la page : filtre les sections, surligne les mots */
 const input = document.getElementById('doc-q');
 const sections = [...document.querySelectorAll('.doc-main > section')];
 const noRes = document.getElementById('doc-noresult');
+const countEl = document.getElementById('doc-count');   /* role=status : le nombre de sections trouvées est annoncé */
 const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 function clearMarks() { document.querySelectorAll('mark.hit').forEach(m => m.replaceWith(m.textContent)); }
 function markIn(el, q) {
@@ -74,10 +78,24 @@ function search() {
     if (ok && q.length >= 2) markIn(s, q);
   }
   noRes.style.display = shown ? 'none' : 'block';
+  if (countEl) {
+    const word = input.value.trim();   /* espaces insécables à l'intérieur des guillemets */
+    const msg = q.length < 2 ? '' : !shown ? 'Aucune section ne contient ce mot.'
+      : shown + (shown > 1 ? ' sections contiennent' : ' section contient') + ' «\u00a0' + word + '\u00a0».';
+    if (countEl.textContent !== msg) countEl.textContent = msg;
+  }
   links.forEach(a => { const s = document.getElementById(a.getAttribute('href').slice(1)); a.style.display = (s && s.closest('section') && s.closest('section').hidden) ? 'none' : ''; });
   /* un groupe du sommaire dont tous les liens sont masqués disparaît avec eux */
   document.querySelectorAll('.doc-side .grp').forEach(g => { g.hidden = ![...g.querySelectorAll('a')].some(a => a.style.display !== 'none'); });
 }
+/* Lien interne vers une section masquée par la recherche (raccourcis, sommaire, renvois dans le texte) :
+   la recherche est vidée d'abord, puis le saut se fait normalement. */
+document.addEventListener('click', e => {
+  const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return;
+  const id = decodeURIComponent(a.getAttribute('href').slice(1)); if (!id) return;
+  const t = document.getElementById(id), s = t && t.closest('.doc-main > section');
+  if (s && s.hidden) { clearTimeout(timer); input.value = ''; search(); }
+});
 let timer; input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 120); });
 addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== input && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); input.focus(); } if (e.key === 'Escape' && document.activeElement === input) { input.value = ''; search(); input.blur(); } });
 if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView(), 50); }

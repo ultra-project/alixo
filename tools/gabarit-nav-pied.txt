@@ -14,7 +14,8 @@
      Une page absente de la barre (CGV, contact…) n'est marquée que dans le pied de page.
      Les liens vers une section de l'accueil ne reçoivent jamais aria-current.
   4. Le lien d'évitement vise #contenu : poser id="contenu" sur l'en-tête de page (section.page-head),
-     ou sur <main> si la page n'a pas d'en-tête séparé.
+     ou sur <main> si la page n'a pas d'en-tête séparé. Exception : conditions.html, où #contenu est une ancre
+     historique du texte (section 4) ; l'en-tête y porte id="haut" et le lien d'évitement vise #haut.
   5. Feuilles et scripts attendus : /site.css (barre, pied), /pages.css, /site.js (menu mobile). Pas de bouton de thème.
 
   Toute modification de la barre ou du pied se fait d'abord dans index.html, puis ici, puis dans chaque page.
