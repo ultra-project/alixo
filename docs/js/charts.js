@@ -43,7 +43,7 @@ window.AlixoCharts = (() => {
   }
 
   function svg(b, { plain = false } = {}) {
-    const ck = TYPES[b.ck] ? b.ck : 'bar';
+    const ck = Object.prototype.hasOwnProperty.call(TYPES, b.ck) ? b.ck : 'bar';   // 1.51 : propriété propre (« constructor »… ne désigne aucun type)
     const ink = plain ? '#1a1a1a' : 'var(--ink)', ink2 = plain ? '#5f6368' : 'var(--ink-2)', hair = plain ? '#d5d8dc' : 'var(--border)', paper = plain ? '#ffffff' : 'var(--paper)';
     const font = plain ? 'Arial, Helvetica, sans-serif' : 'var(--font-ui)';
     const labels = Array.isArray(b.labels) ? b.labels : [];

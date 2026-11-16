@@ -245,7 +245,7 @@
   };
 
   function renderSVG(gtype, params) {
-    const t = TYPES[gtype];
+    const t = Object.prototype.hasOwnProperty.call(TYPES, gtype) ? TYPES[gtype] : null;   // 1.51 : propriété propre (« constructor »… ne désigne aucun type)
     if (!t) return svgWrap(axes('x', 'y'));
     if (t.engine === 'two') return twoCurves(t.cfg, params || {});
     if (t.engine === 'fn') return multiFn(t.cfg);

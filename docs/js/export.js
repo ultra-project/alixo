@@ -16,6 +16,10 @@
   const ALIGN_OF = b => (['center', 'right', 'justify'].includes(b.al) ? b.al : 'left');
   /* bloc « cartes » : titres / textes non vides */
   const cardsOfB = b => (Array.isArray(b.cards) ? b.cards : []).map(c => ({ t: c && c.t || '', x: c && c.x || '' })).filter(c => (c.t + c.x).replace(/<[^>]+>/g, '').trim());
+  /* 1.51 : événements non vides d'une frise chronologique (js/timeline.js) — champs assainis (AlixoTimeline.safeEvents) :
+     htmlRuns les analyse par innerHTML, ils ne doivent jamais porter le HTML brut d'un document reçu */
+  const timelineEvents = b => (window.AlixoTimeline ? AlixoTimeline.safeEvents(b).filter(e => !AlixoTimeline.isEmptyEvent(e)) : []);
+  const timelineTitle = b => (window.AlixoTimeline ? AlixoTimeline.safeTitle(b) : '');
   const cellTaOf = (b, r, c) => Array.isArray(b.ta) && Array.isArray(b.ta[r]) ? (b.ta[r][c] || 'left') : 'left';
   const JURIS_COLOR = '#8c4351';
   const INK = [26, 26, 26], INK2 = [70, 73, 78], INK3 = [133, 137, 143], ACCENT = [51, 101, 138], HAIR = [201, 204, 209];
@@ -98,7 +102,7 @@
   }
   /* score clinique et calculateur : lignes de texte pour l'export */
   function scoreLines(b) {
-    const sc = window.AlixoMed && AlixoMed.SCORES[b.sk]; if (!sc) return { title: 'Score', rows: [], total: '' };
+    const sc = window.AlixoMed && Object.prototype.hasOwnProperty.call(AlixoMed.SCORES, b.sk) && AlixoMed.SCORES[b.sk]; if (!sc) return { title: 'Score', rows: [], total: '' };
     const vals = Array.isArray(b.vals) ? b.vals : [];
     let total = 0;
     const rows = sc.items.map((it, i) => {
@@ -111,7 +115,7 @@
     return { title: sc.name, sub: sc.sub || '', rows, total: String(total) + (it ? ' — ' + it[2] : '') };
   }
   function calcLines(b) {
-    const c = window.AlixoMed && AlixoMed.CALCS[b.ck]; if (!c) return { title: 'Calculateur', rows: [], total: '' };
+    const c = window.AlixoMed && Object.prototype.hasOwnProperty.call(AlixoMed.CALCS, b.ck) && AlixoMed.CALCS[b.ck]; if (!c) return { title: 'Calculateur', rows: [], total: '' };
     const vals = typeof mcalcVals === 'function' ? mcalcVals(b) : {};
     let res = []; try { res = c.out(vals); } catch { res = []; }
     const rows = c.inputs.map(inp => { const v = vals[inp.k]; const lab = inp.sel ? ((inp.sel.find(x => x[0] === v) || [])[1] || '') : (typeof v === 'number' && isFinite(v) ? String(v).replace('.', ',') : String(v ?? '')); return [inp.l, lab + (inp.u && lab ? ' ' + inp.u : '')]; });
@@ -304,8 +308,12 @@
     const scale = Math.min(1, 1600 / Math.max(sw, sh));
     const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(sw * scale)); c.height = Math.max(1, Math.round(sh * scale));
     const ctx = c.getContext('2d');
-    if (mime === 'image/jpeg') { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); }
     ctx.drawImage(img, sx, sy, sw, sh, 0, 0, c.width, c.height);
+    /* 1.51 : réglages non destructifs (b.fx : luminosité, contraste, saturation, noir et blanc, coins) « cuits » ici —
+       js/imgtools.js ; bordure et ombre ne sont pas exportées. Le fond blanc du JPEG est posé après, sous l'image :
+       une image détourée ou aux coins arrondis sort sur blanc, pas sur noir. */
+    if (b.fx && window.AlixoImgTools) { try { AlixoImgTools.bake(ctx, b.fx, c.width, c.height); } catch (e) { console.error('Retouches non appliquées à l’export :', e); } }
+    if (mime === 'image/jpeg') { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.globalCompositeOperation = 'source-over'; }
     const blob = await new Promise(res => c.toBlob(res, mime, 0.9));
     return { data: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height, pw: c.width, ph: c.height };
   }
@@ -505,6 +513,33 @@
           pdf.y += 9; pdf.ensure(12);
           pdf.rect(pdf.M + pdf.cw * 0.1, pdf.y, pdf.cw * 0.8, 0.8, HAIR);
           pdf.y += 11; break;
+        case 'timeline': {   // 1.51 : frise → date en gras de couleur à gauche, titre et description à droite, filet vertical
+          const evs = timelineEvents(b), ttl = timelineTitle(b);
+          if (stripTags(ttl).trim()) { pdf.y += 4; pdf.ensure(40); layoutRuns(pdf, htmlRuns(ttl).map(r => Object.assign({}, r, { b: true })), { size: 12, x: pdf.M, width: pdf.cw, lineH: 16 }); pdf.y += 2; }
+          if (!evs.length) break;
+          const dw = 96, gx = 16, xr = pdf.M + dw + gx, wr = pdf.cw - dw - gx, railX = pdf.M + dw + gx / 2 - 0.5;
+          pdf.y += 5;
+          for (const e of evs) {
+            const col = parseColor(e.c) || ACCENT;
+            const drawEv = dry => {
+              const y0 = pdf.y; pdf.dry = dry;
+              let yl = y0;
+              if (stripTags(e.d).trim()) { layoutRuns(pdf, htmlRuns(e.d).map(r => Object.assign({}, r, { b: true, color: col })), { size: 9.5, x: pdf.M, width: dw, lineH: 13, align: 'right' }); yl = pdf.y; pdf.y = y0; }
+              if (stripTags(e.t).trim()) layoutRuns(pdf, htmlRuns(e.t).map(r => Object.assign({}, r, { b: true })), { size: 11, x: xr, width: wr, lineH: 14.5 });
+              if (stripTags(e.x).trim()) layoutRuns(pdf, htmlRuns(e.x), { size: 10, x: xr, width: wr, lineH: 13.5, color: INK2 });
+              const hh = Math.max(pdf.y, yl) - y0; pdf.dry = false; pdf.y = y0; return hh;
+            };
+            const h = Math.max(drawEv(true), 13);
+            pdf.ensure(h + 8);
+            const top = pdf.y;
+            pdf.rect(railX, top, 1, h + 8, HAIR);
+            pdf.rect(railX - 2, top + 3.5, 5, 5, col);
+            drawEv(false);
+            pdf.y = top + h + 8;
+          }
+          pdf.y += 4;
+          break;
+        }
         case 'tree': {   // 1.20 : arbre → plan indenté
           const walk = (n, depth) => {
             if (!n) return;
@@ -766,6 +801,20 @@
     return `<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblBorders>${borders}</w:tblBorders><w:tblCellMar><w:left w:w="120" w:type="dxa"/><w:right w:w="120" w:type="dxa"/><w:top w:w="80" w:type="dxa"/><w:bottom w:w="80" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid>${Array.from({ length: per }, () => `<w:gridCol w:w="${w}"/>`).join('')}</w:tblGrid>${trs}</w:tbl>${para('')}`;
   }
 
+  /* 1.51 : frise chronologique → tableau Word à deux colonnes sans bordures (date à droite d'un filet de couleur, titre et description) */
+  function timelineXml(b) {
+    const evs = timelineEvents(b), ttl = timelineTitle(b);
+    let out = stripTags(ttl).trim() ? para(runsXml(htmlRuns(ttl), { b: true }), '<w:spacing w:before="120" w:after="80"/><w:keepNext/>') : '';
+    if (!evs.length) return out;
+    const w1 = 1900, w2 = 7100;
+    const trs = evs.map(e => {
+      const col = hex(parseColor(e.c) || ACCENT);
+      const right = (stripTags(e.t).trim() ? para(runsXml(htmlRuns(e.t), { b: true }), '<w:spacing w:after="20"/>') : '') + (stripTags(e.x).trim() || !stripTags(e.t).trim() ? para(runsXml(htmlRuns(e.x || ''), { color: hex(INK2) })) : '');
+      return `<w:tr><w:trPr><w:cantSplit/></w:trPr><w:tc><w:tcPr><w:tcW w:w="${w1}" w:type="dxa"/><w:tcBorders><w:right w:val="single" w:sz="12" w:space="0" w:color="${col}"/></w:tcBorders></w:tcPr>${para(runsXml(htmlRuns(e.d || ''), { b: true, color: col, sz: 19 }), '<w:jc w:val="right"/>')}</w:tc><w:tc><w:tcPr><w:tcW w:w="${w2}" w:type="dxa"/></w:tcPr>${right}</w:tc></w:tr>`;
+    }).join('');
+    return out + `<w:tbl><w:tblPr><w:tblW w:w="9000" w:type="dxa"/><w:tblCellMar><w:left w:w="140" w:type="dxa"/><w:right w:w="140" w:type="dxa"/><w:top w:w="60" w:type="dxa"/><w:bottom w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="${w1}"/><w:gridCol w:w="${w2}"/></w:tblGrid>${trs}</w:tbl>${para('')}`;
+  }
+
   function imageParaXml(n, img, frac = 1, align = 'center') {
     const cx = Math.round(5400000 * frac), cy = Math.round(cx * img.h / img.w);
     return `<w:p><w:pPr><w:jc w:val="${align === 'left' ? 'left' : align === 'right' ? 'right' : 'center'}"/><w:spacing w:before="120" w:after="120"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="${n}" name="Graphique ${n}"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${n}" name="graph${n}.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdImg${n}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
@@ -850,6 +899,7 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         }
         case 'pb': body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; break;   // 1.23 : saut de page
         case 'cards': body += cardsTableXml(b); break;
+        case 'timeline': body += timelineXml(b); break;   // 1.51
         case 'tree': {   // 1.20 : arbre → plan indenté
           const walk = (n, depth) => { if (!n) return; body += para((depth ? runXml({ text: '└ ', color: INK3 }) : '') + runsXml(htmlRuns(n.t || ''), depth ? {} : { b: true }), `<w:ind w:left="${360 + depth * 360}"/>`); (n.k || []).forEach(c => walk(c, depth + 1)); };
           walk(b.root, 0);

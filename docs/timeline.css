@@ -1,0 +1,92 @@
+/* ============================================================
+   Bloc « Frise chronologique » (1.51) — js/timeline.js
+   Vertical par défaut (rail fin à gauche, pastille à la couleur de l'événement) ; horizontal (.tml-h) sur écran large
+   uniquement : sous 600 px, à l'impression et dans le PDF, la frise est toujours verticale.
+   --tc : couleur de l'événement (posée par le JS, validée #rrggbb), défaut = teinte du dossier.
+   ============================================================ */
+/* --tml-rail : l'axe de la frise, assez marqué pour se lire dans les deux thèmes (la bordure ordinaire était presque invisible) */
+.block.timeline { position: relative; margin: 14px 0 6px; --tml-rail: color-mix(in srgb, var(--ink-3) 40%, var(--paper)); }
+.block.timeline .tml-list { list-style: none; margin: 0; padding: 0; }
+.block.timeline [data-ph] { position: relative; outline: none; min-height: 1.35em; overflow-wrap: anywhere; }
+.block.timeline [data-ph].is-blank::before { content: attr(data-ph); position: absolute; left: 0; top: 0; right: 0; color: var(--ink-3); opacity: .75; pointer-events: none; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: inherit; }
+/* la description facultative ne s'annonce que sur l'événement survolé ou en cours de saisie */
+.block.timeline .tml-ev:not(:hover):not(:focus-within) .tml-x.is-blank::before { content: none; }
+
+.tml-title { font-family: var(--font-ui); font-weight: 650; font-size: 15px; color: var(--ink); margin: 0 0 12px; }
+.tml-title.is-blank:not(.show):not(:focus) { display: none; }
+
+.tml-ev { position: relative; padding: 0 0 16px 28px; --tc: var(--tint); }
+.tml-ev:last-child { padding-bottom: 4px; }
+/* rail : un segment par événement, de sa pastille à la suivante */
+.tml-ev::before { content: ""; position: absolute; left: 4px; top: 14px; bottom: -6px; width: 2px; border-radius: 1px; background: var(--tml-rail); }
+.tml-ev:last-child::before { display: none; }
+.tml-dot { position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 18%, transparent); }
+.tml-body { min-width: 0; }
+.tml-d { font-family: var(--font-ui); font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: none; color: var(--tc); line-height: 1.6; }   /* casse saisie respectée : « v. 1450 », « IIIe s. av. J.-C. » */
+/* couleur choisie par l'utilisateur : le JS fournit --tcl / --tcd, la même teinte ramenée à un contraste lisible sur la feuille
+   claire / sombre (un jaune clair restait illisible) ; la pastille garde la couleur pure */
+html:not([data-theme="dark"]) .tml-d { color: var(--tcl, color-mix(in srgb, var(--tc) 82%, #000)); }
+html[data-theme="dark"] .tml-d { color: var(--tcd, color-mix(in srgb, var(--tc) 72%, #fff)); }.tml-t { font-weight: 600; color: var(--ink); line-height: 1.4; margin-top: 1px; }
+.tml-x { color: var(--ink-2); font-size: .94em; line-height: 1.5; margin-top: 2px; }
+
+/* outils d'un événement : au survol ou pendant la saisie */
+.tml-evtools { position: absolute; right: 0; top: -6px; display: none; gap: 1px; padding: 3px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 4px 12px rgba(0, 0, 0, .12); z-index: 3; font-family: var(--font-ui); }
+.tml-ev:hover > .tml-evtools, .tml-ev:focus-within > .tml-evtools { display: inline-flex; }
+.tml-evtools button { width: 24px; height: 24px; display: grid; place-items: center; border-radius: 5px; color: var(--ink-2); }
+.tml-evtools button svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.tml-evtools button:hover { background: var(--hover); color: var(--ink); }
+.tml-evtools button:focus-visible, .tml-tools button:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+.tml-evtools button:disabled { opacity: .35; cursor: default; background: none; }
+.tml-evtools button.danger:hover:not(:disabled) { color: var(--danger); }
+.tml-evtools .tml-swatch i { width: 12px; height: 12px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
+
+/* outils du bloc : sous la frise, au survol (même motif que le bloc Cartes) */
+.tml-tools { display: flex; gap: 4px; margin-top: 8px; opacity: 0; transition: opacity .15s; }
+.block.timeline:hover .tml-tools, .block.timeline:focus-within .tml-tools, .block.timeline.objsel .tml-tools { opacity: 1; }
+.tml-tools button { font-family: var(--font-ui); font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
+.tml-tools button:hover { background: var(--hover); color: var(--ink); }
+.tml-tools button.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
+
+/* bloc sélectionné comme objet (Échap) : pas de surlignage de texte bleu sur toute la frise */
+.block.timeline.objsel:not(:focus-within) ::selection { background: transparent; }
+@media (max-width: 600px) { .tml-tools [data-tml="dir"] { display: none; } }   /* toujours verticale sur un petit écran */
+
+/* ---------- affichage horizontal (écran large uniquement) ---------- */
+@media screen and (min-width: 601px) {
+  body:not(.printing) .block.timeline.tml-h .tml-scroll { overflow-x: auto; padding: 6px 0 8px; scrollbar-width: thin; }
+  body:not(.printing) .block.timeline.tml-h .tml-list { display: flex; align-items: flex-start; min-width: min-content; }
+  body:not(.printing) .block.timeline.tml-h .tml-ev { flex: 1 0 180px; max-width: 280px; padding: 24px 20px 4px 0; }
+  body:not(.printing) .block.timeline.tml-h .tml-ev::before { display: block; left: 0; right: 0; top: 10px; bottom: auto; width: auto; height: 2px; }
+  body:not(.printing) .block.timeline.tml-h .tml-ev:last-child::before { right: 20px; background: linear-gradient(to right, var(--tml-rail), transparent); }
+  body:not(.printing) .block.timeline.tml-h .tml-dot { top: 6px; background: var(--tc); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px color-mix(in srgb, var(--tc) 30%, transparent); }
+  body:not(.printing) .block.timeline.tml-h .tml-evtools { top: 22px; right: 20px; }
+}
+
+/* ---------- lecture seule, impression, page web exportée : ni outils ni champs vides ---------- */
+body.readonly .block.timeline .is-blank, body.printing .block.timeline .is-blank, .exp-title + #blocks .block.timeline .is-blank { display: none !important; }
+body.printing .tml-tools, body.printing .tml-evtools, .bd-bbody .tml-tools, .bd-bbody .tml-evtools { display: none !important; }
+body.printing .block.timeline .tml-scroll { overflow: visible; }
+@media print {
+  .tml-tools, .tml-evtools, .block.timeline .is-blank { display: none !important; }
+  .block.timeline .tml-scroll { overflow: visible; }
+  .tml-ev { page-break-inside: avoid; break-inside: avoid; }
+  .tml-dot, .tml-ev::before { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+@media (pointer: coarse) {
+  /* au doigt : cibles de 40 px, outils d'un événement au-dessus de sa date (ils ne la recouvrent plus), suppression de la frise à l'écart */
+  .tml-evtools button { width: 40px; height: 40px; }
+  .tml-evtools button svg { width: 16px; height: 16px; }
+  .tml-evtools { top: -50px; }   /* 40 px de bouton + marges et filet de la barre : elle finit juste au-dessus de la date */
+  .tml-tools { opacity: 1; flex-wrap: wrap; }
+  .tml-tools button { min-height: 40px; padding: 8px 14px; font-size: 12.5px; }
+  .tml-tools .danger { margin-left: auto; }
+}
+
+/* ---------- aperçu animé dans « Insérer un bloc » (js/blockpicker.js) ---------- */
+.bp-tml { position: relative; margin-top: 10px; padding-left: 18px; display: flex; flex-direction: column; gap: 11px; }
+.bp-tml::before { content: ""; position: absolute; left: 4px; top: 4px; bottom: 6px; width: 2px; border-radius: 1px; background: var(--border); transform-origin: top; animation: bptml 1.2s ease-out both; }
+.bp-tml > div { position: relative; display: flex; flex-direction: column; gap: 5px; animation: bpin .4s both; animation-delay: var(--d); }
+.bp-tml > div::before { content: ""; position: absolute; left: -18px; top: 0; width: 10px; height: 10px; border-radius: 50%; background: var(--tc, var(--tint)); }
+.bp-tml > div > b { height: 6px; width: 26%; border-radius: 3px; background: var(--tc, var(--tint)); opacity: .75; }
+.bp-tml .bp-l { height: 5px; }
+@keyframes bptml { from { transform: scaleY(0); } }

@@ -13,6 +13,9 @@
 <link rel="stylesheet" href="docedit.css">
 <link rel="stylesheet" href="alx.css">
 <link rel="stylesheet" href="imagepick.css">
+<link rel="stylesheet" href="imgtools.css">
+<link rel="stylesheet" href="timeline.css">
+<link rel="stylesheet" href="libtools.css">
 <link id="app-favicon" rel="icon" type="image/png" href="logo.png">
 <link id="app-touchicon" rel="apple-touch-icon" href="logo.png">
 <meta name="theme-color" content="#4f66e0">
@@ -96,6 +99,16 @@
         <button id="btn-new-board" hidden>＋ Planche</button>
         <button id="btn-new-quiz" hidden>＋ Quiz</button>
       </div>
+    </div>
+    <!-- 1.51 : recherche dans le dossier affiché (sous-dossiers compris) et tri — vues Grille et Liste -->
+    <div id="lib-tools" class="lib-tools" role="search" hidden>
+      <label class="lt-search">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>
+        <input id="lib-filter" type="search" placeholder="Rechercher dans ce dossier…" aria-label="Rechercher dans ce dossier" maxlength="80" autocomplete="off" spellcheck="false" enterkeyhint="search">
+        <button id="lib-filter-clear" type="button" class="lt-clear" title="Effacer la recherche" aria-label="Effacer la recherche" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      </label>
+      <button id="lib-sort" type="button" class="lt-sort" aria-haspopup="menu" aria-expanded="false" title="Trier"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h9M4 17h6"/></svg><span class="ls-lbl">Date de modification</span><svg class="ls-dir" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M6.5 13.5 12 19l5.5-5.5"/></svg></button>
+      <div id="lib-live" class="lt-live" role="status" aria-live="polite"></div>
     </div>
     <div id="doc-grid"></div>
     <div id="lib-tree" hidden></div>
@@ -364,6 +377,7 @@
   <button data-ib="crop" title="Recadrer"><svg viewBox="0 0 24 24"><path d="M6 2v14a2 2 0 0 0 2 2h14"/><path d="M18 22V8a2 2 0 0 0-2-2H2"/></svg></button>
   <button data-ib="replace" title="Remplacer l’image"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 14-5.3L20 8M20 4v4h-4M20 12a8 8 0 0 1-14 5.3L4 16M4 20v-4h4"/></svg></button>
   <button data-ib="caption" title="Légende sous l’image"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="11" rx="2"/><path d="M6 19h12"/></svg></button>
+  <button data-ib="more" title="Plus d’outils" aria-label="Plus d’outils pour l’image" aria-haspopup="menu" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" style="fill: currentColor; stroke: none"><circle cx="5.5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="18.5" cy="12" r="1.6"/></svg></button>
   <span class="tb-sep"></span>
   <button data-ib="delete" class="danger" title="Supprimer l’image"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
 </div>
@@ -419,6 +433,9 @@
 <script src="js/grammaire.js"></script>
 <script src="js/corr.js"></script>
 <script src="js/zoom.js"></script>
+<script src="js/timeline.js"></script>
+<script src="js/imgtools.js"></script>
+<script src="js/sanitize.js"></script>
 <script src="js/app.js"></script>
 <script src="js/galaxy3d.js"></script>
 <script src="js/galaxy.js"></script>

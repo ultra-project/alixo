@@ -1,0 +1,71 @@
+/* ============================================================
+   Outils d'image (1.51) — js/imgtools.js
+   Réglages non destructifs d'un bloc image : variables posées sur la figure par le JS (nombres bornés, couleur validée)
+     --fx  : filtres (brightness / contrast / saturate / grayscale)      --rad : rayon des coins
+     --bdw : épaisseur de la bordure      --bdc : couleur de la bordure (défaut : encre discrète du thème)
+   Classes : fx-rad (coins), fx-bd (bordure), fx-sh (ombre). Bordure et ombre vivent à l'écran, à l'impression et dans
+   la page web exportée ; le PDF vectoriel et Word reçoivent l'image « cuite » sans elles.
+   ============================================================ */
+.block.img .imgbox img, .crop-rect .cimg img { filter: var(--fx, none); }
+/* une image chargée ne garde pas le fond gris d'attente : une image détourée (ou aux coins arrondis) laisse voir la feuille */
+.block.img .imgbox:not(.loading):not(.missing) { background: transparent; }
+.block.img.fx-rad .imgbox { border-radius: var(--rad, 4px); }
+.block.img.fx-bd .imgbox { box-shadow: 0 0 0 var(--bdw, 1px) var(--bdc, var(--ink-3)); }
+.block.img.fx-sh .imgbox { filter: drop-shadow(0 5px 12px rgba(0, 0, 0, .26)); }
+html[data-theme="dark"] .block.img.fx-sh .imgbox { filter: drop-shadow(0 5px 14px rgba(0, 0, 0, .6)); }
+/* image sélectionnée : l'anneau de sélection s'ajoute à la bordure */
+.block.img.fx-bd.objsel .imgbox { box-shadow: 0 0 0 var(--bdw, 1px) var(--bdc, var(--ink-3)), 0 0 0 calc(var(--bdw, 1px) + 2px) var(--tint); }
+/* coins arrondis : les poignées d'angle seraient rognées par l'arrondi — celles des côtés suffisent (proportions conservées) */
+.block.img.fx-rad .rz.nw, .block.img.fx-rad .rz.ne, .block.img.fx-rad .rz.sw, .block.img.fx-rad .rz.se { display: none; }
+/* pendant le recadrage : image entière, sans arrondi ni ombre */
+.block.img.cropping .imgbox { border-radius: 4px; box-shadow: none; filter: none; }
+@media print {
+  .block.img.fx-bd .imgbox, .block.img.fx-sh .imgbox { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .block.img.fx-bd.objsel .imgbox { box-shadow: 0 0 0 var(--bdw, 1px) var(--bdc, #5f6368); }
+}
+body.printing .block.img.fx-bd.objsel .imgbox { box-shadow: 0 0 0 var(--bdw, 1px) var(--bdc, var(--ink-3)); }
+
+/* ---------- menu du clic droit sur une image ---------- */
+#ctxmenu:has([data-cm="ixcopy"]) { max-height: calc(100vh - 16px); overflow-y: auto; overscroll-behavior: contain; min-width: 252px; }
+#ctxmenu:has([data-cm="ixcopy"]) .cm-title { max-width: none; }
+#ctxmenu .cm-check { margin-left: auto; padding-left: 12px; color: var(--tint); font-weight: 700; font-size: 14px; line-height: 1; }
+#ctxmenu .cm-sub .cm-lab { font-size: 10.5px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); padding: 6px 8px 3px; }
+#ctxmenu .cm-sub .cm-chips { display: flex; gap: 4px; padding: 0 6px 5px; flex-wrap: wrap; }
+#ctxmenu .cm-sub .cm-chips button { width: auto; min-height: 32px; padding: 3px 10px; font-size: 12px; font-weight: 600; border-radius: 6px; color: var(--ink-2); border: 1px solid var(--border); justify-content: center; }
+#ctxmenu .cm-sub .cm-chips button.on { background: var(--tint-soft); color: var(--tint); border-color: color-mix(in srgb, var(--tint) 40%, var(--border)); }
+#ctxmenu button[data-cm^="ix"] svg, #ctxmenu button[data-cmx^="i"] > svg:first-child, #ctxmenu button[data-cm="ireplace"] svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+#ctxmenu .cm-group:focus-visible, #ctxmenu button[data-cm]:focus-visible { outline: 2px solid var(--tint); outline-offset: -2px; }
+/* au doigt (menu ouvert par « Plus d'outils ») : pastilles, tailles et alignements de 40 px */
+body.mobile #ctxmenu .cm-sub .cm-chips button, body.mobile #ctxmenu:has([data-cm="ixcopy"]) .cm-aligns button { min-height: 40px; height: auto; min-width: 40px; }
+@media (pointer: coarse) { #ctxmenu .cm-sub .cm-chips button, #ctxmenu:has([data-cm="ixcopy"]) .cm-aligns button { min-height: 40px; height: auto; min-width: 40px; } }
+
+/* ---------- fenêtre « Supprimer le fond » (openDialog, #igov) ---------- */
+.ig-dlg .ig-stage {
+  display: grid; place-items: center; padding: 12px; border-radius: 10px; border: 1px solid var(--border);
+  /* damier : zones transparentes */
+  background-color: #fff;
+  background-image: linear-gradient(45deg, #d9dbe0 25%, transparent 25%, transparent 75%, #d9dbe0 75%), linear-gradient(45deg, #d9dbe0 25%, transparent 25%, transparent 75%, #d9dbe0 75%);
+  background-size: 18px 18px; background-position: 0 0, 9px 9px;
+}
+html[data-theme="dark"] .ig-dlg .ig-stage { background-color: #3a3b42; background-image: linear-gradient(45deg, #2b2c32 25%, transparent 25%, transparent 75%, #2b2c32 75%), linear-gradient(45deg, #2b2c32 25%, transparent 25%, transparent 75%, #2b2c32 75%); }
+.ig-dlg .ig-cv { display: block; max-width: 100%; max-height: min(44vh, 380px); width: auto; height: auto; cursor: crosshair; }
+.ig-dlg .ig-ctl { margin-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.ig-row { display: grid; grid-template-columns: 96px 1fr 34px; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+.ig-row output { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 600; font-size: 12.5px; }
+:is(#popover, .po-scope) .ig-row input[type="range"] { flex: none; width: 100%; padding: 0; border: 0; background: none; accent-color: var(--tint); height: 22px; }
+:is(#popover, .po-scope) .ig-row input[type="range"]:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 4px; }
+.ig-check { display: flex; align-items: flex-start; gap: 9px; font-size: 13px; color: var(--ink); cursor: pointer; }
+:is(#popover, .po-scope) .ig-check input[type="checkbox"] { flex: none; width: 16px; height: 16px; margin: 2px 0 0; padding: 0; accent-color: var(--tint); }
+.ig-help { margin: -6px 0 0 106px; font-size: 11.5px; line-height: 1.4; color: var(--ink-2); }
+.ig-check small { display: block; font-size: 11.5px; color: var(--ink-3); margin-top: 1px; line-height: 1.4; }
+.ig-ref { display: flex; align-items: center; gap: 9px; font-size: 12.5px; color: var(--ink-2); flex-wrap: wrap; }
+.ig-ref .ig-sw { width: 16px; height: 16px; border-radius: 50%; box-shadow: 0 0 0 1px var(--surface), 0 0 0 2px var(--ink-3); flex: none; margin: 0 2px; }
+.ig-ref b { font-weight: 600; color: var(--ink); }
+.ig-ref #ig-reftxt { flex: 1; min-width: 180px; }
+.ig-msg { min-height: 1.2em; font-size: 12.5px; color: var(--danger); margin: 0; }
+.ig-dlg #ig-ok:disabled { opacity: .5; cursor: default; filter: none; }
+
+/* ---------- pop-over « Réglages de l'image » ---------- */
+.ig-adj { display: flex; flex-direction: column; gap: 8px; margin: 2px 0 12px; }
+.ig-adj .ig-row { grid-template-columns: 84px 1fr 34px; }
+.ig-adj-foot { justify-content: space-between; align-items: center; }

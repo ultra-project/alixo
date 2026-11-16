@@ -162,6 +162,27 @@ window.AlixoShare = (() => {
   const BATCH_OPS = 100, BATCH_BYTES = 4000000;
   let tooBigWarned = false;
 
+  /* 1.51 — ce qui est publié d'une séance partagée ne contient pas la référence à l'original d'une image retouchée (b.o,
+     js/imgtools.js) : un membre ne peut pas rétablir le fond qu'un autre a supprimé. Le document local n'est pas modifié.
+     Limite connue : une image déjà publiée dans shares/{sid}/imgs AVANT sa retouche y reste (pas de purge). */
+  const publicJSON = d => (window.AlixoImgTools && AlixoImgTools.publicJSON ? AlixoImgTools.publicJSON(d)
+    : JSON.stringify(d, function (k, v) { return k === 'o' && this && this.type === 'img' ? undefined : v; }));
+  /* chemin retour, chez le propriétaire : la version reçue d'un membre n'a pas de b.o — on le reprend du document local
+     pour chaque image inchangée (même bloc, même image), afin que « Réinitialiser l'image » reste disponible chez l'auteur */
+  function keepOriginals(remote, local) {
+    if (!remote) return;
+    /* sécurité : un b.o présent dans la version reçue n'est jamais repris (il n'est pas censé être publié — un membre
+       pourrait y désigner une autre image) : il est retiré avant toute restauration depuis le document local */
+    const strip = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (b && typeof b === 'object' && b.type === 'img' && 'o' in b) delete b.o; });
+    strip(remote.blocks); (Array.isArray(remote.pages) ? remote.pages : []).forEach(p => strip(p && p.blocks));
+    if (!local) return;
+    const from = new Map();
+    const collect = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (b && b.type === 'img' && b.o && typeof b.o === 'object' && b.id) from.set(b.id, b); });
+    collect(local.blocks); (Array.isArray(local.pages) ? local.pages : []).forEach(p => collect(p && p.blocks));
+    if (!from.size) return;
+    const put = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (!b || b.type !== 'img' || b.o) return; const src = from.get(b.id); if (src && src.iid === b.iid) b.o = JSON.parse(JSON.stringify(src.o)); });
+    put(remote.blocks); (Array.isArray(remote.pages) ? remote.pages : []).forEach(p => put(p && p.blocks));
+  }
   function schedulePush() { clearTimeout(pushTm); pushTm = setTimeout(push, 1500); }
   let pushing = false, pushAgain = false;
   async function push() {
@@ -231,7 +252,7 @@ window.AlixoShare = (() => {
     for (const id of ids) {
       const d = state.docs.find(x => x.id === id); if (!d) continue;
       seen.add(id); docs.push(d);
-      const j = JSON.stringify(d), k = sh.id + '/' + id;
+      const j = publicJSON(d), k = sh.id + '/' + id;
       if (lastPushed.get(k) === j) continue;
       if (j.length > DOC_MAX) { warnTooBig(d); continue; }
       ops.push({ ref: ref.collection('docs').doc(id), data: { updatedAt: d.updatedAt || now(), data: j, by: uid, byName: me.name }, size: j.length, done: () => { lastPushed.set(k, j); known.add(id); } });
@@ -248,7 +269,7 @@ window.AlixoShare = (() => {
     const docs = docsBy.get(sh.id); if (!docs) return;
     const ref = sharesRef.doc(sh.id);
     for (const [id, d] of docs) {
-      const j = JSON.stringify(d), k = sh.id + '/' + id;
+      const j = publicJSON(d), k = sh.id + '/' + id;
       if (lastPushed.get(k) === j) continue;
       if (j.length > DOC_MAX) { warnTooBig(d); continue; }
       await ref.collection('docs').doc(id).set({ updatedAt: d.updatedAt || now(), data: j, by: uid, byName: me.name });
@@ -476,6 +497,7 @@ window.AlixoShare = (() => {
           const local = state.docs.find(d => d.id === id);
           if (local && (local.updatedAt || 0) >= (remote.updatedAt || 0)) return;
           lastPushed.set(k, raw.data);
+          keepOriginals(remote, local);   // 1.51 : b.o n'est jamais publié — il ne doit pas disparaître chez le propriétaire pour autant
           AlixoApp.applyRemoteDocs([remote], []);
           if (currentDocId !== id) toast(`« ${remote.titre || 'Sans titre'} » modifiée par ${raw.byName || 'un membre'}`);
           return;
@@ -866,7 +888,7 @@ window.AlixoShare = (() => {
   function eventDeleted(evId) { for (const sh of mySharesOf('event', evId)) deleteShare(sh.id, true); }
   async function copyToLibrary(id) {
     const d = docById(id); if (!d) return;
-    const copy = JSON.parse(JSON.stringify(d));
+    const copy = JSON.parse(publicJSON(d));   // 1.51 : sans b.o (original d'une image retouchée par un autre membre)
     copy.id = uid_(); copy.titre = (d.titre || 'Sans titre') + ' (copie)'; copy.folderId = null; copy.createdAt = copy.updatedAt = now(); copy.pinned = false;
     (copy.blocks || []).forEach(b => { b.id = uid_(); if (b.type === 'docref') delete b.title; });   // 1.43 : jamais de titre figé
     state.docs.push(copy); save(); toast('Copie ajoutée à « Mes cours »');

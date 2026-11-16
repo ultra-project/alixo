@@ -434,8 +434,9 @@ window.AlixoNest = (() => {
     const blockEl = field.closest('#blocks > .block'); const b = blockEl && getBlock(blockEl.dataset.id);
     if (!b) return false;
     const kind = nestKind(field, blockEl);
-    let arr = null; if (alx) { try { arr = JSON.parse(alx); } catch { arr = null; } }
-    const tblBlock = Array.isArray(arr) && arr.length === 1 && arr[0] && arr[0].type === 'table' && Array.isArray(arr[0].rows) ? arr[0] : null;
+    const arr = alx && window.AlixoSanitize ? AlixoSanitize.parseBlocks(alx) : null;   // 1.51 : le presse-papiers n'est jamais sûr — blocs validés, HTML des cases recomposé
+    if (alx && !arr && window.AlixoSanitize && AlixoSanitize.tooBig && AlixoSanitize.tooBig()) { toast('Ce contenu est trop volumineux pour être collé.'); return true; }   // budget d'un collage dépassé : abandon
+    const tblBlock =Array.isArray(arr) && arr.length === 1 && arr[0] && arr[0].type === 'table' && Array.isArray(arr[0].rows) ? arr[0] : null;
 
     // un tableau entier copié dans Alixo, collé dans un encadré, une citation ou une case → tableau imbriqué
     if (tblBlock && kind) {

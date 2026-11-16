@@ -192,7 +192,7 @@ window.AlixoFiles = (() => {
     const rows = []; const walk = (pid, depth) => { for (const c of childFolders(pid)) { rows.push({ f: c, depth }); walk(c.id, depth + 1); } }; walk(null, 0);
     showPopover(`<h4>Déplacer « ${esc(f.name)} » vers…</h4><div class="po-list po-move">
         <button data-mv="" class="${!f.folderId ? 'cur' : ''}"><svg class="ficon" viewBox="0 0 24 24" style="stroke:var(--ink-2)"><path d="M4 11 12 4l8 7M6 10v9h12v-9" fill="none"/></svg>Mes cours</button>
-        ${rows.map(r => `<button data-mv="${r.f.id}" class="${r.f.id === f.folderId ? 'cur' : ''}" style="padding-left:${10 + r.depth * 16}px; --mc:${r.f.couleur}">${folderIconHTML(r.f)}${esc(r.f.nom)}</button>`).join('')}</div>`,
+        ${rows.map(r => `<button data-mv="${r.f.id}" class="${r.f.id === f.folderId ? 'cur' : ''}" style="padding-left:${10 + r.depth * 16}px; --mc:${esc(typeof safeTint === 'function' ? safeTint(r.f.couleur) : r.f.couleur)}">${folderIconHTML(r.f)}${esc(r.f.nom)}</button>`).join('')}</div>`,
       centerRect(), pop => pop.querySelector('.po-list').addEventListener('click', ev => { const b = ev.target.closest('[data-mv]'); if (!b) return; hidePopover(); move(id, b.dataset.mv || null); }));
   }
   /* suppression (annulable quelques secondes ; le contenu n'est effacé de l'appareil qu'ensuite) */
@@ -451,7 +451,7 @@ window.AlixoFiles = (() => {
     return `<button class="lib-row row-file" data-file="${esc(f.id)}" draggable="true" style="--mc:${esc(k.color)}" title="${esc(f.name)}">
         <span class="row-type">${typeChipHTML(null, { label: k.label, color: k.color })}</span>
         <span class="row-main"><span class="row-title">${esc(f.name)}</span><span class="row-sub">${esc(it.sub)}${cloudBadge(f)}</span></span>
-        <span class="row-where"></span><span class="row-date">${fmtRowDate(f.createdAt || Date.now())}</span>
+        <span class="row-where">${libPathHTML(it)}</span><span class="row-date">${it.meta != null ? libRowMeta(it) : fmtRowDate(f.createdAt || Date.now())}</span>
         <span class="row-acts"><span class="del-btn" data-filedel="${esc(f.id)}" title="Supprimer">${TRASH}</span></span></button>`;
   }
   /* fichier reçu par Alixo Share (vue d'un dossier partagé) : même ligne, sans suppression ni glisser-déposer */
@@ -460,7 +460,7 @@ window.AlixoFiles = (() => {
     return `<button class="lib-row row-file shared-card" data-shfile="${esc(f.id)}" data-sid="${esc(f.sid)}" style="--mc:${esc(k.color)}" title="${esc(f.name)}">
         <span class="row-type">${typeChipHTML(null, { label: k.label, color: k.color })}</span>
         <span class="row-main"><span class="row-title">${esc(f.name)}</span><span class="row-sub">${esc(rowSub(f))}</span></span>
-        <span class="row-where">partagé</span><span class="row-date">${f.createdAt ? fmtRowDate(f.createdAt) : ''}</span><span class="row-acts"></span></button>`;
+        <span class="row-where">partagé</span><span class="row-date">${it.meta != null ? libRowMeta(it) : f.createdAt ? fmtRowDate(f.createdAt) : ''}</span><span class="row-acts"></span></button>`;
   }
   const sideTreeHTML = fid => inFolder(fid).map(f => `<div class="tree-row doc file"><button class="tree-caret leaf">▶</button><button class="tree-label" data-file="${f.id}" title="Ouvrir le fichier">${iconHTML(f.name, 'mini')}<span class="tree-name">${esc(f.name)}</span></button></div>`).join('');
   const libTreeHTML = fid => inFolder(fid).map(f => `<div class="tn"><button class="tn-card tn-doc tn-file" data-file="${f.id}" draggable="true">${iconHTML(f.name, 'mini')}<span class="tn-name">${esc(f.name)}</span></button></div>`).join('');

@@ -49,7 +49,7 @@ window.AlixoBoard = (() => {
   const NOTE_SIZES = [['s', 'S', 'Petit'], ['m', 'M', 'Moyen'], ['l', 'L', 'Grand']];
   const SHAPE_KINDS = [['round', 'Rectangle arrondi'], ['rect', 'Rectangle'], ['pill', 'Capsule'], ['ellipse', 'Ellipse'], ['diamond', 'Losange'], ['hex', 'Hexagone'], ['tri', 'Triangle']];
   const STICKERS = ['⭐', '✅', '❌', '❓', '❗', '💡', '🔥', '📌', '⚖️', '📚', '🧠', '🎯', '⏳', '💶', '📈', '📉', '🏛️', '🩺', '⚽', '🎓', '👍', '👎', '➡️', '🔁', '🔑', '🧩', '🗓️', '🏆'];
-  const BLOCK_NAMES = { h: 'Titre', p: 'Texte', li: 'Liste', callout: 'Encadré', quote: 'Citation', table: 'Tableau', img: 'Image', code: 'Code', math: 'Formule', graph: 'Graphique', draw: 'Dessin', hr: 'Séparateur' };
+  const BLOCK_NAMES = { h: 'Titre', p: 'Texte', li: 'Liste', callout: 'Encadré', quote: 'Citation', table: 'Tableau', img: 'Image', code: 'Code', math: 'Formule', graph: 'Graphique', draw: 'Dessin', hr: 'Séparateur', timeline: 'Frise' };
   const KIND_NAMES = { slides: 'Présentation', sheet: 'Tableur', board: 'Planche', quiz: 'Quiz' };
   const BGS = [['dots', 'Points'], ['grid', 'Lignes'], ['plain', 'Uni']];
 

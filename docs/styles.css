@@ -439,8 +439,9 @@ body.split #toolbar > *, body.pane #toolbar > * { flex: none; }
 /* ---------- Blocs ---------- */
 .block { position: relative; margin: 2px 0; border-radius: 6px; }
 .block > .btxt { outline: none; min-height: 1.4em; }
-.block > .btxt:focus:empty::before,
-.block:first-child:last-child > .btxt:empty::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
+/* 1.51 : « vide » = classe is-blank posée par l'application (syncBlank), plus :empty / :has(> br:only-child) */
+.block > .btxt.is-blank:focus::before,
+.block:first-child:last-child > .btxt.is-blank::before { content: attr(data-ph); color: var(--ink-3); opacity: .75; pointer-events: none; }
 
 .bhandle {
   position: absolute; left: -34px; top: 3px; width: 24px; height: 24px;
@@ -482,15 +483,19 @@ body.split #toolbar > *, body.pane #toolbar > * { flex: none; }
 .block.h.l5 { margin-left: 72px; } .block.h.l5 .btxt, .block.h.l5 .hnum { font-size: 15.5px; font-weight: 600; }
 .block.h.l6 { margin-left: 90px; } .block.h.l6 .btxt, .block.h.l6 .hnum { font-size: 15px; font-weight: 600; font-style: italic; }
 
-/* Encadrés typés */
+/* Encadrés typés — 1.51 : plus de cadre ; fond à peine teinté, fine barre à gauche, étiquette discrète
+   (balisage inchangé : .cico, .ctitle, .btxt ; le texte s'aligne sur le bord gauche de l'étiquette) */
 .block.callout {
-  margin: 12px 0; padding: 13px 16px 13px 46px; border-radius: var(--r);
-  background: color-mix(in srgb, var(--cc) 8%, var(--paper));
-  border: 1px solid color-mix(in srgb, var(--cc) 25%, transparent);
+  --cc: var(--tint);
+  --cc-label: color-mix(in srgb, var(--cc) 70%, var(--ink));
+  margin: 12px 0; padding: 12px 16px 12px 18px; border: 0; border-radius: 3px 10px 10px 3px;
+  background: color-mix(in srgb, var(--cc) 5%, var(--paper));
+  box-shadow: inset 3px 0 0 var(--cc);
 }
-.block.callout .cico { position: absolute; left: 14px; top: 13px; width: 18px; height: 18px; color: var(--cc); }
-.block.callout .cico svg { width: 18px; height: 18px; }
-.block.callout .ctitle { font-size: 11px; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; color: var(--cc); margin-bottom: 3px; user-select: none; }
+html[data-theme="dark"] .block.callout { background: color-mix(in srgb, var(--cc) 7%, var(--paper)); }
+.block.callout .cico { position: absolute; left: 18px; top: 12px; width: 15px; height: 15px; color: var(--cc); display: flex; }
+.block.callout .cico svg { width: 15px; height: 15px; }
+.block.callout .ctitle { font-family: var(--font-ui); font-size: 11.5px; line-height: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--cc-label); padding-left: 22px; margin-bottom: 4px; user-select: none; }
 .block.callout .btxt { font-family: var(--font-serif); font-size: 15.5px; line-height: 1.55; }
 .block.callout[data-ct="definition"]  { --cc: #3d6bb5; }
 .block.callout[data-ct="arret"]       { --cc: #8c4351; }
@@ -517,12 +522,12 @@ html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: #5cb896; }
 .juris-head .jico { display: inline-flex; width: 16px; height: 16px; }
 .juris-head .jico svg { width: 16px; height: 16px; }
 .juris-head .jref { outline: none; flex: 1; font-family: var(--font-serif); }
-.juris-head .jref:empty::before { content: "Cass. civ. 1re, 12 juill. 2023, n° 22-14.081"; opacity: .45; }
+.juris-head .jref.is-blank::before { content: "Cass. civ. 1re, 12 juill. 2023, n° 22-14.081"; opacity: .45; }
 .juris-grid { display: grid; grid-template-columns: 108px 1fr; }
 .juris-grid > div { padding: 7px 14px; font-size: 14px; border-top: 1px solid color-mix(in srgb, #8c4351 12%, transparent); }
 .juris-grid .jlabel { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, #8c4351 55%, var(--ink-2)); padding-top: 10px; user-select: none; }
 .juris-grid .jval { font-family: var(--font-serif); line-height: 1.5; outline: none; }
-.juris-grid .jval:empty::before { content: "…"; opacity: .35; }
+.juris-grid .jval.is-blank::before { content: "…"; opacity: .35; }
 
 /* Référence d'article (inline) */
 .refart {
@@ -1478,7 +1483,7 @@ body.printing #blocks [data-ph]::before, body.printing #blocks .jref::before, bo
 .card-item:focus-within { border-color: color-mix(in srgb, var(--tint) 45%, var(--border)); box-shadow: 0 2px 10px color-mix(in srgb, var(--tint) 14%, transparent); }
 .card-item .cd-t { font-family: var(--font-ui); font-weight: 700; font-size: 13.5px; color: var(--ink); outline: none; min-height: 1.3em; position: relative; }
 .card-item .cd-x { font-size: 14px; line-height: 1.45; color: var(--ink-2); outline: none; min-height: 1.4em; flex: 1; position: relative; }
-.card-item .cd-t:has(> br:only-child)::before, .card-item .cd-x:has(> br:only-child)::before, .card-item .cd-t:empty::before, .card-item .cd-x:empty::before { content: attr(data-ph); position: absolute; left: 0; top: 0; color: var(--ink-3); opacity: .5; pointer-events: none; white-space: nowrap; }
+.card-item .cd-t.is-blank::before, .card-item .cd-x.is-blank::before { content: attr(data-ph); position: absolute; left: 0; top: 0; color: var(--ink-3); opacity: .5; pointer-events: none; white-space: nowrap; }
 .cards-tools { display: flex; gap: 4px; margin-top: 6px; opacity: 0; transition: opacity .15s; }
 .block.cards:hover .cards-tools, .block.cards:focus-within .cards-tools { opacity: 1; }
 .cards-tools button { font-family: var(--font-ui); font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
@@ -1540,7 +1545,7 @@ body.printing .cards-tools { display: none !important; }
   .refart, .calc-res { background: #e8eef3 !important; border-color: #c5d2dc !important; color: #2a4a63 !important; }
   mark, .hl { background: #f5e6b3 !important; }
   ::selection { background: transparent; }
-  .block.callout { background: color-mix(in srgb, var(--cc) 8%, #fff) !important; border-color: color-mix(in srgb, var(--cc) 30%, #fff) !important; }
+  .block.callout { --cc-label: color-mix(in srgb, var(--cc) 70%, #1a1a1a); background: color-mix(in srgb, var(--cc) 6%, #fff) !important; box-shadow: inset 3px 0 0 var(--cc) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .block.quote .btxt { border-left-color: color-mix(in srgb, var(--tint) 55%, #fff) !important; }
   .block.juris { border-color: color-mix(in srgb, #8c4351 30%, #fff) !important; background: color-mix(in srgb, #8c4351 5%, #fff) !important; }
   .juris-head { background: color-mix(in srgb, #8c4351 12%, #fff) !important; }
@@ -1663,11 +1668,12 @@ body.lib-agenda .lib-head { display: none; }
 .bhandle { display: none !important; }
 .block { margin: 0; border-radius: 0; }
 .block > .btxt { outline: none; min-height: 1.4em; }
-.block > .btxt:empty::before,
-.block.p > .btxt:empty::before { content: ""; }
-/* aide-mémoire visible seulement quand le paragraphe vide est le seul du cours ou porte le curseur */
-.block.p.cur > .btxt:empty::before, .block.p:only-child > .btxt:empty::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
-.block.h.cur > .btxt:empty::before, .block.callout.cur > .btxt:empty::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
+.block > .btxt::before,
+.block.p > .btxt::before { content: none; }
+/* aide-mémoire visible seulement quand le paragraphe vide est le seul du cours ou porte le curseur
+   (1.51 : « vide » = classe is-blank, décidée par l'application — jamais sous du texte) */
+.block.p.cur > .btxt.is-blank::before, .block.p:only-child > .btxt.is-blank::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
+.block.h.cur > .btxt.is-blank::before, .block.callout.cur > .btxt.is-blank::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
 .block.p .btxt { padding: 2px 0; }
 
 /* titres : le numéro est dessiné par CSS (hors du texte éditable) */
@@ -1778,6 +1784,12 @@ body.img-resizing, body.img-resizing * { user-select: none !important; }
 #imgbar button.danger:hover { color: var(--danger); }
 #imgbar button svg { width: 17px; height: 17px; }
 #imgbar .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+#imgbar button:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+#imgbar button[data-ib="more"][aria-expanded="true"] { background: var(--hover); color: var(--ink); }
+/* au doigt : cibles de 40 px (1.51 — le bouton « Plus d'outils » est la seule entrée du menu d'image sur un écran tactile) */
+body.mobile #imgbar button { width: 40px; height: 40px; }
+body.mobile #imgbar .ib-size { width: auto; }
+@media (pointer: coarse) { #imgbar button { width: 40px; height: 40px; } #imgbar .ib-size { width: auto; } }
 #docwrap.img-drop #doc { outline: 2px dashed var(--tint); outline-offset: -6px; }
 
 /* barre d'outils : taille de police */
@@ -1806,20 +1818,19 @@ body.img-resizing, body.img-resizing * { user-select: none !important; }
 .block.quote .btxt { font-size: 11pt; }
 .tbl { font-size: 10.5pt; }
 
-/* paragraphes vides : un <br> porte le curseur ; l'aide-mémoire s'affiche quand même */
-.block.p.cur > .btxt:has(> br:only-child)::before, .block.p:only-child > .btxt:has(> br:only-child)::before,
-.block.h.cur > .btxt:has(> br:only-child)::before, .block.callout.cur > .btxt:has(> br:only-child)::before { content: attr(data-ph); color: var(--ink-3); opacity: .55; pointer-events: none; }
-.juris-head .jref:has(> br:only-child)::before { content: "Cass. civ. 1re, 12 juill. 2023, n° 22-14.081"; opacity: .45; }
-.juris-grid .jval:has(> br:only-child)::before { content: "…"; opacity: .35; }
+/* paragraphes vides : un <br> porte le curseur ; l'aide-mémoire s'affiche quand même — 1.51 : par la classe is-blank
+   (voir plus haut), les anciens sélecteurs « :has(> br:only-child) » s'affichaient aussi sous du texte suivi d'un <br> */
 
 /* ============================================================
    2.1 — encadré Bilan, alignement, palette, dessin, images (barre,
    taille), notes éphémères, heures de l'agenda, onglets déplaçables
    ============================================================ */
 /* encadré Bilan : synthèse de fin de partie */
-.block.callout[data-ct="bilan"] { --cc: #2e8b8b; border-width: 1.5px; border-style: solid; background: color-mix(in srgb, var(--cc) 6%, var(--paper)); padding-top: 15px; }
-html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: #5cc0c0; }
-.block.callout .ctitle .csub { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; opacity: .7; font-size: 11px; }
+/* 1.51 : même gabarit que les autres encadrés (ni cadre ni retrait), fond un peu plus soutenu, étiquette un peu plus marquée */
+.block.callout[data-ct="bilan"] { --cc: #2e8b8b; background: color-mix(in srgb, var(--cc) 7%, var(--paper)); }
+html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: #5cc0c0; background: color-mix(in srgb, var(--cc) 9%, var(--paper)); }
+.block.callout[data-ct="bilan"] .ctitle { font-weight: 700; }
+.block.callout .ctitle .csub { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-3); font-size: 11px; }
 .block.callout[data-ct="bilan"] .btxt { font-size: 10.5pt; line-height: 1.6; }
 @media print { html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: #2e8b8b; } }
 
@@ -2045,26 +2056,29 @@ html[data-theme="dark"] .dp-sw { border-color: color-mix(in srgb, var(--ink) 50%
   .block.draw.empty .draw-wrap::after { content: none; }
   .fl-svg, .draw-svg { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
 }
-}
 
 /* ============================================================
    1.9.2 — citation avec auteur, fiches Santé, rangs, items,
    graphiques de données, scores, calculateurs, minuteurs, partage
    ============================================================ */
 /* citation : ligne auteur / source */
-.block.quote .qcite { font-family: var(--font-serif); font-size: 13.5px; color: var(--ink-3); padding: 0 0 4px 18px; margin-top: -4px; border-left: 3px solid color-mix(in srgb, var(--tint) 55%, transparent); outline: none; position: relative; }
-.block.quote .qcite:empty, .block.quote .qcite:has(> br:only-child) { min-height: 1.5em; }
-.block.quote .qcite:empty::before, .block.quote .qcite:has(> br:only-child)::before { content: attr(data-ph); position: absolute; left: 18px; top: 0; color: var(--ink-3); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity .15s; }
-.block.quote.cur .qcite:empty::before, .block.quote:hover .qcite:empty::before, .block.quote.cur .qcite:has(> br:only-child)::before, .block.quote:hover .qcite:has(> br:only-child)::before { opacity: .55; }
-.block.quote .qcite:not(:empty):not(:has(> br:only-child)) { color: var(--ink-2); }
-body.printing .block.quote .qcite:empty, body.printing .block.quote .qcite:has(> br:only-child) { display: none; }
+.block.quote .qcite { font-family: var(--font-serif); font-size: 13.5px; color: var(--ink-3); padding: 0 0 4px 18px; margin-top: -6px; border-left: 3px solid color-mix(in srgb, var(--tint) 55%, transparent); outline: none; position: relative; }   /* -6px = marge basse du texte : la barre de gauche reste continue */
+.block.quote .qcite.is-blank { min-height: 1.5em; }
+.block.quote .qcite.is-blank::before { content: attr(data-ph); position: absolute; left: 18px; top: 0; color: var(--ink-3); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity .15s; max-width: calc(100% - 160px); overflow: hidden; text-overflow: ellipsis; }   /* 1.51 : jamais sous le bouton « Auteur / source… » */
+.block.quote.cur .qcite.is-blank::before, .block.quote:hover .qcite.is-blank::before { opacity: .55; }
+.block.quote .qcite:not(.is-blank) { color: var(--ink-2); }
+body.printing .block.quote .qcite.is-blank { display: none; }
 /* 1.43 : ligne de l'auteur vide → bouton « Auteur / source… » (survol, curseur dans la citation, clavier ; au doigt dès que la citation est active) */
 .block.quote { position: relative; }
 .block.quote .q-src { display: none; position: absolute; right: 6px; bottom: 2px; padding: 2px 9px; border-radius: 6px; font: 600 12px var(--font-ui); color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
 .block.quote .q-src:hover { background: var(--hover); color: var(--ink); }
 .block.quote .q-src:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--tint-soft); border-color: var(--tint); }
-.block.quote:is(.cur, :hover, :focus-within):has(> .qcite:empty, > .qcite > br:only-child) .q-src { display: inline-flex; }
-@media (pointer: coarse) { .block.quote .q-src { min-height: 40px; align-items: center; padding: 6px 12px; } }
+.block.quote:is(.cur, :hover, :focus-within):has(> .qcite.is-blank) .q-src { display: inline-flex; }
+@media (pointer: coarse) {
+  .block.quote .q-src { min-height: 40px; align-items: center; padding: 6px 12px; }
+  /* 1.51 : au doigt le bouton fait 40 px de haut — la ligne de la source lui fait la place, il ne recouvre plus la fin de la citation */
+  .block.quote:is(.cur, :hover, :focus-within) > .qcite.is-blank { min-height: 44px; }
+}
 body.readonly .block.quote .q-src, body.printing .block.quote .q-src { display: none !important; }
 @media print { .block.quote .q-src { display: none !important; } }
 
@@ -2079,7 +2093,7 @@ html[data-theme="dark"] .block.callout[style*="--cc-light"] { --cc: var(--cc-dar
 .block.fiche .juris-grid .jlabel { color: color-mix(in srgb, var(--fc) 55%, var(--ink-2)); }
 .juris-head .jkind { font-size: 10.5px; font-weight: 750; text-transform: uppercase; letter-spacing: .07em; opacity: .8; flex: none; user-select: none; }
 .juris-head .jref { position: relative; }
-.juris-head .jref:empty::before, .juris-head .jref:has(> br:only-child)::before { content: attr(data-ph); opacity: .45; position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; overflow: hidden; max-width: 100%; text-overflow: ellipsis; }
+.juris-head .jref.is-blank[data-ph]::before { content: attr(data-ph); opacity: .45; position: absolute; left: 0; top: 0; pointer-events: none; white-space: nowrap; overflow: hidden; max-width: 100%; text-overflow: ellipsis; }
 .juris-head .jbadge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); flex: none; }
 .juris-head .jtimer { font-size: 11.5px; font-weight: 650; padding: 3px 9px; border-radius: 6px; background: color-mix(in srgb, var(--fc, var(--tint)) 16%, transparent); color: color-mix(in srgb, var(--fc, var(--tint)) 70%, var(--ink)); flex: none; font-family: var(--font-ui); }
 .juris-head .jtimer:hover { filter: brightness(1.08); }
@@ -2147,6 +2161,9 @@ body.health .only-health { display: inline-flex !important; }
 .cg-actions .cg-text, .cg-actions .cg-grid { color: var(--tint); }
 
 /* scores cliniques et calculateurs */
+/* 1.51 : bloc que le rendu n'a pas su afficher (renderBlocks) — carte sobre, le reste de la séance s'affiche */
+.block.unreadable { margin: 12px 0; display: flow-root; }
+.unreadable-card { border: 1px dashed var(--border); border-radius: var(--r); padding: 10px 14px; color: var(--ink-2); font-family: var(--font-ui); font-size: 13px; }
 .block.score, .block.mcalc { margin: 12px 0; display: flow-root; }
 .score-card { border: 1px solid color-mix(in srgb, #c04343 30%, transparent); border-radius: var(--r); background: color-mix(in srgb, #c04343 4%, var(--paper)); overflow: hidden; font-family: var(--font-ui); }
 .score-head { display: flex; align-items: baseline; gap: 10px; padding: 9px 14px; background: color-mix(in srgb, #c04343 10%, transparent); }
@@ -2219,7 +2236,7 @@ body.health .only-health { display: inline-flex !important; }
 /* impression */
 @media print {
   .chart-tools, .timer-card button, .jtimer, .score-row .score-p { display: none !important; }
-  .block.quote .qcite:empty, .block.quote .qcite:has(> br:only-child) { display: none; }
+  .block.quote .qcite.is-blank { display: none; }
   .score-card, .chart-card { border-color: #ccc; page-break-inside: avoid; }
 }
 
@@ -2311,11 +2328,16 @@ body.readonly #toolbar button[data-cmd], body.readonly #toolbar button[data-menu
 .nb-tbl.has-head > tbody > tr:first-child > td { font-weight: 650; background: color-mix(in srgb, var(--tint) 8%, var(--paper)); }
 .nb-tbl td:focus { outline: none; }
 .nb-quote { margin: 6px 0; padding: 3px 0 3px 14px; border-left: 3px solid color-mix(in srgb, var(--tint) 55%, transparent); font-family: var(--font-serif); font-style: italic; color: var(--ink-2); min-height: 1.5em; }
-.nb-call { --cc: var(--cc-light, var(--tint)); margin: 6px 0; padding: 8px 12px 9px; border-radius: 8px; background: color-mix(in srgb, var(--cc) 9%, var(--paper)); border: 1px solid color-mix(in srgb, var(--cc) 28%, transparent); color: var(--ink); }
-html[data-theme="dark"] .nb-call { --cc: var(--cc-dark, var(--tint)); }
-.nb-call > .nb-title { font-family: var(--font-ui); font-size: 10.5px; font-weight: 750; text-transform: uppercase; letter-spacing: .08em; color: var(--cc); margin-bottom: 2px; user-select: none; cursor: default; }
+/* 1.51 : aligné sur les encadrés (ni cadre, barre fine à gauche) ; teinte translucide pour rester lisible dans un encadré de même couleur */
+.nb-call { --cc: var(--cc-light, var(--tint)); margin: 6px 0; padding: 8px 12px 9px 14px; border: 0; border-radius: 3px 8px 8px 3px; background: color-mix(in srgb, var(--cc) 7%, transparent); box-shadow: inset 3px 0 0 var(--cc); color: var(--ink); }
+html[data-theme="dark"] .nb-call { --cc: var(--cc-dark, var(--tint)); background: color-mix(in srgb, var(--cc) 10%, transparent); }
+.nb-call > .nb-title { font-family: var(--font-ui); font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: color-mix(in srgb, var(--cc) 80%, var(--ink)); margin-bottom: 2px; user-select: none; cursor: default; }
 .nb-call > .nb-body { font-family: var(--font-serif); min-height: 1.5em; }
 .tcell .nb:first-child, .btxt .nb:first-child { margin-top: 2px; }
+/* encadré imbriqué en fin d'encadré : la ligne vide qui le suit (elle sert à poser le curseur après lui) ne se voit que
+   pendant la saisie — hors focus, à l'impression et à l'export, l'encadré se referme juste sous son contenu */
+.block.callout:not(.cur):not(:focus-within) > .btxt > .nb + br:last-child { display: none; }   /* .cur : bloc où se trouve le curseur */
+.block.callout > .btxt > .nb:last-child, .block.callout:not(.cur):not(:focus-within) > .btxt > .nb:has(+ br:last-child) { margin-bottom: 0; }
 @media print {
   html[data-theme="dark"] .nb-call { --cc: var(--cc-light, #33658a); }
   .nb-tbl, .nb-call { break-inside: avoid; }
@@ -2840,9 +2862,9 @@ html[data-theme="dark"] .gx-legend, html[data-theme="dark"] .gx-btns button { ba
 .t-list ul, .t-list ol { padding-left: 1.1em; margin: 0; }
 .t-list li { margin: .18em 0; padding-left: .2em; }
 .t-list li::marker { color: var(--elc, var(--acc)); }
-.sl-el.t-callout { --cc: var(--elc, #3d6bb5); background: color-mix(in srgb, var(--cc) 9%, var(--sl-paper)); border-left: 7px solid var(--cc); border-radius: 0 12px 12px 0; padding: 14px 20px 16px 22px; }
+.sl-el.t-callout { --cc: var(--elc, #3d6bb5); background: color-mix(in srgb, var(--cc) 6%, var(--sl-paper)); border-left: 5px solid var(--cc); border-radius: 4px 14px 14px 4px; padding: 14px 20px 16px 22px; }   /* 1.51 : aligné sur les encadrés des séances (fond plus léger, barre plus fine) */
 .sl-el.ct-definition { --cc: var(--elc, #3d6bb5); } .sl-el.ct-arret { --cc: var(--elc, #8c4351); } .sl-el.ct-controverse { --cc: var(--elc, #7a6852); } .sl-el.ct-retenir { --cc: var(--elc, #b3762a); } .sl-el.ct-exemple { --cc: var(--elc, #2e8b6a); } .sl-el.ct-bilan { --cc: var(--elc, #2e8b8b); } .sl-el.ct-drapeau { --cc: var(--elc, #c04343); } .sl-el.ct-reflexe { --cc: var(--elc, #d06a3a); } .sl-el.ct-mnemo { --cc: var(--elc, #7a5ca8); } .sl-el.ct-objectifs { --cc: var(--elc, #33658a); }
-.sl-ctitle { display: flex; align-items: center; gap: 8px; font-size: calc(17px * var(--fs)); font-weight: 750; text-transform: uppercase; letter-spacing: .08em; color: var(--cc); margin-bottom: 8px; pointer-events: none; }
+.sl-ctitle { display: flex; align-items: center; gap: 8px; font-size: calc(17px * var(--fs)); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--cc); margin-bottom: 8px; pointer-events: none; }
 .sl-ctitle svg { width: calc(20px * var(--fs)); height: calc(20px * var(--fs)); }
 .t-callout .sl-text { font-size: calc(24px * var(--fs)); line-height: 1.45; color: var(--sl-ink); }
 .sl-el.t-quote { border-left: 5px solid var(--elc, var(--acc)); padding-left: 24px; }
@@ -3588,16 +3610,15 @@ body.printing-sheet #toast, body.printing-sheet #print-summary, body.printing-sh
 .tr li:last-child::before { border-right: 2px solid var(--border); border-radius: 0 6px 0 0; }
 .tr-node { position: relative; display: inline-block; min-width: 90px; max-width: 260px; padding: 6px 12px 7px; border: 1.5px solid color-mix(in srgb, var(--tint) 55%, var(--border)); border-radius: 9px; background: color-mix(in srgb, var(--tint) 5%, var(--paper)); font-family: var(--font-ui); font-size: 13px; line-height: 1.35; color: var(--ink); text-align: center; }
 .tr-node.d0 { background: var(--tint); border-color: var(--tint); color: #fff; font-weight: 650; }
-.tr-node.d0 .tr-t[data-ph]:has(> br:only-child)::before, .tr-node.d0 .tr-t:empty::before { color: rgba(255, 255, 255, .7); }
+.tr-node.d0 .tr-t.is-blank::before { color: rgba(255, 255, 255, .7); }
 .tr-t { outline: none; min-height: 1.3em; white-space: normal; overflow-wrap: break-word; hyphens: manual; position: relative; cursor: text; }
-.tr-t:has(> br:only-child)::before, .tr-t:empty::before { content: attr(data-ph); color: var(--ink-3); pointer-events: none; }
+.tr-t.is-blank::before { content: attr(data-ph); color: var(--ink-3); pointer-events: none; }
 .tr-tools { position: absolute; left: 50%; top: 100%; transform: translateX(-50%); display: none; gap: 3px; padding: 3px; margin-top: 2px; white-space: nowrap; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; box-shadow: 0 4px 12px rgba(0, 0, 0, .12); z-index: 5; }
 .tr-node:hover .tr-tools, .tr-node:focus-within .tr-tools { display: inline-flex; }
 .tr-tools button { font-size: 11px; padding: 2px 7px; border-radius: 5px; color: var(--ink-2); }
 .tr-tools button:hover { background: var(--hover); color: var(--ink); }
 .tr-tools button.danger:hover { color: var(--danger); }
-.tree-tools { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px; font-family: var(--font-ui); }
-.tree-hint { font-size: 11px; color: var(--ink-3); }
+.tree-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; font-family: var(--font-ui); }
 .tree-tools button { font-size: 11.5px; color: var(--ink-3); padding: 3px 8px; border-radius: 6px; opacity: 0; }
 .block.tree:hover .tree-tools button, .block.tree:focus-within .tree-tools button { opacity: 1; }
 .tree-tools button:hover { background: var(--hover); color: var(--danger); }

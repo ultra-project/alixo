@@ -3,7 +3,8 @@
    Un fichier .alx est une archive ZIP (JSZip, js/vendor/jszip.min.js) :
      mimetype       « application/x-alixo » (en premier, non compressé)
      alixo.json     { format: 'alx', version: 1, app, kind, exportedAt, title, doc, images }
-                    doc    : le document tel qu'il est dans la bibliothèque (state.docs), sans rien retirer
+                    doc    : le document tel qu'il est dans la bibliothèque (state.docs) — sauf, depuis la 1.51, la référence à
+                             l'original d'une image retouchée (b.o), retirée de la copie exportée
                     images : { <iid>: 'images/<iid>.png' } — les images du magasin (AlixoImages) que le document utilise
      images/…       les images (fichiers binaires, extension d'après le type)
    L'extension dit le type de document : .alx-docs (séance), .alx-slide (présentation), .alx-sheet (tableur),
@@ -42,6 +43,8 @@ window.AlixoAlx = (() => {
   function imageIds(d) {
     const ids = new Set();
     const add = v => { if (typeof v === 'string' && v) ids.add(v); };
+    /* 1.51 : l'original d'une image retouchée (b.o, js/imgtools.js) n'est PAS exporté — le fond retiré par « Supprimer le fond »
+       ne voyage pas avec le fichier (voir publicJSON plus bas) */
     const fromBlocks = bl => (bl || []).forEach(b => { if (b && b.type === 'img') add(b.iid); });
     fromBlocks(d.blocks);
     (d.pages || []).forEach(p => fromBlocks(p.blocks));
@@ -67,6 +70,11 @@ window.AlixoAlx = (() => {
   }
 
   /* ---------------- export ---------------- */
+  /* 1.51 : le fichier ne contient ni l'image d'origine d'une image retouchée, ni sa référence (b.o). « Réinitialiser l'image »
+     reste possible chez l'auteur (son document en mémoire n'est pas touché), pas chez la personne qui reçoit le fichier.
+     Vaut aussi pour un document lié à un fichier du disque (writeDoc) : rouvert depuis le fichier, il n'a plus d'original. */
+  const publicJSON = v => (window.AlixoImgTools && AlixoImgTools.publicJSON ? AlixoImgTools.publicJSON(v)
+    : JSON.stringify(v, function (k, x) { return k === 'o' && this && this.type === 'img' ? undefined : x; }));
   /* l'archive d'un document → ArrayBuffer */
   async function build(d) {
     if (!d) throw new Error('document introuvable');
@@ -87,7 +95,7 @@ window.AlixoAlx = (() => {
       kind: kindOfDoc(d), exportedAt: new Date().toISOString(), title: S(d.titre) || 'Sans titre',
       doc: d, images
     };
-    zip.file('alixo.json', JSON.stringify(meta));
+    zip.file('alixo.json', publicJSON(meta));
     return zip.generateAsync({ type: 'arraybuffer', compression: 'DEFLATE', compressionOptions: { level: 6 }, mimeType: MIME });
   }
   function fileName(d) { return safeFileName(d.titre || 'Sans titre') + extFor(d); }
@@ -119,7 +127,7 @@ window.AlixoAlx = (() => {
   /* nouveaux identifiants partout (même logique que duplicateDoc dans app.js), images comprises (`imap` : ancien iid → nouveau) */
   function freshIds(copy, imap) {
     const remapImg = v => (v && imap.has(v) ? imap.get(v) : v);
-    const blocks = bl => (bl || []).forEach(b => { if (!b) return; b.id = uid(); if (b.type === 'img') b.iid = remapImg(b.iid); });
+    const blocks = bl => (bl || []).forEach(b => { if (!b) return; b.id = uid(); if (b.type === 'img') { b.iid = remapImg(b.iid); if (b.o && typeof b.o === 'object' && b.o.iid) b.o.iid = remapImg(b.o.iid); } });
     copy.id = uid();
     blocks(copy.blocks);
     (copy.pages || []).forEach(p => { p.id = p.id === 'main' ? 'main' : uid(); blocks(p.blocks); });

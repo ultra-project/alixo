@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.50.0';
+const ALIXO_VERSION = '1.51.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -981,11 +981,11 @@ const isQuizDoc = d => !!d && d.kind === 'quiz';
 const isSpecialDoc = d => isSlidesDoc(d) || isSheetDoc(d) || isBoardDoc(d) || isQuizDoc(d);
 /* 1.47 : types de documents — libellé, classe de couleur (--stor-* dans styles.css), icône ; `docType(d)` donne la clé */
 const DOC_TYPES = {
-  cours: { label: 'Séance', cls: 't-cours', icon: DOC_ICON, mark: 'S' },
-  slides: { label: 'Présentation', cls: 't-slides', icon: SLIDES_ICON, mark: 'P' },
-  sheet: { label: 'Tableur', cls: 't-sheet', icon: SHEET_ICON, mark: 'T' },
-  board: { label: 'Planche', cls: 't-board', icon: BOARD_ICON, mark: 'Pl' },
-  quiz: { label: 'Quiz', cls: 't-quiz', icon: QUIZ_ICON, mark: 'Q' }
+  cours: { label: 'Séance', cls: 't-cours', icon: DOC_ICON },
+  slides: { label: 'Présentation', cls: 't-slides', icon: SLIDES_ICON },
+  sheet: { label: 'Tableur', cls: 't-sheet', icon: SHEET_ICON },
+  board: { label: 'Planche', cls: 't-board', icon: BOARD_ICON },
+  quiz: { label: 'Quiz', cls: 't-quiz', icon: QUIZ_ICON }
 };
 const docType = d => (isSlidesDoc(d) ? 'slides' : isSheetDoc(d) ? 'sheet' : isBoardDoc(d) ? 'board' : isQuizDoc(d) ? 'quiz' : 'cours');
 /* puce colorée « Séance / Présentation / … » ; `custom` = { label, color } pour un fichier importé (couleur de sa famille) */
@@ -1014,7 +1014,7 @@ function treeHTML(pid, depth) {
     const open = expandedFolders.has(f.id);
     const n = subtreeDocCount(f.id);
     return `<div class="tree-node" data-fid="${f.id}">
-      <div class="tree-row ${currentFolderId === f.id ? 'active' : ''}" style="--mc:${f.couleur}">
+      <div class="tree-row ${currentFolderId === f.id ? 'active' : ''}" style="--mc:${esc(safeTint(f.couleur))}">
         <button class="tree-caret ${hasContent ? (open ? 'open' : '') : 'leaf'}" data-caret="${f.id}">▶</button>
         <button class="tree-label" data-open="${f.id}" draggable="true">
           ${folderIconHTML(f)}<span class="tree-name">${esc(f.nom)}</span>
@@ -1038,6 +1038,7 @@ function applyLibNav() {
 { const b = $('#ln-toggle'); if (b) b.addEventListener('click', () => { state.settings.libNavHidden = !state.settings.libNavHidden; save(); renderLibrary(); }); }
 function renderLibrary() {
   applyLibNav();
+  syncLibTools();   // 1.51 : barre de recherche et de tri du dossier
   // arbre
   $('#folder-tree').innerHTML = `
     <div class="tree-row root ${currentFolderId === null && libMode === 'docs' ? 'active' : ''}">
@@ -1130,6 +1131,223 @@ function docSubtitle(d) {
 function docItem(d, tint) {
   return { kind: 'doc', id: d.id, title: d.titre || 'Sans titre', sub: docSubtitle(d), when: d.updatedAt || d.createdAt || 0, type: docType(d), tint: safeTint(tint || folderTint(d.folderId)), pinned: !!d.pinned, prof: d.prof || '', raw: d };
 }
+/* ---------------- 1.51 : recherche dans le dossier et tri (barre #lib-tools, vues Grille et Liste) ----------------
+   libFilter : texte cherché, propre au dossier affiché (remis à vide quand on change de dossier, jamais enregistré).
+   state.settings.libSort = { k: 'date' | 'name' | 'type' | 'size', dir: 1 | -1 } : global, comme libView. */
+let libFilter = '';
+let libToolsCtx = '';   // dossier auquel appartient libFilter
+const LIB_SORTS = [
+  { k: 'date', label: 'Date de modification', dir: -1 },
+  { k: 'name', label: 'Nom', dir: 1 },
+  { k: 'type', label: 'Type', dir: 1 },
+  { k: 'size', label: 'Taille approximative', dir: -1 }
+];
+/* libellé du sens de tri, dit dans les mots du critère (« Ordre décroissant » ne dit rien pour une date) */
+const LIB_DIRS = {
+  date: { '1': 'Plus ancien d’abord', '-1': 'Plus récent d’abord' },
+  name: { '1': 'De A à Z', '-1': 'De Z à A' },
+  type: { '1': 'De A à Z', '-1': 'De Z à A' },
+  size: { '1': 'Plus léger d’abord', '-1': 'Plus lourd d’abord' }
+};
+const libDirLabel = (k, dir) => (LIB_DIRS[k] || LIB_DIRS.name)[dir === 1 ? '1' : '-1'];
+function libSort() {
+  const s = state.settings.libSort;
+  const def = LIB_SORTS.find(x => s && x.k === s.k) || LIB_SORTS[0];
+  return { k: def.k, dir: s && (s.dir === 1 || s.dir === -1) ? s.dir : def.dir };
+}
+/* taille approximative d'un document : longueur de sa fiche JSON (sans les images, qui sont à part) — en cache tant qu'il ne change pas */
+const docSizeCache = new Map();
+function docSizeApprox(d) {
+  if (!d || !d.id) return 0;
+  const key = d.id + ':' + (d.updatedAt || 0);
+  const hit = docSizeCache.get(d.id);
+  if (hit && hit.key === key) return hit.n;
+  let n = 0; try { n = JSON.stringify(d).length; } catch { n = 0; }
+  docSizeCache.set(d.id, { key, n });
+  return n;
+}
+const libIsFolder = it => it.kind === 'folder' || it.kind === 'shfolder';
+const libCmpName = (a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'fr', { numeric: true, sensitivity: 'base' });
+const libItemSize = it => (it.kind === 'file' || it.kind === 'shfile' ? +(it.raw && it.raw.size) || 0 : it.raw ? docSizeApprox(it.raw) : 0);
+const libItemType = it => (it.kind === 'file' || it.kind === 'shfile' ? (/\.([a-z0-9]{1,8})$/i.exec(it.title || '') || ['', 'fichier'])[1].toUpperCase() : (DOC_TYPES[it.type] || DOC_TYPES.cours).label);
+/* tri commun (mes dossiers et dossiers partagés) : dossiers d'abord (dans leur ordre habituel, ou par nom si on trie par nom),
+   puis le reste — épinglés en tête, critère choisi, le nom pour départager */
+function sortLibItems(items, sort) {
+  sort = sort || libSort();
+  const folders = items.filter(libIsFolder), rest = items.filter(it => !libIsFolder(it));
+  if (sort.k === 'name') folders.sort((a, b) => sort.dir * libCmpName(a, b));
+  const val = { date: it => it.when || 0, size: libItemSize }[sort.k];
+  rest.sort((a, b) => {
+    const pin = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0); if (pin) return pin;
+    let c = 0;
+    if (sort.k === 'name') c = libCmpName(a, b);
+    else if (sort.k === 'type') c = libItemType(a).localeCompare(libItemType(b), 'fr', { sensitivity: 'base' });
+    else c = val(a) - val(b);
+    return sort.dir * c || libCmpName(a, b);
+  });
+  if (sort.k === 'size') for (const it of rest) it.meta = fmtBytes(libItemSize(it));   // la colonne de droite montre alors la taille
+  return folders.concat(rest);
+}
+/* tous les mots cherchés doivent figurer dans le titre, le sous-titre, le professeur ou le type (sans casse ni accents) */
+function libMatch(it, words) {
+  const hay = norm([it.title, it.sub, it.prof, libIsFolder(it) ? 'dossier' : libItemType(it)].filter(Boolean).join(' '));
+  return words.every(w => hay.includes(w));
+}
+const libWords = q => norm(q).split(/\s+/).filter(Boolean);
+/* résultats de la recherche : le dossier `fid` et tous ses sous-dossiers ; it.path = chemin relatif (noms des dossiers traversés) */
+function libSearchItems(fid, q) {
+  const words = libWords(q), out = [];
+  const walk = (id, path, depth) => {
+    if (depth > 40) return;   // garde-fou : hiérarchie corrompue (boucle de parentId)
+    for (const f of childFolders(id)) {
+      const it = folderItem(f); it.path = path;
+      if (libMatch(it, words)) out.push(it);
+      walk(f.id, path.concat(f.nom || 'Sans nom'), depth + 1);
+    }
+    const docs = folderDocs(id).map(d => docItem(d));
+    const files = window.AlixoFiles ? AlixoFiles.rowItems(id) : [];
+    for (const it of docs.concat(files)) { it.path = path; if (libMatch(it, words)) out.push(it); }
+  };
+  walk(fid || null, [], 0);
+  if (!fid && window.AlixoShare && AlixoShare.enabled) {
+    for (const it of AlixoShare.sharedDocsAlone().filter(x => x.d).map(x => Object.assign(docItem(x.d, safeTint(x.color)), { kind: 'shdoc', sid: x.sid, shared: { owner: x.owner, role: x.role } }))) if (libMatch(it, words)) out.push(it);
+  }
+  return sortLibItems(out);
+}
+/* mention « dans Dossier › Sous-dossier » d'un résultat trouvé plus bas que le dossier affiché (HTML échappé) */
+function libPathHTML(it) {
+  if (!it.path || !it.path.length) return '';
+  const p = it.path.join(' › ');
+  return `<span class="row-path" title="${esc('Dans ' + p)}">${AlixoIcons.svg('folder', 'row-path-ico')}<span>${esc(p)}</span></span>`;
+}
+/* colonne de droite d'une ligne : la date, ou la taille quand on trie par taille */
+const libRowMeta = it => (it.meta != null ? `<span title="Taille approximative${it.kind === 'file' || it.kind === 'shfile' ? '' : ' (sans les images)'}">${esc(it.meta)}</span>` : fmtRowDate(it.when));
+const libSearchScope = () => (libMode === 'shfolder' ? 'shared' : currentFolderId ? 'folder' : 'root');
+function libEmptySearchHTML() {
+  const sc = libSearchScope();
+  return `<div class="empty-state lib-noresult"><div class="big">${AlixoIcons.svg('folder-open')}</div>
+      <p>${sc === 'root' ? 'Aucun résultat dans Mes cours' : 'Aucun résultat dans ce dossier'} pour « ${esc(libFilter.trim())} ».<br><button type="button" class="linklike" data-libclear>Effacer la recherche</button></p></div>`;
+}
+/* redessine seulement la liste (jamais la barre : le champ garde le focus pendant la frappe) */
+function refreshLibGrid() {
+  if (currentDocId) return;
+  const grid = $('#doc-grid'); if (!grid || grid.hidden) return;
+  if (libMode === 'shfolder') { renderSharedFolder(); announceLibResults(); return; }
+  if (libMode !== 'docs') return;
+  grid.innerHTML = libHTML(currentFolderId, state.settings.libView === 'list');
+  announceLibResults();
+}
+/* nombre de résultats dit aux lecteurs d'écran pendant la frappe (zone #lib-live, masquée à l'œil : le compteur visible
+   « Résultats · 2 » est redessiné avec la liste et n'était pas annoncé ; l'état vide ne porte donc plus role="status") */
+function announceLibResults() {
+  const live = $('#lib-live'); if (!live) return;
+  let txt = '';
+  if (libFilter.trim()) { const n = $$('#doc-grid .lib-list.is-search .lib-row').length; txt = !n ? 'Aucun résultat' : n === 1 ? '1 résultat' : `${n} résultats`; }
+  if (live.textContent !== txt) live.textContent = txt;
+}
+/* état de la barre : visible en vues Grille et Liste (mes dossiers, dossier partagé) ; filtre remis à vide en changeant de dossier */
+function syncLibTools() {
+  const bar = $('#lib-tools'); if (!bar) return;
+  const view = ['grid', 'list', 'tree', 'galaxy'].includes(state.settings.libView) ? state.settings.libView : 'grid';
+  const ctx = libMode === 'shfolder' && sharedNav ? `sh:${sharedNav.sid}:${sharedNav.fid || ''}` : `my:${currentFolderId || ''}`;
+  if (ctx !== libToolsCtx) { libToolsCtx = ctx; libFilter = ''; }
+  let show = libMode === 'shfolder' || (libMode === 'docs' && (view === 'grid' || view === 'list'));
+  // dossier entièrement vide : pas de barre (rien à chercher ni à trier), l'état vide suffit
+  if (show && libMode === 'docs' && !libFilter.trim()) { const all = libItems(currentFolderId, { listAll: true }); show = all.rows.length > 0; }
+  bar.hidden = !show;
+  if (!show) { closeLibSortMenu(); return; }
+  const inp = $('#lib-filter'), sc = libSearchScope();
+  const ph = sc === 'root' ? 'Rechercher dans mes cours…' : 'Rechercher dans ce dossier…';
+  inp.placeholder = ph; inp.setAttribute('aria-label', ph.replace('…', ''));
+  if (document.activeElement !== inp && inp.value !== libFilter) inp.value = libFilter;
+  $('#lib-filter-clear').hidden = !libFilter;
+  const s = libSort(), def = LIB_SORTS.find(x => x.k === s.k);
+  const btn = $('#lib-sort');
+  btn.querySelector('.ls-lbl').textContent = def.label;
+  btn.querySelector('.ls-dir').classList.toggle('asc', s.dir === 1);
+  { const l = libDirLabel(s.k, s.dir); btn.title = `Trier : ${def.label}, ${l.charAt(0).toLowerCase() + l.slice(1)}`; }   // « …, de A à Z », « …, plus récent d’abord »
+  btn.setAttribute('aria-label', btn.title);
+}
+function setLibFilter(v, opts) {
+  libFilter = String(v || '').slice(0, 80);
+  const inp = $('#lib-filter'); if (inp && inp.value !== libFilter && (!opts || !opts.fromInput)) inp.value = libFilter;
+  const clr = $('#lib-filter-clear'); if (clr) clr.hidden = !libFilter;
+  refreshLibGrid();
+}
+function closeLibSortMenu(refocus) {
+  const m = $('#lib-sortmenu'); if (!m) return;
+  m.remove();
+  const btn = $('#lib-sort'); if (btn) { btn.setAttribute('aria-expanded', 'false'); btn.classList.remove('open'); if (refocus) btn.focus(); }
+}
+function openLibSortMenu() {
+  const btn = $('#lib-sort'); if (!btn) return;
+  if ($('#lib-sortmenu')) { closeLibSortMenu(); return; }
+  closeCtxMenu();
+  const s = libSort();
+  const CHECK = '<svg class="ls-check" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>';
+  const m = document.createElement('div');
+  m.id = 'lib-sortmenu'; m.setAttribute('role', 'menu'); m.setAttribute('aria-label', 'Trier le contenu');
+  /* deux groupes distincts (critère, sens) : un lecteur d'écran annonce « 1 sur 4 » puis « 1 sur 2 », et non « 5 sur 6 » ;
+     le sens par défaut du critère vient en premier */
+  const dirs = LIB_SORTS.find(x => x.k === s.k).dir === 1 ? [1, -1] : [-1, 1];
+  m.innerHTML = `<div class="ls-title" aria-hidden="true">Trier par</div>
+    <div class="ls-group" role="group" aria-label="Trier par">${LIB_SORTS.map(x => `<button type="button" role="menuitemradio" aria-checked="${x.k === s.k}" data-lsk="${x.k}">${CHECK}<span>${x.label}</span></button>`).join('')}</div>
+    <div class="ls-sep" role="separator"></div>
+    <div class="ls-group" role="group" aria-label="Ordre">${dirs.map(d => `<button type="button" role="menuitemradio" aria-checked="${s.dir === d}" data-lsd="${d}">${CHECK}<span>${libDirLabel(s.k, d)}</span></button>`).join('')}</div>`;
+  document.body.appendChild(m);
+  const r = btn.getBoundingClientRect();
+  m.style.left = Math.max(8, Math.min(r.right - m.offsetWidth, innerWidth - m.offsetWidth - 8)) + 'px';
+  m.style.top = Math.min(r.bottom + 6, innerHeight - m.offsetHeight - 8) + 'px';
+  btn.setAttribute('aria-expanded', 'true'); btn.classList.add('open');
+  const items = () => [...m.querySelectorAll('button')];
+  (m.querySelector('[data-lsk][aria-checked="true"]') || items()[0]).focus();
+  m.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const cur = libSort();
+    if (b.dataset.lsk) { const def = LIB_SORTS.find(x => x.k === b.dataset.lsk); state.settings.libSort = { k: def.k, dir: def.k === cur.k ? cur.dir : def.dir }; }
+    else state.settings.libSort = { k: cur.k, dir: b.dataset.lsd === '1' ? 1 : -1 };
+    save();
+    closeLibSortMenu(true);
+    syncLibTools(); refreshLibGrid();
+  });
+  m.addEventListener('keydown', e => {
+    const list = items(), i = list.indexOf(document.activeElement);
+    if (e.key === 'ArrowDown') { e.preventDefault(); list[(i + 1) % list.length].focus(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); list[(i - 1 + list.length) % list.length].focus(); }
+    else if (e.key === 'Home') { e.preventDefault(); list[0].focus(); }
+    else if (e.key === 'End') { e.preventDefault(); list[list.length - 1].focus(); }
+    else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeLibSortMenu(true); }
+    else if (e.key === 'Tab') closeLibSortMenu();
+  });
+}
+{
+  const inp = $('#lib-filter');
+  if (inp) {
+    let tm = 0;
+    inp.addEventListener('input', () => { clearTimeout(tm); const v = inp.value; $('#lib-filter-clear').hidden = !v; tm = setTimeout(() => setLibFilter(v, { fromInput: true }), 80); });
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Escape' && inp.value) { e.preventDefault(); e.stopPropagation(); clearTimeout(tm); inp.value = ''; setLibFilter(''); }
+      else if (e.key === 'ArrowDown') { const first = $('#doc-grid .lib-row'); if (first) { e.preventDefault(); first.focus(); } }
+    });
+    $('#lib-filter-clear').addEventListener('click', () => { clearTimeout(tm); inp.value = ''; setLibFilter(''); inp.focus(); });
+    $('#lib-sort').addEventListener('click', e => { e.stopPropagation(); openLibSortMenu(); });
+    document.addEventListener('mousedown', e => { if ($('#lib-sortmenu') && !e.target.closest('#lib-sortmenu, #lib-sort')) closeLibSortMenu(); }, true);
+    window.addEventListener('resize', () => closeLibSortMenu());
+    $('#doc-grid').addEventListener('click', e => { if (e.target.closest('[data-libclear]')) { e.stopPropagation(); inp.value = ''; setLibFilter(''); inp.focus(); } }, true);
+    /* « / » ou Ctrl+F dans la bibliothèque : le curseur va dans le champ de recherche du dossier (Ctrl+K reste la recherche globale) */
+    document.addEventListener('keydown', e => {
+      const mod = e.ctrlKey || e.metaKey;
+      const slash = e.key === '/' && !mod && !e.altKey, find = mod && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'f';
+      if (!slash && !find) return;
+      if (e.defaultPrevented || currentDocId || $('#lib-tools').hidden || $('#view-library').hidden) return;
+      const t = e.target;
+      if (slash && t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      const blocking = ['#setov', '#searchov', '#authov'].some(s => { const o = $(s); return o && !o.hidden; }) || $('#pfov, #obov, #updov, #wnov, #wkov, .dlgov') || !$('#popover').hidden || !$('#ctxmenu').hidden;
+      if (blocking) return;
+      e.preventDefault(); inp.focus(); inp.select();
+    });
+  }
+}
 function folderItem(f) { return { kind: 'folder', id: f.id, title: f.nom, sub: '', when: 0, type: 'folder', tint: safeTint(f.couleur), pinned: false, raw: f }; }
 /* éléments du dossier `fid` (null = racine) : { cards, rows } selon la vue ; à la racine, les partages reçus se mêlent aux miens */
 function libItems(fid, { listAll = false } = {}) {
@@ -1142,10 +1360,11 @@ function libItems(fid, { listAll = false } = {}) {
     shf = AlixoShare.sharedFolders().map(f => ({ kind: 'shfolder', id: f.rootId, sid: f.sid, title: f.title, sub: '', when: 0, type: 'folder', tint: safeTint(f.color), shared: { owner: f.owner, role: f.role }, pinned: false, raw: f }));
     shd = AlixoShare.sharedDocsAlone().filter(x => x.d).map(x => Object.assign(docItem(x.d, safeTint(x.color)), { kind: 'shdoc', sid: x.sid, shared: { owner: x.owner, role: x.role } }));
   }
-  const byDate = (a, b) => (b.pinned - a.pinned) || (b.when - a.when);
-  const rest = docs.concat(files, shd).sort(byDate);
-  if (listAll) return { cards: [], rows: folders.concat(shf, rest) };
-  return { cards: folders.concat(shf), rows: rest };
+  // 1.51 : tri choisi dans la barre (state.settings.libSort ; par défaut épinglés puis date décroissante, comme avant)
+  const all = sortLibItems(folders.concat(shf, docs, files, shd));
+  const dirs = all.filter(libIsFolder), rest = all.filter(it => !libIsFolder(it));
+  if (listAll) return { cards: [], rows: dirs.concat(rest) };
+  return { cards: dirs, rows: rest };
 }
 /* rôle reçu d'un partage : toujours normalisé (read | write) avant toute injection dans le HTML */
 const roleHTML = role => { const r = role === 'write' ? 'write' : 'read'; return `<span class="sh-role ${r}">${r === 'write' ? 'écriture' : 'lecture'}</span>`; };
@@ -1188,7 +1407,7 @@ function libRowHTML(it) {
     return `<button class="lib-row row-folder" data-fid="${esc(f.id)}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
       <span class="row-type">${rowTileHTML(f)}</span>
       <span class="row-main"><span class="row-title">${esc(f.nom)}</span><span class="row-sub">${counts}</span></span>
-      <span class="row-where">${profBadgeHTML(f) || ''}</span><span class="row-date"></span>
+      <span class="row-where">${libPathHTML(it) || profBadgeHTML(f) || ''}</span><span class="row-date"></span>
       <span class="row-acts"><span class="fc-act ren" data-ren="${esc(f.id)}" title="Renommer">${REN_SVG}</span><span class="fc-act del" data-fdel="${esc(f.id)}" title="Supprimer">${TRASH_SVG}</span></span>
     </button>`;
   }
@@ -1206,12 +1425,13 @@ function libRowHTML(it) {
   if (shared) {
     const peers = window.AlixoShare && AlixoShare.enabled ? AlixoShare.peersFor(it.id) : [];
     where = `${SHARE_ICO}par ${esc(it.shared.owner || 'un contact')}${roleHTML(it.shared.role)}${peers.length ? `<span class="peer-live" title="${esc(peers.map(p => p.name).join(', '))}">● ${peers.length === 1 ? esc(peers[0].name) : peers.length + ' personnes'}</span>` : ''}`;
-  } else if (it.prof) where = `<span class="card-prof">${esc(it.prof)}</span>`;
+  } else if (it.path && it.path.length) where = libPathHTML(it);   // 1.51 : résultat trouvé dans un sous-dossier
+  else if (it.prof) where = `<span class="card-prof">${esc(it.prof)}</span>`;
   return `<button class="lib-row row-doc${shared ? ' shared-card' : ''}" data-id="${esc(it.id)}" ${shared ? '' : 'draggable="true"'} style="--mc:${esc(safeTint(it.tint))}">
       <span class="row-type">${typeChipHTML(it.type)}</span>
       <span class="row-main"><span class="row-title">${it.pinned ? `<svg class="pinned-ico" viewBox="0 0 24 24"><path d="M12 17v5M9 3h6l1 7 2.5 3h-13L8 10Z"/></svg>` : ''}<span class="row-ttl">${esc(it.title)}</span></span><span class="row-sub">${esc(it.sub)}</span></span>
       <span class="row-where">${where}</span>
-      <span class="row-date">${fmtRowDate(it.when)}</span>
+      <span class="row-date">${libRowMeta(it)}</span>
       ${shared ? '<span class="row-acts"></span>' : `<span class="row-acts"><span class="pin-btn ${it.pinned ? 'pinned' : ''}" data-pin="${esc(it.id)}" title="${it.pinned ? 'Désépingler' : 'Épingler'}">${PIN_SVG}</span><span class="del-btn" data-del="${esc(it.id)}" title="Supprimer">${TRASH_SVG}</span></span>`}
     </button>`;
 }
@@ -1220,6 +1440,11 @@ function libSectionHTML(title, n, inner, extra = '') {
 }
 /* contenu de #doc-grid pour un dossier (ou la racine) : Reprendre (racine), cartes de dossiers, liste */
 function libHTML(fid, listAll) {
+  if (libFilter.trim()) {   // 1.51 : recherche dans le dossier — tout en lignes, sous-dossiers compris, sans bloc « Reprendre »
+    const found = libSearchItems(fid, libFilter);
+    if (!found.length) return libEmptySearchHTML();
+    return libSectionHTML(found.length > 1 ? 'Résultats' : 'Résultat', found.length, `<div class="lib-list is-search">${found.map(libRowHTML).join('')}</div>`);
+  }
   const { cards, rows } = libItems(fid, { listAll });
   const nPending = !fid && window.AlixoShare && AlixoShare.enabled ? AlixoShare.pendingCount() : 0;
   let pending = nPending ? `<button class="sh-pending" data-nav="__shared" type="button">${plural(nPending, 'invitation')} en attente</button>` : '';
@@ -1313,7 +1538,7 @@ function resumeSectionHTML() {
 }
 /* rafraîchit seulement le bloc Reprendre (toutes les 30 s avec renderCalNow : temps restant, progression) */
 function renderResume() {
-  if (currentDocId || libMode !== 'docs' || currentFolderId !== null) return;
+  if (currentDocId || libMode !== 'docs' || currentFolderId !== null || libFilter.trim()) return;   // 1.51 : pas de « Reprendre » pendant une recherche
   if ($('.inline-rename')) return;   // 1.50 : un titre est en cours de saisie sur place — on ne redessine pas sous le champ
   const grid = $('#doc-grid'); if (!grid || grid.hidden) return;
   const html = resumeSectionHTML(), el = $('#lib-resume');
@@ -1342,10 +1567,14 @@ function renderSharedFolder() {
   const folders = v.folders.map(f => ({ kind: 'shfolder', id: f.id, sid: v.sid, title: f.nom, sub: '', when: 0, type: 'folder', tint: safeTint(f.couleur || v.sh.color), shared: { owner: v.sh.owner, role: v.sh.role }, pinned: false, raw: { nDocs: f.nDocs, nFiles: 0, icone: f.icone, sid: v.sid, rootId: f.id, color: safeTint(f.couleur || v.sh.color), title: f.nom, owner: v.sh.owner, role: v.sh.role } }));
   const docs = v.docs.map(d => Object.assign(docItem(d, tint), { kind: 'shdoc', sid: v.sid, shared: { owner: v.sh.owner, role: v.sh.role } }));
   const files = window.AlixoFiles ? AlixoFiles.sharedRowItems(v.files || []) : [];
-  const rest = docs.concat(files).sort((a, b) => (b.pinned - a.pinned) || (b.when - a.when));
-  const cards = listAll ? [] : folders, rows = listAll ? folders.concat(rest) : rest;
+  // 1.51 : même tri et même recherche que dans mes dossiers (la recherche porte sur ce niveau du dossier partagé)
+  const words = libWords(libFilter), searching = words.length > 0;
+  const sorted = sortLibItems(folders.concat(docs, files).filter(it => !searching || libMatch(it, words)));
+  const sFolders = sorted.filter(libIsFolder), rest = sorted.filter(it => !libIsFolder(it));
+  const cards = searching || listAll ? [] : sFolders, rows = searching ? [] : listAll ? sFolders.concat(rest) : rest;
   let html = '';
-  if (cards.length) html += libSectionHTML('Dossiers', cards.length, `<div class="lib-cards">${cards.map(folderCardHTML).join('')}</div>`);
+  if (searching) html = sorted.length ? libSectionHTML(sorted.length > 1 ? 'Résultats' : 'Résultat', sorted.length, `<div class="lib-list is-search">${sorted.map(libRowHTML).join('')}</div>`) : libEmptySearchHTML();
+  if (cards.length) html +=libSectionHTML('Dossiers', cards.length, `<div class="lib-cards">${cards.map(folderCardHTML).join('')}</div>`);
   if (rows.length) html += libSectionHTML(listAll && folders.length ? 'Contenu' : (files.length ? 'Séances et fichiers' : 'Séances'), rows.length, `<div class="lib-list">${rows.map(libRowHTML).join('')}</div>`);
   if (!html) html = `<div class="empty-state"><div class="big">${AlixoIcons.svg('folder-open')}</div><p>${v.state === 'loading' ? 'Chargement du dossier partagé…' : 'Ce dossier partagé est vide pour l’instant.'}</p></div>`;
   $('#doc-grid').innerHTML = html;
@@ -1459,7 +1688,7 @@ function treeNodeHTML(f) {
   const kidsFiles = window.AlixoFiles ? AlixoFiles.libTreeHTML(pid) : '';
   const has = kidsF.length + kidsD.length > 0 || !!kidsFiles;
   const card = f
-    ? `<button class="tn-card tn-folder ${currentFolderId === f.id ? 'active' : ''} ${has ? 'has-kids' : ''}" data-tfid="${f.id}" draggable="true" style="--mc:${f.couleur}">
+    ? `<button class="tn-card tn-folder ${currentFolderId === f.id ? 'active' : ''} ${has ? 'has-kids' : ''}" data-tfid="${f.id}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
         ${folderIconHTML(f)}<span class="tn-name">${esc(f.nom)}</span><span class="tn-count">${subtreeDocCount(f.id) || ''}</span></button>`
     : `<button class="tn-card tn-root ${currentFolderId === null ? 'active' : ''} ${has ? 'has-kids' : ''}" data-tfid="">
         <svg class="ficon home-ico" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v9h12v-9"/></svg><span class="tn-name">Mes cours</span><span class="tn-count">${state.docs.length || ''}</span></button>`;
@@ -1573,7 +1802,7 @@ $('#doc-grid').addEventListener('click', e => {
   if (card) { openDoc(card.dataset.id); return; }
   /* 1.18 : un clic gauche dans le vide ne fait plus rien (le menu « créer ici » surgissait dès qu'on
      cliquait à côté d'une carte) ; il reste accessible au clic droit et par les boutons du haut */
-  if (e.target.closest('.empty-state')) openNewMenu({ x: e.clientX, y: e.clientY }, currentFolderId);
+  if (e.target.closest('.empty-state:not(.lib-noresult)')) openNewMenu({ x: e.clientX, y: e.clientY }, currentFolderId);
 });
 /* clic droit dans la bibliothèque : document, dossier, ou le fond (= le dossier courant, racine comprise) — 1.47 : un seul écouteur */
 const LIB_BG_SEL = '.lib-sect, .lib-sect-head, .lib-cards, .lib-list, .lib-resume, .empty-state, .grid-sect';
@@ -1869,7 +2098,7 @@ function openMovePopover(kind, id) {
   const name = kind === 'folder' ? item.nom : (item.titre || 'Sans titre');
   showPopover(`<h4>Déplacer « ${esc(name)} » vers…</h4><div class="po-list po-move">
       <button data-mv="" class="${curParent === null ? 'cur' : ''}"><svg class="ficon home-ico" viewBox="0 0 24 24"><path d="M4 11 12 4l8 7M6 10v9h12v-9"/></svg>Mes cours</button>
-      ${rows.map(r => `<button data-mv="${r.f.id}" class="${r.f.id === curParent ? 'cur' : ''}" style="padding-left:${10 + r.depth * 16}px; --mc:${r.f.couleur}">${folderIconHTML(r.f)}${esc(r.f.nom)}</button>`).join('')}
+      ${rows.map(r => `<button data-mv="${r.f.id}" class="${r.f.id === curParent ? 'cur' : ''}" style="padding-left:${10 + r.depth * 16}px; --mc:${esc(safeTint(r.f.couleur))}">${folderIconHTML(r.f)}${esc(r.f.nom)}</button>`).join('')}
     </div>${rows.length ? '' : '<div class="po-hint">Aucun autre dossier disponible.</div>'}`,
     centerRect(), pop => pop.querySelector('.po-list').addEventListener('click', e => {
       const b = e.target.closest('[data-mv]'); if (!b) return;
@@ -2027,8 +2256,15 @@ const NEW_ITEMS = [
   ['quiz', 'quiz', 'Quiz', 'Questions à tester ou à présenter en direct'],
   ['folder', 'folder', 'Dossier', 'Un cours, une matière, un semestre']
 ];
-const cmTile = (key, mark) => `<span class="cm-tile t-${key}" aria-hidden="true">${mark}</span>`;
-const newMark = key => (DOC_TYPES[key] ? DOC_TYPES[key].mark : key === 'folder' ? 'D' : '');
+const cmTile = (key, mark, cls) => `<span class="cm-tile t-${key}${cls ? ' ' + cls : ''}" aria-hidden="true">${mark}</span>`;
+/* 1.51 : à la place des lettres S / P / T / Pl / Q / D, l'icône de fichier en couleur du type — celle du bureau et du menu ⤓
+   (img/fileicons/, voir scripts/make-icon.js ; mêmes noms que AlixoAlx.kindOfDoc) — et un dossier dans le même style.
+   Si l'image ne charge pas, la tuile teintée et l'icône au trait reprennent leur place (.cm-fico retirée). */
+const NEW_FILE_ICONS = { cours: 'docs', slides: 'slide', sheet: 'sheet', board: 'planche', quiz: 'quiz', folder: 'folder' };
+const newMark = key => (DOC_TYPES[key] ? DOC_TYPES[key].icon : key === 'folder' ? FOLDER_ICON : '');
+const newTile = key => (NEW_FILE_ICONS[key]
+  ? cmTile(key, `<img src="img/fileicons/${NEW_FILE_ICONS[key]}.png" alt="" draggable="false" onerror="this.parentNode.classList.remove('cm-fico');this.remove()">${newMark(key)}`, 'cm-fico')
+  : cmTile(key, newMark(key)));
 function openNewMenu(anchor, fid) {
   const menu = $('#ctxmenu');
   const btn = anchor && typeof anchor.getBoundingClientRect === 'function' ? anchor : null;
@@ -2037,7 +2273,7 @@ function openNewMenu(anchor, fid) {
   const f = folder(fid);
   menu.innerHTML = `
     <div class="cm-title">Créer dans « ${esc(f ? f.nom : 'Mes cours')} »</div>
-    ${NEW_ITEMS.map(([cm, key, label, small]) => `<button data-cm="cnew${cm}" role="menuitem">${cmTile(key, newMark(key))}<span class="cm-lbl">${label}<small>${small}</small></span></button>`).join('')}
+    ${NEW_ITEMS.map(([cm, key, label, small]) => `<button data-cm="cnew${cm}" role="menuitem">${newTile(key)}<span class="cm-lbl">${label}<small>${small}</small></span></button>`).join('')}
     <div class="cm-sep"></div>
     <button data-cm="cimport" role="menuitem">${cmTile('import', IMPORT_ICON)}<span class="cm-lbl">Importer des fichiers…<small>PDF, Word, PowerPoint, Excel, images, audio</small></span></button>`;
   menu.className = 'cm-create';
@@ -2195,7 +2431,7 @@ function openFolderCtxMenu(x, y, fid, opts = {}) {
     ${opts.bg ? '' : `<button data-cm="open">${CM_ICO.folder}Ouvrir</button>`}
     <button class="cm-group ${openSub ? 'open' : ''}" data-cmx="new" aria-expanded="${openSub}">${CM_ICO.plus}Nouveau<svg class="cm-chev" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></button>
     <div class="cm-sub" ${openSub ? '' : 'hidden'}>
-      ${NEW_ITEMS.map(([cm, key, label]) => `<button data-cm="new${cm}">${cmTile(key, newMark(key))}${label}</button>`).join('')}
+      ${NEW_ITEMS.map(([cm, key, label]) => `<button data-cm="new${cm}">${newTile(key)}${label}</button>`).join('')}
     </div>
     <button data-cm="import">${IMPORT_ICON}Importer des fichiers…</button>
     ${f ? `<button data-cm="agenda">${CM_ICO.cal}Ajouter ce cours à l’agenda…</button>
@@ -2208,7 +2444,8 @@ function openFolderCtxMenu(x, y, fid, opts = {}) {
   menu.dataset.fid = fid || ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.root = f ? '' : '1';
   placeCtxMenu(menu, x, y);
 }
-function closeCtxMenu() { const m = $('#ctxmenu'); m.hidden = true; m.classList.remove('cm-create'); m.removeAttribute('role'); const b = $('#btn-new-more'); if (b) { b.classList.remove('open'); b.removeAttribute('aria-expanded'); } }
+let imgMenuOpener = null;   // 1.51 : bouton « Plus d'outils » (#imgbar) qui a ouvert le menu d'image — le focus lui revient à la fermeture
+function closeCtxMenu() { const m = $('#ctxmenu'); m.hidden = true; m.classList.remove('cm-create'); m.removeAttribute('role'); m.removeAttribute('aria-label'); if (imgMenuOpener) { imgMenuOpener.setAttribute('aria-expanded', 'false'); imgMenuOpener = null; } const b = $('#btn-new-more'); if (b) { b.classList.remove('open'); b.removeAttribute('aria-expanded'); } }
 
 /* groupe « Nouveau ▸ » du menu contextuel : replie / déplie sans fermer le menu */
 $('#ctxmenu').addEventListener('click', e => {
@@ -2224,6 +2461,14 @@ $('#ctxmenu').addEventListener('click', e => {
   const f = folder(menu.dataset.fid);
   const isRoot = menu.dataset.root === '1';   // 1.47 : menu de la racine « Mes cours »
   const did = menu.dataset.did;
+  if (IMG_MENU_STAY.has(b.dataset.cm) && menu.dataset.img && window.AlixoImgTools && !readOnly) {   // 1.51 : styles d'image — le menu reste ouvert
+    const id = menu.dataset.img, ib = getBlock(id);
+    if (!ib || ib.type !== 'img') { closeCtxMenu(); return; }
+    const hadFocus = menu.contains(document.activeElement);   // lu avant la commande : le rendu rend le focus à la feuille
+    AlixoImgTools.run(b.dataset.cm, id, ib, e, b);
+    refreshImgCtxMenu(id, b, hadFocus);
+    return;
+  }
   closeCtxMenu();
   const cm = b.dataset.cm;
   if (cm.startsWith('pg') && menu.dataset.page) {
@@ -2247,6 +2492,7 @@ $('#ctxmenu').addEventListener('click', e => {
   if (cm === 'cagenda') { openEventPopover(null, { folderId: cfid }); return; }
   if (cm.startsWith('i') && menu.dataset.img) {
     const id = menu.dataset.img; const ib = getBlock(id); if (!ib || ib.type !== 'img') return;
+    if (window.AlixoImgTools ? AlixoImgTools.run(cm, id, ib, e, b) : readOnly) return;   // 1.51 : outils d'image (js/imgtools.js) ; lecture seule : rien d'autre que copier / télécharger
     if (cm === 'isz') { ib.w = +b.dataset.pct; touch(); renderBlocks('__none'); selectObj(id); return; }
     if (cm === 'isize') { imgSizePopover(id, { left: e.clientX, top: e.clientY, bottom: e.clientY }); return; }
     if (cm === 'ial') { ib.align = b.dataset.al; if (ib.align !== 'center' && (ib.w || 60) > 60) ib.w = 45; touch(); renderBlocks('__none'); selectObj(id); return; }
@@ -2371,8 +2617,16 @@ function makeZip(files) {
   return new Blob([...parts, ...central, new Uint8Array(eocd.buffer)], { type: 'application/zip' });
 }
 
-const safeFileName = s => (s || '').replace(/[\\/:*?"<>|]/g, '·').trim() || 'Sans titre';
+/* 1.51 : sans caractères de contrôle ni marques de sens d'écriture (U+202E… : « exe.gnp » affiché « png.exe ») */
+const safeFileName = s => String(s || '').replace(/[\u0000-\u001F\u007F-\u009F؜‎‏‪-‮⁦-⁩]/g, '').replace(/[\\/:*?"<>|]/g, '·').trim() || 'Sans titre';
 
+/* 1.51 : feuilles de style de la page web exportée — styles.css, puis celles des blocs rangés dans leur propre fichier
+   (frise chronologique, retouches d'image) ; une feuille illisible (hors ligne) est simplement omise */
+async function exportCssText() {
+  let css = '';
+  for (const f of ['styles.css', 'timeline.css', 'imgtools.css']) { try { const r = await fetch(f); if (r.ok || r.status === 0) css += await r.text() + '\n'; } catch { /* export sans cette feuille */ } }
+  return css;
+}
 function docExportHTML(d, cssText) {
   const numMap = computeNumbers(d.blocks);
   const body = d.blocks.map(b => blockHTML(b, numMap)).join('')
@@ -2382,7 +2636,7 @@ function docExportHTML(d, cssText) {
 <style>${cssText}
 body { overflow: auto; background: #fff; padding: 40px 16px; }
 #doc { margin: 0 auto; border: 1px solid #dadce0; }
-.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dhz, .dsel, .draw-textedit, .dref-tools, .dref-go, .q-src { display: none !important; }
+.bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dhz, .dsel, .draw-textedit, .dref-tools, .dref-go, .q-src, .tml-tools, .tml-evtools { display: none !important; }
 .block.draw.empty .draw-wrap::after { content: none; }
 .block.li.cl .cbox { pointer-events: none; }
 .tbl .tcell:focus { box-shadow: none; }
@@ -2409,7 +2663,7 @@ async function downloadFolderZip(fid) {
   const fmt = EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf';
   const ext = EXPORT_FORMATS[fmt].ext;
   let css = '';
-  if (fmt === 'html') { try { css = await (await fetch('styles.css')).text(); } catch { /* export sans styles si hors-ligne */ } }
+  if (fmt === 'html') css = await exportCssText();
   const jobs = [];
   const used = new Set();
   const walk = (f, path) => {
@@ -2595,17 +2849,33 @@ function shareMailPrefHTML() {
   return `<div class="set-sect"><div class="po-label">E-mails</div>
     <div class="set-checks" id="set-sharemail"><label><input type="checkbox" role="switch" data-set="shareMail" ${C.shareMailPref() ? 'checked' : ''}><span><b>Recevoir par e-mail les invitations à un partage</b><small>Quand quelqu’un partage une séance, un dossier, un fichier ou un événement avec vous. L’invitation reste visible dans Bibliothèque › Partagés avec moi dans tous les cas.</small></span></label></div></div>`;
 }
+/* 1.51 : carte « Profil » sans compte (mode local) — niveau, classe, spécialités ; rien ne quitte l'appareil, pas de date de naissance */
+function localProfilCardHTML() {
+  const p = state.settings.profil;
+  return `<div class="po-label">Profil</div>
+    <div class="acc-card acc-profil">
+      <div class="acc-head">
+        <div class="acc-id"><div class="acc-name">Mon profil</div><div class="acc-mail">Alixo adapte ses outils à votre niveau et à vos spécialités.</div></div>
+        <div class="acc-btns"><button id="po-editprofil" class="cta ghost small" type="button">Modifier mon profil</button></div>
+      </div>
+      <div class="acc-facts">
+        <div class="acc-fact"><span>Études</span><b>${esc((p && profilEtudesLabel(p)) || 'Profil non renseigné')}</b></div>
+        <div class="acc-fact"><span>Spécialités</span><b>${esc((p && profilSpecialitesLabel(p)) || '—')}</b></div>
+      </div>
+    </div>`;
+}
 function accountSectionHTML() {
   const A = window.AlixoAuth;
   if (!A || !A.isConfigured) {
     return `<div class="po-label">Compte</div>
-      <div class="po-hint">Service en ligne non configuré — l’application fonctionne en local (voir SETUP-COMPTES.md).</div>`;
+      <div class="po-hint">Service en ligne non configuré — l’application fonctionne en local (voir SETUP-COMPTES.md).</div>
+      ${localProfilCardHTML()}`;
   }
   const acc = A.account();
   if (acc) {
     const sync = window.AlixoSync && window.AlixoSync.enabled ? window.AlixoSync.status() : 'inactif';
     const p = state.settings.profil;
-    const niveau = p ? profilNiveauLabel(p) : '';
+    const niveau = p ? profilEtudesLabel(p) : '';   // 1.51 : « Lycée · Terminale » (niveau + classe)
     const specs = p ? profilSpecialitesLabel(p) : '';
     const pseudo = (window.AlixoShare && AlixoShare.enabled && AlixoShare.pseudo()) || '';
     const plus = hasPlusPlan();
@@ -2645,6 +2915,7 @@ function accountSectionHTML() {
         <div class="acc-btns"><button id="po-login" class="cta small" type="button">Se connecter</button></div>
       </div>
     </div>
+    ${localProfilCardHTML()}
     <div class="po-label">Stockage</div>
     <div class="acc-card"><div id="po-storage" class="po-hint" style="margin:0">Calcul de l’espace utilisé…</div></div>`;
 }
@@ -3593,7 +3864,7 @@ function bindSettingsSection(k, root) {
     const pseudoOk = root.querySelector('#po-pseudo-ok');
     if (pseudoOk) { const go = () => { if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPseudo(root.querySelector('#po-pseudo').value); else toast('Connexion requise'); }; pseudoOk.addEventListener('click', go); root.querySelector('#po-pseudo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } }); }
     const editProfil = root.querySelector('#po-editprofil');
-    if (editProfil) editProfil.addEventListener('click', () => { closeSettings(); openOnboarding(true); });
+    if (editProfil) editProfil.addEventListener('click', () => openProfileModal(editProfil));   // 1.51 : fenêtre dédiée, par-dessus les Paramètres
     const login = root.querySelector('#po-login');
     if (login) login.addEventListener('click', () => { closeSettings(); window.AlixoAuth.openAuthOverlay(); });
     const sm = root.querySelector('#set-sharemail input');
@@ -3748,7 +4019,7 @@ function openSettings(cat) {
 function closeSettings() { const ov = $('#setov'); if (ov) ov.hidden = true; }
 document.addEventListener('keydown', e => {
   const ov = $('#setov');
-  if (e.key === 'Escape' && ov && !ov.hidden && !$('.dlgov')) { e.stopPropagation(); closeSettings(); }
+  if (e.key === 'Escape' && ov && !ov.hidden && !$('.dlgov') && !$('#pfov')) { e.stopPropagation(); closeSettings(); }
 }, true);
 $('#btn-settings').addEventListener('click', openSettings);
 
@@ -3781,8 +4052,14 @@ const PLAN_DEFAULT = [
   { name: 'Sous-section', num: '1', pre: '' },
   { name: 'Paragraphe', num: 'a', pre: '' }
 ];
+/* 1.51 — sécurité : valeur d'une table de définitions (scores, calculateurs, types de graphiques, styles de numérotation…)
+   pour une clé venue d'un document — propriété PROPRE uniquement : « constructor », « toString », « __proto__ »… hérités
+   d'Object.prototype ne désignent rien (ils faisaient lever le rendu, et la séance s'ouvrait vide) */
+function ownOf(table, k) {
+  return table && (typeof k === 'string' || typeof k === 'number') && Object.prototype.hasOwnProperty.call(table, k) ? table[k] : undefined;
+}
 /* styles de numérotation : [exemple, fonction] */
-const NUM_STYLES = { I: ['I.', ROMAN], A: ['A.', ALPHA], '1': ['1.', String], a: ['a.', alpha], i: ['i.', roman], '§': ['§ 1', n => '§ ' + n], '-': ['—', () => ''] };
+const NUM_STYLES ={ I: ['I.', ROMAN], A: ['A.', ALPHA], '1': ['1.', String], a: ['a.', alpha], i: ['i.', roman], '§': ['§ 1', n => '§ ' + n], '-': ['—', () => ''] };
 const NUM_STYLE_NAMES = { I: 'I. II. III.', A: 'A. B. C.', '1': '1. 2. 3.', a: 'a. b. c.', i: 'i. ii. iii.', '§': '§ 1, § 2', '-': 'Sans numéro' };
 /* 1.39 : trois modes de plan — 'auto' (le plan numérote et détecte les titres, comme avant), 'adaptive' (le plan
    suit l'ordre dans lequel vous introduisez les styles de numéros, sans rien imposer : « 1. » tapé en premier devient
@@ -3798,7 +4075,7 @@ function planModeOf(d) {
 function normLevels(raw) {
   return raw.slice(0, PLAN_MAX).map((l, i) => ({
     name: String((l && l.name) || (PLAN_DEFAULT[i] ? PLAN_DEFAULT[i].name : '') || `Niveau ${i + 1}`),
-    num: l && NUM_STYLES[l.num] ? l.num : (PLAN_DEFAULT[i] ? PLAN_DEFAULT[i].num : '1'),
+    num: l && ownOf(NUM_STYLES, l.num) ? l.num : (PLAN_DEFAULT[i] ? PLAN_DEFAULT[i].num : '1'),
     pre: String((l && l.pre) || '')
   }));
 }
@@ -3818,7 +4095,7 @@ function adaptiveOrder(d) {
   const order = [];
   /* ordre par niveau d'abord (un titre déplacé par Tab garde son rang), puis par apparition */
   const byLevel = new Map();
-  for (const b of d.blocks || []) if (b && b.type === 'h' && b.st && NUM_STYLES[b.st]) { const L = Math.max(1, +b.level || 1); if (!byLevel.has(L)) byLevel.set(L, b.st); }
+  for (const b of d.blocks || []) if (b && b.type === 'h' && b.st && ownOf(NUM_STYLES, b.st)) { const L = Math.max(1, +b.level || 1); if (!byLevel.has(L)) byLevel.set(L, b.st); }
   for (const L of [...byLevel.keys()].sort((a, b) => a - b)) { const st = byLevel.get(L); if (!order.includes(st)) order.push(st); }
   adaptiveCache = { id: d.id, key, order };
   return order;
@@ -3838,10 +4115,10 @@ function planLevels(d) {
 const planDepth = () => planLevels().length;
 const planLevelOf = level => { const lv = planLevels(); return lv[Math.min(lv.length, Math.max(1, +level || 1)) - 1]; };
 const planName = level => planLevelOf(level).name;
-const planSample = level => NUM_STYLES[planLevelOf(level).num][0];
+const planSample = level => (ownOf(NUM_STYLES, planLevelOf(level).num) || NUM_STYLES['1'])[0];
 function planNum(level, n) {
   const st = planLevelOf(level).num;
-  const v = NUM_STYLES[st][1](n);
+  const v = (ownOf(NUM_STYLES, st) || NUM_STYLES['1'])[1](n);
   return st === '§' || st === '-' ? v : v + '.';
 }
 /* mots déclencheurs : [{ level, re }] — « Chapitre 1 », « chapitre : … », « Chap. II » (suivi d'un espace ou d'une ponctuation) */
@@ -3939,15 +4216,15 @@ const isFiche = b => !!b && (b.type === 'juris' || b.type === 'fiche');
 function ficheDef(b) {
   if (!b) return JURIS_DEF;
   if (b.type === 'juris') return JURIS_DEF;
-  return AlixoMed.FICHES[b.fk] || AlixoMed.FICHES.patho;
+  return ownOf(AlixoMed.FICHES, b.fk) || AlixoMed.FICHES.patho;
 }
 const PH_P = 'Écrivez, ou tapez « / » pour insérer…';
 const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
 /* 1.38 : alignement d'un champ de bloc (fiche d'arrêt, fiche, cartes) — b.fal = { <data-f> : 'center' | 'right' | 'justify' } */
-const falStyle = (b, k) => (b && b.fal && b.fal[k] ? ` style="text-align:${b.fal[k]}"` : '');
+const falStyle = (b, k) => (b && b.fal && ['left', 'center', 'right', 'justify'].includes(b.fal[k]) ? ` style="text-align:${b.fal[k]}"` : '');   // 1.51 : valeur validée, jamais interpolée telle quelle
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
-const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc', 'docref'];   // 1.43 : + 'docref' (bloc « Document »)
-const BLOCK_PROPS = ['text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans', 'ref', 'kind'];
+const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc', 'docref', 'timeline'];   // 1.43 : + 'docref' (bloc « Document ») ; 1.51 : + 'timeline' (frise chronologique, js/timeline.js)
+const BLOCK_PROPS = ['text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans', 'ref', 'kind', 'events', 'dir', 'fx', 'o'];   // 1.51 : + frise (events, dir) et retouches d'image (fx, o — js/imgtools.js)
 /* « atomes » non éditables dans le texte : références d'articles, items LiSA, résultats de calcul, liens, rangs */
 const ATOM_SEL = '.refart, .calc-res, .lnk, .rtag';
 const ATOM_RE = /<img|refart|calc-res|class="lnk"|rtag/;
@@ -4057,7 +4334,7 @@ function patchImages() {
 function imgCrop(b) { const c = b.crop; return c && c.w > 0 && c.h > 0 ? { x: +c.x || 0, y: +c.y || 0, w: +c.w, h: +c.h } : { x: 0, y: 0, w: 1, h: 1 }; }
 function imgStyle(b) {
   const nw = b.nw || 4, nh = b.nh || 3, c = imgCrop(b);
-  return `--w:${Math.max(8, Math.min(100, +b.w || 60))}%; --ar:${((c.w * nw) / (c.h * nh)).toFixed(4)}; --nar:${(nw / nh).toFixed(4)}; --iw:${(100 / c.w).toFixed(3)}%; --tx:${(-c.x * 100).toFixed(3)}%; --ty:${(-c.y * 100).toFixed(3)}%`;
+  return `--w:${Math.max(8, Math.min(100, +b.w || 60))}%; --ar:${((c.w * nw) / (c.h * nh)).toFixed(4)}; --nar:${(nw / nh).toFixed(4)}; --iw:${(100 / c.w).toFixed(3)}%; --tx:${(-c.x * 100).toFixed(3)}%; --ty:${(-c.y * 100).toFixed(3)}%` + (window.AlixoImgTools ? AlixoImgTools.styleVars(b) : '');   // 1.51 : + réglages non destructifs (--fx, --rad, --bdw, --bdc — js/imgtools.js)
 }
 
 /* ---------------- rendu d'un bloc ---------------- */
@@ -4076,11 +4353,11 @@ function blockHTML(b, numMap) {
     }
     case 'quote':
       /* citation + ligne « auteur / source » (champ à part, jamais vide à l'export) */
-      return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
+      return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite${b.cite ? '' : ' is-blank'}" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
     case 'callout': {
-      const c = CALLOUTS[b.ct] || CALLOUTS.retenir;
+      const c = ownOf(CALLOUTS, b.ct) || CALLOUTS.retenir;
       const style = c.color ? ` style="--cc-light:${c.color}; --cc-dark:${c.dark || c.color}"` : '';
-      return `<div class="block callout${alClass(b)}" data-id="${b.id}" data-ct="${b.ct}"${style}><span class="cico" contenteditable="false">${AlixoIcons.svg(c.ico)}</span><div class="ctitle" contenteditable="false">${c.name}${c.sub ? `<span class="csub">${c.sub}</span>` : ''}</div><div class="btxt" data-ph="${b.ct === 'bilan' || b.ct === 'objectifs' ? 'Points clés… (« - » en début de ligne pour une puce)' : 'Contenu de l’encadré…'}">${b.text || '<br>'}</div></div>`;
+      return `<div class="block callout${alClass(b)}" data-id="${b.id}" data-ct="${esc(b.ct)}"${style}><span class="cico" contenteditable="false">${AlixoIcons.svg(c.ico)}</span><div class="ctitle" contenteditable="false">${c.name}${c.sub ? `<span class="csub">${c.sub}</span>` : ''}</div><div class="btxt" data-ph="${b.ct === 'bilan' || b.ct === 'objectifs' ? 'Points clés… (« - » en début de ligne pour une puce)' : 'Contenu de l’encadré…'}">${b.text || '<br>'}</div></div>`;
     }
     case 'draw':
       return window.AlixoDraw ? AlixoDraw.blockHTML(b, MV_HANDLE) : `<div class="block draw" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="draw-wrap">Dessin</div></div>`;
@@ -4092,11 +4369,11 @@ function blockHTML(b, numMap) {
       const badge = year && new Date().getFullYear() - year >= 5 ? `<span class="jbadge" contenteditable="false" title="Recommandation de plus de 5 ans : vérifier qu’elle est toujours en vigueur">ancienne</span>` : '';
       const timer = def.timer ? `<button class="jtimer" contenteditable="false" data-tstart="${def.timer}" type="button" title="Lancer un compte à rebours de ${Math.round(def.timer / 60)} min">⏱ ${Math.round(def.timer / 60)} min</button>` : '';
       return `<div class="block ${b.type === 'juris' ? 'juris' : 'fiche juris'}" data-id="${b.id}"${b.type === 'fiche' ? ` data-fk="${esc(b.fk || 'patho')}" style="--fc:${def.color}"` : ''}>
-        <div class="juris-head"><span class="jico" contenteditable="false">${AlixoIcons.svg(def.ico)}</span>${b.type === 'fiche' ? `<span class="jkind" contenteditable="false">${esc(def.name)}</span>` : ''}<div class="jref" data-f="ref" data-ph="${esc(def.head)}"${falStyle(b, 'ref')}>${f.ref || '<br>'}</div>${badge}${timer}</div>
-        <div class="juris-grid">${def.fields.map(([k, lab]) => `<div class="jlabel" contenteditable="false">${lab}</div><div class="jval" data-f="${k}"${falStyle(b, k)}>${f[k] || '<br>'}</div>`).join('')}</div></div>`;
+        <div class="juris-head"><span class="jico" contenteditable="false">${AlixoIcons.svg(def.ico)}</span>${b.type === 'fiche' ? `<span class="jkind" contenteditable="false">${esc(def.name)}</span>` : ''}<div class="jref${f.ref ? '' : ' is-blank'}" data-f="ref" data-ph="${esc(def.head)}"${falStyle(b, 'ref')}>${f.ref || '<br>'}</div>${badge}${timer}</div>
+        <div class="juris-grid">${def.fields.map(([k, lab]) => `<div class="jlabel" contenteditable="false">${lab}</div><div class="jval${f[k] ? '' : ' is-blank'}" data-f="${k}"${falStyle(b, k)}>${f[k] || '<br>'}</div>`).join('')}</div></div>`;
     }
     case 'chart': {
-      const t = AlixoCharts.TYPES[b.ck] ? b.ck : 'bar';
+      const t = ownOf(AlixoCharts.TYPES, b.ck) ? b.ck : 'bar';
       const o = b.opts || {};
       return `<div class="block chart" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
         <div class="chart-card"><div class="cwrap">${AlixoCharts.svg(b)}</div>
@@ -4112,7 +4389,7 @@ function blockHTML(b, numMap) {
         </div></div></div>`;
     }
     case 'score': {
-      const sc = AlixoMed.SCORES[b.sk]; if (!sc) return `<div class="block score" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Score inconnu</div></div>`;
+      const sc = ownOf(AlixoMed.SCORES, b.sk); if (!sc) return `<div class="block score" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Score inconnu</div></div>`;
       const vals = Array.isArray(b.vals) ? b.vals : [];
       const total = scoreTotal(b);
       const it = sc.interp.find(([a, z]) => total >= a && total <= z);
@@ -4124,7 +4401,7 @@ function blockHTML(b, numMap) {
         <div class="score-total"><span>Total</span><b>${Number.isInteger(total) ? total : total.toFixed(1)}</b>${it ? `<span class="score-interp">${esc(it[2])}</span>` : ''}</div></div></div>`;
     }
     case 'mcalc': {
-      const c = AlixoMed.CALCS[b.ck]; if (!c) return `<div class="block mcalc" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Calculateur inconnu</div></div>`;
+      const c = ownOf(AlixoMed.CALCS, b.ck); if (!c) return `<div class="block mcalc" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Calculateur inconnu</div></div>`;
       const vals = mcalcVals(b);
       let res = [];
       try { res = c.out(vals); } catch { res = []; }
@@ -4163,10 +4440,12 @@ function blockHTML(b, numMap) {
       return `<div class="block pb" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="pb-line">Saut de page</div></div>`;
     case 'tree':
       return trBlockHTML(b);
+    case 'timeline':   // 1.51 : frise chronologique (js/timeline.js, chargé avant app.js)
+      return window.AlixoTimeline ? AlixoTimeline.blockHTML(b, { handle: MV_HANDLE, readOnly }) : `<div class="block timeline" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}</div>`;
     case 'cards': {
       const cards = cardsOf(b);
       return `<div class="block cards" data-id="${b.id}">
-        <div class="cards-grid">${cards.map((c, i) => `<div class="card-item"><div class="cd-t" data-f="t${i}" data-ph="Titre"${falStyle(b, 't' + i)}>${c.t || '<br>'}</div><div class="cd-x" data-f="x${i}" data-ph="Texte de la carte…"${falStyle(b, 'x' + i)}>${c.x || '<br>'}</div></div>`).join('')}</div>
+        <div class="cards-grid">${cards.map((c, i) => `<div class="card-item"><div class="cd-t${c.t ? '' : ' is-blank'}" data-f="t${i}" data-ph="Titre"${falStyle(b, 't' + i)}>${c.t || '<br>'}</div><div class="cd-x${c.x ? '' : ' is-blank'}" data-f="x${i}" data-ph="Texte de la carte…"${falStyle(b, 'x' + i)}>${c.x || '<br>'}</div></div>`).join('')}</div>
         <div class="cards-tools" contenteditable="false"><button data-cd="add" type="button" title="Ajouter une carte">＋ carte</button><button data-cd="del" type="button" title="Retirer la dernière carte">− carte</button><button data-cd="rm" class="danger" type="button" title="Supprimer le bloc">Supprimer</button></div></div>`;
     }
     case 'timer': {
@@ -4216,7 +4495,7 @@ function blockHTML(b, numMap) {
           `<tr>${Array.from({ length: nc }, (_, ci) => { if (covered.has(ri + ':' + ci)) return ''; const sp = anchors.get(ri + ':' + ci); const last = ci + (sp ? sp.cs : 1) - 1; const bg = cellBg(b, ri, ci); const ta = cellTa(b, ri, ci); return `<td${sp ? ` colspan="${sp.cs}" rowspan="${sp.rs}"` : ''}${bg ? ` style="background:${esc(bg)}; color:${contrastInk(bg)}"` : ''}><div class="tcell" contenteditable="true" data-r="${ri}" data-c="${ci}"${ta ? ` style="text-align:${ta}"` : ''}>${r[ci] || ''}</div>${last < nc - 1 ? `<span class="tbl-rz" data-c="${last}" title="Glisser pour redimensionner la colonne"></span>` : ''}</td>`; }).join('')}</tr>`).join('')}</tbody></table></div></div>`;
     }
     case 'graph': {
-      const t = AlixoGraphs.TYPES[b.gtype];
+      const t = ownOf(AlixoGraphs.TYPES, b.gtype);
       const p = b.params || {};
       let controls = '';
       if (t && t.engine === 'two') {
@@ -4234,14 +4513,14 @@ function blockHTML(b, numMap) {
           <span class="graph-hint">Intersection calculée automatiquement</span>`;
       }
       return `<div class="block graph" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
-        <div class="graph-card"><div class="gwrap">${AlixoGraphs.renderSVG(b.gtype, p)}</div>
+        <div class="graph-card"><div class="gwrap">${AlixoGraphs.renderSVG(t ? b.gtype : '', p)}</div>
         ${controls ? `<div class="graph-controls">${controls}</div>` : ''}</div></div>`;
     }
     case 'img': {
       const src = AlixoImages.cache.get(b.iid);
       const al = ['left', 'right', 'center'].includes(b.align) ? b.align : 'center';
       const handles = ['nw', 'ne', 'sw', 'se', 'e', 'w'].map(k => `<span class="rz ${k}" data-rz="${k}"></span>`).join('');
-      return `<figure class="block img al-${al}" data-id="${b.id}" contenteditable="false" style="${imgStyle(b)}">${MV_HANDLE}<div class="imgbox ${src ? '' : 'loading'}">${src ? `<img src="${src}" alt="${esc(b.alt || '')}" draggable="false">` : ''}${handles}</div>${b.cap !== undefined && b.cap !== null ? `<figcaption contenteditable="true" data-f="cap">${b.cap || ''}</figcaption>` : ''}</figure>`;
+      return `<figure class="block img al-${al}${window.AlixoImgTools ? AlixoImgTools.classes(b) : ''}" data-id="${b.id}" contenteditable="false" style="${imgStyle(b)}">${MV_HANDLE}<div class="imgbox ${src ? '' : 'loading'}">${src ? `<img src="${src}" alt="${esc(b.alt || '')}" draggable="false">` : ''}${handles}</div>${b.cap !== undefined && b.cap !== null ? `<figcaption contenteditable="true" data-f="cap">${b.cap || ''}</figcaption>` : ''}</figure>`;
     }
     default:
       return `<div class="block p${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="${PH_P}">${b.text || '<br>'}</div></div>`;
@@ -4289,17 +4568,31 @@ function fadeNotes(reason = 'timer') {
   shown.forEach(el => { el.classList.add('fade'); setTimeout(() => el.remove(), 500); });
 }
 
+/* 1.51 : bloc que blockHTML n'a pas pu rendre — une carte sobre, non éditable, qui garde l'identifiant du bloc */
+function unreadableBlockHTML(b) {
+  return `<div class="block unreadable" data-id="${esc(b && b.id)}" contenteditable="false">${MV_HANDLE}<div class="unreadable-card" role="note">Ce bloc ne peut pas être affiché.</div></div>`;
+}
 /* rendu complet ; focusId : bloc à placer sous le curseur ('__none' : ne pas toucher au curseur),
    sinon le curseur est remis là où il était */
 function renderBlocks(focusId, caretPos, caretKey) {
   const d = doc(); if (!d) return;
   if (!d.blocks.length) d.blocks.push({ id: uid(), type: 'p', text: '' });
   const restore = focusId === undefined ? caretSnapshot() : null;
-  const numMap = computeNumbers(d.blocks);
+  /* 1.51 — sécurité : un bloc que le rendu ne sait pas lire (document reçu, importé ou collé contenant une valeur inattendue)
+     ne vide plus toute la séance : il est remplacé à l'écran par un bloc « illisible », les autres s'affichent. Ses données
+     restent intactes dans le modèle (syncAllFromDom et normalizeDom ne lisent rien d'un bloc .unreadable). */
+  let numMap = {};
+  try { numMap = computeNumbers(d.blocks); } catch (err) { console.error('Alixo — numérotation impossible', err); }
   blocksEl.innerHTML = d.blocks.map(b => {
-    const html = blockHTML(b, numMap);
-    const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b) + (window.AlixoDraw ? AlixoDraw.layerHTML(b) : '');   // 1.50 : + calque des objets de dessin posés sur le bloc
-    return extra ? html.replace(/<\/(div|figure)>\s*$/, (m, tag) => extra + '</' + tag + '>') : html;   // fonction : un « $ » dans le texte d'un objet de dessin n'est pas un motif de remplacement
+    if (!b || typeof b !== 'object') return '';
+    try {
+      const html = blockHTML(b, numMap);
+      const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b) + (window.AlixoDraw ? AlixoDraw.layerHTML(b) : '');   // 1.50 : + calque des objets de dessin posés sur le bloc
+      return extra ? html.replace(/<\/(div|figure)>\s*$/, (m, tag) => extra + '</' + tag + '>') : html;   // fonction : un « $ » dans le texte d'un objet de dessin n'est pas un motif de remplacement
+    } catch (err) {
+      console.error('Alixo — bloc illisible', b.type, err);
+      return unreadableBlockHTML(b);
+    }
   }).join('');
   if (window.AlixoNest) AlixoNest.fixTails(blocksEl);
   renderPlan();
@@ -4312,6 +4605,7 @@ function renderBlocks(focusId, caretPos, caretKey) {
   if (pagesActive()) paginate(true);   // 1.23 : vue par pages — sauts recalculés AVANT de replacer le curseur (sinon le défilement se cale sur une feuille sans pages)
   if (focusId && focusId !== '__none') focusBlock(focusId, caretPos, caretKey);
   else if (restore && restore.id) focusBlock(restore.id, restore.off, restore.key);
+  syncBlank(blocksEl);   // 1.51 : aide-mémoire des champs vides (classe is-blank)
   markCurrent();
   if (window.AlixoDraw) AlixoDraw.afterRender();
   if (readOnly) blocksEl.querySelectorAll('[contenteditable="true"], input, select, textarea').forEach(el => { if (el.getAttribute('contenteditable') === 'true') el.setAttribute('contenteditable', 'false'); else el.disabled = true; });
@@ -4338,7 +4632,7 @@ function setBlockNumbers() {
 }
 
 /* ---------------- champs et curseur ---------------- */
-const FIELD_SEL = '.btxt, .jref, .jval, .tcell, figcaption, .qcite, .cd-t, .cd-x, .tr-t';
+const FIELD_SEL = '.btxt, .jref, .jval, .tcell, figcaption, .qcite, .cd-t, .cd-x, .tr-t, .tml-title, .tml-d, .tml-t, .tml-x';   // 1.51 : + champs de la frise
 function fieldOfNode(n) {
   const el = n && (n.nodeType === 3 ? n.parentElement : n);
   const f = el && el.closest ? el.closest(FIELD_SEL) : null;
@@ -4473,18 +4767,39 @@ function caretSnapshot(fallbackId) {
   return { id: bl.dataset.id, off, key: fieldKey(f) };
 }
 /* classe .cur sur le bloc du curseur (aide-mémoire des paragraphes vides) */
+/* 1.51 : l'état « vide » d'un champ est décidé ici, plus par le CSS (« :has(> br:only-child) » ignorait les nœuds de texte :
+   un champ contenant du texte et un seul <br> affichait son aide-mémoire sous le texte). Vide = aucun caractère visible
+   (les caractères de largeur nulle ne comptent pas), au plus un saut de ligne, ni image, ni atome, ni bloc imbriqué. */
+const BLANK_SEL = '[data-ph], .jref, .jval';
+const BLANK_IGNORE = new RegExp('[' + String.fromCharCode(0x200B, 0xFEFF) + '\\r\\n]', 'g');   // largeur nulle, sauts de ligne du source
+function isBlankField(f) {
+  if (!f) return false;
+  if ((f.textContent || '').replace(BLANK_IGNORE, '')) return false;
+  if (f.querySelector('img, .nb, ' + ATOM_SEL)) return false;
+  return f.getElementsByTagName('br').length <= 1;
+}
+/* bascule la classe « is-blank » sur tous les champs à aide-mémoire du périmètre (un bloc, ou tout l'éditeur) ;
+   la classe est portée par le champ lui-même : elle n'entre ni dans innerHTML ni dans le modèle */
+function syncBlank(scope) {
+  const root = scope && scope.nodeType === 1 ? scope : blocksEl;
+  if (root.matches && root.matches(BLANK_SEL)) root.classList.toggle('is-blank', isBlankField(root));
+  const list = root.querySelectorAll(BLANK_SEL);
+  for (let i = 0; i < list.length; i++) { const f = list[i], v = isBlankField(f); if (f.classList.contains('is-blank') !== v) f.classList.toggle('is-blank', v); }
+}
 function markCurrent() {
   const bl = blockAtSelection();
   const prev = blocksEl.querySelector('.block.cur');
   if (prev && prev !== bl) prev.classList.remove('cur');
   if (bl && !bl.classList.contains('cur')) bl.classList.add('cur');
+  if (bl && !composing) syncBlank(bl);
   if (window.AlixoShare && AlixoShare.enabled && currentDocId) AlixoShare.setPresence(currentDocId, bl ? bl.dataset.id : null);
 }
 
 /* ---------------- lecture de l'écran → modèle ---------------- */
 function blockElType(el) {
   const c = el.classList;
-  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc', 'docref']) if (c.contains(t)) return t;
+  if (c.contains('unreadable')) return 'unreadable';   // 1.51 : bloc que le rendu n'a pas su afficher — jamais relu comme un paragraphe
+  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc', 'docref', 'timeline']) if (c.contains(t)) return t;
   return 'p';
 }
 const levelOfEl = el => { const m = el.className.match(/\bl([1-6])\b/); return m ? +m[1] : 1; };
@@ -4563,6 +4878,7 @@ function syncAllFromDom() {
     const id = el.dataset.id;
     const type = blockElType(el);
     let b = old.get(id);
+    if (type === 'unreadable') { if (b) out.push(b); continue; }   // 1.51 : bloc illisible — le modèle est gardé tel quel (ni relu, ni vidé, ni effacé)
     if (!b || (b.type !== type && TEXT_TYPES.includes(type))) {
       b = Object.assign({ id, type, text: '' }, b && b.day ? { day: b.day } : {}, b && Array.isArray(b.fl) && b.fl.length ? { fl: b.fl } : {});   // 1.50 : les objets de dessin restent sur leur bloc
       if (type === 'h') b.level = levelOfEl(el);
@@ -4578,6 +4894,7 @@ function syncAllFromDom() {
     else if (b.type === 'table') { el.querySelectorAll('.tcell').forEach(c => { const r = +c.dataset.r, k = +c.dataset.c; if (b.rows && b.rows[r] && k < b.rows[r].length) b.rows[r][k] = c.innerHTML.replace(/\u200B/g, ''); }); }
     else if (b.type === 'img') { const fc = el.querySelector('figcaption'); if (fc) b.cap = cleanHTML(fc.innerHTML); }
     else if (b.type === 'tree') treeSyncFromDom(b, el);
+    else if (b.type === 'timeline') { if (window.AlixoTimeline) AlixoTimeline.syncFromDom(b, el, cleanHTML); }
     else if (b.type === 'cards') { const items = [...el.querySelectorAll('.card-item')]; if (items.length) b.cards = items.map(c => { const t = c.querySelector('.cd-t'), x = c.querySelector('.cd-x'); return { t: t ? cleanHTML(t.innerHTML) : '', x: x ? cleanHTML(x.innerHTML) : '' }; }); }
     out.push(b);
   }
@@ -4756,6 +5073,7 @@ function insertSpecial(block) {
    ============================================================ */
 const blocksEl = $('#blocks');
 let fmtInProgress = false;   // mise en forme en cours : l'événement input est ignoré (une seule entrée d'historique)
+let composing = false;       // 1.51 : saisie par touche morte / IME en cours — l'aide-mémoire du champ reste masqué
 let lastAnchorBlock = null;
 let selFromNative = false;   // compatibilité : plus de sélection de blocs « à la main »
 let justDraggedSel = false, justDraggedCurve = false;
@@ -4778,6 +5096,24 @@ blocksEl.addEventListener('focusin', e => {
   if (e.target.classList && e.target.classList.contains('fsrc')) lastFormulaInput = e.target;
   if (e.target.classList && e.target.classList.contains('tcell')) lastCell = { r: +e.target.dataset.r, c: +e.target.dataset.c };
 });
+
+/* 1.51 : aide-mémoire des champs vides — recalculé à chaque saisie (y compris pendant une mise en forme), masqué
+   d'office pendant une composition (touche morte, IME : le <br> d'origine cohabite alors avec le texte en cours) */
+function syncBlankAt(target) {
+  const el = target && target.nodeType === 1 ? target : null;
+  const cur = blockAtSelection();
+  const bl = (el && el !== blocksEl ? el.closest('#blocks > .block') : null) || cur;   // #blocks est la zone éditable : la cible est souvent #blocks lui-même
+  syncBlank(bl || blocksEl);
+  if (bl && cur && cur !== bl) syncBlank(cur);
+}
+blocksEl.addEventListener('compositionstart', () => {
+  composing = true;
+  const f = activeField();
+  const host = f && f.matches && f.matches(BLANK_SEL) ? f : (f && f.closest ? f.closest(BLANK_SEL) : null);
+  if (host) host.classList.remove('is-blank');
+});
+blocksEl.addEventListener('compositionend', e => { composing = false; syncBlankAt(e.target); });
+blocksEl.addEventListener('input', e => { if (!composing && !e.isComposing) syncBlankAt(e.target); }, true);
 
 blocksEl.addEventListener('input', e => {
   if (fmtInProgress) return;
@@ -4805,7 +5141,7 @@ blocksEl.addEventListener('input', e => {
   const after = d.blocks.map(b => b.id).join(',');
   const bl = blockAtSelection(); const b = bl && getBlock(bl.dataset.id);
   touch({ typing: true, blockId: b ? b.id : null });
-  if (before !== after) { setBlockNumbers(); planRefreshSoon(); markCurrent(); }
+  if (before !== after) { setBlockNumbers(); planRefreshSoon(); markCurrent(); syncBlank(blocksEl); }
   if (!b) return;
   const f = activeField();
   const inText = !!(f && f.classList.contains('btxt'));
@@ -5367,19 +5703,31 @@ function detectAutoPattern(b, el) {
 const PASTE_INLINE = { b: 'b', strong: 'b', i: 'i', em: 'i', u: 'u', s: 's', strike: 's', del: 's', sup: 'sup', sub: 'sub', mark: 'mark' };
 const PASTE_BLOCK = new Set(['p', 'div', 'li', 'ul', 'ol', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'tr', 'blockquote', 'pre', 'section', 'article', 'header', 'footer', 'table', 'td', 'th', 'hr', 'dd', 'dt', 'dl', 'figure', 'figcaption']);
 const PASTE_SKIP = new Set(['script', 'style', 'head', 'meta', 'title', 'link', 'img', 'svg', 'noscript', 'template', 'button', 'input', 'select', 'textarea', 'iframe', 'object']);
-function htmlToLines(html) {
+/* 1.51 : { styles: true } — contenu copié depuis Alixo (marque data-alixo-clip) : couleur, surlignage, taille et police
+   sont conservés, recomposés par AlixoSanitize (liste blanche). Sans l'option (Word, pages web) : comportement inchangé. */
+function htmlToLines(html, opts) {
+  const styles = !!(opts && opts.styles && window.AlixoSanitize);
   let parsed;
   try { parsed = new DOMParser().parseFromString(html, 'text/html'); } catch { return null; }
   const lines = [];
   let cur = '';
+  /* 1.51 — sécurité : le style en cours n'est plus une pile de <span> rouverte à chaque ligne (sortie = profondeur × lignes,
+     des dizaines de Mo pour quelques Ko collés) mais UN seul <span> par ligne, aux styles fusionnés (l'intérieur l'emporte).
+     Plafonds : 8 styles imbriqués, 5 000 lignes, 2 Mo de sortie — au-delà, le collage est repris sans les styles. */
+  const MAX_STYLE_DEPTH = 8, MAX_STYLED_LINES = 5000, MAX_STYLED_OUT = 2000000;
+  let eff = null;        // style effectif (fusion des <span> ouverts), ou null
+  let lineNo = 0, outLen = 0, over = false;
   const flush = () => {
     const t = document.createElement('div'); t.innerHTML = cur;   // rééquilibre les balises
     const clean = t.innerHTML.trim();
     if ((t.textContent || '').replace(/ /g, ' ').trim()) lines.push(clean);
-    cur = '';
+    if (styles) { outLen += cur.length; if (lines.length > MAX_STYLED_LINES || outLen > MAX_STYLED_OUT) over = true; }
+    lineNo++;
+    cur = styles && eff ? AlixoSanitize.propsSpan(eff) : '';
   };
-  const walk = (node, st) => {
+  const walk = (node, st, depth) => {
     for (const n of node.childNodes) {
+      if (over) return;
       if (n.nodeType === 3) { cur += esc(n.textContent.replace(/[\r\n\t]+/g, ' ')); continue; }
       if (n.nodeType !== 1) continue;
       const tag = n.tagName.toLowerCase();
@@ -5400,15 +5748,30 @@ function htmlToLines(html) {
       if (/line-through/.test(deco)) open.push('s');
       if (cs.verticalAlign === 'super') open.push('sup');
       if (cs.verticalAlign === 'sub') open.push('sub');
-      const eff = [...new Set(open)].filter(x => !s[x]);
-      eff.forEach(x => { cur += `<${x}>`; s[x] = true; });
-      walk(n, s);
-      eff.slice().reverse().forEach(x => { cur += `</${x}>`; });
+      const tags = [...new Set(open)].filter(x => !s[x]);
+      const own = styles && !isBlock ? AlixoSanitize.spanProps(n) : null;   // style propre de l'élément (liste blanche), ou null
+      const outer = eff, openedAt = lineNo;
+      if (own) {
+        if (depth >= MAX_STYLE_DEPTH) { over = true; return; }
+        cur += AlixoSanitize.propsSpan(own);
+        eff = Object.assign({}, outer, own);
+      }
+      tags.forEach(x => { cur += `<${x}>`; s[x] = true; });
+      walk(n, s, own ? depth + 1 : depth);
+      if (over) return;
+      tags.slice().reverse().forEach(x => { cur += `</${x}>`; });
+      if (own) {
+        eff = outer;
+        cur += '</span>';
+        if (openedAt !== lineNo && outer) cur += AlixoSanitize.propsSpan(outer);   // la ligne a changé : son unique <span> portait la fusion — on revient au style englobant
+      }
       if (isBlock) flush();
     }
   };
-  walk(parsed.body, {});
+  walk(parsed.body, {}, 0);
+  if (over) return htmlToLines(html);   // trop profond ou trop volumineux : texte sans styles (comportement d'un collage ordinaire)
   flush();
+  if (over) return htmlToLines(html);
   return lines;
 }
 function fragHTML(frag) { const t = document.createElement('div'); t.appendChild(frag); t.querySelectorAll('.fl-layer').forEach(n => n.remove()); return t.innerHTML; }   // 1.50 : sans les calques de dessin
@@ -5458,6 +5821,70 @@ function insertBlocksAtCaret(newBlocks) {
   return last.id;
 }
 
+/* 1.51 — sécurité : rien de ce qui vient du presse-papiers n'est digne de confiance, pas même « text/x-alixo »
+   (n'importe quelle page web peut poser ce format lors d'un « copier »). Le JSON est validé et reconstruit par
+   AlixoSanitize.blocks (types et propriétés en liste blanche, HTML recomposé, identifiants régénérés) avant le filtre
+   de spécialité ; sans le module, le format est ignoré (repli sur le HTML / le texte, eux-mêmes nettoyés). */
+if (window.AlixoSanitize) AlixoSanitize.configure({
+  fonts: DOC_FONTS.map(f => f.css).filter(Boolean),
+  callouts: Object.keys(CALLOUTS),
+  fiches: Object.keys(AlixoMed.FICHES),
+  /* clés connues : un score, un calculateur ou un graphique d'un type inconnu est refusé, un style de numérotation inconnu retiré */
+  scores: Object.keys(AlixoMed.SCORES),
+  calcs: Object.keys(AlixoMed.CALCS),
+  charts: Object.keys(AlixoCharts.TYPES),
+  graphs: Object.keys(AlixoGraphs.TYPES),
+  numStyles: Object.keys(NUM_STYLES),
+  normShape: s => (window.AlixoDraw && AlixoDraw.normShape ? AlixoDraw.normShape(s) : null)   // draw.js est chargé après app.js
+});
+/* renvoie les blocs sûrs, null (rien d'exploitable : repli sur le HTML / le texte), ou false quand le contenu dépasse le
+   budget d'un collage (AlixoSanitize.parseBlocks) : le collage est alors abandonné en entier, avec un message */
+const CLIP_TOO_BIG = 'Ce contenu est trop volumineux pour être collé.';
+function clipBlocks(alx) {
+  if (!alx || !window.AlixoSanitize) return null;
+  const arr = AlixoSanitize.parseBlocks(alx);
+  if (!arr && AlixoSanitize.tooBig()) { toast(CLIP_TOO_BIG); return false; }
+  return arr ? specFilterBlocks(arr) : null;
+}
+/* fragment copié à l'intérieur d'un passage mis en forme : cloneContents() ne reprend pas les balises ancêtres (copier
+   trois mots au milieu d'un texte rouge en 14 pt donnait du texte nu) — on ré-enveloppe le fragment dans des copies
+   superficielles des ancêtres de mise en forme, du plus proche au plus lointain, jusqu'au champ */
+const CLIP_CTX_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SUP', 'SUB', 'MARK', 'SPAN', 'FONT']);
+function wrapInlineContext(html, range, field) {
+  if (!html || !range || !field) return html;
+  let n = range.commonAncestorContainer;
+  if (n && n.nodeType === 3) n = n.parentNode;
+  if (!n || n === field || !field.contains(n)) return html;
+  for (; n && n !== field; n = n.parentNode) {
+    if (n.nodeType !== 1 || !CLIP_CTX_TAGS.has(n.tagName)) continue;
+    if (n.matches(ATOM_SEL) || n.classList.contains('corr')) continue;
+    if ((n.tagName === 'SPAN' || n.tagName === 'FONT') && !n.getAttribute('style') && !n.getAttribute('color') && !n.getAttribute('face')) continue;
+    const c = n.cloneNode(false); c.removeAttribute('class'); c.removeAttribute('id');
+    c.innerHTML = html; html = c.outerHTML;
+  }
+  return html;
+}
+/* text/html d'une copie : fragment contextualisé + marque de provenance (indice pour le collage, jamais un gage de confiance) */
+function clipHTML(range) {
+  if (!range || range.collapsed) return '';
+  const f = fieldOfNode(range.commonAncestorContainer);
+  const html = wrapInlineContext(fragHTML(range.cloneContents()), range, f);
+  return html ? `<div data-alixo-clip="1">${html}</div>` : '';
+}
+/* champs simples (case de tableau, légende, champ de fiche, carte, nœud d'arbre) : copie contextualisée, sans « text/x-alixo » ;
+   renvoie true si la copie a été prise en charge */
+function copySimpleField(e, f) {
+  if (!f || f.classList.contains('btxt') || f.tagName === 'INPUT') return false;
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return false;
+  const r = sel.getRangeAt(0);
+  if (!f.contains(r.commonAncestorContainer)) return false;
+  const html = clipHTML(r); if (!html) return false;
+  e.clipboardData.setData('text/plain', sel.toString());
+  e.clipboardData.setData('text/html', html);
+  e.preventDefault();
+  return true;
+}
+
 blocksEl.addEventListener('paste', e => {
   const cd = e.clipboardData; if (!cd) return;
   // image copiée (capture d'écran, photo) → bloc image
@@ -5467,14 +5894,15 @@ blocksEl.addEventListener('paste', e => {
   const alx = cd.getData('text/x-alixo');
   const html = cd.getData('text/html'), text = cd.getData('text/plain');
   if (!alx && !html && !text) return;
+  const fromAlixo = !!(html && window.AlixoSanitize && AlixoSanitize.isAlixoClip(html));   // 1.51 : copié depuis Alixo (indice, pas un gage de confiance) → le style est conservé
   /* 1.21 : un objet est sélectionné (dessin, image, tableau…) et aucun champ n'a le curseur : le collage s'insère
      après l'objet — avant, le navigateur injectait le contenu n'importe où dans la page (parfois par-dessus l'objet) */
   if (!field && objSel) {
     e.preventDefault();
-    let arr = null; if (alx) { try { arr = JSON.parse(alx); } catch { arr = null; } }
-    if (Array.isArray(arr)) arr = specFilterBlocks(arr);
+    let arr = clipBlocks(alx);
+    if (arr === false) return;   // trop volumineux : abandon (message déjà affiché)
     if (!Array.isArray(arr) || !arr.length) {
-      let lines = html ? htmlToLines(html) : null;
+      let lines = html ? htmlToLines(html, { styles: fromAlixo }) : null;
       if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
       arr = lines.map(l => ({ type: 'p', text: l }));
     }
@@ -5489,18 +5917,20 @@ blocksEl.addEventListener('paste', e => {
   if (window.AlixoNest && AlixoNest.handlePaste(field, { alx, html, text })) return;
   const url = (text || '').trim();
   if (field.classList.contains('btxt') && !alx && isWebUrl(url) && (!html || stripTags(html).trim() === url)) { openLinkPopover({ url }); return; }
-  // champs simples (fiche, case, légende) : texte seul
+  // champs simples (fiche, case, légende) : texte seul — 1.51 : mise en forme conservée (assainie) quand la source est Alixo
   if (!field.classList.contains('btxt')) {
-    let lines = html ? htmlToLines(html) : null;
+    let lines = html ? htmlToLines(html, { styles: fromAlixo }) : null;
     if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
-    if (lines.length === 1 && field.classList.contains('tcell')) document.execCommand('insertHTML', false, lines[0]);
+    if (!lines.length) return;
+    if (fromAlixo && (lines.length === 1 || field.classList.contains('tcell'))) document.execCommand('insertHTML', false, lines.map(l => AlixoSanitize.inline(l)).join('<br>'));
+    else if (lines.length === 1 && field.classList.contains('tcell')) document.execCommand('insertHTML', false, lines[0]);
     else document.execCommand('insertText', false, lines.map(l => stripTags(l)).join('\n'));
     return;
   }
-  // blocs copiés depuis Alixo (objets compris)
+  // blocs copiés depuis Alixo (objets compris) — 1.51 : toujours assainis (clipBlocks), jamais injectés tels quels
   if (alx) {
-    let arr = null; try { arr = JSON.parse(alx); } catch { arr = null; }
-    if (Array.isArray(arr)) arr = specFilterBlocks(arr);
+    const arr = clipBlocks(alx);
+    if (arr === false) return;   // trop volumineux : abandon (message déjà affiché)
     if (Array.isArray(arr) && arr.length) {
       if (arr.length === 1 && isTextBlock(arr[0])) { document.execCommand('insertHTML', false, arr[0].text || ''); return; }
       insertBlocksAtCaret(arr);
@@ -5508,7 +5938,7 @@ blocksEl.addEventListener('paste', e => {
     }
   }
   const bl = field.closest('#blocks > .block'); const b = getBlock(bl.dataset.id); if (!b) return;
-  let lines = html ? htmlToLines(html) : null;
+  let lines = html ? htmlToLines(html, { styles: fromAlixo }) : null;
   if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
   if (!lines.length) return;
   if (lines.length === 1 || !isTextBlock(b) || b.type !== 'p') {
@@ -5542,7 +5972,7 @@ function selectionPayload() {
       if (rr.compareBoundaryPoints(Range.START_TO_START, fr) < 0) rr.setStart(fr.startContainer, fr.startOffset);
       if (rr.compareBoundaryPoints(Range.END_TO_END, fr) > 0) rr.setEnd(fr.endContainer, fr.endOffset);
       if (rr.collapsed && !sel.isCollapsed && els.length > 1) continue;
-      copy.text = cleanHTML(fragHTML(rr.cloneContents()));
+      copy.text = cleanHTML(wrapInlineContext(fragHTML(rr.cloneContents()), rr, f));   // 1.51 : avec la mise en forme des balises ancêtres
     } else if (!(inRange(el, 0) && inRange(el, el.childNodes.length)) && !(objSel === b.id)) continue;   // objet partiellement couvert : ignoré
     out.push(copy);
   }
@@ -5565,30 +5995,34 @@ document.addEventListener('copy', e => {
     e.preventDefault();
     return;
   }
-  const f = activeField(); if (f && (f.classList.contains('tcell') || f.tagName === 'FIGCAPTION' || f.tagName === 'INPUT')) return;
+  const f = activeField(); if (f && f.tagName === 'INPUT') return;
+  if (copySimpleField(e, f)) return;   // 1.51 : case, légende, champ de fiche… — la mise en forme voyage avec le texte
+  if (f && (f.classList.contains('tcell') || f.tagName === 'FIGCAPTION')) return;
   const payload = selectionPayload(); if (!payload) return;
   const sel = getSelection(); const r = sel.getRangeAt(0);
   e.clipboardData.setData('text/x-alixo', JSON.stringify(payload));
   const oneTable = payload.length === 1 && payload[0].type === 'table' && window.AlixoNest ? payload[0] : null;
   e.clipboardData.setData('text/plain', oneTable ? AlixoNest.blockTableText(oneTable) : (sel.isCollapsed ? payload.map(blockPlain).join('\n') : sel.toString()));
-  e.clipboardData.setData('text/html', oneTable ? AlixoNest.blockTableHTML(oneTable) : (sel.isCollapsed ? '' : fragHTML(r.cloneContents())));
+  e.clipboardData.setData('text/html', oneTable ? AlixoNest.blockTableHTML(oneTable) : clipHTML(r));
   e.preventDefault();
   if (oneTable) toast('Tableau copié — Ctrl+V pour le coller');
 });
 document.addEventListener('cut', e => {
   if (!doc() || !document.body.classList.contains('mode-editor') || tsel) return;
   if (document.activeElement && /^(TEXTAREA|INPUT)$/.test(document.activeElement.tagName)) return;
-  const f = activeField(); if (f && (f.classList.contains('tcell') || f.tagName === 'FIGCAPTION' || f.tagName === 'INPUT')) return;
+  const f = activeField(); if (f && f.tagName === 'INPUT') return;
+  if (!readOnly && copySimpleField(e, f)) { document.execCommand('delete'); return; }   // 1.51 : l'événement input qui suit met le modèle à jour
+  if (f && (f.classList.contains('tcell') || f.tagName === 'FIGCAPTION')) return;
   const payload = selectionPayload(); if (!payload) return;
   const sel = getSelection(); const r = sel.getRangeAt(0);
   e.clipboardData.setData('text/x-alixo', JSON.stringify(payload));
   e.clipboardData.setData('text/plain', sel.isCollapsed ? payload.map(blockPlain).join('\n') : sel.toString());
-  e.clipboardData.setData('text/html', sel.isCollapsed ? '' : fragHTML(r.cloneContents()));
+  e.clipboardData.setData('text/html', clipHTML(r));
   e.preventDefault();
   if (objSel && sel.isCollapsed) { deleteObj(objSel); return; }
   fmtInProgress = true;
   try { document.execCommand('delete'); } finally { fmtInProgress = false; }
-  syncAllFromDom(); touch(); setBlockNumbers(); planRefreshSoon();
+  syncAllFromDom(); touch(); setBlockNumbers(); planRefreshSoon(); syncBlank(blocksEl);
 });
 
 /* ---------------- clavier ---------------- */
@@ -5642,6 +6076,13 @@ blocksEl.addEventListener('keydown', e => {
     const id = objSel;
     if (window.AlixoDraw && AlixoDraw.handleKey(e, id)) return;   // dessin sélectionné : formes, flèches, Suppr d'une forme…
     if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteObj(id); return; }
+    /* 1.51 — image sélectionnée, au clavier : Tab entre dans sa barre d'outils (Échap en ressort) ; Maj+F10 ou la touche
+       « Menu » ouvre directement « Plus d'outils » */
+    { const ib = getBlock(id), bar = $('#imgbar');
+      if (ib && ib.type === 'img' && !bar.hidden) {
+        if (e.key === 'Tab' && !e.shiftKey && !mod) { const first = bar.querySelector('button'); if (first) { e.preventDefault(); first.focus(); return; } }
+        if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) { e.preventDefault(); const more = bar.querySelector('[data-ib="more"]'); if (more && $('#ctxmenu').hidden) more.click(); return; }
+      } }
     if (e.key === 'Escape') { e.preventDefault(); clearObjSel(); focusFieldNearBlock(id, 1) || focusFieldNearBlock(id, -1); return; }
     if (e.key === 'Enter' && !mod) {
       e.preventDefault();
@@ -6229,7 +6670,7 @@ function treeParentOf(root, path) {
 }
 function trNodeHTML(n, path, depth) {
   const kids = Array.isArray(n.k) ? n.k : [];
-  return `<li><div class="tr-node d${Math.min(depth, 4)}"><div class="tr-t" contenteditable="true" data-path="${path}" data-ph="${depth ? 'Nœud' : 'Racine'}" spellcheck="true">${n.t || '<br>'}</div>
+  return `<li><div class="tr-node d${Math.min(depth, 4)}"><div class="tr-t${n.t ? '' : ' is-blank'}" contenteditable="true" data-path="${esc(path)}" data-ph="${depth ? 'Nœud' : 'Racine'}" spellcheck="true">${n.t || '<br>'}</div>
       <div class="tr-tools" contenteditable="false"><button data-tr="child" data-path="${path}" type="button" title="Ajouter un enfant (Tab)">＋ enfant</button>${depth ? `<button data-tr="sib" data-path="${path}" type="button" title="Ajouter un frère (Entrée)">＋ frère</button><button data-tr="del" data-path="${path}" type="button" class="danger" title="Supprimer ce nœud et ses enfants">✕</button>` : ''}</div></div>
     ${kids.length ? `<ul>${kids.map((c, i) => trNodeHTML(c, path ? path + '.' + i : String(i), depth + 1)).join('')}</ul>` : ''}</li>`;
 }
@@ -6237,7 +6678,7 @@ function trBlockHTML(b) {
   const root = treeRoot(b);
   return `<div class="block tree" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
     <div class="tree-wrap"><ul class="tr">${trNodeHTML(root, '', 0)}</ul></div>
-    <div class="tree-tools" contenteditable="false"><span class="tree-hint">Entrée : nouveau frère · Tab : nouvel enfant · Retour arrière sur un nœud vide : supprimer</span><button data-trm="rm" class="danger" type="button" title="Supprimer l’arbre">Supprimer l’arbre</button></div></div>`;
+    <div class="tree-tools" contenteditable="false"><button data-trm="rm" class="danger" type="button" title="Supprimer l’arbre">Supprimer l’arbre</button></div></div>`;
 }
 const treePlain = (n, depth = 0) => (n ? [('  '.repeat(depth) + stripTags(n.t || '')).trimEnd()].concat((n.k || []).map(c => treePlain(c, depth + 1))).join('\n') : '');
 /* relit les nœuds depuis l'écran (saisie en cours) */
@@ -6279,6 +6720,8 @@ blocksEl.addEventListener('keydown', e => {
   if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); selectObj(bid); return; }
   if (e.key === 'ArrowUp' || e.key === 'ArrowDown') e.stopPropagation();   // pas de changement de bloc depuis un nœud
 }, true);
+/* 1.51 : bloc « Frise chronologique » — clics sur les outils et clavier des champs (js/timeline.js) */
+if (window.AlixoTimeline) AlixoTimeline.init(blocksEl);
 
 /* ---------------- interactions graphiques ---------------- */
 blocksEl.addEventListener('click', e => {
@@ -6318,7 +6761,7 @@ blocksEl.addEventListener('pointerdown', e => {
   if (!curve) return;
   const bl = curve.closest('.block');
   const b = getBlock(bl.dataset.id);
-  const t = AlixoGraphs.TYPES[b.gtype];
+  const t = ownOf(AlixoGraphs.TYPES, b.gtype);
   if (!t || t.engine !== 'two') return;
   const svg = bl.querySelector('svg');
   const scale = svg.getBoundingClientRect().height / 320;
@@ -6371,7 +6814,9 @@ function deleteObj(id) {
   const target = d.blocks[Math.min(i, d.blocks.length - 1)];
   renderBlocks(target.id, i < d.blocks.length ? 'start' : 'end');
   if (b.type === 'timer') stopTimerBlock(b.id);
-  toast(`${{ img: 'Image', graph: 'Graphique', formula: 'Formule', table: 'Tableau', juris: 'Fiche d’arrêt', fiche: 'Fiche', draw: 'Dessin', chart: 'Graphique', score: 'Score', mcalc: 'Calculateur', timer: 'Minuteur', tree: 'Arbre', hr: 'Séparateur', cards: 'Cartes' }[b.type] || 'Bloc'} supprimé${b.type === 'img' || b.type === 'formula' || b.type === 'fiche' ? 'e' : ''} — Ctrl+Z pour annuler`);
+  /* 1.51 : la frise se supprime d'un bouton toujours visible au doigt — annulation proposée dans le message (pas de Ctrl+Z sur un téléphone) */
+  if (b.type === 'timeline') { toast('Frise supprimée', { action: 'Annuler', onAction: () => undoEdit() }); return; }
+  toast(`${{ img: 'Image', graph: 'Graphique', formula: 'Formule', table: 'Tableau', juris: 'Fiche d’arrêt', fiche: 'Fiche', draw: 'Dessin', chart: 'Graphique', score: 'Score', mcalc: 'Calculateur', timer: 'Minuteur', tree: 'Arbre', hr: 'Séparateur', cards: 'Cartes', timeline: 'Frise' }[b.type] || 'Bloc'} supprimé${b.type === 'img' || b.type === 'formula' || b.type === 'fiche' || b.type === 'timeline' ? 'e' : ''} — Ctrl+Z pour annuler`);
 }
 document.addEventListener('pointerdown', e => {
   if (objSel && !e.target.closest('#blocks, #toolbar, #popover, #aipanel, #mathpanel, #drawpanel, #ctxmenu, #imgbar')) clearObjSel();   // 1.50 : + #drawpanel (un ancien bloc Dessin se règle dans le panneau)
@@ -6940,7 +7385,7 @@ $('#img-file').addEventListener('change', async e => {
     try {
       const im = await fileToImage(files[0]);
       const iid = uid(); await AlixoImages.put(iid, im.data);
-      b.iid = iid; b.nw = im.w; b.nh = im.h; delete b.crop;
+      b.iid = iid; b.nw = im.w; b.nh = im.h; delete b.crop; delete b.o;   // 1.51 : l'original mémorisé (b.o) était celui de l'ancienne image
       touch(); renderBlocks('__none'); selectObj(id); toast('Image remplacée');
     } catch { toast('Image illisible'); }
     return;
@@ -7015,7 +7460,7 @@ function imgSizePopover(id, anchor) {
     });
 }
 /* clic droit sur une image : taille, alignement, recadrage, légende… */
-function openImgCtxMenu(x, y, id) {
+function openImgCtxMenu(x, y, id, o) {
   const b = getBlock(id); if (!b || b.type !== 'img') return;
   const menu = $('#ctxmenu');
   const al = b.align || 'center';
@@ -7029,9 +7474,57 @@ function openImgCtxMenu(x, y, id) {
     <button data-cm="icap">${CM_ICO.pen}${b.cap !== undefined && b.cap !== null ? 'Retirer la légende' : 'Ajouter une légende'}</button>
     <button data-cm="ireplace">${CM_ICO.dup}Remplacer l’image…</button>
     <button data-cm="idel" class="danger">${CM_ICO.trash}Supprimer l’image</button>`;
+  /* 1.51 : menu enrichi et groupé (retouches, pivoter, style, copier…) — js/imgtools.js ; en lecture seule : Copier et Télécharger */
+  if (window.AlixoImgTools) { menu.classList.remove('cm-create'); menu.innerHTML = AlixoImgTools.menuHTML(b, { readOnly, open: o && o.open }); }
+  else if (readOnly) return;
   menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = id;
+  /* un vrai menu pour les lecteurs d'écran : rôle, nom, et un rôle d'élément sur chaque commande qui n'en porte pas déjà un */
+  menu.setAttribute('role', 'menu'); menu.setAttribute('aria-label', 'Outils de l’image');
+  menu.querySelectorAll('button:not([role])').forEach(x => x.setAttribute('role', 'menuitem'));
   placeCtxMenu(menu, x, y);
+  imgMenuOpener = o && o.opener ? o.opener : null;
+  if (imgMenuOpener) imgMenuOpener.setAttribute('aria-expanded', 'true');
+  if (o && o.focus) { const first = ctxMenuItems()[0]; if (first) first.focus(); }
 }
+/* 1.51 — le menu d'image s'ouvre aussi par le bouton « Plus d'outils » de la barre de l'image (#imgbar) : c'est la seule
+   entrée au doigt (pas de clic droit sur iPhone / iPad) et au clavier. Ouvert ainsi, il prend le focus et se parcourt aux
+   flèches (↑ ↓, Début, Fin ; → / ← : déplier / replier un groupe) ; Échap ou Tab le referme et rend le focus au bouton. */
+const ctxMenuItems =() => [...$('#ctxmenu').querySelectorAll('button')].filter(x => !x.disabled && x.offsetParent !== null);
+function closeImgMenu(refocus) {
+  const op = imgMenuOpener;
+  closeCtxMenu();
+  if (refocus && op && op.isConnected && !$('#imgbar').hidden) op.focus();
+}
+/* coins, bordure, ombre, noir et blanc : le menu reste ouvert et se redessine sur place (groupes dépliés, défilement et
+   focus conservés) — régler trois styles ne demande plus trois ouvertures du menu */
+const IMG_MENU_STAY = new Set(['ixrad', 'ixbd', 'ixsh', 'ixgray']);
+function refreshImgCtxMenu(id, btn, hadFocus) {
+  const menu = $('#ctxmenu');
+  const open = [...menu.querySelectorAll('.cm-group.open')].map(g => g.dataset.cmx);
+  const top = menu.scrollTop, x = parseFloat(menu.style.left) || 0, y = parseFloat(menu.style.top) || 0;
+  const opener = imgMenuOpener;
+  const key = btn ? `[data-cm="${btn.dataset.cm}"]` + (btn.dataset.rad != null ? `[data-rad="${btn.dataset.rad}"]` : '') + (btn.dataset.bw != null ? `[data-bw="${btn.dataset.bw}"]` : '') : '';
+  openImgCtxMenu(x, y, id, { open, opener });
+  menu.scrollTop = top;
+  if (hadFocus && key) { const again = menu.querySelector(key); if (again) again.focus(); }
+}
+$('#ctxmenu').addEventListener('keydown', e => {
+  const menu = $('#ctxmenu'); if (menu.hidden || !menu.dataset.img) return;
+  const list = ctxMenuItems(), i = list.indexOf(document.activeElement);
+  const go = n => { e.preventDefault(); e.stopPropagation(); if (list.length) list[(n + list.length) % list.length].focus(); };
+  if (e.key === 'ArrowDown') go(i + 1);
+  else if (e.key === 'ArrowUp') go(i < 0 ? list.length - 1 : i - 1);
+  else if (e.key === 'Home') go(0);
+  else if (e.key === 'End') go(list.length - 1);
+  else if ((e.key === 'ArrowRight' || e.key === 'ArrowLeft') && i >= 0) {
+    const g = list[i].classList.contains('cm-group') ? list[i] : null;
+    const sub = list[i].closest('.cm-sub');
+    if (g && (e.key === 'ArrowRight') === (g.getAttribute('aria-expanded') !== 'true')) { e.preventDefault(); e.stopPropagation(); g.click(); }
+    else if (!g && sub && e.key === 'ArrowLeft' && !list[i].closest('.cm-chips')) { e.preventDefault(); e.stopPropagation(); const head = sub.previousElementSibling; if (head) { head.click(); head.focus(); } }
+    else if (list[i].closest('.cm-chips, .cm-aligns')) go(i + (e.key === 'ArrowRight' ? 1 : -1));
+  }
+  else if (e.key === 'Escape' || e.key === 'Tab') { e.preventDefault(); e.stopPropagation(); closeImgMenu(true); }
+});
 blocksEl.addEventListener('contextmenu', e => {
   const fig = e.target.closest('#blocks > .block.img'); if (!fig || e.target.closest('figcaption')) return;
   e.preventDefault();
@@ -7039,11 +7532,28 @@ blocksEl.addEventListener('contextmenu', e => {
   selectObj(fig.dataset.id);
   openImgCtxMenu(e.clientX, e.clientY, fig.dataset.id);
 });
-$('#imgbar').addEventListener('pointerdown', e => e.preventDefault());
+/* Échap dans la barre : retour à l'image, qui reste sélectionnée */
+$('#imgbar').addEventListener('keydown', e => { if (e.key === 'Escape' && objSel) { e.preventDefault(); e.stopPropagation(); selectObj(objSel); } });
+let imgMoreWasOpen = false;   // le menu était déjà ouvert par « Plus d'outils » quand on a appuyé sur le bouton : un second appui le referme
+$('#imgbar').addEventListener('pointerdown', e => { imgMoreWasOpen = !!imgMenuOpener && !$('#ctxmenu').hidden; e.preventDefault(); });
 $('#imgbar').addEventListener('click', e => {
   const btn = e.target.closest('[data-ib]'); if (!btn || !objSel) return;
   const id = objSel; const b = getBlock(id); if (!b || b.type !== 'img') return;
   const k = btn.dataset.ib;
+  if (k === 'more') {
+    const viaPointer = e.detail > 0, was = viaPointer ? imgMoreWasOpen : (!!imgMenuOpener && !$('#ctxmenu').hidden);
+    imgMoreWasOpen = false;
+    if (was) { closeImgMenu(!viaPointer); return; }
+    const r = btn.getBoundingClientRect();
+    openImgCtxMenu(r.left, r.bottom + 6, id, { opener: btn, focus: true });
+    /* de préférence à côté de la barre (à droite, sinon à gauche) : le menu grandit quand on déplie un groupe, et ne doit
+       recouvrir ni le bouton ni l'image qu'on règle ; faute de place (téléphone), il reste sous le bouton */
+    const menu = $('#ctxmenu'), br = $('#imgbar').getBoundingClientRect(), mw = menu.offsetWidth;
+    if (br.right + 8 + mw <= innerWidth - 10) placeCtxMenu(menu, br.right + 8, br.top);
+    else if (br.left - 8 - mw >= 6) placeCtxMenu(menu, br.left - 8 - mw, br.top);
+    return;
+  }
+  if (readOnly) return;   // 1.51 — sécurité : séance en lecture seule → la barre ne modifie rien (seul « Plus d'outils » reste : Copier, Télécharger)
   if (k.startsWith('al-')) { b.align = k.slice(3); if (b.align !== 'center' && (b.w || 60) > 60) b.w = 45; touch(); renderBlocks('__none'); selectObj(id); return; }
   if (k === 'size') { imgSizePopover(id, btn.getBoundingClientRect()); return; }
   if (k === 'crop') { startCrop(id); return; }
@@ -7339,6 +7849,7 @@ const SLASH_ITEMS = [
   { id: 'timer', icon: 'clock', name: 'Minuteur', sub: 'Compte à rebours ou chronomètre dans le cours', kw: 'minuteur chrono chronometre compte a rebours timer temps', },
   { id: 'tree', icon: 'wave', name: 'Arbre', sub: 'Arborescence : racine, branches, feuilles (plan, arbre de décision, généalogie, organigramme)', kw: 'arbre arborescence hierarchie organigramme decision branches noeud genealogique schema' },
   { id: 'cards', icon: 'layers', name: 'Cartes', sub: '3 cartes par ligne, chacune avec un titre et un texte (notions, acteurs, étapes…)', kw: 'cartes carte grille vignettes tuiles colonnes trois 3' },
+  { id: 'timeline', icon: 'clock', name: 'Frise chronologique', sub: 'Dates et événements le long d’un axe, vertical ou horizontal', kw: 'frise chronologie chronologique timeline dates histoire evenements periode ligne du temps' },
   { id: 'hr', ico: '—', name: 'Séparateur', sub: 'Trait horizontal — ou tapez « -- » puis Entrée', kw: 'separateur ligne trait horizontal hr divider barre' },
   { id: 'pb', ico: '⤓', name: 'Saut de page', sub: 'Ce qui suit commence sur une nouvelle page (à l’écran et dans le PDF)', kw: 'saut page nouvelle page break pagebreak feuille suivante' },
   { id: 'toc', icon: 'list', name: 'Table des matières', sub: 'Les titres de la séance, numérotés et cliquables — mise à jour toute seule, reprise dans le PDF et Word', kw: 'table des matieres sommaire toc plan index titres' },
@@ -7531,7 +8042,8 @@ function applySlash(sid) {
     }, () => { if (getBlock(bid)) restore(); });
     return;
   }
-  if (sid === 'tree') { const nb = transform({ type: 'tree', root: { t: '', k: [{ t: '', k: [] }, { t: '', k: [] }] } }); focusBlock(nb.id, 'start'); setTimeout(() => treeFocus(nb.id, ''), 30); toast('Arbre — Entrée : nouveau frère, Tab : nouvel enfant'); return; }
+  if (sid === 'tree') { const nb = transform({ type: 'tree', root: { t: '', k: [{ t: '', k: [] }, { t: '', k: [] }] } }); focusBlock(nb.id, 'start'); setTimeout(() => treeFocus(nb.id, ''), 30); toast('Entrée : nœud au même niveau · Tab : nœud en dessous · Retour arrière sur un nœud vide : supprimer.'); return; }
+  if (sid === 'timeline') { const nb = transform({ type: 'timeline', dir: 'v', events: [{ d: '', t: '', x: '', c: '' }, { d: '', t: '', x: '', c: '' }, { d: '', t: '', x: '', c: '' }] }); clearObjSel(); focusBlock(nb.id, 'start', 'f:d0'); toast('Entrée pour passer au champ suivant, puis créer un événement.'); return; }
   if (sid === 'cards') { const nb = transform({ type: 'cards', cards: [{ t: '', x: '' }, { t: '', x: '' }, { t: '', x: '' }] }); focusBlock(nb.id, 'start', 'f:t0'); toast('Cartes — Entrée : du titre au texte, Tab : carte suivante, « ＋ carte » pour en ajouter'); return; }
   if (sid === 'toc') {
     const nb = transform({ type: 'toc' });
@@ -10018,17 +10530,18 @@ function blockPlain(b) {
   if (isFiche(b)) return stripTags(Object.values(b.fields || {}).join(' '));
   if (b.type === 'quote') return stripTags((b.text || '') + (b.cite ? ' ' + b.cite : ''));
   if (b.type === 'chart') return [b.title || 'Graphique', ...(b.labels || [])].join(' ');
-  if (b.type === 'score') return (AlixoMed.SCORES[b.sk] || {}).name || 'Score';
-  if (b.type === 'mcalc') return (AlixoMed.CALCS[b.ck] || {}).name || 'Calculateur';
+  if (b.type === 'score') return (ownOf(AlixoMed.SCORES, b.sk) || {}).name || 'Score';
+  if (b.type === 'mcalc') return (ownOf(AlixoMed.CALCS, b.ck) || {}).name || 'Calculateur';
   if (b.type === 'timer') return b.label || 'Minuteur';
   if (b.type === 'hr' || b.type === 'pb') return '';
   if (b.type === 'toc') return b.title || 'Table des matières';
   if (b.type === 'docref') return docRefInfo(b).title;   // 1.43
   if (b.type === 'cards') return cardsOf(b).map(c => stripTags(c.t) + (c.x ? ' — ' + stripTags(c.x) : '')).join('\n');
   if (b.type === 'tree') return treePlain(b.root);
+  if (b.type === 'timeline') return window.AlixoTimeline ? AlixoTimeline.plain(b, stripTags) : '';   // 1.51 : « date — titre : description » par ligne
   if (b.type === 'table') return (b.rows || []).map(r => r.map(c => stripTags(c)).join(' | ')).join('\n');
   if (b.type === 'formula') return b.src || '';
-  if (b.type === 'graph') return (AlixoGraphs.TYPES[b.gtype] || {}).name || '';
+  if (b.type === 'graph') return (ownOf(AlixoGraphs.TYPES, b.gtype) || {}).name || '';
   if (b.type === 'img') return stripTags(b.cap || b.alt || '');
   if (b.type === 'draw') return window.AlixoDraw ? AlixoDraw.shapesText(b) : '';
   return stripTags(b.text);
@@ -10438,7 +10951,7 @@ async function exportDoc(fmtWanted) {
   if (fmt === 'pdf' || isSpecialDoc(d)) { exportPDF(); return; }
   toast(`Préparation du fichier ${EXPORT_FORMATS[fmt].label}…`, { duration: 3000 });
   let css = '';
-  if (fmt === 'html') { try { css = await (await fetch('styles.css')).text(); } catch { /* sans styles hors ligne */ } }
+  if (fmt === 'html') css = await exportCssText();
   let data;
   try { data = await exportDocFile(d, fmt, css); } catch (e) { console.error(e); toast('Export impossible : ' + (e && e.message || e)); return; }
   const name = safeFileName(d.titre || 'Sans titre') + EXPORT_FORMATS[fmt].ext;
@@ -10740,14 +11253,14 @@ function openChartColorsPopover(id, anchor) {
 
 /* ---------------- scores cliniques ---------------- */
 function scoreTotal(b) {
-  const sc = AlixoMed.SCORES[b.sk]; if (!sc) return 0;
+  const sc = ownOf(AlixoMed.SCORES, b.sk); if (!sc) return 0;
   const vals = Array.isArray(b.vals) ? b.vals : [];
   let t = 0;
   sc.items.forEach((it, i) => { if (it.opts) { const v = vals[i]; if (typeof v === 'number') t += v; } else if (vals[i]) t += it.p; });
   return Math.round(t * 10) / 10;
 }
 function refreshScore(bl, b) {
-  const sc = AlixoMed.SCORES[b.sk]; if (!sc) return;
+  const sc = ownOf(AlixoMed.SCORES, b.sk); if (!sc) return;
   const total = scoreTotal(b);
   const it = sc.interp.find(([a, z]) => total >= a && total <= z);
   const tot = bl.querySelector('.score-total');
@@ -10947,7 +11460,7 @@ function openScoreChooser(bid, inlineCtx) {
 
 /* ---------------- calculateurs cliniques ---------------- */
 function mcalcVals(b) {
-  const c = AlixoMed.CALCS[b.ck]; if (!c) return {};
+  const c = ownOf(AlixoMed.CALCS, b.ck); if (!c) return {};
   const src = b.vals && typeof b.vals === 'object' ? b.vals : {};
   const out = {};
   for (const inp of c.inputs) {
@@ -10960,7 +11473,7 @@ function mcalcVals(b) {
   return out;
 }
 function refreshCalc(bl, b) {
-  const c = AlixoMed.CALCS[b.ck]; if (!c) return;
+  const c = ownOf(AlixoMed.CALCS, b.ck); if (!c) return;
   let res = [];
   try { res = c.out(mcalcVals(b)); } catch { res = []; }
   const out = bl.querySelector('.mcalc-out');
@@ -11658,6 +12171,185 @@ function openOnboarding(edit, opts) {
 }
 
 /* ============================================================
+   1.51 — « Modifier mon profil » : fenêtre dédiée (#pfov), un seul écran
+   Niveau, classe ou année (profil.classe, facultatif, 40 caractères), spécialités. Le parcours d'accueil (openOnboarding)
+   ne sert plus qu'au premier lancement et à la question de l'âge. La date de naissance et l'accord parental ne se
+   modifient pas ici : la fenêtre ne les touche jamais (ils sont recopiés tels quels).
+   ============================================================ */
+const PF_CLASSE_MAX = 40;
+const PF_CLASSES = {
+  college: ['6e', '5e', '4e', '3e'],
+  lycee: ['Seconde', 'Première', 'Terminale'],
+  superieur: ['L1', 'L2', 'L3', 'M1', 'M2', 'BTS', 'BUT', 'Prépa', 'Doctorat']
+};
+/* « Lycée · Terminale » : niveau puis classe (texte libre — toujours échappé par l'appelant) */
+function profilEtudesLabel(p) {
+  if (!p) return '';
+  const cl = typeof p.classe === 'string' ? p.classe.trim().slice(0, PF_CLASSE_MAX) : '';
+  return [profilNiveauLabel(p), cl].filter(Boolean).join(' · ');
+}
+let pfClose = null;   // ferme la fenêtre ouverte (une seule à la fois)
+function closeProfileModal() { if (pfClose) pfClose(); }
+function openProfileModal(opener) {
+  closeProfileModal();
+  const prev = state.settings.profil || null;
+  const str = (v, max) => (typeof v === 'string' ? v : '').slice(0, max);
+  const sel = {
+    niveau: prev && OB_NIVEAUX.some(n => n.k === prev.niveau) ? prev.niveau : null,
+    niveauAutre: prev ? str(prev.niveauAutre, 60) : '',
+    classe: prev ? str(prev.classe, PF_CLASSE_MAX) : '',
+    specialites: new Set(prev && Array.isArray(prev.specialites) ? prev.specialites.filter(k => OB_SPECIALITES.some(s => s.k === k)) : []),
+    specialiteAutre: prev ? str(prev.specialiteAutre, 60) : ''
+  };
+  let dirty = false;
+  const back = opener && typeof opener.focus === 'function' ? opener : document.activeElement;
+  const birth = prev && window.AlixoAuth && AlixoAuth.account() && /^\d{4}-\d{2}-\d{2}$/.test(prev.birth || '') ? prev.birth : '';
+  const birthTxt = birth ? new Date(birth + 'T12:00:00').toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' }) : '';
+  const ov = document.createElement('div');
+  ov.id = 'pfov';
+  ov.innerHTML = `<div class="ob-card pf-card" role="dialog" aria-modal="true" aria-labelledby="pf-title" tabindex="-1">
+      <button type="button" class="pf-x" id="pf-x" title="Fermer" aria-label="Fermer sans enregistrer"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+      <h2 class="ob-title" id="pf-title">Modifier mon profil</h2>
+      <p class="ob-sub">Alixo adapte ses outils et ses blocs au niveau et aux spécialités indiqués ici.</p>
+      <div class="pf-sect">
+        <div class="pf-label" id="pf-l-niveau">Niveau</div>
+        <div class="ob-levels" role="radiogroup" aria-labelledby="pf-l-niveau">
+          ${OB_NIVEAUX.map(n => `<button type="button" class="ob-level ${sel.niveau === n.k ? 'sel' : ''}" role="radio" aria-checked="${sel.niveau === n.k}" data-k="${n.k}">${n.label}</button>`).join('')}
+        </div>
+        <input class="ob-other-input ${sel.niveau === 'autre' ? 'on' : ''}" id="pf-niveau-autre" aria-label="Préciser le niveau" placeholder="Niveau (ex. BTS, prépa, autodidacte…)" maxlength="60" autocomplete="off" value="${esc(sel.niveauAutre)}">
+      </div>
+      <div class="pf-sect">
+        <label class="pf-label" for="pf-classe">Classe ou année <span class="pf-opt">facultatif</span></label>
+        <input class="ob-other-input on" id="pf-classe" aria-describedby="pf-classe-hint" placeholder="Ex. Terminale, L2, 1re année de BTS…" maxlength="${PF_CLASSE_MAX}" autocomplete="off" value="${esc(sel.classe)}">
+        <div class="pf-suggs" id="pf-suggs" role="group" aria-label="Suggestions de classe"></div>
+        <p class="pf-hint" id="pf-classe-hint">Indiquez seulement le niveau (ex. Terminale, L2), sans nom d’établissement.</p>
+      </div>
+      <div class="pf-sect">
+        <div class="pf-label" id="pf-l-spec">Spécialités <span class="pf-opt">une ou plusieurs</span></div>
+        <div class="ob-chips" role="group" aria-labelledby="pf-l-spec">
+          ${OB_SPECIALITES.map(s => `<button type="button" class="ob-chip ${sel.specialites.has(s.k) ? 'sel' : ''}" aria-pressed="${sel.specialites.has(s.k)}" data-k="${s.k}" style="--chip-c:${s.c}"><span class="dot"></span>${s.nom}</button>`).join('')}
+        </div>
+        <input class="ob-other-input ${sel.specialites.has('autre') ? 'on' : ''}" id="pf-spec-autre" aria-label="Préciser la spécialité" placeholder="Spécialité (ex. Architecture, Psychologie…)" maxlength="60" autocomplete="off" value="${esc(sel.specialiteAutre)}">
+      </div>
+      ${birthTxt ? `<div class="pf-birth">Date de naissance : <b>${esc(birthTxt)}</b>. Elle sert à vérifier votre âge et ne peut pas être modifiée dans l’application. Une erreur de saisie ? Écrivez à <a href="mailto:contact@alixoapp.com">contact@alixoapp.com</a> depuis l’adresse e-mail de votre compte.</div>` : ''}
+      <div class="ob-foot pf-foot">
+        <div class="pf-msg" id="pf-msg" role="status" aria-live="polite"></div>
+        <button type="button" class="cta ghost" id="pf-cancel">Annuler</button>
+        <button type="button" class="cta ob-next" id="pf-save">Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(ov);
+  const card = ov.querySelector('.pf-card'), q = s => ov.querySelector(s);
+  const saveBtn = q('#pf-save'), msg = q('#pf-msg'), classeEl = q('#pf-classe'), suggs = q('#pf-suggs');
+  const missing = () => (!sel.niveau ? 'Choisissez un niveau pour enregistrer.' : !sel.specialites.size ? 'Choisissez au moins une spécialité pour enregistrer.' : '');
+  const syncSave = () => { const m = missing(); saveBtn.disabled = !!m; msg.textContent = dirty || !prev ? m : ''; };
+  function renderSuggs() {
+    const list = PF_CLASSES[sel.niveau] || [];
+    suggs.hidden = !list.length;
+    suggs.innerHTML = list.map(c => `<button type="button" class="pf-sugg ${sel.classe.trim() === c ? 'sel' : ''}" aria-pressed="${sel.classe.trim() === c}" data-c="${esc(c)}">${esc(c)}</button>`).join('');
+  }
+  ov.querySelectorAll('.ob-level').forEach(b => b.addEventListener('click', () => {
+    if (sel.niveau !== b.dataset.k) {
+      // la classe proposée pour l'ancien niveau n'a plus de sens (« Terminale » au collège) : on la retire ; une saisie libre est gardée
+      if ((PF_CLASSES[sel.niveau] || []).includes(sel.classe.trim())) { sel.classe = ''; classeEl.value = ''; }
+      sel.niveau = b.dataset.k; dirty = true;
+    }
+    ov.querySelectorAll('.ob-level').forEach(x => { x.classList.toggle('sel', x === b); x.setAttribute('aria-checked', String(x === b)); });
+    q('#pf-niveau-autre').classList.toggle('on', sel.niveau === 'autre');
+    if (sel.niveau === 'autre') q('#pf-niveau-autre').focus();
+    renderSuggs(); syncSave();
+  }));
+  q('.ob-levels').addEventListener('keydown', e => {   // groupe de boutons radio : flèches
+    if (!['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp'].includes(e.key)) return;
+    const list = [...ov.querySelectorAll('.ob-level')], i = list.indexOf(document.activeElement); if (i < 0) return;
+    e.preventDefault();
+    const n = list[(i + (e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1) + list.length) % list.length];
+    n.focus(); n.click();
+  });
+  q('#pf-niveau-autre').addEventListener('input', e => { sel.niveauAutre = e.target.value; dirty = true; });
+  classeEl.addEventListener('input', () => { sel.classe = classeEl.value.slice(0, PF_CLASSE_MAX); dirty = true; renderSuggs(); });
+  suggs.addEventListener('click', e => {
+    const b = e.target.closest('.pf-sugg'); if (!b) return;
+    sel.classe = sel.classe.trim() === b.dataset.c ? '' : b.dataset.c;   // un second clic retire la suggestion
+    classeEl.value = sel.classe; dirty = true; renderSuggs();
+    const again = [...suggs.querySelectorAll('.pf-sugg')].find(x => x.dataset.c === b.dataset.c); if (again) again.focus();
+  });
+  ov.querySelectorAll('.ob-chip').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.k;
+    sel.specialites.has(k) ? sel.specialites.delete(k) : sel.specialites.add(k);
+    b.classList.toggle('sel', sel.specialites.has(k)); b.setAttribute('aria-pressed', String(sel.specialites.has(k)));
+    q('#pf-spec-autre').classList.toggle('on', sel.specialites.has('autre'));
+    if (k === 'autre' && sel.specialites.has('autre')) q('#pf-spec-autre').focus();
+    dirty = true; syncSave();
+  }));
+  q('#pf-spec-autre').addEventListener('input', e => { sel.specialiteAutre = e.target.value; dirty = true; });
+
+  const focusables = () => [...card.querySelectorAll('button, input, a[href], [tabindex]:not([tabindex="-1"])')].filter(el => !el.disabled && el.offsetParent !== null);
+  function onKey(e) {
+    if (!ov.isConnected) { document.removeEventListener('keydown', onKey, true); return; }
+    if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); return; }
+    if (e.key === 'Enter' && e.target.tagName === 'INPUT' && card.contains(e.target)) { e.preventDefault(); if (!saveBtn.disabled) commit(); return; }
+    if (e.key !== 'Tab') return;
+    const list = focusables(); if (!list.length) return;
+    const first = list[0], last = list[list.length - 1], a = document.activeElement;
+    if (!card.contains(a)) { e.preventDefault(); first.focus(); }
+    else if (e.shiftKey && (a === first || a === card)) { e.preventDefault(); last.focus(); }
+    else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+  }
+  const onFocusIn = e => { if (ov.isConnected && !card.contains(e.target) && !e.target.closest('#toast')) { const l = focusables(); (l[0] || card).focus(); } };
+  function close(refocus) {
+    document.removeEventListener('keydown', onKey, true);
+    document.removeEventListener('focusin', onFocusIn, true);
+    ov.remove(); pfClose = null;
+    const t = refocus || (back && back.isConnected ? back : $('#po-editprofil'));
+    if (t && t.isConnected && typeof t.focus === 'function') t.focus();
+  }
+  pfClose = () => close();
+  function commit() {
+    if (missing()) { syncSave(); return; }
+    const before = (prev && Array.isArray(prev.specialites)) ? prev.specialites : [];
+    const beforeAllowed = sp => { const keep = state.settings.profil; state.settings.profil = prev; try { return specAllowed(sp); } finally { state.settings.profil = keep; } };
+    // tout ce que la fenêtre ne gère pas (date de naissance, accord parental…) est recopié tel quel
+    state.settings.profil = Object.assign({ birth: '', parent: null }, prev || {}, {
+      niveau: sel.niveau,
+      niveauAutre: sel.niveau === 'autre' ? sel.niveauAutre.trim().slice(0, 60) : '',
+      classe: sel.classe.trim().slice(0, PF_CLASSE_MAX),
+      specialites: [...sel.specialites],
+      specialiteAutre: sel.specialites.has('autre') ? sel.specialiteAutre.trim().slice(0, 60) : '',
+      ts: Date.now()
+    });
+    save();
+    syncHealthUI();
+    if (!currentDocId) { renderCrumbs(); renderLibrary(); }
+    if (window.AlixoCloud && AlixoCloud.enabled) AlixoCloud.beat();
+    const sov = $('#setov'), inSettings = sov && !sov.hidden;
+    if (inSettings) renderSettingsBody();
+    close(inSettings ? $('#po-editprofil') : null);
+    // spécialité retirée : les blocs déjà présents dans la séance ouverte restent tels quels — simple information
+    let orphan = false;
+    if (before.some(k => !sel.specialites.has(k))) {
+      const d = currentDocId ? findDoc(currentDocId) : null;
+      orphan = !!(d && Array.isArray(d.blocks) && d.blocks.some(b => { const sp = blockSpec(b); return sp && beforeAllowed(sp) && !specAllowed(sp); }));
+    }
+    toast(orphan ? 'Profil mis à jour. Les blocs d’une spécialité retirée restent dans cette séance, sans être modifiés.' : 'Profil mis à jour');
+    /* compte connecté dont le profil vient d'être créé ici sans date de naissance (second appareil, synchronisation pas encore
+       reçue) : la question de l'âge est posée tout de suite, sans attendre le prochain démarrage */
+    if (window.AlixoAuth && AlixoAuth.account() && !state.settings.profil.birth) maybeOnboard();
+  }
+  saveBtn.addEventListener('click', commit);
+  q('#pf-cancel').addEventListener('click', () => close());
+  q('#pf-x').addEventListener('click', () => close());
+  // clic sur le fond : ferme seulement si rien n'a été modifié (pas de perte de saisie sur un clic à côté)
+  let downOnBackdrop = false;
+  ov.addEventListener('mousedown', e => { downOnBackdrop = e.target === ov; });
+  ov.addEventListener('click', e => { if (e.target === ov && downOnBackdrop && !dirty) close(); });
+  document.addEventListener('keydown', onKey, true);
+  document.addEventListener('focusin', onFocusIn, true);
+  renderSuggs(); syncSave();
+  (ov.querySelector('.ob-level.sel') || ov.querySelector('.ob-level')).focus();
+}
+
+/* ============================================================
    1.18 — fenêtre « mise à jour disponible »
    Affichée au démarrage (et toutes les 6 h) tant que la version en cours est plus ancienne que celle
    annoncée par l'administrateur (config/public.latestVersion). « Plus tard » la fait taire 24 h pour
@@ -11903,7 +12595,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les dessins se glissent maintenant sur le cours depuis un panneau à droite ; clic droit sur les onglets et les cours récents, renommage sur place, barre latérale masquable, et la correction des fautes fonctionne dans les tableaux.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Nouveau bloc frise chronologique, outils d’image au clic droit (suppression du fond, réglages, rotation), recherche et tri dans les dossiers, encadrés repensés ; le copier-coller garde le style entre deux cours.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

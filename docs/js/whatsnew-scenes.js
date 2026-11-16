@@ -11,9 +11,31 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.50.0 (ou nouveautes.html?v=1.50.0 en page seule).
+   Aperçu : index.html?nouveautes=1.51.0 (ou nouveautes.html?v=1.51.0 en page seule).
    ============================================================ */
 'use strict';
+
+AlixoWhatsNew.register('1.51.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une <em>frise</em>, des images<br>et des dossiers mieux rangés', text: 'Cinq nouveautés et deux corrections, en moins d’une minute.', dur: 5500 },
+    { title: 'La <em>frise</em> chronologique', text: 'Un nouveau bloc pour les dates : tapez « / » puis « frise ».',
+      bullets: ['<b>Date libre</b> : « 1789 », « v. 1450 », « 1914-1918 »', '<b>Entrée</b> passe au champ suivant, puis à l’événement d’après', '<b>Verticale ou horizontale</b>, reprise dans le PDF et Word'],
+      art: { image: 'nouveautes/1.51.0-frise.png', alt: 'Une frise chronologique dans un cours : quatre événements datés le long d’un rail' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 8500 },
+    { title: 'Clic droit sur une <em>image</em>', text: 'Une vraie boîte à outils, sans quitter le cours.',
+      bullets: ['<b>Supprimer le fond</b>, calculé sur votre appareil', '<b>Régler</b> : luminosité, contraste, noir et blanc, rotation', '<b>Habiller</b> : coins arrondis, bordure, ombre', '<b>Réinitialiser</b> revient à l’original à tout moment'],
+      art: { image: 'nouveautes/1.51.0-image.png', alt: 'Le menu d’outils ouvert à côté d’une image aux coins arrondis' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 9500 },
+    { title: '<em>Rechercher</em> et trier dans un dossier', text: 'Au-dessus de la liste de vos cours, un champ de recherche et un bouton de tri.',
+      bullets: ['<b>Recherche</b> dans le dossier et ses sous-dossiers', '<b>Tri</b> par date, nom, type ou taille', '<b>Mémorisé</b> d’une fois sur l’autre'],
+      art: 'cards', accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
+    { title: 'Des encadrés plus <em>simples</em>', text: 'Bilan, définition, exemple : un fond léger, une fine barre de couleur, plus de cadre.',
+      bullets: ['<b>Vos cours</b> en profitent sans rien changer', '<b>Copier-coller</b> : taille, couleur et surlignage suivent d’un cours à l’autre', '<b>Même</b> pour quelques mots pris au milieu d’un passage coloré'],
+      art: { image: 'nouveautes/1.51.0-encadres.png', alt: 'Quatre encadrés : définition, exemple, à retenir, bilan' }, accent: '#b3762a', accent2: '#8a4b9c', dur: 9000 },
+    { title: 'Et <em>aussi</em>', text: 'Des retouches demandées, et deux corrections.',
+      bullets: ['<b>Profil</b> : niveau, classe et spécialités dans une petite fenêtre', '<b>Menu Nouveau</b> : les icônes en couleur des documents', '<b>Corrigé</b> : « Écrivez, ou tapez… » ne passe plus derrière le texte', '<b>Arbres</b> : la ligne d’aide ne reste plus affichée'],
+      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 9500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 AlixoWhatsNew.register('1.50.0', {
   scenes: [
@@ -47,24 +69,5 @@ AlixoWhatsNew.register('1.49.1', {
       bullets: ['<b>Bouche en « o »</b> pendant la frappe', '<b>Sourire</b> retrouvé quand le champ se vide ou qu’elle répond', '<b>Fondu</b> discret, coupé si le système réduit les animations'],
       art: { image: 'nouveautes/1.49.1-coco-oh.png', alt: 'Coco surprise, bouche en « o »' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 11000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 8000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.49.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Dites bonjour<br>à <em>Coco</em>', text: 'Alixo AI s’ouvre à côté du cours, et sa mascotte répond à vos questions.', dur: 5500 },
-    { title: 'Alixo AI, à <em>côté</em> du cours', text: 'Le bouton Alixo AI (ou F8) ouvre un panneau sur la moitié droite de l’écran, comme un PDF.',
-      bullets: ['<b>Le cours</b> reste visible et modifiable à gauche', '<b>Plus d’onglet</b> : un panneau qu’on redimensionne et qu’on referme', '<b>Depuis</b> une séance, une présentation ou un tableur'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M13 4v16M15.5 9h3M15.5 12.5h3M15.5 16h3"/></svg>' }, accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
-    { title: '<em>Coco</em> a lu votre cours', text: 'Posez une question : Coco répond en s’appuyant sur ce qui est écrit dans le document ouvert.',
-      bullets: ['<b>Réponse</b> en direct, mot après mot, avec Stop à tout moment', '<b>Mots importants</b> en gras, listes courtes', '<b>Sur l’ordinateur</b> : rien n’est envoyé à un service d’IA'],
-      art: { image: 'nouveautes/1.49.0-coco.png', alt: 'Coco, la mascotte d’Alixo, cachée derrière la zone de saisie' }, accent: '#2e8b6a', accent2: '#b3762a', dur: 8500 },
-    { title: 'Des fiches de révision <em>colorées</em>', text: 'La carte Fiche de révision produit une fiche en cartes de couleur, comme une fiche faite à la main.',
-      bullets: ['<b>À retenir</b>, grandes idées, définitions, dates clés, mots-clés', '<b>Astuce</b> et pièges, cases à cocher pour s’auto-évaluer', '<b>Insérer</b> dans la séance, copier, imprimer en couleur'],
-      art: { image: 'nouveautes/1.49.0-fiche.png', alt: 'Une fiche de révision en cartes colorées' }, accent: '#b3762a', accent2: '#8a4b9c', dur: 8500 },
-    { title: 'Le quiz, en <em>fenêtre</em>', text: 'La carte Quiz ouvre une fenêtre : paramétrage, puis les questions, sans quitter le cours.',
-      bullets: ['<b>Première question</b> jouée pendant que les suivantes s’écrivent', '<b>Score</b> rappelé dans le fil du chat, avec Rejouer', '<b>Enregistrer</b> comme document Quiz, imprimer'],
-      art: 'quiz', accent: '#3d6bb5', accent2: '#2e8b6a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
   ]
 });

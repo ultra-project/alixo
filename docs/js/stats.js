@@ -11,8 +11,9 @@ window.AlixoStats = (() => {
   const DOWS = ['lun.', 'mar.', 'mer.', 'jeu.', 'ven.', 'sam.', 'dim.'];
   const words = html => stripTags(html || '').replace(/​/g, '').split(/[\s ]+/).filter(w => /[\p{L}\p{N}]/u.test(w)).length;
   const blockWords = b => {
-    if (b.type === 'table') return (b.rows || []).reduce((n, r) => n + r.reduce((m, c) => m + words(c), 0), 0);
+    if (b.type === 'table') return (b.rows || []).reduce((n, r) => n + (Array.isArray(r) ? r : []).reduce((m, c) => m + words(c), 0), 0);
     if (b.type === 'cards') return (b.cards || []).reduce((n, c) => n + words(c.t) + words(c.x), 0);
+    if (b.type === 'timeline') return words(b.title) + (Array.isArray(b.events) ? b.events : []).reduce((n, e) => n + (e ? words(e.d) + words(e.t) + words(e.x) : 0), 0);   // 1.51 : frise chronologique
     if (b.type === 'juris' || b.type === 'fiche') return Object.values(b.fields || {}).reduce((n, v) => n + words(v), 0);
     if (['p', 'h', 'li', 'quote', 'callout'].includes(b.type)) return words(b.text) + words(b.cite);
     return 0;
