@@ -330,6 +330,7 @@ window.AlixoBoard = (() => {
         <span class="bd-sep"></span>
         <button data-bd="font" class="bd-font" title="Police de la planche (post-it, textes, zones)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && dd.font && AlixoApp.fontByKey(dd.font) ? AlixoApp.fontByKey(dd.font).name : 'Police')}</span><span class="tcaret">▾</span></button>
         <button data-bd="present" title="Présenter la planche en plein écran, sans les barres (F11)">${I.present}<span class="bd-lbl">Présenter</span></button>
+        ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-bd="quizia"', 'bd-aiquiz') : ''}
         <button data-bd="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
       </div>`;
     if (readOnly) {
@@ -1243,6 +1244,7 @@ window.AlixoBoard = (() => {
       if (k === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police de la planche', hint: 'Police des post-it, textes et zones de cette planche.', onPick: f => { if (readOnly) return; if (f === null) delete dd.font; else dd.font = f; commit(); renderAll(); } }); return; }
       if (k === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (k === 'present') { setPresent(true); return; }
+      if (k === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }   // 1.52 : Coco (aussi en lecture seule)
       if (k === 'zin') { zoomCenter(1.25); return; } if (k === 'zout') { zoomCenter(0.8); return; }
       if (k === 'z100') { const s = stage(); zoomAt(1, s.clientWidth / 2, s.clientHeight / 2); return; }
       if (k === 'fit') { fitAll(); return; }
@@ -1623,5 +1625,42 @@ window.AlixoBoard = (() => {
     const el = $(`#bd-items > .bd-item[data-id="${it.id}"]`); if (el) { el.classList.add('flash'); setTimeout(() => el.classList.remove('flash'), 1500); }
   }
 
-  return { newDoc, open, leave, remoteChanged, undo, redo, exportPDF, preview, itemCount, search, reveal, insertTemplate, isPresenting: () => presenting };
+  /* 1.52 : façade « edit » pour Coco (js/cocotools.js) — notes, textes, formes et zones ; les nouveaux éléments se
+     placent sous l'ensemble existant, sur la grille ; une photo d'historique par lot, un commit + renderAll. */
+  const edit = (() => {
+    const S = v => (typeof v === 'string' ? v : '');
+    const TEXTY = ['note', 'text', 'shape', 'zone'];
+    let pending = false, cursor = null;
+    const mark = () => { if (pending) { pushHist(); pending = false; } };
+    const canEdit = () => { const dd = d(); return !!dd && dd.kind === 'board' && !readOnly && active() && !presenting; };
+    const textOf = it => (it.t === 'zone' ? S(it.title) : S(it.text));
+    return {
+      kind: 'board',
+      canEdit,
+      snapshot() { const dd = d(); return dd ? JSON.stringify(itemsOf(dd)) : ''; },
+      restore(json) { const dd = d(); if (!dd || !canEdit()) return false; let v; try { v = JSON.parse(json); } catch { return false; } if (!Array.isArray(v)) return false; commitEdit(); pushHist(); dd.items = v; afterRestore(dd); return true; },
+      begin() { commitEdit(); pending = true; cursor = null; },
+      commit() { pending = false; cursor = null; commit(); if (active()) renderAll(); },
+      items() { const dd = d(); return dd ? itemsOf(dd).filter(it => TEXTY.includes(it.t)).map(it => ({ id: it.id, type: it.t, text: textOf(it).replace(/\s+/g, ' ').trim() })) : []; },
+      /* ajoute une note ou un texte sous la planche (puis de gauche à droite dans le même lot) ; `text` est du texte brut */
+      add(t, text) {
+        const dd = d(); if (!dd || (t !== 'note' && t !== 'text')) return null;
+        mark();
+        if (!cursor) { const bb = bboxOf(itemsOf(dd)); cursor = bb ? { x: snap(bb.x), y: snap(bb.y + bb.h + 60) } : { x: 0, y: 0 }; }
+        const it = makeItem(t, cursor.x, cursor.y, t === 'note' ? { color: nextNoteColor(), text: S(text).slice(0, 1000) } : { text: S(text).slice(0, 2000) });
+        cursor.x += it.w + 40;
+        itemsOf(dd).push(it);
+        return it.id;
+      },
+      setText(id, text) { const it = item(id); if (!it || !TEXTY.includes(it.t) || it.locked) return false; mark(); if (it.t === 'zone') it.title = S(text).slice(0, 120); else it.text = S(text).slice(0, 2000); return true; },
+      remove(id) { const dd = d(); const it = item(id); if (!dd || !it || it.locked) return false; mark(); dd.items = itemsOf(dd).filter(x => x.id !== id && !(isArrow(x) && (x.from === id || x.to === id))); return true; },
+      applyFixes(fixes) {
+        const out = { fixes: 0, blocks: 0, done: [] }; const touched = new Set();
+        for (const f of fixes || []) { const it = item(f.id); if (!it || !TEXTY.includes(it.t) || !f.avant) continue; const v = textOf(it); if (!v.includes(f.avant)) continue; mark(); if (it.t === 'zone') it.title = v.replace(f.avant, f.apres); else it.text = v.replace(f.avant, f.apres); out.fixes++; touched.add(f.id); out.done.push(f); }
+        out.blocks = touched.size; return out;
+      }
+    };
+  })();
+
+  return { newDoc, open, leave, remoteChanged, undo, redo, exportPDF, preview, itemCount, search, reveal, insertTemplate, isPresenting: () => presenting, edit };
 })();

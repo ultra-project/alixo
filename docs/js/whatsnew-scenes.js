@@ -15,6 +15,27 @@
    ============================================================ */
 'use strict';
 
+/* 1.52 : illustrations dessinées (pas encore de captures ni de vidéo) */
+AlixoWhatsNew.register('1.52.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Coco <em>modifie</em> vos cours,<br>le téléphone <em>importe</em>', text: 'Six nouveautés, en moins d’une minute.', dur: 5500 },
+    { title: 'Coco <em>modifie</em> le document', text: 'Demandez, Coco le fait dans le cours.',
+      bullets: ['<b>Corrige les fautes</b>, met en encadré, ajoute une conclusion', '<b>Annuler les modifications</b> en un clic', '<b>Rien n’est supprimé</b> sans votre accord'],
+      art: 'spell', accent: '#2e8b6a', accent2: '#b3762a', dur: 9000 },
+    { title: 'Importer depuis le <em>téléphone</em>', text: 'Un QR code, et vos fichiers arrivent dans le dossier.',
+      bullets: ['<b>PDF, Word, photos, audio…</b> jusqu’à 20 Mo', '<b>Effacés du serveur</b> dès leur arrivée'],
+      art: { svg: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 8.5h2v2h-2zM12.5 8.5h2v2h-2zM9.5 11.5h2v2h-2z"/></svg>' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8000 },
+    { title: 'Des <em>styles</em> enregistrés', text: 'Votre mise en forme préférée, sous un nom, en un clic.',
+      art: 'palette', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 6500 },
+    { title: 'Le <em>bouton</em> de lien', text: 'Tapez « / » puis « bouton » : vers un cours, un fichier ou une page web.',
+      art: 'cards', accent: '#b3762a', accent2: '#3d6bb5', dur: 6500 },
+    { title: 'Et <em>aussi</em>', text: 'Des outils du quotidien revus.',
+      bullets: ['<b>Minuteurs</b> : anneau de progression, En pause, Temps écoulé', '<b>Agenda</b> : toute la semaine, l’heure qu’il est', '<b>Correcteur</b> : les mots presque justes corrigés', '<b>Supprimer le fond</b> passe dans Alixo+'],
+      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 9500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
+
 AlixoWhatsNew.register('1.51.0', {
   scenes: [
     { kind: 'intro', kicker: 'Mise à jour installée', title: 'Une <em>frise</em>, des images<br>et des dossiers mieux rangés', text: 'Cinq nouveautés et deux corrections, en moins d’une minute.', dur: 5500 },
@@ -22,7 +43,7 @@ AlixoWhatsNew.register('1.51.0', {
       bullets: ['<b>Date libre</b> : « 1789 », « v. 1450 », « 1914-1918 »', '<b>Entrée</b> passe au champ suivant, puis à l’événement d’après', '<b>Verticale ou horizontale</b>, reprise dans le PDF et Word'],
       art: { image: 'nouveautes/1.51.0-frise.png', alt: 'Une frise chronologique dans un cours : quatre événements datés le long d’un rail' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 8500 },
     { title: 'Clic droit sur une <em>image</em>', text: 'Une vraie boîte à outils, sans quitter le cours.',
-      bullets: ['<b>Supprimer le fond</b>, calculé sur votre appareil', '<b>Régler</b> : luminosité, contraste, noir et blanc, rotation', '<b>Habiller</b> : coins arrondis, bordure, ombre', '<b>Réinitialiser</b> revient à l’original à tout moment'],
+      bullets: ['<b>Supprimer le fond</b>, calculé sur votre appareil (Alixo+ depuis la 1.52)', '<b>Régler</b> : luminosité, contraste, noir et blanc, rotation', '<b>Habiller</b> : coins arrondis, bordure, ombre', '<b>Réinitialiser</b> revient à l’original à tout moment'],
       art: { image: 'nouveautes/1.51.0-image.png', alt: 'Le menu d’outils ouvert à côté d’une image aux coins arrondis' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 9500 },
     { title: '<em>Rechercher</em> et trier dans un dossier', text: 'Au-dessus de la liste de vos cours, un champ de recherche et un bouton de tri.',
       bullets: ['<b>Recherche</b> dans le dossier et ses sous-dossiers', '<b>Tri</b> par date, nom, type ou taille', '<b>Mémorisé</b> d’une fois sur l’autre'],
@@ -56,18 +77,5 @@ AlixoWhatsNew.register('1.50.0', {
       bullets: ['<b>Fautes dans les tableaux</b> : le clic droit propose enfin les corrections', '<b>Menu des onglets</b> : il ne saute plus à gauche quand on ferme un onglet'],
       art: 'spell', accent: '#c04343', accent2: '#33658a', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
-  ]
-});
-
-AlixoWhatsNew.register('1.49.1', {
-  scenes: [
-    { kind: 'intro', kicker: 'Correctif installé', title: 'Coco vous <em>répond</em>', text: 'Le chat d’Alixo AI refusait toute question : c’est réparé.', dur: 6500 },
-    { title: 'Le chat <em>fonctionne</em>', text: 'Posez une question sur le cours : la réponse arrive, mot après mot.',
-      bullets: ['<b>Réparé</b> : plus de « Demande refusée »', '<b>Quiz</b> et <b>fiche</b> n’étaient pas touchés', '<b>Toujours</b> sur l’ordinateur, rien n’est envoyé'],
-      art: { image: 'nouveautes/1.49.0-coco.png', alt: 'Coco répond dans le panneau Alixo AI' }, accent: '#2e8b6a', accent2: '#33658a', dur: 11000 },
-    { title: 'Coco <em>s’étonne</em> quand vous écrivez', text: 'Dès que vous tapez un message, la mascotte ouvre de grands yeux.',
-      bullets: ['<b>Bouche en « o »</b> pendant la frappe', '<b>Sourire</b> retrouvé quand le champ se vide ou qu’elle répond', '<b>Fondu</b> discret, coupé si le système réduit les animations'],
-      art: { image: 'nouveautes/1.49.1-coco-oh.png', alt: 'Coco surprise, bouche en « o »' }, accent: '#b3762a', accent2: '#2e8b6a', dur: 11000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 8000 }
   ]
 });

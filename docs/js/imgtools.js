@@ -11,6 +11,8 @@
      reste dans le magasin : Ctrl+Z annule sans rien ajouter. « Réinitialiser l'image » revient à b.o.
    Chargé AVANT app.js (styleVars / classes servent dès le premier rendu) ; les globales d'app.js (getBlock, touch,
    renderBlocks, AlixoImages, IMG_MAX_BYTES, storageAllows…) ne sont lues qu'au moment des actions.
+   1.52 : « Supprimer le fond » fait partie d'Alixo+ (requirePlus('detourage') d'app.js) ; l'entrée reste visible dans le
+   menu, marquée d'un badge Alixo+ quand l'abonnement n'est pas actif.
    ============================================================ */
 'use strict';
 
@@ -263,6 +265,7 @@ window.AlixoImgTools = (() => {
 
   /* ---------------- fenêtre « Supprimer le fond » ---------------- */
   async function openRemoveBg(id) {
+    if (typeof requirePlus === 'function' && !requirePlus('detourage')) return;   // 1.52 : Alixo+ (ouvre la fenêtre Alixo+ sinon)
     const b = getBlock(id); if (!b || b.type !== 'img') return;
     let src, img;
     try { src = await sourceOf(b); img = await loadImage(src); } catch (e) { toast(e.message || 'Image illisible'); return; }
@@ -480,7 +483,7 @@ window.AlixoImgTools = (() => {
     <button data-cm="ixalt">${ICO.alt}Texte alternatif…${check(!!b.alt)}</button>
     <div class="cm-sep"></div>
     ${group('iret', ICO.wand, 'Retouches', `
-      <button data-cm="ixbg">${ICO.wand}Supprimer le fond…</button>
+      ${typeof isPlus === 'function' && !isPlus() ? `<button data-cm="ixbg" aria-label="Supprimer le fond (réservé à Alixo+)">${ICO.wand}Supprimer le fond…<span class="plus-badge" aria-hidden="true">Alixo+</span></button>` : `<button data-cm="ixbg">${ICO.wand}Supprimer le fond…</button>`}
       <button data-cm="ixadj">${ICO.sliders}Luminosité, contraste, saturation…${check(!!(f.br || f.ct || f.sat))}</button>
       ${toggle('ixgray', ICO.gray, 'Noir et blanc', f.gray)}`, isOpen('iret'))}
     ${group('itr', ICO.transform, 'Pivoter, retourner', `
@@ -512,7 +515,7 @@ window.AlixoImgTools = (() => {
     if (!cm.startsWith('ix')) return false;
     const rect = e && Number.isFinite(e.clientX) ? { left: e.clientX, top: e.clientY, bottom: e.clientY } : centerRect();
     const apply = (patch, msg) => { setFx(b, patch); touch(); renderBlocks('__none'); selectObj(id); if (msg) toast(msg); };
-    if (cm === 'ixbg') { openRemoveBg(id); return true; }
+    if (cm === 'ixbg') { openRemoveBg(id); return true; }   // 1.52 : Alixo+ — le garde-fou est dans openRemoveBg (seul point d'entrée)
     if (cm === 'ixadj') { openAdjust(id, rect); return true; }
     if (cm === 'ixgray') { apply({ gray: !fxOf(b).gray }); return true; }
     if (cm === 'ixrotl' || cm === 'ixrotr' || cm === 'ixfliph' || cm === 'ixflipv') { transform(id, cm.slice(2)); return true; }

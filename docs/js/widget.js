@@ -25,6 +25,12 @@ window.AlixoWidget = (() => {
   const fmtLeft = m => (m >= 60 ? `${Math.floor(m / 60)} h ${pad2(m % 60)}` : `${m} min`);
   const fmtN = n => (+n || 0).toLocaleString('fr-FR');
   const KIND_ICO = { cours: '📝', slides: '🎞️', sheet: '📊', board: '🗂️', quiz: '❓' };
+  /* 1.52 : icônes du minuteur (copies locales de js/icons.js : la page du widget ne charge pas la bibliothèque) */
+  const WG_SVG = {
+    play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5v14l11-7Z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>',
+    reset: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/></svg>'
+  };
   const plural = (n, s) => `${n} ${s}${n > 1 ? 's' : ''}`;
 
   /* ---------------- rendu ---------------- */
@@ -64,10 +70,14 @@ window.AlixoWidget = (() => {
       const m = snap.minuteur || { on: false, total: 1500, base: 1500, t0: 0, over: false, label: '' };
       const presets = String(myOpts().presets || '').split(',').map(x => parseInt(x, 10)).filter(x => x > 0 && x <= 600).slice(0, 3);
       const list = presets.length ? presets : [25, 5, 45];
-      const running = m.on, left = remaining(m);
-      return `<div class="wg-timer ${m.over ? 'over' : ''} ${running ? 'live' : ''}"><div class="wg-digits" id="wg-digits">${m.over ? 'écoulé' : fmtClock(left)}</div>${m.label ? `<div class="wg-tlabel">${esc(m.label)}</div>` : ''}
-        <div class="wg-presets">${list.map(p => `<button type="button" data-set="${p * 60}" class="${m.total === p * 60 ? 'on' : ''}" ${running ? 'disabled' : ''}>${p} min</button>`).join('')}</div>
-        <div class="wg-tbtns"><button type="button" class="wg-cta" data-timer="${running ? 'pause' : 'start'}">${running ? 'Pause' : (m.over || m.base >= m.total ? 'Démarrer' : 'Reprendre')}</button><button type="button" class="wg-ghost" data-timer="reset" ${running ? 'disabled' : ''}>Remettre</button></div></div>`;
+      /* 1.52 : anneau de progression (--p), état « En pause », « Temps écoulé », icônes SVG (plus de texte seul) */
+      const running = m.on, left = remaining(m), paused = !running && !m.over && m.base < m.total;
+      const p = m.over ? 0 : Math.min(1, left / (m.total || 1));
+      const main = m.over ? 'Relancer' : running ? 'Mettre en pause' : paused ? 'Reprendre' : 'Démarrer';
+      return `<div class="wg-timer ${m.over ? 'over' : ''} ${running ? 'live' : ''} ${paused ? 'paused' : ''}" style="--p:${Math.round(p * 1000) / 1000}">
+        <div class="wg-ring"><svg viewBox="0 0 120 120" aria-hidden="true"><circle class="tr-track" cx="60" cy="60" r="54"/><circle class="tr-bar" cx="60" cy="60" r="54"/></svg><div class="wg-digits" id="wg-digits" role="timer">${m.over ? 'Temps écoulé' : fmtClock(left)}</div>${m.label ? `<div class="wg-tlabel">${esc(m.label)}</div>` : ''}<div class="wg-tstate" id="wg-tstate" aria-live="polite">${paused ? 'En pause' : ''}</div></div>
+        <div class="wg-presets">${list.map(pm => `<button type="button" data-set="${pm * 60}" class="${m.total === pm * 60 ? 'on' : ''}" aria-pressed="${m.total === pm * 60}" ${running ? 'disabled' : ''}>${pm} min</button>`).join('')}</div>
+        <div class="wg-tbtns"><button type="button" class="wg-cta" data-timer="${running ? 'pause' : 'start'}">${running ? WG_SVG.pause : WG_SVG.play}<span>${main}</span></button><button type="button" class="wg-ghost" data-timer="reset" ${running ? 'disabled' : ''} aria-label="Remettre à zéro" title="Remettre à zéro">${WG_SVG.reset}</button></div></div>`;
     },
     jourj() {
       const j = (snap.jourj && (snap.jourj[id] || snap.jourj.auto)) || { days: null };
@@ -133,9 +143,10 @@ window.AlixoWidget = (() => {
     if (!snap || !snap.plus) return;
     if (kind === 'minuteur' && snap.minuteur) {
       const m = snap.minuteur; const el = $('#wg-digits'); if (!el) return;
-      const left = remaining(m);
-      if (m.on && left <= 0) { el.textContent = 'écoulé'; el.closest('.wg-timer').classList.add('over'); return; }
-      el.textContent = m.over ? 'écoulé' : fmtClock(left);
+      const left = remaining(m), box = el.closest('.wg-timer');
+      if (m.on && left <= 0) { el.textContent = 'Temps écoulé'; box.classList.add('over'); box.style.setProperty('--p', 0); return; }   /* 1.52 */
+      el.textContent = m.over ? 'Temps écoulé' : fmtClock(left);
+      if (m.on) box.style.setProperty('--p', Math.round(Math.min(1, left / (m.total || 1)) * 1000) / 1000);
     }
     if (kind === 'horloge') { const now = new Date(); const t = $('#wg-time'); if (t) t.textContent = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`; const d = $('#wg-date'); if (d) d.textContent = longDate(now); }
     if (kind === 'agenda' && snap.agenda && snap.agenda.status) {

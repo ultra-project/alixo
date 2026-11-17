@@ -24,6 +24,12 @@ window.AlixoFiles = (() => {
   const MAX_SYNC = 20 * 1024 * 1024;     // au-delà : le fichier reste sur cet appareil
   const CHUNK = 700 * 1024;
   const RISKY = new Set(['exe', 'bat', 'cmd', 'com', 'msi', 'scr', 'ps1', 'vbs', 'vbe', 'js', 'jse', 'wsf', 'wsh', 'lnk', 'jar', 'hta', 'reg', 'cpl', 'pif']);
+  /* 1.52 : liste blanche des fichiers venus d'un téléphone (js/photodrop.js) — documents, images, audio, vidéo, texte brut, zip ;
+     ni SVG ni pages web (contenu actif), ni code source, ni documents à macros (.docm, .xlsm…), ni aide compilée (.chm).
+     Même liste que OPENABLE de main.js et ACCEPT de js/photo.js (page du téléphone, autonome). */
+  const SAFE_EXTS = new Set(['pdf', 'docx', 'doc', 'odt', 'rtf', 'pptx', 'ppt', 'odp', 'key', 'xlsx', 'xls', 'ods', 'csv', 'tsv',
+    'png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'avif', 'heic', 'mp3', 'wav', 'm4a', 'ogg', 'oga', 'flac', 'aac', 'opus',
+    'mp4', 'webm', 'mov', 'm4v', 'mkv', 'avi', 'txt', 'md', 'json', 'tex', 'log', 'zip']);
 
   const files = () => (Array.isArray(state.files) ? state.files : (state.files = []));
   const byId = id => files().find(f => f.id === id) || null;
@@ -158,6 +164,31 @@ window.AlixoFiles = (() => {
       document.body.appendChild(picker);
     }
     picker.click();
+  }
+  /* 1.52 : extension jamais importée ni ouverte (exécutables, scripts…) */
+  const riskyExt = name => RISKY.has(extOf(name));
+  const knownExt = name => SAFE_EXTS.has(extOf(name));   // 1.52 : liste blanche (import depuis le téléphone)
+  /* 1.52 : import depuis un téléphone ou une tablette — QR code (js/photodrop.js), fichiers rangés dans le dossier choisi
+     (figé ici : si le dossier disparaît entre-temps, addFiles range dans « Mes cours ») */
+  function pickPhone(folderId) {
+    if (!window.AlixoPhotoDrop) { toast('Fonction indisponible'); return; }
+    const fid = folderId || null;
+    AlixoPhotoDrop.openFiles({ title: folder(fid) ? folder(fid).nom : 'Mes cours', onFile: f => addFiles([f], folder(fid) ? fid : null) });
+  }
+  /* 1.52 : le bouton « Importer » propose les deux chemins ; sur mobile, l'ordinateur seul (le téléphone est déjà là) */
+  function openImportChoice(folderId, anchor) {
+    if (document.body.classList.contains('mobile') || typeof showPopover !== 'function') { pick(folderId); return; }
+    const r = anchor && typeof anchor.getBoundingClientRect === 'function' ? anchor.getBoundingClientRect() : { left: innerWidth / 2 - 160, top: 80, bottom: 80, right: innerWidth / 2 + 160 };
+    const pc = '<svg class="po-ico" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>';
+    const phone = window.AlixoIcons ? AlixoIcons.svg('smartphone', 'po-ico') : '';
+    showPopover(`<h4>Importer dans « ${esc(folder(folderId) ? folder(folderId).nom : 'Mes cours')} »</h4><div class="po-list po-export po-import">
+      <button data-imp="pc">${pc}<span><b>Depuis l’ordinateur</b><small>PDF, Word, PowerPoint, Excel, images, audio</small></span></button>
+      <button data-imp="phone">${phone}<span><b>Depuis un téléphone ou une tablette</b><small>QR code à scanner</small></span></button></div>`,
+      { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-import').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-imp]'); if (!b) return;
+        hidePopover();
+        if (b.dataset.imp === 'phone') pickPhone(folderId); else pick(folderId);
+      }));
   }
 
   /* ---------------- opérations ---------------- */
@@ -349,7 +380,9 @@ window.AlixoFiles = (() => {
           console.error(e);
           if (ext !== 'docx' || typeof mammoth === 'undefined') throw e;
           const r = await mammoth.convertToHtml({ arrayBuffer: buf });   // secours : le texte seul
-          body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+          // 1.52 : le HTML produit par mammoth vient du fichier : assaini comme un collage (liens, styles et scripts retirés)
+          const html = window.AlixoSanitize ? AlixoSanitize.rich(r.value || '') : esc(String(r.value || '').replace(/<[^>]*>/g, ' '));
+          body.innerHTML = `<div class="vw-doc">${html || '<i>Document vide</i>'}</div>`;
         }
       } else if (ext === 'pptx') {
         body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
@@ -664,9 +697,9 @@ window.AlixoFiles = (() => {
     return { enabled: true, schedule, download, status: () => denied ? 'denied' : (busy ? 'busy' : 'ok') };
   })();
 
-  { const ib = $('#btn-import-files'); if (ib) ib.addEventListener('click', () => pick(currentFolderId)); }
+  { const ib = $('#btn-import-files'); if (ib) ib.addEventListener('click', () => openImportChoice(currentFolderId, ib)); }   // 1.52 : ordinateur ou téléphone
   // la bibliothèque a pu être dessinée avant le chargement de ce module
   setTimeout(() => { try { refreshLibrary(); } catch { /* pas encore prête */ } }, 0);
 
-  return { open, openShared, openSharedMenu, pick, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
+  return { open, openShared, openSharedMenu, pick, pickPhone, openImportChoice, riskyExt, knownExt, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
 })();

@@ -15,12 +15,13 @@
 }
 #cocopanel[hidden] { display: none; }
 body.mode-editor #cocopanel { top: calc(var(--topbar-h) + var(--toolbar-h) + var(--tabbar-h) + 2px); }   /* comme #viewpanel */
-/* vues où le panneau n'a pas de sens (planche, quiz, onglet Word, bibliothèque) : il reste « ouvert » mais invisible,
-   et revient tout seul en revenant à une séance, une présentation ou un tableur */
-body:not(.mode-editor):not(.mode-slides):not(.mode-sheet) #cocopanel { display: none; }
+/* vues où le panneau n'a pas de sens (onglet Word, bibliothèque) : il reste « ouvert » mais invisible, et revient tout
+   seul en revenant à un document (1.52 : planche et quiz compris) */
+body:not(.mode-editor):not(.mode-slides):not(.mode-sheet):not(.mode-board):not(.mode-quiz) #cocopanel { display: none; }
 /* décalage du contenu (classes posées par syncRightPanelClass, app.js) */
 #view-editor.coco-open #docwrap { padding-right: calc(var(--coco-w) + 20px); }
-body.coco-open #view-slides, body.coco-open #view-sheet { right: var(--coco-w); }
+body.coco-open #view-slides, body.coco-open #view-sheet, body.coco-open #view-board, body.coco-open #view-quiz { right: var(--coco-w); }
+body.bd-present #cocopanel { display: none; }   /* planche en mode présentation : plein écran */
 body.coco-open #view-slides { grid-template-columns: minmax(0, 212px) 1fr minmax(0, 280px); }
 @media (max-width: 1500px) { body.coco-open #view-slides { grid-template-columns: minmax(0, 150px) 1fr minmax(0, 240px); } }
 /* petit écran (portable 1366 × 768) : panneau plus étroit, volet latéral de la présentation masqué, pellicule réduite */
@@ -28,7 +29,7 @@ body.coco-open #view-slides { grid-template-columns: minmax(0, 212px) 1fr minmax
 @media (max-width: 1200px) { body.coco-open #view-slides { grid-template-columns: 0 1fr 0; } body.coco-open #sl-strip, body.coco-open #sl-side { display: none; } }
 /* écran partagé (js/split.js) : le panneau se replie sur la zone principale */
 body.split:not(.mode-editor) #cocopanel { right: var(--main-r); bottom: var(--main-b); top: calc(var(--topbar-h) + var(--tabbar-h) + var(--main-t)); }
-body.split.coco-open #view-slides, body.split.coco-open #view-sheet { right: calc(var(--main-r) + var(--coco-w)); }
+body.split.coco-open #view-slides, body.split.coco-open #view-sheet, body.split.coco-open #view-board, body.split.coco-open #view-quiz { right: calc(var(--main-r) + var(--coco-w)); }
 #cocopanel .coco-resizer { left: -4px; }
 
 /* en-tête */
@@ -83,6 +84,9 @@ html[data-theme="dark"] .coco-msg .coco-err { color: #e07070; }
 .coco-act { display: inline-flex; align-items: center; gap: 5px; height: 28px; padding: 0 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink); font: 600 12px var(--font-ui); cursor: pointer; }
 .coco-act:hover { background: var(--hover); border-color: var(--tint); color: var(--tint); }
 .coco-act svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+/* 1.52 : « Supprimer » d'une confirmation de Coco */
+.coco-act.danger { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); color: var(--danger); }
+.coco-act.danger:hover { background: var(--danger); border-color: var(--danger); color: #fff; }
 @keyframes coco-caret { 50% { opacity: 0; } }
 @keyframes coco-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 
@@ -226,3 +230,12 @@ html[data-theme="dark"] .fiche-formulas code { background: color-mix(in srgb, #0
   #coco-print .fiche-chips span { background: #fff; }
   #coco-print * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* 1.52 : Coco modifie le document — le message de résumé garde ses boutons (Annuler les modifications, Voir le détail,
+   Appliquer / Annuler) ; un message annulé est grisé */
+.coco-msg.coco .coco-md p + p { margin-top: 4px; }
+.coco-msg.coco[data-undone] .coco-md { color: var(--ink-3); }
+/* 1.52 : planche ou quiz avec Coco ouvert — la barre n'a plus que la moitié de la largeur : icônes seules (le nom reste dans
+   l'infobulle), pour que le bouton « Alixo AI » et Télécharger restent visibles sans faire défiler la barre */
+body:has(#cocopanel:not([hidden])) .bd-bar .bd-lbl { display: none; }
+body:has(#cocopanel:not([hidden])) .bd-bar button { padding: 0 6px; }

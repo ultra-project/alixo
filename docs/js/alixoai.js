@@ -29,6 +29,7 @@
                                   mots, astuce, pieges, exemples, partie) — voir parse.sheet.
      cancel(token)               annule les requêtes portant ce jeton
      passages(text, n, size)     découpe un texte en n passages répartis (exposé pour les tests)
+     run('route' | 'edit', …)    1.52 : Coco décide de répondre ou d'agir, puis modifie le document par commandes (js/cocotools.js)
      parse.*                     analyseurs des formats de réponse (exposés pour les tests)
    Événement document « alixo-ai » (detail = { state, busy, waiting, task }) à chaque changement visible.
    ============================================================ */
@@ -45,9 +46,11 @@ window.AlixoAI = (() => {
      chat = jetons d'une réponse de Coco ; chatDoc = caractères du cours confiés à Coco (1.49).
      Processeur : environ 6 à 10 jetons par seconde (modèle 4B) — lots et extraits plus courts. */
   const BUDGETS = {
-    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 2200, chat: 360, chatDoc: 12000 },
-    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1300, chat: 240, chatDoc: 5000 }
+    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 2200, chat: 360, chatDoc: 12000, agent: 3200, agentOut: 700, route: 24 },
+    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1300, chat: 240, chatDoc: 5000, agent: 1600, agentOut: 450, route: 24 }
   };
+  /* 1.52 : agent = caractères du document confiés à Coco par lot quand il modifie le document (js/cocotools.js) ;
+     agentOut = jetons d'une réponse en commandes ; route = jetons de la décision « répondre ou agir » */
   function tier() { const l = L(); return l && l.status().tier === 'gpu' ? 'gpu' : 'cpu'; }
   const budget = () => BUDGETS[tier()];
   /* conversation d'un quiz plafonnée à la taille du contexte du moteur (≈ 2,2 caractères par jeton, marge comprise) */
@@ -234,6 +237,27 @@ window.AlixoAI = (() => {
     return out;
   };
 
+  /* 1.52 — Routage de Coco : « REPONDRE » ou « AGIR | corriger | embellir | modifier » (une ligne) */
+  parse.route = (text, intents) => {
+    const t = clean(text).trim().toLowerCase();
+    const list = (intents && intents.length ? intents : ['corriger', 'embellir', 'modifier']).map(x => String(x).toLowerCase());
+    if (!/\bagir\b/.test(t)) return { action: 'repondre' };
+    const found = list.find(k => new RegExp('\\b' + k.replace(/[^a-zà-ÿ]/g, '') + '\\b').test(t.normalize('NFC')));
+    return { action: found || list[list.length - 1] };
+  };
+  /* 1.52 — Édition par commandes : une commande par ligne ; « - », « • », numérotation et guillemets de bloc tolérés ;
+     « RIEN » → aucune ligne. L'analyse fine (mot, arguments, identifiants) est faite par js/cocotools.js. */
+  parse.edit = text => {
+    const out = [];
+    for (const raw of clean(text).split('\n')) {
+      let line = raw.trim().replace(/^(?:[-•*]|\d+[.)])\s+/, '').replace(/^`+|`+$/g, '').trim();
+      if (!line) continue;
+      if (/^rien\.?$/i.test(line)) continue;
+      out.push(line);
+    }
+    return out;
+  };
+
   /* ---------------- consignes (courtes, un exemple) ---------------- */
   const STYLE_TYPES = 'definition (notion suivie de sa définition), arret (décision de justice), exemple, retenir (règle essentielle), controverse (débat), bilan (synthèse), drapeau (santé : signes de gravité), reflexe (santé : réflexe clinique), mnemo (moyen mnémotechnique), h1/h2/h3/h4 (titre de plan), li (élément de liste), quote (citation)';
   const LANG_NAMES = { fr: 'français', en: 'anglais', es: 'espagnol', de: 'allemand', it: 'italien', pt: 'portugais' };
@@ -333,6 +357,33 @@ R: Un droit s’éteint quand son titulaire ne l’exerce pas pendant un certain
   const CHAT_SYSTEM = `Tu es Coco, la mascotte d’Alixo : tu aides un étudiant à comprendre SON cours, donné ci-dessous.
 Réponds en français, court (3 à 8 lignes), avec des phrases simples, en le tutoyant. Appuie-toi d’abord sur le cours ; si le cours n’en parle pas, dis-le en une phrase puis réponds brièvement avec tes connaissances.
 Mise en forme : **gras** pour les mots importants, listes avec « - ». Pas de titres, pas de tableaux.`;
+  /* 1.52 : Coco décide s'il répond ou s'il modifie le document (js/cocotools.js) — sans le document, une ligne */
+  function routeSystem(kindWord, intents) {
+    const names = (intents && intents.length ? intents : ['corriger', 'embellir', 'modifier']);
+    return `Tu es Coco, l’assistant d’Alixo. L’étudiant t’écrit à propos de son document ouvert (${kindWord || 'le document'}).
+Décide s’il te demande de MODIFIER le document ou seulement de RÉPONDRE.
+Réponds par UNE ligne, rien d’autre : REPONDRE — ou — AGIR | ${names.join(' | ')}
+corriger : fautes d’orthographe ou de grammaire. embellir : encadrés, titres, mise en forme, « plus beau », « plus clair ». modifier : tout autre changement du contenu (ajouter, réécrire, supprimer, résumer, traduire, renommer).
+Exemples : « c’est quoi la prescription ? » → REPONDRE · « corrige les fautes » → AGIR | corriger · « mets les définitions en encadré » → AGIR | embellir · « ajoute une conclusion » → AGIR | modifier`;
+  }
+  /* 1.52 : Coco modifie le document par commandes (registre fermé, js/cocotools.js) ; `commands` = liste des commandes et des
+     types autorisés, générée depuis le registre ; `example` = entrée / réponse d'exemple propres au type de document */
+  const EDIT_INTRO = {
+    doc: ['les notes de cours d’un étudiant', 'les paragraphes du document, un par ligne : « id | type | texte ». « (long) » : paragraphe coupé, à ne pas réécrire.'],
+    slides: ['la présentation d’un étudiant', 'les diapositives puis leurs éléments, un par ligne : « d2 | Titre | … » puis « d2.e1 | text | … ».'],
+    sheet: ['le tableur d’un étudiant', 'les cases non vides, une par ligne : « A1 | contenu ». Une valeur qui commence par « = » est une formule.'],
+    board: ['la planche (tableau blanc) d’un étudiant', 'les notes et textes de la planche, un par ligne : « n3 | note | texte ».'],
+    quiz: ['le quiz d’un étudiant', 'les questions, une par ligne : « q2 | qcm | question | A ; B ; C ; D ».']
+  };
+  function editSystem(kind, commands, example) {
+    const [what, input] = EDIT_INTRO[kind] || EDIT_INTRO.doc;
+    return `Tu es Coco, l’assistant d’Alixo. Tu modifies ${what} selon sa demande, sans rien inventer.
+Entrée : la demande, puis ${input}
+${commands}
+Rien à changer : RIEN
+Règles : garde les termes du cours ; **gras** autorisé pour un mot important, aucune autre mise en forme ; pas de commentaire ; ne supprime que si on te le demande.
+${example || ''}`.trim();
+  }
 
   /* ---------------- exécution ---------------- */
   let seq = 0;
@@ -355,6 +406,8 @@ Mise en forme : **gras** pour les mots importants, listes avec « - ». Pas de t
     if (task === 'quiz') return runQuiz(payload, opts, token, b);
     if (task === 'sheet') return runSheet(payload, opts, token, b);
     if (task === 'chat') return runChat(payload, opts, token, b);
+    if (task === 'route') return runRoute(payload, opts, token, b);
+    if (task === 'edit') return runEdit(payload, opts, token, b);
     throw new Error('AlixoAI : tâche inconnue « ' + task + ' »');
   }
   /* délai de garde : processeur nettement plus lent que la carte graphique (et premier chargement du modèle compris) */
@@ -473,6 +526,25 @@ Mise en forme : **gras** pour les mots importants, listes avec « - ». Pas de t
     const r = await engineChat({ task: 'chat', messages, maxTokens: b.chat, temperature: 0.4, timeoutMs: slow(120000), token, quiet: true, onToken: t => { if (opts.onText) { try { opts.onText(clean(t)); } catch { /* interface */ } } } });
     if (!r.ok) throw fail(r);
     return { text: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+  }
+  /* 1.52 — routage : { question, kind (mot : « la séance »…), intents } → { action: 'repondre' | intention, raw } ; sans le document */
+  async function runRoute(p, opts, token, b) {
+    const question = String(p.question || '').trim().slice(0, 600);
+    const r = await engineChat({ task: 'route', system: routeSystem(p.kind, p.intents), user: question, maxTokens: b.route || 24, temperature: 0, timeoutMs: slow(60000), token, quiet: true });
+    if (!r.ok) throw fail(r);
+    return Object.assign(parse.route(r.raw, p.intents), { raw: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut });
+  }
+  /* 1.52 — édition : { instruction, kind, lines[], commands, example, part } → { lines[] (commandes brutes), raw } ;
+     onToken(texte cumulé) pendant la réponse. part = { k, n } : lot k sur n (le modèle sait s'il voit la fin du document) */
+  async function runEdit(p, opts, token, b) {
+    const lines = (p.lines || []).map(String);
+    const instruction = String(p.instruction || '').trim().slice(0, 600);
+    const part = p.part && p.part.n > 1 ? `Partie ${p.part.k} / ${p.part.n} du document${p.part.k < p.part.n ? ' (la suite vient après : n’ajoute rien à la fin ici)' : ' (fin du document)'}${p.part.k > 1 ? ' ; les parties précédentes ont déjà été traitées, ne refais pas ce qui l’est déjà' : ''}.\n` : '';
+    const user = `Demande : « ${instruction} »\n${part}${lines.join('\n')}`;
+    const maxTokens = Math.max(60, Math.min(b.agentOut || 450, 60 + 40 * lines.length));
+    const r = await engineChat({ task: 'edit', system: editSystem(p.kind, p.commands || '', p.example || ''), user, maxTokens, temperature: 0, timeoutMs: slow(120000), token, quiet: true, onToken: t => { if (opts.onToken) { try { opts.onToken(clean(t)); } catch { /* interface */ } } } });
+    if (!r.ok) throw fail(r);
+    return { lines: parse.edit(r.raw), raw: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
   }
   function cancel(token) { const l = L(); if (l && l.cancel) l.cancel(token); }
   const newToken = () => 'ai' + (++seq);

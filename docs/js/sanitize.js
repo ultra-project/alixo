@@ -23,7 +23,7 @@
 'use strict';
 
 window.AlixoSanitize = (() => {
-  const cfg = { fonts: [], callouts: null, fiches: null, scores: null, calcs: null, charts: null, graphs: null, numStyles: null, normShape: null };
+  const cfg = { fonts: [], callouts: null, fiches: null, scores: null, calcs: null, charts: null, graphs: null, numStyles: null, linkKinds: null, icons: null, normShape: null };
   /* fonts : piles CSS admises (DOC_FONTS) ; callouts / fiches / scores / calcs / charts / graphs / numStyles : clés connues
      (scores cliniques, calculateurs, types de graphiques, styles de numérotation) ; normShape : validateur des objets de dessin */
   function configure(o) {
@@ -31,7 +31,7 @@ window.AlixoSanitize = (() => {
     if (Array.isArray(o.fonts)) cfg.fonts = o.fonts.filter(f => typeof f === 'string' && f).map(f => ({ css: f, key: fontKey(f) }));
     if (Array.isArray(o.callouts)) cfg.callouts = o.callouts.map(String);
     if (Array.isArray(o.fiches)) cfg.fiches = o.fiches.map(String);
-    for (const k of ['scores', 'calcs', 'charts', 'graphs', 'numStyles']) if (Array.isArray(o[k])) cfg[k] = o[k].map(String);
+    for (const k of ['scores', 'calcs', 'charts', 'graphs', 'numStyles', 'linkKinds', 'icons']) if (Array.isArray(o[k])) cfg[k] = o[k].map(String);   // 1.52 : + linkKinds, icons (bouton de lien)
     if (typeof o.normShape === 'function') cfg.normShape = o.normShape;
   }
 
@@ -327,6 +327,7 @@ window.AlixoSanitize = (() => {
     const type = typeof b.type === 'string' ? b.type : 'p';
     const o = { id: uid(), type };
     const al = align(b.al); if (al && al !== 'left') o.al = al;
+    if (b.gen === 'alixoai') o.gen = 'alixoai';   // 1.52 : bloc écrit ou réécrit par Coco (AlixoAI) — seule valeur admise
     const html = k => rich(typeof b[k] === 'string' ? b[k] : '');
     switch (type) {
       case 'p': o.text = html('text'); break;
@@ -470,6 +471,18 @@ window.AlixoSanitize = (() => {
         if (typeof b.kind === 'string' && KEY_RE.test(b.kind) && !inherited(b.kind)) o.kind = b.kind;
         break;
       }
+      case 'linkbtn': {   // 1.52 : bouton de lien — cible invalide ⇒ bloc refusé ; url https: seulement (main.js n'ouvre que https) ; couleur, icône, taille, alignement en liste blanche
+        o.kind = known(cfg.linkKinds, b.kind); if (!o.kind) return null;
+        if (o.kind === 'url') { const u = safeHref(b.url); if (!/^https:\/\/[^/?#\s]/i.test(u) || u.length > 2000) return null; o.url = u; }
+        else if (typeof b.ref === 'string' && ID_RE.test(b.ref)) o.ref = b.ref;
+        else return null;
+        const l = plain(b.label, 80).trim(); if (l) o.label = l;
+        const c = hex(b.color); if (/^#[0-9a-f]{6}$/i.test(c)) o.color = c;
+        const ic = known(cfg.icons, b.icon); if (ic) o.icon = ic;
+        if (['s', 'm', 'l'].includes(b.size)) o.size = b.size;
+        const a = align(b.align); if (a && a !== 'justify') o.align = a;
+        break;
+      }
       case 'cards': {
         o.cards = Array.isArray(b.cards) ? b.cards.slice(0, 60).map(c => ({ t: atoms(isObj(c) && typeof c.t === 'string' ? c.t : ''), x: atoms(isObj(c) && typeof c.x === 'string' ? c.x : '') })) : [];
         break;
@@ -526,5 +539,5 @@ window.AlixoSanitize = (() => {
   /* le dernier parseBlocks a-t-il été abandonné parce que le contenu dépassait le budget ? */
   const tooBig = () => lastTooBig;
 
-  return { configure, inline, atoms, rich, blocks, parseBlocks, tooBig, text, hex, align, color, esc, spanOpen, spanProps, propsSpan, isAlixoClip };
+  return { configure, inline, atoms, rich, blocks, parseBlocks, tooBig, text, hex, align, color, fontSize, fontFamily, esc, spanOpen, spanProps, propsSpan, isAlixoClip };   // 1.52 : fontSize, fontFamily (styles enregistrés, js/textstyles.js)
 })();

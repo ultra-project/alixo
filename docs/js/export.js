@@ -509,6 +509,20 @@
           layoutRuns(pdf, [{ text: 'Document Alixo : ', b: true, color: ACCENT }, { text: r.title }], { size: 10.5, x: pdf.M, width: pdf.cw });
           pdf.y += 6; break;
         }
+        case 'linkbtn': {   // 1.52 : bouton de lien → pastille arrondie de la couleur du bouton, libellé blanc en gras (le PDF ne garde pas le lien)
+          const r = typeof linkBtnInfo === 'function' ? linkBtnInfo(b) : { title: 'Lien' };
+          const label = toCp1252(String(b.label || '').trim() || r.title || 'Lien').slice(0, 80);
+          const bh = b.size === 's' ? 22 : b.size === 'l' ? 32 : 26, fs = b.size === 's' ? 9.5 : b.size === 'l' ? 12 : 10.5;
+          const bw = Math.min(pdf.cw, textWidth(label, fs, true) + bh);
+          const bx = b.align === 'center' ? pdf.M + (pdf.cw - bw) / 2 : b.align === 'right' ? pdf.M + pdf.cw - bw : pdf.M;
+          const col = parseColor(b.color) || ACCENT, rad = Math.min(8, bh / 2);
+          pdf.y += 6; pdf.ensure(bh + 8);
+          /* rectangle aux coins arrondis (quarts de cercle en Bézier), repère PDF : origine en bas à gauche */
+          const x0 = bx, x1 = bx + bw, y1 = pdf.H - pdf.y, y0 = y1 - bh, k = rad * 0.5523;
+          pdf.op(`${n2(col[0] / 255)} ${n2(col[1] / 255)} ${n2(col[2] / 255)} rg ${n2(x0 + rad)} ${n2(y0)} m ${n2(x1 - rad)} ${n2(y0)} l ${n2(x1 - rad + k)} ${n2(y0)} ${n2(x1)} ${n2(y0 + rad - k)} ${n2(x1)} ${n2(y0 + rad)} c ${n2(x1)} ${n2(y1 - rad)} l ${n2(x1)} ${n2(y1 - rad + k)} ${n2(x1 - rad + k)} ${n2(y1)} ${n2(x1 - rad)} ${n2(y1)} c ${n2(x0 + rad)} ${n2(y1)} l ${n2(x0 + rad - k)} ${n2(y1)} ${n2(x0)} ${n2(y1 - rad + k)} ${n2(x0)} ${n2(y1 - rad)} c ${n2(x0)} ${n2(y0 + rad)} l ${n2(x0)} ${n2(y0 + rad - k)} ${n2(x0 + rad - k)} ${n2(y0)} ${n2(x0 + rad)} ${n2(y0)} c f`);
+          pdf.text(bx + (bw - textWidth(label, fs, true)) / 2, pdf.y + bh / 2 + fs * 0.35, label, fs, true, false, [255, 255, 255]);
+          pdf.y += bh + 8; break;
+        }
         case 'hr':
           pdf.y += 9; pdf.ensure(12);
           pdf.rect(pdf.M + pdf.cw * 0.1, pdf.y, pdf.cw * 0.8, 0.8, HAIR);
@@ -895,6 +909,13 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         case 'docref': {   // 1.43 : bloc « Document » → un paragraphe « Document Alixo : titre »
           const r = typeof docRefInfo === 'function' ? docRefInfo(b) : { title: 'Document' };
           body += para(runXml({ text: 'Document Alixo : ', b: true, color: ACCENT }) + runXml({ text: r.title }), '<w:spacing w:before="80" w:after="160"/>');
+          break;
+        }
+        case 'linkbtn': {   // 1.52 : bouton de lien → séquence ombrée de la couleur du bouton, texte blanc en gras, alignée comme le bouton
+          const r = typeof linkBtnInfo === 'function' ? linkBtnInfo(b) : { title: 'Lien' };
+          const label = String(b.label || '').trim() || r.title || 'Lien';
+          const col = parseColor(b.color) || ACCENT, sz = b.size === 's' ? 20 : b.size === 'l' ? 26 : 22;
+          body += para(runXml({ text: `  ⟶ ${label}  `, b: true, color: [255, 255, 255], bg: col }, { sz }), `${jcXml(b.align)}<w:spacing w:before="120" w:after="200"/>`);
           break;
         }
         case 'pb': body += '<w:p><w:r><w:br w:type="page"/></w:r></w:p>'; break;   // 1.23 : saut de page

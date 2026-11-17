@@ -1012,5 +1012,66 @@ window.AlixoSlides = (() => {
   }
   window.addEventListener('resize', () => { if (document.querySelector('.sp-box')) fitPreviews(); });
 
-  return { newDoc, open, leave, refresh, remoteChanged, undo, redo, exportPDF, preview, fitPreviews, present: startPresent, THEMES, BLOCKS, SW, SH };
+  /* 1.52 : façade « edit » pour Coco (js/cocotools.js) — même forme qu'AlixoApp.edit. Les textes reçus sont déjà assainis
+     (AlixoSanitize.inline) ; une photo d'historique est prise à la première écriture du lot, un seul commit + renderAll. */
+  const edit = (() => {
+    const S = v => (typeof v === 'string' ? v : '');
+    const plain = h => (window.AlixoSanitize ? AlixoSanitize.text(S(h)) : S(h).replace(/<[^>]*>/g, '')).replace(/\s+/g, ' ').trim();
+    const TEXTY = ['title', 'subtitle', 'text', 'kicker', 'list', 'olist', 'checklist', 'agenda', 'quote', 'callout', 'definition', 'sticky', 'bubble', 'badge', 'code'];
+    const LAYOUT = { contenu: 'content', puces: 'bullets', section: 'section', titre: 'title', deux: 'two', plan: 'plan' };
+    let pending = false;
+    const mark = () => { if (pending) { pushHist(); pending = false; } };
+    const canEdit = () => { const dd = d(); return !!dd && dd.kind === 'slides' && !readOnly && document.body.classList.contains('mode-slides'); };
+    const find = sid => { const dd = d(); return dd ? slides(dd).find(s => s.id === sid) || null : null; };
+    const listHTML = (lines, ol) => `<${ol ? 'ol' : 'ul'}>${lines.map(l => `<li>${l}</li>`).join('')}</${ol ? 'ol' : 'ul'}>`;
+    return {
+      kind: 'slides',
+      canEdit,
+      layouts: () => Object.keys(LAYOUT),
+      snapshot() { const dd = d(); return dd ? JSON.stringify(slides(dd)) : ''; },
+      restore(json) { const dd = d(); if (!dd || !canEdit()) return false; let v; try { v = JSON.parse(json); } catch { return false; } if (!Array.isArray(v) || !v.length) return false; pushHist(); dd.slides = v; afterRestore(dd); return true; },
+      begin() { syncAllText(); pending = true; },
+      commit() { pending = false; commit(); renderAll(); },
+      /* diapositives et leurs éléments texte : [{ id, n, type: 'slide', title, notes, els: [{ id, t, text }] }] */
+      items() { const dd = d(); return dd ? slides(dd).map((s, i) => ({ id: s.id, n: i + 1, type: 'slide', notes: S(s.notes), els: (s.els || []).filter(e => TEXTY.includes(e.t)).map(e => ({ id: e.id, t: e.t, text: plain(e.html) })) })) : []; },
+      /* 1.52 : lines = lignes déjà découpées sur « / » AVANT l'assainissement (js/cocotools.js) — découper le HTML assaini
+         sur « / » cassait les balises fermantes (« <b>x</b> » → « <b>x< » + « b> ») ; sinon découpe sur <br> seulement */
+      setElText(sid, eid, html, lines0) {
+        const s = find(sid); const e = s && (s.els || []).find(x => x.id === eid); if (!e || !TEXTY.includes(e.t)) return false;
+        mark();
+        const lines = (Array.isArray(lines0) ? lines0.map(S) : S(html).split(/<br\s*\/?>/)).map(x => x.trim()).filter(Boolean);
+        e.html = ['list', 'checklist', 'agenda', 'olist'].includes(e.t) ? listHTML(lines.length ? lines : [S(html)], e.t === 'olist' || e.t === 'agenda') : S(html);
+        return true;
+      },
+      /* nouvelle diapositive après la courante (ou en fin) : layout contenu | puces | section | titre ; title et lines déjà assainis */
+      addSlide(layout, { title, lines, after } = {}) {
+        const dd = d(); if (!dd) return null;
+        mark();
+        const lay = LAYOUT[String(layout || '').toLowerCase()] || (lines && lines.length > 1 ? 'bullets' : 'content');
+        const s = newSlide(lay, dd);
+        const t = (s.els || []).find(e => e.t === 'title'); if (t && title) t.html = S(title);
+        const body = (s.els || []).find(e => e.t === 'list' || e.t === 'text'); const ls = (lines || []).map(S).filter(Boolean);
+        if (body) { if (body.t === 'list') body.html = listHTML(ls.length ? ls : ['…']); else body.html = ls.length ? ls.map(l => `<p>${l}</p>`).join('') : body.html; }
+        const list = slides(dd); const i = after ? list.findIndex(x => x.id === after) : list.length - 1;
+        list.splice((i < 0 ? list.length - 1 : i) + 1, 0, s);
+        curSlide = s.id; selSet.clear();
+        return s.id;
+      },
+      removeSlide(sid) { const dd = d(); if (!dd || slides(dd).length <= 1) return false; const i = slides(dd).findIndex(x => x.id === sid); if (i < 0) return false; mark(); slides(dd).splice(i, 1); if (curSlide === sid) curSlide = (slides(dd)[i] || slides(dd)[i - 1]).id; selSet.clear(); return true; },
+      setNotes(sid, text) { const s = find(sid); if (!s) return false; mark(); s.notes = plain(text).slice(0, 2000); return true; },
+      /* correction (js/corr.js) : remplacement du passage dans un élément dont le texte brut est identique au HTML (sans balise) */
+      applyFixes(fixes) {
+        const out = { fixes: 0, blocks: 0, done: [] }; const touched = new Set();
+        for (const f of fixes || []) {
+          const [sid, eid] = String(f.id).split('.'); const s = find(sid); const e = s && (s.els || []).find(x => x.id === eid); if (!e || !f.avant) continue;
+          const h = S(e.html); const safe = typeof esc === 'function' ? esc(f.avant) : f.avant; const safeTo = typeof esc === 'function' ? esc(f.apres) : f.apres;
+          if (!h.includes(safe)) continue;
+          mark(); e.html = h.replace(safe, safeTo); out.fixes++; touched.add(f.id); out.done.push(f);
+        }
+        out.blocks = touched.size; return out;
+      }
+    };
+  })();
+
+  return { newDoc, open, leave, refresh, remoteChanged, undo, redo, exportPDF, preview, fitPreviews, present: startPresent, THEMES, BLOCKS, SW, SH, edit };
 })();

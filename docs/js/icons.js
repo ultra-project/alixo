@@ -123,6 +123,14 @@
     'search': '<circle cx="11" cy="11" r="7"/><path d="m16.5 16.5 4.5 4.5"/>',
     'check': '<path d="m4 12 5 5L20 6"/>',
     'x': '<path d="M6 6l12 12M18 6 6 18"/>',
+    /* 1.52 : minuteurs et agenda (lecture, pause, remise à zéro, chronomètre, sablier, réglages, corbeille) */
+    'play': '<path d="M7 5v14l11-7Z"/>',
+    'pause': '<path d="M8 5v14M16 5v14"/>',
+    'rotate-ccw': '<path d="M4 12a8 8 0 1 0 2.3-5.7L4 8.5"/><path d="M4 4v4.5h4.5"/>',
+    'timer': '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9 2h6M12 2v3"/>',
+    'hourglass': '<path d="M6 3h12M6 21h12M8 3v3.5a4 4 0 0 0 1.6 3.2L12 12l-2.4 2.3A4 4 0 0 0 8 17.5V21M16 3v3.5a4 4 0 0 1-1.6 3.2L12 12l2.4 2.3a4 4 0 0 1 1.6 3.2V21"/>',
+    'ellipsis': '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    'trash': '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
     'link': '<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>',
     'equal': '<path d="M5 9h14M5 15h14"/>',
     'wave': '<path d="M3 12c2-5 4-5 6 0s4 5 6 0 4-5 6 0"/>'

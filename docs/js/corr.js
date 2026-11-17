@@ -17,12 +17,12 @@ window.AlixoCorr = (() => {
   /* ---------------- réglages ---------------- */
   const AI = () => window.AlixoAI || null;
   const GRAMMAR = () => window.AlixoGrammar || null;
-  const PAUSE_MS = 1500;           // pause de frappe avant de relire les phrases en cours
-  const SENTENCE_MS = 700;         // délai après une fin de phrase (. ! ? Entrée)
+  const PAUSE_MS = 900;            // pause de frappe avant de relire les phrases en cours (1.52 : 1500 → 900)
+  const SENTENCE_MS = 350;         // délai après une fin de phrase (. ! ? Entrée) (1.52 : 700 → 350)
   const LEAVE_MS = 250;            // délai après la sortie d'un bloc
   /* taille des lots de F7 (caractères par requête), donnée par AlixoAI */
   const maxBatchFull = () => (AI() ? AI().budget().full : 6000);
-  const MIN_WORDS = 3;             // une phrase plus courte n'est pas envoyée
+  const MIN_WORDS = 2;             // une phrase plus courte n'est pas relue (1.52 : 3 → 2)
   const CACHE_MAX = 4000;          // phrases mémorisées
   const LS = { learned: 'alixo.corr.learned', ignored: 'alixo.corr.ignored', cache: 'alixo.corr.cache', stats: 'alixo.corr.stats' };
 
@@ -50,7 +50,9 @@ window.AlixoCorr = (() => {
     developement: 'développement', developpment: 'développement', interet: 'intérêt', regle: 'règle', reglement: 'règlement', periode: 'période', siecle: 'siècle', medecin: 'médecin', medecine: 'médecine', hypothese: 'hypothèse',
     synthese: 'synthèse', numero: 'numéro', bibliotheque: 'bibliothèque', facon: 'façon', lecon: 'leçon', recu: 'reçu', apercu: 'aperçu', garcon: 'garçon', exmeple: 'exemple', exempel: 'exemple', exemlpe: 'exemple', exmple: 'exemple',
     entrepirse: 'entreprise', entrerpise: 'entreprise', gouvernemnet: 'gouvernement', gouvernment: 'gouvernement', coment: 'comment', commetn: 'comment', pourquio: 'pourquoi', pourqoi: 'pourquoi', pourquoit: 'pourquoi',
-    perosnne: 'personne', persone: 'personne', pesonne: 'personne', enfnat: 'enfant', pouvior: 'pouvoir', droti: 'droit', dorit: 'droit', pensse: 'pense', cest: 'c’est', jai: 'j’ai'
+    perosnne: 'personne', persone: 'personne', pesonne: 'personne', enfnat: 'enfant', pouvior: 'pouvoir', droti: 'droit', dorit: 'droit', pensse: 'pense', cest: 'c’est', jai: 'j’ai',
+    /* 1.52 */
+    parmis: 'parmi', malgrés: 'malgré', malgre: 'malgré', malgres: 'malgré', bienque: 'bien que', language: 'langage', dilemne: 'dilemme', connection: 'connexion'
   };
 
   /* ---------------- stockage local ---------------- */
@@ -66,7 +68,12 @@ window.AlixoCorr = (() => {
   /* ---------------- lexique ---------------- */
   const LEX = new Map();        // mot → rang (0 = le plus fréquent)
   const BY_SKEL = new Map();    // squelette sans accent → mots accentués
+  const BY_LF = new Map();      // 1.52 : « première lettre dépouillée:longueur » → { w: mots, s: squelettes } (voisins pour nearest)
   const strip = w => w.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/œ/g, 'oe').replace(/æ/g, 'ae');
+  const lfKey = w => strip(w[0]) + ':' + w.length;
+  /* lettres présentes dans un squelette (un bit par lettre a-z, bit 26 pour le reste) : un écart d'une lettre change au plus deux bits */
+  function letterMask(s) { let m = 0; for (let i = 0; i < s.length; i++) { const c = s.charCodeAt(i) - 97; m |= 1 << (c >= 0 && c < 26 ? c : 26); } return m; }
+  function popcount(v) { v -= (v >>> 1) & 0x55555555; v = (v & 0x33333333) + ((v >>> 2) & 0x33333333); return (((v + (v >>> 4)) & 0x0f0f0f0f) * 0x01010101) >>> 24; }
   (function loadLex() {
     const src = window.ALIXO_LEXIQUE || '';
     let i = 0;
@@ -77,6 +84,7 @@ window.AlixoCorr = (() => {
       if (s !== w) { let a = BY_SKEL.get(s); if (!a) BY_SKEL.set(s, a = []); a.push(w); }
     }
     for (const k of Object.keys(TYPO_FIXES)) LEX.delete(k);   // « etre », « tres »… ne sont pas des mots
+    for (const w of LEX.keys()) { const key = lfKey(w); let e = BY_LF.get(key); if (!e) BY_LF.set(key, e = { w: [], s: [], m: [] }); const sk = strip(w); e.w.push(w); e.s.push(sk); e.m.push(letterMask(sk)); }   // 1.52 (après la purge : jamais une clé de TYPO_FIXES) ; s : squelettes, m : lettres présentes
   })();
   const known = w => LEX.has(w.toLowerCase());
 
@@ -102,9 +110,10 @@ window.AlixoCorr = (() => {
     if (/[^a-zàâäçéèêëîïôöûùüÿœæ]/.test(k)) return null;
     // accent oublié : un seul mot du lexique a ce squelette (« ecole » → « école », mais « cote » reste « cote »)
     if (strip(k) === k) {
-      const c = (BY_SKEL.get(k) || []).filter(x => !participleTrap(x, k));
+      const raw = BY_SKEL.get(k) || [];
+      const c = raw.filter(x => !participleTrap(x, k));
       if (c.length === 1) return { to: caseLike(word, c[0]), src: 'accent' };
-      if (c.length) return null;
+      if (raw.length) return null;   // 1.52 : plusieurs mots accentués possibles, ou seulement un participe (« donnees ») : on s'arrête là (« donnes » serait faux)
     }
     if (k.length < 5) return null;                                   // mots courts : trop de voisins
     const cands = new Set();
@@ -113,7 +122,137 @@ window.AlixoCorr = (() => {
       const t = k.slice(0, i) + k[i + 1] + k[i] + k.slice(i + 2); if (LEX.has(t)) cands.add(t);                      // lettres inversées
     }
     if (cands.size === 1) return { to: caseLike(word, [...cands][0]), src: 'frappe' };
+    if (cands.size) return null;
+    /* 1.52 : étage « proche » — un seul mot du lexique à une lettre d'écart, avec tous les garde-fous de sureNear (à deux lettres :
+       jamais d'office, seulement proposé par spellSuggest) */
+    const n = nearest(k, { k: 1 });
+    if (n && sureNear(k, n, word)) return { to: caseLike(word, n.to), src: 'proche' };
     return null;
+  }
+  /* ---------------- 1.52 : mot le plus proche du lexique ----------------
+     Damerau-Levenshtein (transposition de deux lettres voisines = 1) en bande |i − j| ≤ k ; renvoie k + 1 dès que la
+     distance dépasse k (sortie anticipée). Tampons réutilisés : appelée des centaines de fois par mot. */
+  const DL_BUF = [new Array(40), new Array(40), new Array(40)];
+  function dlDistance(a, b, k) {
+    if (a === b) return 0;
+    const m = a.length, n = b.length;
+    if (Math.abs(m - n) > k) return k + 1;
+    if (!m) return n; if (!n) return m;
+    const INF = k + 1;
+    if (n + 1 > DL_BUF[0].length) for (const buf of DL_BUF) buf.length = n + 1;
+    let prev2 = DL_BUF[0], prev = DL_BUF[1], cur = DL_BUF[2];
+    for (let j = 0; j <= n; j++) prev[j] = j <= k ? j : INF;
+    for (let i = 1; i <= m; i++) {
+      cur[0] = i <= k ? i : INF;
+      const lo = Math.max(1, i - k), hi = Math.min(n, i + k);
+      let rowMin = INF;
+      for (let j = 1; j <= n; j++) {
+        if (j < lo || j > hi) { cur[j] = INF; continue; }
+        let v = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+        if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) v = Math.min(v, prev2[j - 2] + 1);
+        cur[j] = v > INF ? INF : v;
+        if (v < rowMin) rowMin = v;
+      }
+      if (rowMin > k) return INF;
+      const t = prev2; prev2 = prev; prev = cur; cur = t;
+    }
+    return Math.min(prev[n], INF);
+  }
+  /* mot (minuscule) → { to, d, sim, second, rank, unique } ou null. Candidats : même première lettre (sans accent), longueur
+     L − 1 … L + 1 (± 2 à partir de 8 lettres quand k = 2) ; sim = 1 − d / longueur max ; second = distance du 2e candidat
+     (k + 1 s'il n'y en a pas) ; unique = un seul candidat à la meilleure distance */
+  function nearest(word, { k = 1 } = {}) {
+    const w = String(word || '').toLowerCase(); if (w.length < 3 || !LEX.size) return null;
+    const sw = strip(w), L = w.length, k0 = sw[0], mask = letterMask(sw);
+    const span = k >= 2 && L >= 8 ? 2 : 1;
+    let best = null, bestD = k + 1, second = k + 1, ties = 0;
+    for (let len = L - span; len <= L + span; len++) {
+      const e = BY_LF.get(k0 + ':' + len); if (!e) continue;
+      for (let i = 0; i < e.w.length; i++) {
+        if (popcount(mask ^ e.m[i]) > 2 * k) continue;                   // filtre rapide : trop de lettres différentes
+        const c = e.w[i]; if (c === w) continue;
+        const d = dlDistance(sw, e.s[i], k);
+        if (d > k) continue;
+        if (d < bestD) { second = bestD; bestD = d; best = c; ties = 1; }
+        else if (d === bestD) { ties++; second = d; if (LEX.get(c) < LEX.get(best)) best = c; }
+        else if (d < second) second = d;
+      }
+    }
+    if (!best) return null;
+    return { to: best, d: bestD, sim: 1 - bestD / Math.max(L, best.length), second, rank: LEX.get(best), unique: ties === 1 };
+  }
+  /* nature de l'écart entre deux squelettes à distance ≤ 1 : { type: 'accent' | 'sub' | 'trans' | 'ins' | 'del', pos, a, b } */
+  function editKind(sa, sb) {
+    if (sa === sb) return { type: 'accent' };
+    if (sa.length === sb.length) {
+      let i = 0; while (sa[i] === sb[i]) i++;
+      if (sa.slice(i + 1) === sb.slice(i + 1)) return { type: 'sub', pos: i, a: sa[i], b: sb[i] };
+      return { type: 'trans', pos: i };
+    }
+    const [lo, hi] = sa.length < sb.length ? [sa, sb] : [sb, sa];
+    let i = 0; while (lo[i] === hi[i]) i++;
+    return { type: sa.length < sb.length ? 'ins' : 'del', pos: i, n: hi.length };
+  }
+  /* substitution plausible pour une coquille : voyelle contre voyelle (« parlemant »), ou paire phonétique (s/z, c/s, c/k, k/q, g/j) —
+     une consonne changée fait le plus souvent un autre mot (« colite » / « comité », « caducité » / « capacité ») */
+  const VOWELS = 'aeiouy';
+  const PHON = ['sz', 'cs', 'ck', 'kq', 'gj'];
+  const plausibleSub = (a, b) => (VOWELS.includes(a) && VOWELS.includes(b)) || PHON.includes(a + b) || PHON.includes(b + a);
+  /* la correction « proche » est-elle sûre ? (k : mot en minuscules, word : mot tel que tapé). Jamais à deux lettres d'écart
+     (« amortissement » n'est pas « avertissement ») ; jamais une lettre ajoutée ou retirée en fin de mot (pluriel, dérivé :
+     « coupon(s) », « pointeur » / « pointer ») */
+  function sureNear(k, n, word) {
+    if (!n || k !== word) return false;                                   // minuscule initiale seulement : jamais un nom propre ou un sigle
+    const L = k.length;
+    if (n.d > 1) return false;
+    if (L < (n.d === 0 ? 5 : 6)) return false;
+    if (n.sim < 0.7) return false;
+    if (!n.unique || n.second - n.d < 1) return false;
+    if (n.rank > 12000) return false;
+    if (participleTrap(n.to, k)) return false;
+    if (/[^a-zàâäçéèêëîïôöûùüÿœæ]/.test(k)) return false;
+    if (ignored.has(k) || TYPO_FIXES[k] || learned[k]) return false;
+    const ek = editKind(strip(k), strip(n.to));
+    if (ek.type === 'accent' && participleTrap(k, strip(n.to))) return false;   // « soldé » n'est pas « solde »
+    if (ek.type === 'sub' && !plausibleSub(ek.a, ek.b)) return false;
+    if ((ek.type === 'ins' || ek.type === 'del') && ek.pos >= ek.n - 2) return false;
+    if (opts.docCount && opts.docCount(k) >= 2) return false;            // mot répété dans la séance : un terme voulu
+    if (opts.lang && opts.lang() !== 'fr') return false;
+    if (opts.near && !opts.near()) return false;                         // réglage « mots proches » décoché
+    return true;
+  }
+  /* 1.52 : suggestions (jamais automatiques) pour les mots absents du lexique, proches d'un seul mot connu ; seuils souples.
+     text : une phrase ; renvoie des fixes { avant, apres, kind, regle, at, soft: true } (at dans la phrase) */
+  const ABBR_BEFORE = /(?:^|\s)(?:art|n°|no|c|p|pp|al|cf|chap|vol|t|v|éd|ed|op|loc|cit|ibid|etc)\.\s*$/i;
+  function spellSuggest(text, blockId) {
+    void blockId;
+    const out = []; const t = String(text || ''); if (!LEX.size) return out;
+    const re = /[A-Za-zÀ-ÿœŒæÆ]+(?:['’-][A-Za-zÀ-ÿœŒæÆ]+)*/g; let m;
+    while ((m = re.exec(t))) {
+      const w = m[0], k = w.toLowerCase(), at = m.index;
+      if (w.length < 4 || w !== k) continue;                              // majuscule, sigle, CamelCase : jamais
+      if (/['’-]/.test(k) || /\d/.test(t.slice(Math.max(0, at - 1), at + w.length + 1))) continue;
+      if (/[^a-zàâäçéèêëîïôöûùüÿœæ]/.test(k)) continue;
+      if (at > 0 && /['’]/.test(t[at - 1])) continue;                      // élision : « l'ebitda »
+      if (ABBR_BEFORE.test(t.slice(0, at))) continue;                      // « art. 1240 », « C. civ. »
+      if (ignored.has(k) || LEX.has(k)) continue;
+      if (opts.docCount && opts.docCount(k) >= 2) continue;
+      let to = TYPO_FIXES[k] || learned[k] || '';
+      if (!to) {
+        const n = nearest(k, { k: 2 });
+        if (!n || !n.unique || n.rank > 20000) continue;
+        if (!(n.d <= 1 || (n.d === 2 && k.length >= 9))) continue;
+        if (n.d <= 1) {
+          const ek = editKind(strip(k), strip(n.to));
+          if ((ek.type === 'ins' || ek.type === 'del') && ek.pos >= ek.n - 2) continue;   // pluriel ou dérivé : « neurone(s) », « pointeur » / « pointer »
+          if (ek.type === 'accent' && participleTrap(n.to, k)) continue;
+        }
+        to = n.to;
+      }
+      if (!to || to === k) continue;
+      out.push({ avant: w, apres: caseLike(w, to), kind: 'orthographe', regle: 'Mot inconnu', at, soft: true });
+    }
+    return out;
   }
   function learn(from, to) {
     const a = String(from || '').trim().toLowerCase(), b = String(to || '').trim();
@@ -243,6 +382,18 @@ window.AlixoCorr = (() => {
     if (strip(ka) === strip(kb)) return true;
     return d <= (a.length >= 8 ? 2 : 1);
   }
+  /* 1.52 : explication du modèle aux guillemets déséquilibrés (« Verbe être : « était », « Deux n : « connaître ») : un mot
+     seul après le « ouvrant est gardé sans guillemet (« Deux n : connaître »), sinon on coupe avant le « ; un » orphelin
+     est retiré */
+  function ruleText(r) {
+    r = String(r || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    const open = (r.match(/«/g) || []).length, close = (r.match(/»/g) || []).length;
+    if (open > close) {
+      const i = r.lastIndexOf('«'); const before = r.slice(0, i), after = r.slice(i + 1).trim();
+      r = after && after.length <= 30 && !/[«»]/.test(after) ? (before + after).replace(/\s+/g, ' ') : before.replace(/[\s:;,–—-]+$/, '');
+    } else if (close > open) r = r.replace(/\s*»(?![^«]*«)/, '');
+    return r.trim();
+  }
   /* normalise la réponse d'une phrase : [[avant, apres, type, regle]…] → fixes localisées dans la phrase */
   function fixesFor(text, raw) {
     const out = []; const seen = new Set();
@@ -252,7 +403,7 @@ window.AlixoCorr = (() => {
       const apres = align(avant, x[1]); if (!apres || apres === avant || seen.has(avant)) continue;
       seen.add(avant);
       const kind = KINDS[String(x[2] || '').toLowerCase()] || 'orthographe';
-      out.push({ avant, apres, kind, regle: String(x[3] || '').trim(), at: text.indexOf(avant) });
+      out.push({ avant, apres, kind, regle: ruleText(x[3]), at: text.indexOf(avant) });
     }
     return out;
   }
@@ -279,7 +430,7 @@ window.AlixoCorr = (() => {
   /* ---------------- pendant la frappe : file d'attente, grammaire sur l'appareil (1.43) ----------------
      Plus d'IA ici : les phrases nouvelles ou modifiées passent par js/grammaire.js (quelques millisecondes), sans
      requête ni carte graphique. Les phrases déjà relues par AlixoAI (F7) ressortent de la mémoire telles quelles. */
-  let opts = {};               // fourni par app.js : ctx(), text(blockId) → { text, lang, type } | null, onResult, onError, caretIn(blockId, s, e)
+  let opts = {};               // fourni par app.js : ctx(), text(blockId) → { text, lang, type } | null, onResult, onError, caretIn(blockId, s, e) ; 1.52 : docCount(word), lang(), near()
   const pending = new Map();   // blockId → { keys: Map(key → { text }), lang }
   const timers = new Map();    // blockId → timer
   let runTm = null;
@@ -302,7 +453,7 @@ window.AlixoCorr = (() => {
       if (!all && opts.caretIn && opts.caretIn(blockId, sn.s, sn.e) && !/[.!?…]["»”')\]]*$/.test(sn.text)) continue;
       const key = keyOf(sn.text, ctx);
       const hit = cacheGet(key);
-      if (hit !== undefined) { stats.cached++; fromCache.push({ key, text: sn.text, fixes: hit.map(x => ({ avant: x[0], apres: x[1], kind: KINDS[x[2]] || 'orthographe', regle: x[3] || '', at: sn.text.indexOf(x[0]) })).filter(f => f.at >= 0) }); continue; }
+      if (hit !== undefined) { stats.cached++; fromCache.push({ key, text: sn.text, fixes: hit.map(x => ({ avant: x[0], apres: x[1], kind: KINDS[x[2]] || 'orthographe', regle: ruleText(x[3]), at: sn.text.indexOf(x[0]) })).filter(f => f.at >= 0) }); continue; }
       if (!entry) { entry = { keys: new Map(), lang: ctx.lang }; pending.set(blockId, entry); }
       entry.keys.set(key, { text: sn.text });
     }
@@ -336,8 +487,10 @@ window.AlixoCorr = (() => {
       try {
         for (const [key, v] of entry.keys) {
           stats.sent++; stats.chars += v.text.length;
-          const fixes = G.check(v.text, { level }).filter(f => !ignored.has(String(f.avant).toLowerCase()));
-          list.push({ key, text: v.text, fixes });
+          const fixes = G.check(v.text, { level });
+          for (const f of spellSuggest(v.text, blockId)) if (!fixes.some(x => x.at === f.at)) fixes.push(f);   // 1.52 : mots inconnus proches d'un mot connu (suggestions)
+          fixes.sort((a, b) => a.at - b.at);
+          list.push({ key, text: v.text, fixes: fixes.filter(f => !ignored.has(String(f.avant).toLowerCase())) });
         }
       } catch (err) { if (opts.onError) opts.onError(err); continue; }
       persist();
@@ -356,7 +509,7 @@ window.AlixoCorr = (() => {
         if (!worth(sn.text)) continue;
         const key = keyOf(sn.text, ctx);
         const hit = second ? undefined : cacheGet(key);
-        if (hit !== undefined) { stats.cached++; for (const x of hit) { const at = sn.text.indexOf(x[0]); if (at >= 0) all.push({ id: b.id, avant: x[0], apres: x[1], kind: KINDS[x[2]] || 'orthographe', regle: x[3] || '', at: sn.s + at }); } continue; }
+        if (hit !== undefined) { stats.cached++; for (const x of hit) { const at = sn.text.indexOf(x[0]); if (at >= 0) all.push({ id: b.id, avant: x[0], apres: x[1], kind: KINDS[x[2]] || 'orthographe', regle: ruleText(x[3]), at: sn.s + at }); } continue; }
         todo.push({ key, text: sn.text, blockId: b.id, lang: ctx.lang, s: sn.s });
       }
     }
@@ -392,6 +545,7 @@ window.AlixoCorr = (() => {
   return {
     init, typed, sentenceDone, left, drop, pending: () => pending.size,
     localFix, learn, ignore, isIgnored, forget, known,
+    nearest, dlDistance, spellSuggest,   // 1.52
     sentences, worth, sureTypo, levenshtein, locate, align,
     analyzeBlocks, request, call,
     getConfig, setConfig, configured, isLocalUrl, isLocal,

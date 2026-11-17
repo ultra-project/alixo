@@ -185,6 +185,7 @@ window.AlixoQuiz = (() => {
       <button data-qz="test" class="qz-primary" title="Jouer le quiz sur cet appareil (F5) : chronomètre, points, résultat enregistré">${I.play}<span class="bd-lbl">Tester</span></button>
       <button data-qz="live" class="qz-live" title="Présenter en direct : code et QR code à l'écran, les participants répondent sur leur téléphone (alixoapp.com/quiz)">${I.cast}<span class="bd-lbl">Présenter en direct</span></button>
       <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
+      ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-qz="quizia"', 'qz-aiquiz') : ''}
       <span class="bd-sep"></span>
       <button data-qz="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (questions et réponses) (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
     </div>`;
@@ -539,6 +540,7 @@ window.AlixoQuiz = (() => {
       else if (a === 'test') startTest(); else if (a === 'live') startLive();
       else if (a === 'results') openResults(); else if (a === 'pdf') exportPDF(); else if (a === 'look') openAppearance();
       else if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); }
+      else if (a === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(d()); }   // 1.52 : Coco depuis le quiz
       else if (a === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else exportPDF(); }   // 1.40 : petite fenêtre des formats
     });
     /* palette : clic = ajouter après la question ouverte ; glisser = déposer dans la liste */
@@ -1283,5 +1285,40 @@ window.AlixoQuiz = (() => {
     const c = $(`#qz-list .qz-card[data-q="${qid}"]`); if (c) { c.scrollIntoView({ block: 'nearest' }); c.classList.add('flash'); setTimeout(() => c.classList.remove('flash'), 1500); }
   }
 
-  return { newDoc, open, leave, remoteChanged, undo, redo, exportPDF, preview, count, search, reveal, startTest, startLive, openResults, openAppearance, isLive: () => !!live };
+  /* 1.52 : façade « edit » pour Coco (js/cocotools.js) — questions du quiz ; textes bruts (≤ 400 car., comme l'éditeur) ;
+     une photo d'historique par lot, un commit + renderAll. */
+  const edit = (() => {
+    const S = v => (typeof v === 'string' ? v : '');
+    const T = v => S(v).replace(/\s+/g, ' ').trim().slice(0, 400);
+    let pending = false;
+    const mark = () => { if (pending) { pushHist(); pending = false; } };
+    const canEdit = () => { const dd = d(); return !!dd && dd.kind === 'quiz' && !readOnly && active() && !live; };
+    const find = id => { const dd = d(); return dd ? qsOf(dd).find(q => q.id === id) || null : null; };
+    return {
+      kind: 'quiz',
+      canEdit,
+      snapshot() { const dd = d(); return dd ? JSON.stringify(qsOf(dd)) : ''; },
+      restore(json) { const dd = d(); if (!dd || !canEdit()) return false; let v; try { v = JSON.parse(json); } catch { return false; } if (!Array.isArray(v)) return false; pushHist(); dd.questions = v; if (!v.some(q => q.id === cur)) cur = (v[0] || {}).id || null; commit(); renderAll(); return true; },
+      begin() { pending = true; },
+      commit() { pending = false; commit(); if (active()) renderAll(); },
+      items() { const dd = d(); return dd ? qsOf(dd).map((q, i) => ({ id: q.id, n: i + 1, type: q.t, text: qText(q), opts: (q.opts || []).map(o => S(o.text)) })) : []; },
+      addMcq(text, opts, ansIndex) {
+        const dd = d(); const list = (opts || []).map(T).filter(Boolean).slice(0, 4); if (!dd || !T(text) || list.length < 2) return null;
+        mark();
+        const q = C.newQuestion('mcq'); q.text = T(text); q.opts = list.map(t => ({ id: C.uid(), text: t }));
+        const k = Math.max(0, Math.min(list.length - 1, +ansIndex || 0)); q.ans = [q.opts[k].id];
+        qsOf(dd).push(q); cur = q.id; return q.id;
+      },
+      addTf(text, truth) { const dd = d(); if (!dd || !T(text)) return null; mark(); const q = C.newQuestion('tf'); q.text = T(text); q.ans = !!truth; qsOf(dd).push(q); cur = q.id; return q.id; },
+      setText(id, text) { const q = find(id); if (!q || !T(text)) return false; mark(); q.text = T(text); return true; },
+      remove(id) { const dd = d(); const i = dd ? qsOf(dd).findIndex(q => q.id === id) : -1; if (i < 0) return false; mark(); qsOf(dd).splice(i, 1); if (cur === id) cur = (qsOf(dd)[i] || qsOf(dd)[i - 1] || {}).id || null; return true; },
+      applyFixes(fixes) {
+        const out = { fixes: 0, blocks: 0, done: [] }; const touched = new Set();
+        for (const f of fixes || []) { const q = find(f.id); if (!q || !f.avant || !S(q.text).includes(f.avant)) continue; mark(); q.text = S(q.text).replace(f.avant, f.apres); out.fixes++; touched.add(f.id); out.done.push(f); }
+        out.blocks = touched.size; return out;
+      }
+    };
+  })();
+
+  return { newDoc, open, leave, remoteChanged, undo, redo, exportPDF, preview, count, search, reveal, startTest, startLive, openResults, openAppearance, isLive: () => !!live, edit };
 })();

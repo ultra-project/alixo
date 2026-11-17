@@ -36,7 +36,7 @@
   </div>
   <div class="tb-right">
     <button id="cal-now" class="cal-now" hidden title="Agenda — cliquer pour ouvrir"></button>
-    <button id="timer-now" class="cal-now timer-now" hidden title="Chronomètre / compte à rebours"></button>
+    <button id="timer-now" class="cal-now timer-now" hidden title="Minuteurs — ouvrir" aria-label="Minuteurs — ouvrir"></button>
     <span id="save-status" class="only-editor" title="Enregistrement automatique"></span>
     <button id="btn-cloudsave" class="tbtn cloudsave only-editor" hidden title="Sauvegarde en ligne : ajouter ce document à votre bibliothèque Alixo (synchronisé sur vos appareils)">
       <svg viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-7.95A6 6 0 0 1 18 8.5a4.5 4.5 0 0 1-.5 9H7Z"/><path d="M12 16v-5M9.5 13.5 12 11l2.5 2.5"/></svg><span>Sauvegarde en ligne</span>
@@ -57,7 +57,7 @@
 </header>
 
 <!-- ===== Onglets des séances ouvertes ===== -->
-<nav id="tabbar" hidden></nav>
+<nav id="tabbar" hidden title="Double-clic sur un espace libre : nouvelle séance"></nav>
 
 <!-- ===== Vue Bibliothèque ===== -->
 <section id="view-library">
@@ -191,13 +191,13 @@
 
   <!-- Agenda -->
   <aside id="calpanel" class="glass rpanel" hidden>
-    <div class="mp-tabs"><span class="rp-title">Agenda</span><button id="cal-add" class="cta small" type="button">＋ Événement</button><button id="cal-close" class="rp-close" title="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="mp-tabs"><span class="rp-title">Agenda</span><button id="cal-add" class="cta small" type="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>Événement</button><button id="cal-close" class="rp-close" title="Fermer" aria-label="Fermer le panneau Agenda"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div id="cal-body"></div>
   </aside>
 
   <!-- Chronomètre et compte à rebours -->
   <aside id="timerpanel" class="glass rpanel" hidden>
-    <div class="mp-tabs"><span class="rp-title">Chronomètre · Compte à rebours</span><button id="timer-close" class="rp-close" title="Fermer"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
+    <div class="mp-tabs"><span class="rp-title">Minuteurs</span><button id="timer-close" class="rp-close" title="Fermer" aria-label="Fermer le panneau Minuteurs"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></div>
     <div id="timer-body"></div>
   </aside>
 
@@ -304,7 +304,7 @@
       <textarea class="coco-input" rows="1" placeholder="Pose une question sur le cours…" aria-label="Question pour Coco" enterkeyhint="send"></textarea>
       <button type="submit" class="coco-send">Envoyer</button>
     </div>
-    <div class="coco-under"><p class="coco-privacy">AlixoAI répond sur cet ordinateur : rien n’est envoyé à un service d’IA. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a></p><span class="coco-keys"><kbd>Entrée</kbd> envoyer · <kbd>Maj+Entrée</kbd> retour à la ligne</span></div>
+    <div class="coco-under"><p class="coco-privacy">Alixo AI répond sur cet ordinateur : rien n’est envoyé à un service d’IA. <a href="https://alixoapp.com/confidentialite.html#alixoai" target="_blank" rel="noopener">En savoir plus</a></p><span class="coco-keys"><kbd>Entrée</kbd> envoyer · <kbd>Maj+Entrée</kbd> retour à la ligne</span></div>
   </form>
 </aside>
 
@@ -326,6 +326,8 @@
   <button data-cmd="subscript" title="Indice (Ctrl+,)"><span class="tlabel">x<sub>2</sub></span></button>
   <button data-menu="color" title="Couleur du texte"><span class="color-ico">A</span></button>
   <button data-menu="hilite" title="Couleur de surlignage"><span class="hl-swatch">ab</span></button>
+  <!-- 1.52 : styles enregistrés (js/textstyles.js) — appliquer un style nommé, ou enregistrer celui de la sélection -->
+  <button data-menu="tstyle" class="tb-tstyle" title="Styles enregistrés : appliquer un style nommé à la sélection, ou enregistrer la mise en forme du texte sélectionné sous un nom" aria-label="Styles enregistrés" aria-haspopup="dialog"><svg viewBox="0 0 24 24"><path d="m4 17.5 4.5-11 4.5 11M6 13.5h5"/><path d="M15 7.5h5M15 11h5M15 14.5h4"/><path d="M4 21h16"/></svg><span class="tcaret">▾</span></button>
   <button data-cmd="removeFormat" title="Effacer la mise en forme (Ctrl+\)"><svg viewBox="0 0 24 24"><path d="M6 6 18 18M13 5h6M5 19h8M15 5 9.5 19"/></svg></button>
   <span class="tb-sep"></span>
   <button data-act="heading" title="Niveau de titre (Ctrl+Alt+1…4)"><span class="tt">I.A.</span></button>
@@ -437,6 +439,7 @@
 <script src="js/imgtools.js"></script>
 <script src="js/sanitize.js"></script>
 <script src="js/app.js"></script>
+<script src="js/textstyles.js"></script>
 <script src="js/galaxy3d.js"></script>
 <script src="js/galaxy.js"></script>
 <script src="js/slides.js"></script>
@@ -452,6 +455,7 @@
 <script src="js/odt.js"></script>
 <script src="js/aiquiz.js"></script>
 <script src="js/aifiche.js"></script>
+<script src="js/cocotools.js"></script>
 <script src="js/coco.js"></script>
 <script src="js/draw.js"></script>
 <script src="js/export.js"></script>

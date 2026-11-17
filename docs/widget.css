@@ -85,11 +85,25 @@ body.moving .wg * { pointer-events: none; }
 .wg-evn small { color: var(--ink-3); }
 
 /* ---------- minuteur ---------- */
-.wg-timer { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
-.wg-digits { font-size: 44px; font-weight: 300; letter-spacing: .02em; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink); }
-.wg-timer.live .wg-digits { color: var(--tint); }
-.wg-timer.over .wg-digits { color: var(--danger); font-size: 30px; font-weight: 600; }
-.wg-tlabel { font-size: 12px; color: var(--ink-2); }
+/* 1.52 : anneau de progression (--p) derrière les chiffres, état « En pause » (--warn), « Temps écoulé », boutons avec icônes SVG */
+.wg-timer { --tc: var(--tint); flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; }
+.wg-timer.live { --tc: var(--ok); }
+.wg-timer.paused { --tc: var(--warn); }
+.wg-timer.over { --tc: var(--danger); }
+.wg-ring { position: relative; width: 132px; height: 132px; display: grid; place-content: center; text-align: center; }
+.wg-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; transform: rotate(-90deg); }
+.wg-ring .tr-track { fill: none; stroke: color-mix(in srgb, var(--tc) 16%, transparent); stroke-width: 6; }
+.wg-ring .tr-bar { fill: none; stroke: var(--tc); stroke-width: 6; stroke-linecap: round; stroke-dasharray: 339.3; stroke-dashoffset: calc(339.3 * (1 - var(--p, 1))); transition: stroke-dashoffset .25s linear; }
+.wg-digits { font-size: 34px; font-weight: 400; letter-spacing: .02em; font-variant-numeric: tabular-nums; line-height: 1; color: var(--ink); }
+.wg-timer.over .wg-digits { color: var(--danger); font-size: 22px; font-weight: 600; }
+.wg-tlabel { font-size: 12px; color: var(--ink-2); margin-top: 4px; max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wg-tstate { font-size: 11px; font-weight: 700; color: var(--tc); margin-top: 3px; }
+.wg-tstate:empty { display: none; }
+.wg-tbtns .wg-cta, .wg-tbtns .wg-ghost { display: inline-flex; align-items: center; gap: 6px; }
+.wg-tbtns .wg-cta { background: var(--tc); }
+.wg-tbtns svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.wg-tbtns .wg-cta svg { fill: currentColor; }
+@media (prefers-reduced-motion: reduce) { .wg-ring .tr-bar { transition: none; } }
 .wg-presets { display: flex; gap: 5px; }
 .wg-presets button { border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; font-size: 11.5px; color: var(--ink-2); background: var(--bg2); }
 .wg-presets button.on { border-color: var(--tint); color: var(--tint); font-weight: 700; }

@@ -2158,8 +2158,50 @@ window.AlixoSheets = (() => {
     return out;
   }
 
+  /* 1.52 : façade « edit » pour Coco (js/cocotools.js) — feuille affichée ; repères A1 validés (parseRef) ; formules du
+     moteur interne (jamais évaluées autrement) ; une photo d'historique par lot, un commit + renderAll. */
+  const edit = (() => {
+    const S = v => (typeof v === 'string' ? v : (v === null || v === undefined ? '' : String(v)));
+    let pending = false;
+    const mark = () => { if (pending) { pushHist(); pending = false; } };
+    const canEdit = () => { const dd = d(); return !!dd && dd.kind === 'sheet' && !readOnly && active(); };
+    const ref = r => { const p = parseRef(String(r || '').trim().toUpperCase()); return p && p.r >= 0 && p.r < MAX_ROWS && p.c >= 0 && p.c < MAX_COLS ? p : null; };
+    const grow = (s, p) => { if (p.r >= nRows(s)) s.nr = Math.min(MAX_ROWS, p.r + 1); if (p.c >= nCols(s)) s.nc = Math.min(MAX_COLS, p.c + 1); };
+    return {
+      kind: 'sheet',
+      canEdit,
+      isRef: r => !!ref(r),
+      snapshot() { const dd = d(); return dd ? JSON.stringify(sheetsOf(dd)) : ''; },
+      restore(json) { const dd = d(); if (!dd || !canEdit()) return false; let v; try { v = JSON.parse(json); } catch { return false; } if (!Array.isArray(v) || !v.length) return false; pushHist(); dd.sheets = v; afterRestore(dd); return true; },
+      begin() { if (editing) commitEdit(true); pending = true; },
+      commit() { pending = false; commit(); if (active()) renderAll(); },
+      /* cases non vides de la feuille affichée, en ordre de lecture : [{ id: 'A1', text }] (500 au plus) */
+      items() {
+        const s = sheet(); if (!s) return [];
+        return Object.entries(cellsOf(s)).filter(([, c]) => c && c.v !== undefined && c.v !== '').map(([k, c]) => ({ k, p: parseRef(k), v: S(c.v) })).filter(x => x.p)
+          .sort((a, b) => a.p.r - b.p.r || a.p.c - b.p.c).slice(0, 500).map(x => ({ id: x.k, type: 'case', text: x.v }));
+      },
+      sheetName() { const s = sheet(); return s ? S(s.name) : ''; },
+      setCell(r, value) { const s = sheet(); const p = ref(r); if (!s || !p) return false; const v = S(value).slice(0, 500); mark(); grow(s, p); setValue(s, p.r, p.c, v); return true; },
+      clear(range) {
+        const s = sheet(); if (!s) return 0;
+        const [a, b] = String(range || '').toUpperCase().split(':'); const p1 = ref(a), p2 = b ? ref(b) : p1; if (!p1 || !p2) return 0;
+        const r1 = Math.min(p1.r, p2.r), r2 = Math.max(p1.r, p2.r), c1 = Math.min(p1.c, p2.c), c2 = Math.max(p1.c, p2.c);
+        if ((r2 - r1 + 1) * (c2 - c1 + 1) > 2000) return 0;
+        let n = 0; mark();
+        for (let r = r1; r <= r2; r++) for (let c = c1; c <= c2; c++) { if (cellAt(s, r, c)) { setCell(s, r, c, { v: '' }); n++; } }
+        return n;
+      },
+      applyFixes(fixes) {
+        const s = sheet(); const out = { fixes: 0, blocks: 0, done: [] }; const touched = new Set(); if (!s) return out;
+        for (const f of fixes || []) { const p = ref(f.id); const c = p && cellAt(s, p.r, p.c); if (!c || !f.avant) continue; const v = S(c.v); if (v[0] === '=' || !v.includes(f.avant)) continue; mark(); setValue(s, p.r, p.c, v.replace(f.avant, f.apres)); out.fixes++; touched.add(f.id); out.done.push(f); }
+        out.blocks = touched.size; return out;
+      }
+    };
+  })();
+
   return {
     newDoc, open, leave, remoteChanged, undo, redo,
-    exportPDF, exportCSV, sheetCSV, preview, cellCount, search, reveal
+    exportPDF, exportCSV, sheetCSV, preview, cellCount, search, reveal, edit
   };
 })();

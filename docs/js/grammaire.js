@@ -5,6 +5,10 @@
    ambiguïté (il à → il a, il et → il est, ils on → ils ont, jusqu'a → jusqu'à…), « si il » → « s'il », « quelque soit »
    → « quel(le) que soit », « sa va » → « ça va », mot outil répété (« le le »), et, au niveau « strict » seulement,
    l'espace avant ; : ! ?. Dans le doute, rien : une faute manquée vaut mieux qu'une phrase juste « corrigée ».
+   1.52 : « tout les » → « tous les », « quand à » → « quant à », « est-ce-que », « bien sur » → « bien sûr », « A » en début
+   de phrase → « À », « peut être que » → « peut-être que », « d'avantage » → « davantage », « ces sont » → « ce sont »,
+   « sa sera » → « ça sera » ; typographie au niveau standard : espace avant la virgule, « ,, », « ;; », « .. » ;
+   minuscule après un point quand le mot précédent a au moins quatre lettres (« art. », « civ. », « etc. » ne comptent pas).
    Écartés car trop ambigus sans analyse complète : ces / ses, ou / où, la / là, « de le » (« de le faire »)…
    Les cas limites sont gérés à part : inversion (« dit-il à », « pense-t-on à »), pronom tonique après une préposition
    (« pour elle à », « chez elles on »), incises (« il, à son tour, … »), noms communs (« la grâce a été »).
@@ -82,6 +86,17 @@ window.AlixoGrammar = (() => {
   /* déterminants avant « grâce » / « face » : ce sont alors des noms (« la grâce a été accordée », « la face a changé ») */
   const DET = new Set(['la', 'le', 'une', 'un', 'sa', 'son', 'ma', 'ta', 'cette', 'de', 'du', 'des', 'leur', 'notre', 'votre', 'quelle', 'en', 'volte', 'pile', 'droit', 'recours', 'demande', 'mesure', 'mesures']);
 
+  /* 1.52 : après « A » majuscule en début de phrase, ces mots font de « A » la préposition « À » (jamais le verbe avoir) */
+  const AFTER_A_PREP = new Set(['la', 'le', 'les', "l'", 'ce', 'cet', 'cette', 'ces', 'un', 'une', 'des', 'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'son', 'sa', 'ses', 'notre', 'nos', 'votre', 'vos', 'leur', 'leurs',
+    'partir', 'propos', 'titre', 'défaut', 'travers', 'terme', 'savoir', 'noter', 'retenir', 'voir', 'lire', 'suivre', 'condition', 'cause', 'chaque', 'tout', 'tous', 'toutes', 'quoi', 'qui', 'quel', 'quelle', 'quelles', 'quels',
+    'moi', 'nous', 'vous', 'lui', 'elle', 'eux', 'peine', 'priori', 'posteriori', 'contrario', 'fortiori', 'côté', 'droite', 'gauche', 'présent', 'plusieurs', 'cet', 'cette', 'force', 'juste', 'court', 'long', 'moyen', 'première', 'quelques', "d'", 'demi', 'nouveau', 'bientôt', 'jamais', 'vrai', 'bas', 'haut', 'bord', 'contre', 'mesure', 'raison', 'tort', 'moins', 'part', 'temps', 'domicile', 'distance']);
+  /* 1.52 : mots qui peuvent précéder « d'avantage » (nom : « pas d'avantage fiscal ») — on ne touche pas */
+  const DAVANTAGE_NO = new Set(['pas', 'plus', 'peu', 'point', 'trop', 'assez', 'beaucoup', 'tant', 'autant', 'moins', 'aucun', 'aucune', 'quel', 'quelle', 'type', 'sorte', 'genre', 'forme', 'espèce', 'notion', 'perte', 'absence', 'sans', 'guère', "l'", 'un', 'une', 'cet', 'ce', 'cette', 'de', "d'", 'et', 'ou', 'ni', 'comme']);
+  /* 1.52 : ce qui suit « davantage » (adverbe) ; un adjectif qui suit (« d'avantage fiscal ») ferait un nom */
+  const DAVANTAGE_AFTER = new Set(['de', "d'", 'que', "qu'", 'encore', 'pour', 'sur', 'dans', 'en', 'à', 'au', 'aux', 'les', 'la', 'le', 'et', 'ou', 'ni', 'mais', 'car', 'donc', 'si', 'quand', 'lorsque', 'avec', 'sans', 'par', 'chez', 'vers', 'depuis', 'pendant', 'afin', 'alors', 'puis', 'ensuite', 'aujourd\'hui', 'demain', 'ici', 'là', 'chaque', 'ces', 'cette', 'ce', 'cet', 'ses', 'sa', 'son', 'leur', 'leurs', 'nos', 'notre', 'vos', 'votre', 'mes', 'ma', 'mon']);
+  /* 1.52 : abréviations usuelles suivies d'un point : la minuscule qui suit n'est pas un début de phrase */
+  const ABBR = new Set(['etc', 'art', 'arts', 'cass', 'civ', 'com', 'soc', 'crim', 'chap', 'sect', 'suiv', 'préc', 'prec', 'resp', 'fasc', 'ibid', 'idem', 'trad', 'coll', 'spéc', 'spec', 'édit', 'janv', 'févr', 'fevr', 'sept', 'sep', 'oct', 'nov', 'déc', 'dec', 'juil', 'juill', 'plén', 'plen', 'réq', 'req', 'rép', 'rep', 'obs', 'note', 'comm', 'comp', 'cont', 'conf', 'contra', 'concl', 'doctr', 'somm', 'panor', 'chron', 'bull', 'gaz', 'rec', 'mixte', 'min', 'max', 'env', 'approx', 'boul', 'fig', 'tabl', 'ann', 'adde', 'sqq', 'infra', 'supra', 'loc', 'cit', 'vol', 'tome', 'paragr', 'parag', 'alin', 'num', 'nos', 'http', 'https', 'www', 'exp', 'sup', 'inf', 'cf', 'ex', 'vs', 'cad', 'dir', 'éd', 'ed', 'ouvr', 'colloq', 'univ', 'fac', 'prof', 'dr', 'me', 'mme', 'mlle', 'mr', 'mgr', 'st', 'ste', 'sté', 'cie', 'ets', 'sarl', 'sas', 'eurl', 'bd', 'av', 'imp', 'pl', 'rte', 'ch', 'cedex', 'tél', 'tel', 'fax', 'mob', 'port', 'kg', 'mg', 'ml', 'cl', 'km', 'cm', 'mm', 'hab', 'habit', 'pers', 'moy', 'tot', 'nb', 'nbre', 'qté', 'pdt', 'cpdt', 'cpt', 'ms', 'ns', 'vs', 'tjs', 'bcp', 'svt', 'pcq', 'pr', 'ds', 'ac', 'mdr']);
+
   /* ---------------- règles ---------------- */
   function check(text, opts) {
     text = String(text || ''); const level = (opts && opts.level) || 'standard';
@@ -142,17 +157,90 @@ window.AlixoGrammar = (() => {
         else if ((k === 'grâce' || k === 'face') && glue && isWord(n2) && !(prev && (DET.has(prev.k) || prev.k === "l'" || prev.k === "d'")) && !(k === 'face' && n2.k === 'face') && AFTER_AVOIR.has(n2.k) && !participle(n2) && !['été', 'eu', 'fait', 'pas', 'rien', 'toujours', 'déjà', 'souvent', 'encore', 'bien', 'trop', 'beaucoup', 'peu', 'besoin', 'droit', 'lieu', 'tendance', 'intérêt', 'raison', 'tort', 'tout', 'tous', 'toutes', 'plusieurs', 'aucun', 'aucune'].includes(n2.k)) hit = k;
         if (hit) { const a = k === 'rapport' ? prev : t; add(a, n, span(text, a, t) + (t.e === n.s ? '' : ' ') + (n.w === 'A' ? 'À' : 'à'), `Préposition « à » : « ${k === 'rapport' ? 'par rapport' : k === "jusqu'" ? 'jusqu’' : k} à »`); continue; }
       }
+      /* 1.52 : « tout les » → « tous les », « toute les » → « toutes les » */
+      if ((k === 'tout' || k === 'toute') && n && n.k === 'les' && glue && !midCap) {
+        add(t, n, sameCase(t.w, k === 'tout' ? 'tous' : 'toutes') + ' les', '« Tous les », « toutes les » : « tout » s’accorde devant un déterminant pluriel'); continue;
+      }
+      /* 1.52 : « quand à / aux » → « quant à / aux » (pas devant un nombre ni une heure : « il vient quand à midi ») */
+      if (k === 'quand' && n && glue && (n.k === 'à' || n.k === 'aux' || n.k === 'au') && n2 && isWord(n2) && !isCap(n2) && !/^\d/.test(n2.w) && !['midi', 'minuit', 'quelle', 'quel', 'nouveau', 'peu', 'peine', 'présent', 'partir', 'propos', 'nouveau', 'moins', 'plus', 'tort', 'raison', 'temps', 'moitié', 'côté', 'mi', 'demi', 'force', 'juste', 'titre', 'terme', 'ce', 'cet', 'cette', 'ces', 'son', 'sa', 'ses', 'mon', 'ma', 'mes', 'ton', 'ta', 'tes', 'leur', 'leurs', 'notre', 'nos', 'votre', 'vos', 'lui', 'elle', 'eux', 'elles', 'moi', 'toi', 'nous', 'vous', 'tout', 'tous', 'toute', 'toutes', 'chaque'].includes(n2.k) && (n.k !== 'au' || ['moins', 'plus', 'contraire', 'sujet', 'surplus', 'demeurant', 'reste', 'fond', 'principe'].includes(n2.k)) && (n.k !== 'aux' || !/^(?:dernières|premières|alentours|environs|alentour)$/.test(n2.k))) {
+        add(t, n, sameCase(t.w, 'quant') + ' ' + n.w, '« Quant à » (en ce qui concerne), pas « quand » (le moment)'); continue;
+      }
+      /* 1.52 : « quant » qui n'est pas suivi de « à / au / aux » → « quand » (« quant il arrive ») */
+      if (k === 'quant' && n && glue && !['à', 'a', 'au', 'aux', '-'].includes(n.k) && isWord(n) && !isCap(n) && !midCap) {
+        add(t, t, sameCase(t.w, 'quand'), '« Quand » (le moment) ; « quant » ne s’emploie que dans « quant à »'); continue;
+      }
+      /* 1.52 : « est-ce-que » → « est-ce que » */
+      if (k === 'est' && n && n.w === '-' && n.e === T[i + 2]?.s && t.e === n.s && T[i + 2].k === 'ce' && T[i + 3] && T[i + 3].w === '-' && T[i + 3].s === T[i + 2].e && T[i + 4] && T[i + 4].k === 'que' && T[i + 4].s === T[i + 3].e) {
+        add(t, T[i + 4], sameCase(t.w, 'est-ce que'), '« Est-ce que » : un seul trait d’union, entre « est » et « ce »'); i += 4; continue;
+      }
+      /* 1.52 : « bien sur » → « bien sûr » (locution : début de phrase, entre virgules, ou suivie de « que ») — « il compte bien sur lui » reste */
+      if (k === 'bien' && n && n.k === 'sur' && glue && !midCap && (atStart(T, i) || (T[i - 1] && T[i - 1].w === ',') || !n2 || n2.w === ',' || n2.k === 'que' || n2.k === "qu'" || n2.w === '.' || n2.w === '!')) {
+        add(t, n, t.w + ' sûr', '« Bien sûr » (évidemment) prend un accent circonflexe'); continue;
+      }
+      /* 1.52 : « A » en début de phrase devant un déterminant ou un pronom → « À » */
+      if (t.w === 'A' && atStart(T, i) && n && glue && AFTER_A_PREP.has(n.k)) {
+        add(t, t, 'À', 'La préposition « à » garde son accent en majuscule : « À »'); continue;
+      }
+      /* 1.52 : « peut être que » / « , peut être » / « Peut être … » → « peut-être » ; « il peut être utile » reste */
+      if (k === 'peut' && n && n.k === 'être' && glue && !midCap && (atStart(T, i) || (T[i - 1] && T[i - 1].w === ',') || (n2 && (n2.k === 'que' || n2.k === "qu'")))) {
+        add(t, n, sameCase(t.w, 'peut-être'), '« Peut-être » (adverbe) prend un trait d’union ; « il peut être » (verbe) n’en prend pas'); continue;
+      }
+      /* 1.52 : « d'avantage » → « davantage » (adverbe) — « pas d'avantage fiscal » (nom) reste */
+      if (k === "d'" && n && n.k === 'avantage' && t.e === n.s && !(T[i - 1] && (DAVANTAGE_NO.has(T[i - 1].k) || !isWord(T[i - 1]))) && (!n2 || !isWord(n2) || DAVANTAGE_AFTER.has(n2.k))) {
+        add(t, n, sameCase(t.w, 'davantage'), '« Davantage » (plus) s’écrit en un mot'); continue;
+      }
+      /* 1.52 : « ces sont » → « ce sont », « ces fut » → « ce fut » */
+      if (k === 'ces' && n && glue && ['sont', 'fut', 'furent', 'sera', 'seront', 'serait', 'seraient', 'soit', 'soient', 'étaient', 'était'].includes(n.k)) {
+        add(t, n, sameCase(t.w, 'ce') + ' ' + n.w, '« Ce sont », « ce fut » : « ce » (pronom), pas « ces » (démonstratif pluriel)'); continue;
+      }
+      /* 1.52 : « sa sera / serait / été / ne » → « ça » */
+      if (k === 'sa' && n && glue && ['sera', 'serait', 'été', 'ne', "n'"].includes(n.k) && !(T[i + 2] && T[i + 2].w === '-')) {
+        const rep = n.k === 'été' ? sameCase(t.w, 'ça') + ' a été' : sameCase(t.w, 'ça') + (n.k === "n'" ? ' ' : ' ') + n.w;
+        add(t, n, rep, '« Ça » (cela), pas le possessif « sa »'); continue;
+      }
       /* mot outil répété : « le le », « de de » (même casse, ou majuscule de début de phrase) */
       if (n && glue && DUP.has(k) && n.k === k && (n.w === t.w || (atStart(T, i) && n.w === t.w.toLowerCase()))) {
         out.push({ avant: span(text, t, n), apres: t.w, kind: 'grammaire', regle: 'Mot répété', at: t.s }); i++; continue;
       }
     }
+    /* 1.52 : mot qui finit en `end` — cherché dans une fenêtre de 60 caractères (avant : regex « …+$ » sur tout le début
+       du texte à chaque signe trouvé, quadratique : 200 Ko de « mot , » figeaient la page) */
+    const wordEnding = (text, end, dflt) => { const ws = text.slice(Math.max(0, end - 60), end).match(/[A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]'’-]+$/); return ws ? ws[0] : dflt; };
+    /* 1.52 : typographie (niveau standard) — espace avant la virgule, signes doublés « ,, » « ;; », « .. » (pas « … » ni « ... ») */
+    {
+      let re = /([A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]'’]) ,(?=\s|$)/g, m;
+      while ((m = re.exec(text))) {
+        const word = wordEnding(text, m.index + 1, m[1]);
+        out.push({ avant: word + ' ,', apres: word + ',', kind: 'typographie', regle: 'Pas d’espace avant la virgule', at: m.index + 1 - word.length });
+      }
+      re = /([A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]])(,,|;;)(?=\s|$)/g;
+      while ((m = re.exec(text))) {
+        const word = wordEnding(text, m.index + 1, m[1]);
+        out.push({ avant: word + m[2], apres: word + m[2][0], kind: 'typographie', regle: 'Signe de ponctuation doublé', at: m.index + 1 - word.length });
+      }
+      re = /([A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]])\.\.(?=\s|$)/g;
+      while ((m = re.exec(text))) {
+        if (text[m.index + 3] === '.') continue;
+        const word = wordEnding(text, m.index + 1, m[1]);
+        out.push({ avant: word + '..', apres: word + '.', kind: 'typographie', regle: 'Deux points à la suite : un seul point (ou des points de suspension « … »)', at: m.index + 1 - word.length });
+      }
+    }
+    /* 1.52 : minuscule après un point — quand le mot d'avant a au moins quatre lettres et n'est pas une abréviation
+       (« art. 1240 », « C. civ. », « etc. », « Cass. soc. »), que le point est suivi d'un seul espace puis d'un mot en minuscules */
+    for (let i = 1; i < T.length - 1; i++) {
+      const dot = T[i]; if (dot.w !== '.') continue;
+      const p = T[i - 1], n = T[i + 1];
+      if (!isWord(p) || p.e !== dot.s || p.k.length < 4 || ABBR.has(p.k) || p.w === p.w.toUpperCase() || /\d/.test(p.w)) continue;
+      if (!isWord(n) || n.k !== n.w || n.w.length < 2 || !/^[a-zà-ÿœæ]/.test(n.w) || dot.e !== n.s - 1 || text[dot.e] !== ' ') continue;
+      if (ABBR.has(n.k) || /\d/.test(n.w) || (T[i + 2] && T[i + 2].w === '.' && T[i + 2].s === n.e)) continue;   // « etc. » après, « p. 12 »…
+      out.push({ avant: n.w, apres: n.w[0].toUpperCase() + n.w.slice(1), kind: 'typographie', regle: 'Majuscule en début de phrase', at: n.s });
+    }
     /* typographie française (niveau strict) : espace avant ; : ! ? — pas dans « 10:30 », « http:// », « :) » */
     if (level === 'strict') {
       const re = /([A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]])([;:!?]+)(?=\s|$)/g; let m;
       while ((m = re.exec(text))) {
-        if (m[2] === ':' && /\d$/.test(text.slice(0, m.index + 1))) continue;
-        const ws = text.slice(0, m.index + 1).match(/[A-Za-zÀ-ÖØ-öø-ÿŒœ»)\]'’-]+$/); const word = ws ? ws[0] : m[1];
+        if (m[2] === ':' && /\d/.test(text[m.index])) continue;
+        const word = wordEnding(text, m.index + 1, m[1]);
         const at = m.index + 1 - word.length;
         out.push({ avant: word + m[2], apres: word + ' ' + m[2], kind: 'typographie', regle: 'Typographie française : espace insécable avant « ' + m[2] + ' »', at });
       }
