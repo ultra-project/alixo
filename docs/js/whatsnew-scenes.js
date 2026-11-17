@@ -16,7 +16,7 @@
 'use strict';
 
 /* 1.52 : illustrations dessinées (pas encore de captures ni de vidéo) */
-AlixoWhatsNew.register('1.52.0', {
+const SCENES_152 = {
   scenes: [
     { kind: 'intro', kicker: 'Mise à jour installée', title: 'Coco <em>modifie</em> vos cours,<br>le téléphone <em>importe</em>', text: 'Six nouveautés, en moins d’une minute.', dur: 5500 },
     { title: 'Coco <em>modifie</em> le document', text: 'Demandez, Coco le fait dans le cours.',
@@ -34,7 +34,9 @@ AlixoWhatsNew.register('1.52.0', {
       art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 9500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
-});
+};
+AlixoWhatsNew.register('1.52.1', SCENES_152);   // 1.52.1 : correctif de Coco — même présentation que la 1.52.0
+AlixoWhatsNew.register('1.52.0', SCENES_152);
 
 AlixoWhatsNew.register('1.51.0', {
   scenes: [
