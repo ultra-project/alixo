@@ -699,6 +699,16 @@ td > .cell-sub:first-child { margin-top: 0; }
   .auth.single .auth-side { background: none; }
   .login { padding: 28px 22px 22px; }
 }
+/* 1.53.0 : Workspace — détail des signalements d'un dépôt et de ses commentaires */
+tr.ws-detail td { background: var(--surface); padding: 10px 16px 14px; }
+.ws-reps h4 { margin: 8px 0 4px; font-size: 12.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--ink-3); }
+.ws-reps ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.ws-reps li { padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+.ws-reps li.ws-rcom > ul { margin-top: 8px; }
+.ws-reps .ws-rtext { margin: 4px 0; white-space: pre-wrap; word-break: break-word; }
+.ws-reps .acts { justify-content: flex-start; margin-top: 6px; }
+.lnk { background: none; border: 0; padding: 0; color: var(--ink-3); text-decoration: underline; cursor: pointer; font: inherit; font-size: 11.5px; }
+.lnk:hover { color: var(--ink); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

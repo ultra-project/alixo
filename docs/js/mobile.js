@@ -24,7 +24,7 @@
   menu.addEventListener('click', () => { if (body.classList.contains('mode-editor') || body.classList.contains('mode-slides') || body.classList.contains('mode-quiz')) { showLibrary(); } else open(!body.classList.contains('drawer-open')); });
   back.addEventListener('click', () => open(false));
   const nav = document.getElementById('libnav');
-  nav.addEventListener('click', e => { if (e.target.closest('[data-doc], [data-open], [data-shrow], #ln-agenda, #ln-shared, #ln-todo')) setTimeout(() => open(false), 60); });
+  nav.addEventListener('click', e => { if (e.target.closest('[data-doc], [data-open], [data-shrow], #ln-agenda, #ln-shared, #ln-workspace, #ln-todo')) setTimeout(() => open(false), 60); });
   // lien vers la version complète
   const full = document.createElement('a');
   full.className = 'mob-full'; full.href = 'index.html?desktop=1'; full.textContent = 'Version complète (ordinateur)';

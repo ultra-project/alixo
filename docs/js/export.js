@@ -13,6 +13,11 @@
     '--font-serif': 'Georgia, serif'
   };
   const CALLOUT_COLORS = { definition: '#3d6bb5', arret: '#8c4351', controverse: '#7a6852', retenir: '#b3762a', exemple: '#2e8b6a', bilan: '#2e8b8b' };
+  /* 1.53 : couleur d'un type d'encadré — réglage de l'utilisateur (Paramètres › Apparence) via la façade, repli sur la table locale */
+  const calloutHex = ct => {
+    if (window.AlixoApp && typeof AlixoApp.calloutColor === 'function') { const c = AlixoApp.calloutColor(ct); if (/^#[0-9a-f]{6}$/i.test(c)) return c; }
+    return Object.prototype.hasOwnProperty.call(CALLOUT_COLORS, ct) ? CALLOUT_COLORS[ct] : CALLOUT_COLORS.retenir;
+  };
   const ALIGN_OF = b => (['center', 'right', 'justify'].includes(b.al) ? b.al : 'left');
   /* bloc « cartes » : titres / textes non vides */
   const cardsOfB = b => (Array.isArray(b.cards) ? b.cards : []).map(c => ({ t: c && c.t || '', x: c && c.x || '' })).filter(c => (c.t + c.x).replace(/<[^>]+>/g, '').trim());
@@ -441,7 +446,7 @@
           layoutRuns(pdf, [{ text: timerText(b), b: true, color: INK2 }], { size: 10.5, x: pdf.M, width: pdf.cw });
           pdf.y += 5; break;
         case 'callout': {
-          const cc = parseColor(CALLOUT_COLORS[b.ct] || CALLOUT_COLORS.retenir);
+          const cc = parseColor(calloutHex(b.ct));
           const co = CALLOUTS[b.ct] || CALLOUTS.retenir;
           const name = co.name + (co.sub ? '  —  ' + co.sub : '');
           const innerX = pdf.M + 16, innerW = pdf.cw - 26;
@@ -887,7 +892,7 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
         case 'mcalc': body += scoreTableXml(b); break;
         case 'timer': body += para(runXml({ text: timerText(b), b: true, color: INK2 })); break;
         case 'callout': {
-          const cc = parseColor(CALLOUT_COLORS[b.ct] || CALLOUT_COLORS.retenir);
+          const cc = parseColor(calloutHex(b.ct));
           const co = CALLOUTS[b.ct] || CALLOUTS.retenir;
           const name = co.name + (co.sub ? '  —  ' + co.sub : '');
           const pPr = `<w:shd w:val="clear" w:color="auto" w:fill="${hex(blend(cc, 0.08))}"/><w:pBdr><w:left w:val="single" w:sz="24" w:space="10" w:color="${hex(cc)}"/></w:pBdr><w:ind w:left="170"/>`;

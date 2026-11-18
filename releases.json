@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-17T18:48:11.506Z",
+ "generatedAt": "2026-11-18T15:13:22.451Z",
  "version": "1.52.1",
  "date": "2026-11-17T18:47:50Z",
  "notes": "Nouveautés 1.52.1 — Coco modifie vraiment vos cours (correctif)\n\n\n- **Les demandes de modification à Coco fonctionnent.** En 1.52.0, demander à Coco de corriger, de mettre en forme ou de compléter le document répondait « Demande refusée » dans l’application Windows et Mac : le moteur d’AlixoAI sur l’ordinateur n’avait pas été prévenu des deux nouvelles demandes (décider s’il faut répondre ou agir, puis modifier) et les rejetait avant même de lire le cours. C’est corrigé : « corrige les fautes », « mets des couleurs », « ajoute une conclusion »… sont maintenant exécutées, avec **Annuler les modifications** comme prévu. Les questions ordinaires à Coco n’étaient pas touchées.\n- Côté technique : `engine/llm-host.js` autorise les tâches « route » et « edit » ; le test `scripts/v1520-coco-edit-test.js` vérifie désormais que toute tâche envoyée par `app/js/alixoai.js` figure dans la liste du moteur, pour que l’oubli ne se reproduise plus. La présentation animée de la 1.52.0 est rejouée pour cette version.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.52.1",

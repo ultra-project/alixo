@@ -13,6 +13,7 @@
 <link rel="stylesheet" href="imagepick.css">
 <link rel="stylesheet" href="imgtools.css">
 <link rel="stylesheet" href="timeline.css">
+<link rel="stylesheet" href="workspace.css">
 <link rel="stylesheet" href="libtools.css">
 <link rel="stylesheet" href="refonte.css">
 <link id="app-favicon" rel="icon" type="image/png" href="logo.png">
@@ -64,6 +65,7 @@
   <aside id="libnav" class="glass">
     <button id="ln-agenda" class="ln-agenda" title="Agenda : cours et événements du mois (Ctrl+Maj+A)"></button>
     <button id="ln-shared" class="ln-agenda ln-shared" title="Alixo Share : cours et dossiers partagés avec vous, invitations"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><span>Partagés avec moi</span><span id="share-badge" class="ln-next" hidden></span></button>
+    <button id="ln-workspace" class="ln-agenda ln-workspace" title="Workspace : séances déposées par les membres d’Alixo, à ajouter à votre bibliothèque"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 14h8M12 10v8"/></svg><span>Workspace</span></button>
     <button id="ln-todo" class="ln-agenda ln-todo" title="Tâches à faire : catégories, échéances (Ctrl+Maj+K)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.5 7 1.4 1.4L8.5 5.6M11 7h10M11 17h10"/><rect x="3" y="14" width="6" height="6" rx="1.2"/></svg><span>Tâches</span><span id="todo-badge" class="ln-next" hidden></span></button>
     <div class="ln-head">
       <span class="ln-title">Explorateur</span>
@@ -115,6 +117,7 @@
     <div id="lib-galaxy" hidden></div>
     <div id="lib-agenda" hidden></div>
     <div id="lib-shared" hidden></div>
+    <div id="lib-workspace" hidden></div>
     <div id="lib-todo" hidden></div>
   </div>
 </section>
@@ -462,6 +465,7 @@
 <script src="js/alx.js"></script>
 <script src="js/sync.js"></script>
 <script src="js/share.js"></script>
+<script src="js/workspace.js"></script>
 <script src="js/notify.js"></script>
 <script src="js/whatsnew.js"></script>
 <script src="js/whatsnew-scenes.js"></script>

@@ -5,7 +5,7 @@
    --tc : couleur de l'événement (posée par le JS, validée #rrggbb), défaut = teinte du dossier.
    ============================================================ */
 /* --tml-rail : l'axe de la frise, assez marqué pour se lire dans les deux thèmes (la bordure ordinaire était presque invisible) */
-.block.timeline { position: relative; margin: 14px 0 6px; --tml-rail: color-mix(in srgb, var(--ink-3) 40%, var(--paper)); }
+.block.timeline { position: relative; margin: 12px 0; --tml-rail: color-mix(in srgb, var(--ink-3) 40%, var(--paper)); }
 .block.timeline .tml-list { list-style: none; margin: 0; padding: 0; }
 .block.timeline [data-ph] { position: relative; outline: none; min-height: 1.35em; overflow-wrap: anywhere; }
 .block.timeline [data-ph].is-blank::before { content: attr(data-ph); position: absolute; left: 0; top: 0; right: 0; color: var(--ink-3); opacity: .75; pointer-events: none; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: inherit; }
@@ -16,11 +16,12 @@
 .tml-title.is-blank:not(.show):not(:focus) { display: none; }
 
 .tml-ev { position: relative; padding: 0 0 16px 28px; --tc: var(--tint); }
-.tml-ev:last-child { padding-bottom: 4px; }
+.tml-ev:last-child { padding-bottom: 0; }   /* 1.53 : plus d'espace résiduel sous la frise */
 /* rail : un segment par événement, de sa pastille à la suivante */
 .tml-ev::before { content: ""; position: absolute; left: 4px; top: 14px; bottom: -6px; width: 2px; border-radius: 1px; background: var(--tml-rail); }
 .tml-ev:last-child::before { display: none; }
 .tml-dot { position: absolute; left: 0; top: 5px; width: 10px; height: 10px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 18%, transparent); }
+html[data-theme="dark"] .tml-dot { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tc) 28%, transparent); }   /* halo plus visible sur fond sombre */
 .tml-body { min-width: 0; }
 .tml-d { font-family: var(--font-ui); font-size: 12.5px; font-weight: 700; letter-spacing: .02em; text-transform: none; color: var(--tc); line-height: 1.6; }   /* casse saisie respectée : « v. 1450 », « IIIe s. av. J.-C. » */
 /* couleur choisie par l'utilisateur : le JS fournit --tcl / --tcd, la même teinte ramenée à un contraste lisible sur la feuille
@@ -40,9 +41,8 @@ html[data-theme="dark"] .tml-d { color: var(--tcd, color-mix(in srgb, var(--tc) 
 .tml-evtools button.danger:hover:not(:disabled) { color: var(--danger); }
 .tml-evtools .tml-swatch i { width: 12px; height: 12px; border-radius: 50%; background: var(--tc); box-shadow: 0 0 0 1px rgba(0, 0, 0, .15); }
 
-/* outils du bloc : sous la frise, au survol (même motif que le bloc Cartes) */
-.tml-tools { display: flex; gap: 4px; margin-top: 8px; opacity: 0; transition: opacity .15s; }
-.block.timeline:hover .tml-tools, .block.timeline:focus-within .tml-tools, .block.timeline.objsel .tml-tools { opacity: 1; }
+/* outils du bloc : superposés sous la frise, hors du flux, au survol / pendant la saisie / bloc sélectionné — position, fond et
+   affichage dans la règle groupée de styles.css (1.53, voir .cards-tools) */
 .tml-tools button { font-family: var(--font-ui); font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
 .tml-tools button:hover { background: var(--hover); color: var(--ink); }
 .tml-tools button.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
@@ -53,7 +53,7 @@ html[data-theme="dark"] .tml-d { color: var(--tcd, color-mix(in srgb, var(--tc) 
 
 /* ---------- affichage horizontal (écran large uniquement) ---------- */
 @media screen and (min-width: 601px) {
-  body:not(.printing) .block.timeline.tml-h .tml-scroll { overflow-x: auto; padding: 6px 0 8px; scrollbar-width: thin; }
+  body:not(.printing) .block.timeline.tml-h .tml-scroll { overflow-x: auto; padding: 6px 0 0; scrollbar-width: thin; }
   body:not(.printing) .block.timeline.tml-h .tml-list { display: flex; align-items: flex-start; min-width: min-content; }
   body:not(.printing) .block.timeline.tml-h .tml-ev { flex: 1 0 180px; max-width: 280px; padding: 24px 20px 4px 0; }
   body:not(.printing) .block.timeline.tml-h .tml-ev::before { display: block; left: 0; right: 0; top: 10px; bottom: auto; width: auto; height: 2px; }
@@ -77,7 +77,7 @@ body.printing .block.timeline .tml-scroll { overflow: visible; }
   .tml-evtools button { width: 40px; height: 40px; }
   .tml-evtools button svg { width: 16px; height: 16px; }
   .tml-evtools { top: -50px; }   /* 40 px de bouton + marges et filet de la barre : elle finit juste au-dessus de la date */
-  .tml-tools { opacity: 1; flex-wrap: wrap; }
+  .tml-tools { position: static; display: flex; flex-wrap: wrap; }   /* 1.53 : dans le flux, toujours visible (pas de survol au doigt) */
   .tml-tools button { min-height: 40px; padding: 8px 14px; font-size: 12.5px; }
   .tml-tools .danger { margin-left: auto; }
 }

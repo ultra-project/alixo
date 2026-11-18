@@ -5,11 +5,17 @@
 
    Données :
    - profiles/{uid}            → { email, emailLower, name, pseudo, pseudoLower }  (lisible par le titulaire et les admins)
-   - handles/{pseudoLower}     → { uid, pseudo, name, email }  (1.26 : annuaire des pseudos, lu document par document)
-   - shares/{sid}              → { owner, ownerName, ownerEmail, kind: doc|folder|event, target, title, color,
-                                   members: { uid: { role: read|write, name, email, since } }, memberIds: [uid],
-                                   invites: [{ email, role, name, by, ts }], inviteEmails: [email],
+   - handles/{pseudoLower}     → { uid, pseudo, updatedAt }  (1.26 : annuaire des pseudos, lu document par document ;
+                                   1.53 : plus de nom ni d'e-mail — le pseudo, généré au premier démarrage, est la seule
+                                   identité visible des autres membres)
+   - shares/{sid}              → { owner, ownerName (pseudo), ownerEmail, kind: doc|folder|event|file, target, title, color,
+                                   members: { uid: { role: read|write, name (pseudo), since, via? } }, memberIds: [uid],
+                                   invites: [{ email?, uid?, pseudo?, role, name, by, ts }], inviteEmails: [email], inviteUids: [uid],
+                                   inviteRoles: { [uid | email]: read|write } (1.53.0 : rôle accordé, vérifié par les règles à l'acceptation),
+                                   link: { code, role } (1.53 : lien d'adhésion, facultatif),
                                    excluded: [ids], folder: { root, folders }, event: {…}, createdAt, updatedAt }
+   - sharelinks/{code}         → { sid, title, ownerPseudo, role, createdAt } — lien « toute personne disposant du lien
+                                   peut rejoindre » (1.53) ; code de 20 caractères aléatoires, lu par tout membre connecté
    - shares/{sid}/docs/{docId} → { updatedAt, data: JSON de la séance, by, byName }
    - shares/{sid}/log/{id}     → { ts, uid, name, action, docId, title, detail }
    - shares/{sid}/presence/{uid} → { name, color, docId, blockId, ts } — qui consulte / modifie quoi, en direct (1.15)
@@ -24,7 +30,68 @@
 window.AlixoShare = (() => {
   const A = window.AlixoAuth;
   const acc = A && A.isConfigured && A.account();
-  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {} };
+
+  /* ---------------- fonctions pures (testables sans compte : scripts/v1530-partage-test.js) ---------------- */
+  /* 1.47 : rôle et identifiants reçus du nuage, toujours normalisés avant usage (classes CSS, attributs data-*) */
+  const safeRole = r => (r === 'write' ? 'write' : 'read');
+  const initial = s => (s || '?').trim()[0].toUpperCase();
+  /* 1.53 : jamais la valeur reçue du nuage en repli (elle serait insérée telle quelle dans le HTML) — un type inconnu s'affiche « partage » */
+  const KIND_LABELS = { doc: 'séance', folder: 'dossier', event: 'événement', file: 'fichier' };
+  const SHARE_KINDS = Object.keys(KIND_LABELS);
+  const kindLabel = k => (Object.prototype.hasOwnProperty.call(KIND_LABELS, k) ? KIND_LABELS[k] : 'partage');
+  /* article défini du type, pour les phrases (« partage la séance », « le fichier »…) */
+  const kindThe = k => (k === 'doc' ? 'la séance' : k === 'folder' ? 'le dossier' : k === 'file' ? 'le fichier' : 'l’événement');
+  /* 1.53 : pseudo généré au premier démarrage — « AdjectifNom » + deux chiffres (ex. RenardLucide42). Mots français sans
+     accent, neutres, sans aucune combinaison moqueuse : le pseudo est la seule identité visible des autres membres. */
+  const PSEUDO_ADJ = ['Agile', 'Aimable', 'Alerte', 'Ample', 'Ardent', 'Attentif', 'Audacieux', 'Avise', 'Brillant', 'Calme', 'Candide', 'Celeste', 'Clair', 'Complice', 'Cordial', 'Courtois', 'Curieux', 'Digne', 'Discret', 'Docile', 'Doux', 'Droit', 'Eveille', 'Fidele', 'Fin', 'Fringant', 'Gai', 'Gentil', 'Grand', 'Habile', 'Hardi', 'Heureux', 'Humble', 'Ingenieux', 'Inspire', 'Intrepide', 'Joyeux', 'Juste', 'Leger', 'Libre', 'Loyal', 'Lucide', 'Lumineux', 'Malin', 'Modeste', 'Noble', 'Paisible', 'Patient', 'Placide', 'Prudent', 'Radieux', 'Rapide', 'Reveur', 'Sage', 'Savant', 'Serein', 'Sincere', 'Subtil', 'Tranquille', 'Vaillant', 'Vif', 'Zele'];
+  const PSEUDO_NOUN = ['Aigle', 'Alouette', 'Belette', 'Bison', 'Bouleau', 'Cerf', 'Chamois', 'Chene', 'Chevreuil', 'Colibri', 'Comete', 'Cygne', 'Dauphin', 'Ecureuil', 'Erable', 'Etoile', 'Faucon', 'Flamant', 'Fougere', 'Gazelle', 'Geai', 'Glacier', 'Heron', 'Hibou', 'Hirondelle', 'Ibis', 'Iris', 'Jaguar', 'Jasmin', 'Lagon', 'Lezard', 'Lievre', 'Loutre', 'Lynx', 'Marmotte', 'Martinet', 'Merle', 'Mesange', 'Meteore', 'Mouette', 'Nuage', 'Ocelot', 'Orque', 'Ours', 'Panda', 'Papillon', 'Pelican', 'Phare', 'Pinson', 'Pivert', 'Renard', 'Rivage', 'Rossignol', 'Saule', 'Sequoia', 'Sommet', 'Tigre', 'Tilleul', 'Torrent', 'Toucan', 'Volcan', 'Zebre'];
+  const rnd = n => { if (window.crypto && crypto.getRandomValues) { const a = new Uint32Array(1); crypto.getRandomValues(a); return a[0] % n; } return Math.floor(Math.random() * n); };
+  function randomPseudo() {
+    return PSEUDO_ADJ[rnd(PSEUDO_ADJ.length)] + PSEUDO_NOUN[rnd(PSEUDO_NOUN.length)] + String(100 + rnd(900));   // trois chiffres (1.53.0 : moins de collisions)
+  }
+  /* code d'un lien de partage : 20 caractères [A-Za-z0-9] tirés de crypto.getRandomValues */
+  function randomCode(len) {
+    const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+    let out = ''; for (let i = 0; i < len; i++) out += ALPHA[rnd(ALPHA.length)];
+    return out;
+  }
+  const ROLE_LABEL = { read: 'Peut consulter', write: 'Peut modifier' };
+  const roleOptions = role => `<option value="read"${safeRole(role) !== 'write' ? ' selected' : ''}>Peut consulter</option><option value="write"${safeRole(role) === 'write' ? ' selected' : ''}>Peut modifier</option>`;
+  /* 1.53 : corps, pied et puce de la boîte « Partager » (fonction pure). sh : partage (id null tant qu'il n'est pas créé) ;
+     ctx : { uid, me (pseudo du propriétaire), webUrl, pushErr, canOrg }. Jamais d'e-mail d'un membre : seuls les pseudos s'affichent. */
+  function shareDialogHTML(sh, ctx) {
+    ctx = ctx || {};
+    const members = Object.entries(sh.members || {}).filter(([u]) => u !== sh.owner);
+    const invites = Array.isArray(sh.invites) ? sh.invites : [];
+    const link = sh.link && typeof sh.link === 'object' && typeof sh.link.code === 'string' && /^[A-Za-z0-9]{20}$/.test(sh.link.code) ? { code: sh.link.code, role: safeRole(sh.link.role) } : null;
+    const nPeople = members.length + 1;
+    /* puce : les invitations en attente comptent (« Privé · vous seul » serait faux avec 2 invitations) */
+    const chip = sh.org ? 'Entreprise' : `Privé · ${members.length ? `${nPeople} personnes` : invites.length ? `${invites.length} invitation${invites.length > 1 ? 's' : ''} en attente` : 'vous seul'}${link ? ' · lien actif' : ''}`;
+    const row = (av, name, status, right, cls) => `<div class="sh-person${cls ? ' ' + cls : ''}"><div class="sh-av">${esc(initial(av))}</div><div class="sh-mi"><b>${esc(name)}</b><span>${status}</span></div>${right}</div>`;
+    let people = row(ctx.me || 'Moi', `${ctx.me || 'Moi'} (vous)`, 'Gère les personnes, le lien et le contenu', '<span class="sh-status">Propriétaire</span>', 'owner');
+    people += members.map(([u, m]) => row(m.name, m.name || 'Membre', `Membre${m.via ? ' · a rejoint par le lien' : ''}`, `<select class="sh-rolesel" data-role="${esc(u)}" title="Droit de cette personne">${roleOptions(m.role)}</select><button class="sh-rm" data-rm="${esc(u)}" type="button" title="Retirer l’accès">Retirer</button>`)).join('');
+    people += invites.map(inv => {
+      const who = inv.uid ? '@' + (inv.pseudo || inv.name || '') : (inv.email || '');
+      const key = inv.uid ? 'u:' + inv.uid : 'e:' + (inv.email || '');
+      return row(inv.pseudo || inv.name || inv.email, who, `Invitation en attente · ${ROLE_LABEL[safeRole(inv.role)]}`, `${inv.email ? `<button class="sh-mailbtn" data-resend="${esc(inv.email)}" type="button" title="Gmail, messagerie ou copie du message">Renvoyer l’invitation</button>` : ''}<button class="sh-rm" data-cancel="${esc(key)}" type="button" title="Annuler l’invitation">Annuler</button>`, 'pending');
+    }).join('');
+    const url = link ? `${ctx.webUrl || 'https://alixoapp.com/docs/'}?join=${link.code}` : '';
+    const body = `<div class="po-label" style="margin-top:0">Personnes${members.length || invites.length ? ` <span class="dlg-chip">${members.length + invites.length}</span>` : ''}</div>
+      <div class="sh-people">${people}</div>
+      <div class="po-label">Ajouter quelqu’un</div>
+      <div class="sh-inv"><input id="sh-who" placeholder="@pseudo ou e-mail" autocomplete="off" spellcheck="false"><select id="sh-role">${roleOptions('read')}</select><button class="pobtn" id="sh-add" type="button">Inviter</button></div>
+      <div class="sh-rolehelp"><span><b>Peut consulter</b> : lit les séances, les présente, ouvre les fichiers, copie le tout dans sa bibliothèque.</span><span><b>Peut modifier</b> : change les séances en direct ; chaque modification est notée dans le journal. Les fichiers restent en lecture.</span></div>
+      <div class="ai-keymsg${ctx.pushErr ? ' err' : ''}" id="sh-msg">${ctx.pushErr ? 'Envoi des séances impossible : ' + esc(ctx.pushErr) : ''}</div>
+      <div class="po-label">Lien de partage</div>
+      <div class="sh-linkbox${link ? ' on' : ''}">
+        <label class="sh-switch"><input type="checkbox" id="sh-link-on"${link ? ' checked' : ''}><span>Toute personne disposant du lien peut rejoindre</span></label>
+        ${link ? `<div class="sh-linkrow"><select id="sh-link-role" title="Droit donné par le lien">${roleOptions(link.role)}</select><code id="sh-link-url" title="Version PC : alixo://join/${esc(link.code)}">${esc(url)}</code><button class="cta small" id="sh-link-copy" type="button">Copier le lien</button></div><div class="po-hint" style="margin-bottom:0">Le lien donne ce droit à qui l’ouvre connecté à Alixo. Le désactiver n’exclut pas les personnes déjà entrées : retirez-les ci-dessus.</div>` : '<div class="po-hint" style="margin-bottom:0">Sans lien, seules les personnes invitées ci-dessus ont accès.</div>'}
+      </div>`;
+    const foot = `${sh.id && sh.kind === 'folder' ? '<button class="cta ghost" id="sh-content" type="button">Contenu partagé…</button>' : ''}${sh.id ? '<button class="cta ghost" id="sh-log" type="button">Journal…</button><button class="cta ghost ev-danger" id="sh-stop" type="button">Arrêter le partage</button>' : ''}<span class="dlg-spacer"></span>${ctx.canOrg && !sh.org ? '<button class="cta ghost biz-share-btn" id="sh-org" type="button" title="Tous les membres de l’entreprise le voient, en lecture">Partager à l’entreprise</button>' : ''}<button class="cta" type="button" data-dlg-close>Fermer</button>`;
+    return { chip, body, foot };
+  }
+
+  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openShareDialog() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {}, joinByCode: async () => false, ensurePseudo: async () => '', randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN } };
   if (!acc || !window.firebase || !firebase.firestore || !window.AlixoApp) return OFF;
 
   const uid = acc.uid;
@@ -47,8 +114,6 @@ window.AlixoShare = (() => {
   const now = () => Date.now();
   const norm2 = s => String(s || '').trim().toLowerCase();
   const isOwner = sh => sh && sh.owner === uid;
-  /* 1.47 : rôle et identifiants reçus du nuage, toujours normalisés avant usage (classes CSS, attributs data-*) */
-  const safeRole = r => (r === 'write' ? 'write' : 'read');
   const SAFE_ID = /^[\w-]{1,64}$/;
   const safeId = id => typeof id === 'string' && SAFE_ID.test(id);
   const safeColor = c => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : DEFAULT_TINT);
@@ -57,12 +122,16 @@ window.AlixoShare = (() => {
   const bizOrg = () => (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active() ? AlixoBusiness.orgId() : '');
   const isOrgShare = sh => !!(sh && sh.org && sh.org === bizOrg());
   const isMember = sh => !!(sh && ((Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)) || isOrgShare(sh)));
-  const isInvited = sh => !!(sh && Array.isArray(sh.inviteEmails) && me.email && sh.inviteEmails.includes(me.email));
+  /* 1.53 : invité par e-mail (inviteEmails) ou par pseudo (inviteUids) */
+  const invitedByEmail = sh => !!(sh && Array.isArray(sh.inviteEmails) && me.email && sh.inviteEmails.includes(me.email));
+  const invitedByUid = sh => !!(sh && Array.isArray(sh.inviteUids) && sh.inviteUids.includes(uid));
+  const isInvited = sh => invitedByEmail(sh) || invitedByUid(sh);
   const fmtWhen = ts => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  const kindLabel = k => ({ doc: 'séance', folder: 'dossier', event: 'événement', file: 'fichier' }[k] || k);
-  /* article défini du type, pour les phrases (« partage la séance », « le fichier »…) */
-  const kindThe = k => (k === 'doc' ? 'la séance' : k === 'folder' ? 'le dossier' : k === 'file' ? 'le fichier' : 'l’événement');
-  const initial = s => (s || '?').trim()[0].toUpperCase();
+  /* 1.53 : nom affiché aux autres membres — le pseudo, jamais le vrai nom ni l'e-mail (prénom en secours tant que le pseudo n'existe pas) */
+  const displayName = () => profile.pseudo || me.name;
+  /* propriétaire d'un partage tel qu'il s'affiche : son pseudo (ownerName) ; pour un partage antérieur à 1.53 sans
+     pseudo, la partie locale de l'adresse — l'adresse complète n'est plus jamais montrée */
+  const ownerLabel = sh => (sh && (sh.ownerName || (sh.ownerEmail ? String(sh.ownerEmail).split('@')[0] : ''))) || '';
 
   /* ---------------- profil (pseudo) ---------------- */
   async function saveProfile(extra) {
@@ -81,40 +150,85 @@ window.AlixoShare = (() => {
     if (/unavailable|network/.test(code)) return 'Serveur injoignable — vérifiez la connexion internet.';
     return (err && err.message) || String(err);
   }
-  /* 1.26 : annuaire des pseudos — handles/{pseudoLower} → { uid, pseudo, name, email }. Les profils ne sont plus
+  /* 1.26 : annuaire des pseudos — handles/{pseudoLower} → { uid, pseudo, updatedAt }. Les profils ne sont plus
      lisibles entre utilisateurs ; seul un pseudo connu permet de retrouver quelqu'un (lecture d'un document précis,
-     jamais de liste). Choisir un pseudo, c'est accepter que les personnes qui le connaissent puissent vous inviter. */
+     jamais de liste). 1.53 : l'annuaire ne porte plus ni nom ni e-mail (quiconque devinait un pseudo les obtenait). */
   const handles = () => db.collection('handles');
+  const handleDoc = p => ({ uid, pseudo: p, updatedAt: now() });
+  /* ASCII seulement : les règles comparent pseudo.lower() au handle, et lower() côté serveur ne suit pas toLowerCase() pour tout l'Unicode */
+  const PSEUDO_RE = /^[A-Za-z0-9 ._-]{3,24}$/;
+  async function writeProfilePseudo(p, h) {
+    await db.collection('profiles').doc(uid).set({ uid, email: me.email, emailLower: me.email, name: me.name, pseudo: p, pseudoLower: h, updatedAt: now() }, { merge: true });
+  }
   async function setPseudo(p) {
     p = String(p || '').trim().replace(/\s+/g, ' ');
-    if (p && !/^[\p{L}\p{N} ._-]{3,24}$/u.test(p)) { toast('Pseudo : 3 à 24 caractères (lettres, chiffres, espace, . _ -)'); return false; }
-    const h = p ? norm2(p) : '', old = profile.pseudo ? norm2(profile.pseudo) : '';
+    /* 1.53 : champ vide → un nouveau pseudo au hasard (il n'y a plus de compte sans pseudo) */
+    if (!p) { try { const n = await ensurePseudo(true); toast(`Nouveau pseudo : ${n}`); return true; } catch (err) { console.error('Share (pseudo) :', err); toast(friendly(err), { duration: 7000 }); return false; } }
+    if (!PSEUDO_RE.test(p)) { toast('Pseudo : 3 à 24 caractères — lettres sans accent, chiffres, espace, . _ -'); return false; }
+    const h = norm2(p), old = profile.pseudo ? norm2(profile.pseudo) : '';
     try {
-      if (h) {
-        const s = await handles().doc(h).get();
-        if (s.exists && s.data().uid !== uid) { toast('Ce pseudo est déjà pris'); return false; }
-        await handles().doc(h).set({ uid, pseudo: p, name: me.name, email: me.email, updatedAt: now() });
-      }
+      const s = await handles().doc(h).get();
+      if (s.exists && s.data().uid !== uid) { toast('Ce pseudo est déjà pris'); return false; }
+      await handles().doc(h).set(handleDoc(p));
       if (old && old !== h) await handles().doc(old).delete().catch(() => {});
-      await db.collection('profiles').doc(uid).set({ uid, email: me.email, emailLower: me.email, name: me.name, pseudo: p, pseudoLower: h, updatedAt: now() }, { merge: true });
+      await writeProfilePseudo(p, h);
     } catch (err) { console.error('Share (pseudo) :', err); toast(friendly(err), { duration: 7000 }); return false; }
     profile.pseudo = p;
-    toast(p ? `Pseudo « ${p} » enregistré — les personnes qui le connaissent peuvent vous inviter` : 'Pseudo retiré');
+    toast(`Pseudo « ${p} » enregistré — les personnes qui le connaissent peuvent vous inviter`);
     return true;
   }
-  /* trouve un membre par pseudo ou par e-mail → { uid?, email, name }. Une adresse e-mail n'est plus cherchée dans
-     les profils (1.26) : l'invitation est rangée sous l'adresse, et l'invité la voit à sa connexion. */
+  /* 1.53 : tout compte a un pseudo — généré au hasard au premier démarrage (ou à la demande : force). Un `set` sur
+     un handle qui appartient à quelqu'un d'autre est refusé par les règles (permission-denied) : c'est une collision,
+     on retire un autre nom (5 essais). Renvoie le pseudo, ou lève une erreur. */
+  async function ensurePseudo(force) {
+    if (profile.pseudo && !force) return profile.pseudo;
+    const old = profile.pseudo ? norm2(profile.pseudo) : '';
+    let lastErr = null;
+    for (let i = 0; i < 5; i++) {
+      const p = randomPseudo(), h = norm2(p);
+      try { await handles().doc(h).set(handleDoc(p)); }
+      catch (err) { lastErr = err; if (/permission-denied/.test((err && err.code) || '')) continue; throw err; }
+      await writeProfilePseudo(p, h);
+      if (old && old !== h) handles().doc(old).delete().catch(() => {});
+      profile.pseudo = p;
+      return p;
+    }
+    throw lastErr || new Error('Aucun pseudo libre trouvé — réessayez');
+  }
+  /* 1.53 : un handle écrit par une version antérieure porte encore le nom et l'e-mail → réécrit sans eux */
+  async function migrateHandle() {
+    if (!profile.pseudo) return;
+    if (!PSEUDO_RE.test(profile.pseudo)) return;   // pseudo non ASCII d'une version antérieure : laissé tel quel (le handle serveur n'en serait pas sûr)
+    const h = norm2(profile.pseudo);
+    try {
+      const s = await handles().doc(h).get();
+      const d = s.exists ? s.data() : null;
+      if (!d) { await handles().doc(h).set(handleDoc(profile.pseudo)); return; }
+      /* 1.53.0 : le handle appartient à quelqu'un d'autre — ce pseudo ne peut plus être le mien (les règles exigent ownsPseudo) : un autre est tiré */
+      if (d.uid !== uid) {
+        const prev = profile.pseudo; profile.pseudo = '';   // vidé d'abord : ensurePseudo ne doit pas tenter d'effacer le handle d'autrui
+        try { const p = await ensurePseudo(true); toast(`Votre nouveau pseudo Alixo : ${p} — l’ancien appartenait déjà à un autre membre`, { duration: 9000 }); }
+        catch (err) { profile.pseudo = prev; throw err; }
+        return;
+      }
+      if ('email' in d || 'name' in d || 'emailLower' in d) await handles().doc(h).set(handleDoc(profile.pseudo));
+    } catch (err) { console.error('Share (annuaire) :', err); }
+  }
+  /* trouve un membre par pseudo ou par e-mail → { uid?, email?, name }. Une adresse e-mail n'est plus cherchée dans
+     les profils (1.26) : l'invitation est rangée sous l'adresse, et l'invité la voit à sa connexion. 1.53 : un pseudo
+     ne donne que l'uid — l'invitation est rangée sous l'uid (inviteUids), sans e-mail. */
   async function findUser(input) {
     const s = String(input || '').trim();
     if (!s) return null;
-    if (s.includes('@')) {
+    if (s.includes('@') && !/^@/.test(s)) {
       const email = norm2(s);
       return { email, name: email.split('@')[0] };
     }
     const snap = await handles().doc(norm2(s.replace(/^@/, ''))).get();
     if (!snap.exists) return null;
     const d = snap.data();
-    return { uid: d.uid, email: norm2(d.email || ''), name: d.pseudo || d.name || '' };
+    if (!safeId(d.uid)) return null;
+    return { uid: d.uid, pseudo: String(d.pseudo || ''), name: String(d.pseudo || '') };
   }
 
   /* ---------------- contenu partagé par le propriétaire ---------------- */
@@ -255,7 +369,7 @@ window.AlixoShare = (() => {
       const j = publicJSON(d), k = sh.id + '/' + id;
       if (lastPushed.get(k) === j) continue;
       if (j.length > DOC_MAX) { warnTooBig(d); continue; }
-      ops.push({ ref: ref.collection('docs').doc(id), data: { updatedAt: d.updatedAt || now(), data: j, by: uid, byName: me.name }, size: j.length, done: () => { lastPushed.set(k, j); known.add(id); } });
+      ops.push({ ref: ref.collection('docs').doc(id), data: { updatedAt: d.updatedAt || now(), data: j, by: uid, byName: displayName() }, size: j.length, done: () => { lastPushed.set(k, j); known.add(id); } });
     }
     for (const id of [...known]) {
       if (seen.has(id)) continue;
@@ -272,7 +386,7 @@ window.AlixoShare = (() => {
       const j = publicJSON(d), k = sh.id + '/' + id;
       if (lastPushed.get(k) === j) continue;
       if (j.length > DOC_MAX) { warnTooBig(d); continue; }
-      await ref.collection('docs').doc(id).set({ updatedAt: d.updatedAt || now(), data: j, by: uid, byName: me.name });
+      await ref.collection('docs').doc(id).set({ updatedAt: d.updatedAt || now(), data: j, by: uid, byName: displayName() });
       lastPushed.set(k, j);
       if (now() - (lastLog.get(k) || 0) > 5 * 60000) { lastLog.set(k, now()); log(sh.id, 'edit', id, d.titre || 'Sans titre'); }
     }
@@ -362,7 +476,7 @@ window.AlixoShare = (() => {
       const n = Math.max(1, Math.ceil(u8.length / FILE_CHUNK));
       for (let i = 0; i < n; i++) await ref.doc(id).collection('chunks').doc(String(i).padStart(4, '0')).set({ i, data: FBlob.fromUint8Array(u8.subarray(i * FILE_CHUNK, Math.min(u8.length, (i + 1) * FILE_CHUNK))) });
       if (!AF.byId(id)) { await delSharedFile(sh.id, id).catch(() => {}); continue; }   // supprimé pendant l'envoi
-      await ref.doc(id).set(Object.assign({}, meta, { chunks: n, by: uid, byName: me.name }));   // la fiche en dernier : un fichier visible est toujours complet
+      await ref.doc(id).set(Object.assign({}, meta, { chunks: n, by: uid, byName: displayName() }));   // la fiche en dernier : un fichier visible est toujours complet
       known.set(id, j);
       log(sh.id, 'file', id, f.name);
     }
@@ -424,7 +538,7 @@ window.AlixoShare = (() => {
   }
   function sharedFileById(sid, id) { const m = filesBy.get(sid); return (m && m.get(id)) || null; }
   /* informations d'un partage par son identifiant (propriétaire, droit, titre) */
-  function shareMeta(sid) { const sh = shares.get(sid); return sh ? { sid, title: sh.title, owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh), kind: sh.kind, color: sh.color || DEFAULT_TINT, isOwner: isOwner(sh) } : null; }
+  function shareMeta(sid) { const sh = shares.get(sid); return sh ? { sid, title: sh.title, owner: ownerLabel(sh), role: myRole(sh), kind: sh.kind, color: sh.color || DEFAULT_TINT, isOwner: isOwner(sh) } : null; }
 
   /* image d'une séance partagée, pour AlixoImages.get (appareil qui ne l'a pas) */
   async function fetchImage(iid) {
@@ -435,7 +549,7 @@ window.AlixoShare = (() => {
     return null;
   }
   function log(sid, action, docId, title, detail) {
-    sharesRef.doc(sid).collection('log').add({ ts: now(), uid, name: me.name, action, docId: docId || '', title: title || '', detail: detail || '' }).catch(err => console.error('Share (journal) :', err));
+    sharesRef.doc(sid).collection('log').add({ ts: now(), uid, name: displayName(), action, docId: docId || '', title: title || '', detail: detail || '' }).catch(err => console.error('Share (journal) :', err));
   }
 
   /* ---------------- réception ---------------- */
@@ -529,6 +643,7 @@ window.AlixoShare = (() => {
 
   /* instantané reçu : couleurs validées (#rrggbb), identifiants de dossiers / cible conformes — les entrées douteuses sont écartées */
   function sanitizeShare(sh) {
+    if (!SHARE_KINDS.includes(sh.kind)) sh.kind = 'doc';   // 1.53.0 : type fermé (une valeur libre finissait dans le HTML)
     if (sh.color != null) sh.color = safeColor(sh.color);
     if (!safeId(sh.target)) sh.target = '';
     if (sh.folder && typeof sh.folder === 'object') {
@@ -556,14 +671,15 @@ window.AlixoShare = (() => {
       if (prev && isInvited(prev) && isMember(sh) && !isOwner(sh)) toast(`Vous avez rejoint « ${sh.title} »`);
       // centre de notifications : nouvelle invitation, cours reçu, modification par un autre membre
       if (window.AlixoNotify && !isOwner(sh)) {
-        if (!prev && isInvited(sh) && !isMember(sh)) AlixoNotify.push({ id: 'inv_' + sh.id, kind: 'share', title: `${sh.ownerName || sh.ownerEmail || 'Un membre'} vous invite à « ${sh.title} »`, text: `${kindLabel(sh.kind)} partagé${sh.kind === 'doc' || sh.kind === 'event' ? 'e' : ''} — Bibliothèque › Partagés avec moi pour accepter.`, action: { type: 'shared' }, silent: !ready });
-        else if (prev && !isMember(prev) && isMember(sh)) AlixoNotify.push({ id: 'join_' + sh.id, kind: 'share', title: `Vous avez rejoint « ${sh.title} »`, text: `Partagé par ${sh.ownerName || sh.ownerEmail || 'un membre'} · droit ${myRole(sh) === 'write' ? 'de modification' : 'de lecture'}.`, action: { type: 'shared' }, silent: true });
+        if (!prev && isInvited(sh) && !isMember(sh)) AlixoNotify.push({ id: 'inv_' + sh.id, kind: 'share', title: `${ownerLabel(sh) || 'Un membre'} vous invite à « ${sh.title} »`, text: `${kindLabel(sh.kind)} partagé${sh.kind === 'doc' || sh.kind === 'event' ? 'e' : ''} — Bibliothèque › Partagés avec moi pour accepter.`, action: { type: 'shared' }, silent: !ready });
+        else if (prev && !isMember(prev) && isMember(sh)) AlixoNotify.push({ id: 'join_' + sh.id, kind: 'share', title: `Vous avez rejoint « ${sh.title} »`, text: `Partagé par ${ownerLabel(sh) || 'un membre'} · droit ${myRole(sh) === 'write' ? 'de modification' : 'de lecture'}.`, action: { type: 'shared' }, silent: true });
       }
     });
     // partages disparus de cette requête (retiré, supprimé, invitation retirée)
     for (const [sid, sh] of [...shares]) {
       if (seen.has(sid)) continue;
-      const mine = source === 'owner' ? isOwner(sh) : source === 'member' ? (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid) && !isOwner(sh)) : source === 'org' ? (isOrgShare(sh) && !isOwner(sh) && !(Array.isArray(sh.memberIds) && sh.memberIds.includes(uid))) : (isInvited(sh) && !isMember(sh) && !isOwner(sh));
+      const mine = source === 'owner' ? isOwner(sh) : source === 'member' ? (Array.isArray(sh.memberIds) && sh.memberIds.includes(uid) && !isOwner(sh)) : source === 'org' ? (isOrgShare(sh) && !isOwner(sh) && !(Array.isArray(sh.memberIds) && sh.memberIds.includes(uid)))
+        : source === 'inviteuid' ? (invitedByUid(sh) && !invitedByEmail(sh) && !isMember(sh) && !isOwner(sh)) : (invitedByEmail(sh) && !invitedByUid(sh) && !isMember(sh) && !isOwner(sh));
       if (!mine) continue;
       shares.delete(sid); stopDocs(sid);
       if (sh.kind === 'event') dropEvent(sid);
@@ -642,19 +758,20 @@ window.AlixoShare = (() => {
   /* ---------------- accès : qui voit cette séance ---------------- */
   function accessFor(docId) {
     const sh = shareForAny(docId); if (!sh) return null;
-    const members = Object.entries(sh.members || {}).map(([u, m]) => ({ uid: u, name: m.name || m.email || '', email: m.email || '', role: safeRole(m.role) }));
-    return { sid: sh.id, kind: sh.kind, title: sh.title, isOwner: isOwner(sh), role: isOwner(sh) ? 'owner' : myRole(sh), owner: { uid: sh.owner, name: sh.ownerName || sh.ownerEmail || '', email: sh.ownerEmail || '' }, members, invites: (sh.invites || []).map(i => ({ name: i.name || i.email, email: i.email, role: safeRole(i.role) })), color: sh.color };
+    /* 1.53 : plus d'e-mail dans ce qui est affiché (members[uid].email n'est plus écrit ; les anciennes fiches en ont encore un) */
+    const members = Object.entries(sh.members || {}).map(([u, m]) => ({ uid: u, name: m.name || (m.email ? m.email.split('@')[0] : 'Membre'), role: safeRole(m.role) }));
+    return { sid: sh.id, kind: sh.kind, title: sh.title, isOwner: isOwner(sh), role: isOwner(sh) ? 'owner' : myRole(sh), owner: { uid: sh.owner, name: sh.ownerName || (sh.ownerEmail ? sh.ownerEmail.split('@')[0] : '') }, members, invites: (sh.invites || []).map(i => ({ name: i.pseudo ? '@' + i.pseudo : (i.name || i.email || ''), email: i.email || '', role: safeRole(i.role) })), color: sh.color };
   }
   /* dossiers partagés avec moi, pour la bibliothèque (1.15) */
   function sharedFolders() {
     return [...shares.values()].filter(sh => isMember(sh) && !isOwner(sh) && sh.kind === 'folder').map(sh => {
       const map = docsBy.get(sh.id) || new Map();
       const rootId = sh.folder && sh.folder.root ? sh.folder.root.id : sh.target;
-      return { sid: sh.id, title: sh.title || 'Dossier', color: sh.color || DEFAULT_TINT, icone: sh.folder && sh.folder.root ? sh.folder.root.icone : '', owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh), rootId, nDocs: map.size, nFiles: (filesBy.get(sh.id) || new Map()).size, state: docsState.get(sh.id) ? docsState.get(sh.id).st : 'ready' };
+      return { sid: sh.id, title: sh.title || 'Dossier', color: sh.color || DEFAULT_TINT, icone: sh.folder && sh.folder.root ? sh.folder.root.icone : '', owner: ownerLabel(sh), role: myRole(sh), rootId, nDocs: map.size, nFiles: (filesBy.get(sh.id) || new Map()).size, state: docsState.get(sh.id) ? docsState.get(sh.id).st : 'ready' };
     });
   }
   function sharedDocsAlone() {
-    return [...shares.values()].filter(sh => isMember(sh) && !isOwner(sh) && sh.kind === 'doc').map(sh => ({ sid: sh.id, d: (docsBy.get(sh.id) || new Map()).get(sh.target) || null, title: sh.title, color: sh.color || DEFAULT_TINT, owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh) }));
+    return [...shares.values()].filter(sh => isMember(sh) && !isOwner(sh) && sh.kind === 'doc').map(sh => ({ sid: sh.id, d: (docsBy.get(sh.id) || new Map()).get(sh.target) || null, title: sh.title, color: sh.color || DEFAULT_TINT, owner: ownerLabel(sh), role: myRole(sh) }));
   }
   /* contenu d'un dossier partagé (sous-dossiers, séances) avec le chemin depuis la racine du partage */
   function sharedFolderView(sid, fid) {
@@ -671,7 +788,7 @@ window.AlixoShare = (() => {
     const path = []; let f = fs.find(x => x.id === cur);
     while (f) { path.unshift(f); f = fs.find(x => x.id === f.parentId); }
     const curF = cur === rootId ? { id: rootId, nom: sh.title || 'Dossier', couleur: sh.color || DEFAULT_TINT, icone: sh.folder && sh.folder.root ? sh.folder.root.icone : '' } : fs.find(x => x.id === cur);
-    return { sid, sh: { title: sh.title, owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh), color: sh.color || DEFAULT_TINT }, rootId, cur: curF, path, folders, docs, files: sharedFilesIn(sid, cur), state: docsState.get(sid) ? docsState.get(sid).st : 'ready' };
+    return { sid, sh: { title: sh.title, owner: ownerLabel(sh), role: myRole(sh), color: sh.color || DEFAULT_TINT }, rootId, cur: curF, path, folders, docs, files: sharedFilesIn(sid, cur), state: docsState.get(sid) ? docsState.get(sid).st : 'ready' };
   }
   /* 1.32 : partages à toute l'entreprise (Alixo Business) — écoute lancée quand l'entreprise est connue */
   let orgUnsub = null, orgNow = '';
@@ -695,6 +812,8 @@ window.AlixoShare = (() => {
     sharesRef.where('owner', '==', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'owner'), err => console.error('Share (mes partages) :', err));
     sharesRef.where('memberIds', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'member'), err => console.error('Share (reçus) :', err));
     if (me.email) sharesRef.where('inviteEmails', 'array-contains', me.email).onSnapshot(s => applyShareSnapshot(s.docs, 'invite'), err => console.error('Share (invitations) :', err));
+    /* 1.53 : invitations par pseudo (rangées sous l'uid, sans e-mail) */
+    sharesRef.where('inviteUids', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'inviteuid'), err => console.error('Share (invitations par pseudo) :', err));
   }
 
   /* ---------------- événements partagés (copie dans l'agenda du membre) ---------------- */
@@ -719,7 +838,7 @@ window.AlixoShare = (() => {
   function shareOfDoc(id) { for (const [sid, m] of docsBy) if (m.has(id)) return shares.get(sid); return null; }
   function sharedDocs() { const out = []; for (const [sid, m] of docsBy) { const sh = shares.get(sid); if (!sh || isOwner(sh)) continue; for (const d of m.values()) out.push(d); } return out; }
   function canWrite(id) { const sh = shareOfDoc(id); return !!sh && myRole(sh) === 'write'; }
-  function infoFor(id) { const sh = shareOfDoc(id); return sh ? { sid: sh.id, title: sh.title, owner: sh.ownerName || sh.ownerEmail || '', role: myRole(sh), kind: sh.kind, color: sh.color } : null; }
+  function infoFor(id) { const sh = shareOfDoc(id); return sh ? { sid: sh.id, title: sh.title, owner: ownerLabel(sh), role: myRole(sh), kind: sh.kind, color: sh.color } : null; }
   function tintFor(id) { const sh = shareOfDoc(id); return sh ? (sh.color || DEFAULT_TINT) : null; }
   function labelFor(id) { const sh = shareOfDoc(id); return sh ? (sh.kind === 'folder' ? sh.title : 'Partagé') : ''; }
   function pendingCount() { let n = 0; for (const sh of shares.values()) if (isInvited(sh) && !isMember(sh) && !isOwner(sh)) n++; return n; }
@@ -728,7 +847,8 @@ window.AlixoShare = (() => {
 
   /* ---------------- actions ---------------- */
   async function createShare(kind, target) {
-    const sh = { owner: uid, ownerName: me.name, ownerEmail: me.email, kind, target, title: '', color: '', members: {}, memberIds: [], invites: [], inviteEmails: [], excluded: [], createdAt: now(), updatedAt: now() };
+    /* ownerName : le pseudo (1.53) — ownerEmail reste pour les e-mails envoyés par le serveur, jamais affiché aux membres */
+    const sh = { owner: uid, ownerName: displayName(), ownerEmail: me.email, kind, target, title: '', color: '', members: {}, memberIds: [], invites: [], inviteEmails: [], inviteUids: [], excluded: [], createdAt: now(), updatedAt: now() };
     sh.title = titleOf(sh); sh.color = colorOf(sh);
     if (kind === 'folder') sh.folder = folderSnapshot(sh);
     if (kind === 'event') sh.event = (state.events || []).find(e => e.id === target) || null;
@@ -742,19 +862,29 @@ window.AlixoShare = (() => {
   async function invite(sid, who, role, opts) {
     const sh = shares.get(sid); if (!sh) throw new Error('Partage introuvable');
     const u = await findUser(who);
-    if (!u || !u.email) throw new Error('Personne introuvable — indiquez un e-mail ou un pseudo Alixo existant');
-    if (u.email === me.email) throw new Error('C’est votre propre adresse');
-    if (u.uid && sh.members && sh.members[u.uid]) throw new Error(`${u.name} est déjà membre`);
-    if ((sh.inviteEmails || []).includes(u.email)) throw new Error('Invitation déjà envoyée à cette adresse');
+    if (!u || (!u.email && !u.uid)) throw new Error('Personne introuvable — indiquez un e-mail ou un pseudo Alixo existant');
+    if (u.uid === uid || (u.email && u.email === me.email)) throw new Error('C’est vous-même');
+    if (u.uid && sh.members && sh.members[u.uid]) throw new Error(`@${u.name} est déjà membre`);
+    if (u.uid && (sh.inviteUids || []).includes(u.uid)) throw new Error(`Invitation déjà envoyée à @${u.name}`);
+    if (u.email && (sh.inviteEmails || []).includes(u.email)) throw new Error('Invitation déjà envoyée à cette adresse');
+    role = safeRole(role);
     /* 1.32 : Alixo Business — une adresse extérieure à l'entreprise attend l'accord d'un modérateur (le dirigeant et les
        modérateurs partagent librement) ; l'invitation part d'elle-même une fois la demande approuvée */
-    if (!(opts && opts.direct) && window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.gate(u.email) === 'external') {
-      const rid = await AlixoBusiness.request({ sid, kind: sh.kind, title: sh.title, to: u.email, role: role === 'write' ? 'write' : 'read' });
+    if (u.email && !(opts && opts.direct) && window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.gate(u.email) === 'external') {
+      const rid = await AlixoBusiness.request({ sid, kind: sh.kind, title: sh.title, to: u.email, role });
       return { pending: true, email: u.email, name: u.name || '', role, rid };
     }
-    const inv = { email: u.email, role: role === 'write' ? 'write' : 'read', name: u.name || '', by: me.name, ts: now() };
-    await sharesRef.doc(sid).update({ invites: FV.arrayUnion(inv), inviteEmails: FV.arrayUnion(u.email), updatedAt: now() });
-    sh.invites = [...(sh.invites || []), inv]; sh.inviteEmails = [...(sh.inviteEmails || []), u.email];
+    /* 1.53 : par pseudo → { uid, pseudo } rangé sous inviteUids (aucun e-mail lu ni écrit) ; par e-mail → comme avant */
+    const inv = u.uid ? { uid: u.uid, pseudo: u.name || '', role, name: u.name || '', by: displayName(), ts: now() }
+      : { email: u.email, role, name: u.name || '', by: displayName(), ts: now() };
+    const upd = { invites: FV.arrayUnion(inv), updatedAt: now() };
+    if (u.uid) upd.inviteUids = FV.arrayUnion(u.uid); else upd.inviteEmails = FV.arrayUnion(u.email);
+    /* 1.53.0 : le rôle accordé est inscrit dans inviteRoles[uid | e-mail] — les règles n'acceptent, à l'acceptation, que ce rôle-là */
+    upd.inviteRoles = Object.assign({}, inviteRolesOf(sh), { [u.uid || u.email]: role });
+    await sharesRef.doc(sid).update(upd);
+    sh.inviteRoles = upd.inviteRoles;
+    sh.invites = [...(sh.invites || []), inv];
+    if (u.uid) sh.inviteUids = [...(sh.inviteUids || []), u.uid]; else sh.inviteEmails = [...(sh.inviteEmails || []), u.email];
     if (u.uid) knownAccount.add(inv);
     inv.mailed = await sendMail(sh, inv).catch(() => false);   // true : parti tout seul ; false : à envoyer soi-même (boutons du gestionnaire)
     return inv;
@@ -777,10 +907,12 @@ window.AlixoShare = (() => {
   async function sendMail(sh, inv) {
     const B = serverMail();
     if (B) {
-      /* { queued: true } : le serveur a pris la demande (il ne dit jamais si l'adresse a un compte : pas d'énumération) */
-      try { const r = await B.mail('share', { sid: sh.id, email: inv.email }); if (r && (r.queued || r.sent || r.already)) { serverQueued.add(inv); return true; } }
+      /* { queued: true } : le serveur a pris la demande (il ne dit jamais si l'adresse a un compte : pas d'énumération).
+         1.53 : invitation par pseudo → { sid, uid } : le serveur retrouve l'adresse dans profiles/{uid} (l'application ne la connaît pas) */
+      try { const r = await B.mail('share', inv.uid ? { sid: sh.id, uid: inv.uid } : { sid: sh.id, email: inv.email }); if (r && (r.queued || r.sent || r.already)) { serverQueued.add(inv); return true; } }
       catch { /* pas de compte Alixo à cette adresse, plafond du jour, hors ligne… : moyens habituels ci-dessous */ }
     }
+    if (!inv.email) return false;   // par pseudo sans serveur : l'invitation attend dans « Partagés avec moi », rien d'autre à envoyer
     const m = inviteMessage(sh, inv);
     let sent = false;
     if (MAIL.webhook) {
@@ -810,10 +942,24 @@ window.AlixoShare = (() => {
     else if (how === 'gmail') window.open(url, '_blank', 'noopener');
     else location.href = url;
   }
+  /* 1.53.0 : inviteRoles = { [uid | e-mail en minuscules]: 'read' | 'write' } — écrit par le propriétaire, lu par les règles à l'acceptation */
+  const inviteRolesOf = sh => (sh && sh.inviteRoles && typeof sh.inviteRoles === 'object' && !Array.isArray(sh.inviteRoles) ? sh.inviteRoles : {});
+  /* l'invité retire sa propre clé (et elle seule) : chemin pointé pour un uid, carte recopiée sans la clé pour une adresse (qui contient des points) */
+  function dropInviteRole(sh, upd, key) {
+    const roles = inviteRolesOf(sh);
+    if (!Object.prototype.hasOwnProperty.call(roles, key)) return;
+    if (/^[\w-]+$/.test(key)) upd[`inviteRoles.${key}`] = FV.delete();
+    else { const rest = Object.assign({}, roles); delete rest[key]; upd.inviteRoles = rest; }
+  }
   async function cancelInvite(sid, inv) {
     const sh = shares.get(sid); if (!sh) return;
-    await sharesRef.doc(sid).update({ invites: FV.arrayRemove(inv), inviteEmails: FV.arrayRemove(inv.email), updatedAt: now() });
-    sh.invites = (sh.invites || []).filter(x => x.email !== inv.email); sh.inviteEmails = (sh.inviteEmails || []).filter(x => x !== inv.email);
+    const upd = { invites: FV.arrayRemove(inv), updatedAt: now() };
+    if (inv.uid) upd.inviteUids = FV.arrayRemove(inv.uid); else upd.inviteEmails = FV.arrayRemove(inv.email);
+    const roles = Object.assign({}, inviteRolesOf(sh)); delete roles[inv.uid || inv.email]; upd.inviteRoles = roles;
+    await sharesRef.doc(sid).update(upd);
+    sh.inviteRoles = roles;
+    sh.invites = (sh.invites || []).filter(x => x !== inv && !(inv.uid ? x.uid === inv.uid : x.email === inv.email));
+    if (inv.uid) sh.inviteUids = (sh.inviteUids || []).filter(x => x !== inv.uid); else sh.inviteEmails = (sh.inviteEmails || []).filter(x => x !== inv.email);
   }
   async function setRole(sid, memberUid, role) {
     role = safeRole(role);
@@ -841,6 +987,7 @@ window.AlixoShare = (() => {
       const batch = db.batch(); docs.forEach(d => batch.delete(d.ref)); await batch.commit();
       const fls = await sharesRef.doc(sid).collection('files').get();          // fichiers partagés (1.17) : fiche + morceaux
       for (const f of fls.docs) await delSharedFile(sid, f.id).catch(() => {});
+      if (sh.link && sh.link.code) await db.collection('sharelinks').doc(String(sh.link.code)).delete().catch(() => {});   // 1.53 : le lien d'adhésion avant le partage (la règle relit le partage)
       await sharesRef.doc(sid).delete();
     } catch (err) { console.error('Share (suppression) :', err); }
     if (!silent) toast('Partage arrêté');
@@ -848,16 +995,25 @@ window.AlixoShare = (() => {
   }
   async function accept(sid) {
     const sh = shares.get(sid); if (!sh) return;
-    const inv = (sh.invites || []).find(x => x.email === me.email);
-    const role = inv && inv.role === 'write' ? 'write' : 'read';   // jamais autre chose que read | write
-    const member = { role, name: profile.pseudo || me.name, email: me.email, since: now() };
-    const upd = { [`members.${uid}`]: member, memberIds: FV.arrayUnion(uid), inviteEmails: FV.arrayRemove(me.email), updatedAt: now() };
-    if (inv) upd.invites = FV.arrayRemove(inv);
+    /* 1.53 : mon invitation, par pseudo (uid) ou par e-mail ; les deux listes sont nettoyées de ce qui me concerne */
+    const myInvites = (sh.invites || []).filter(x => x && ((x.uid && x.uid === uid) || (x.email && x.email === me.email)));
+    /* 1.53.0 : le rôle est celui que le propriétaire a inscrit dans inviteRoles (clé : mon uid, sinon mon adresse) ; un partage
+       antérieur sans inviteRoles ne donne que la lecture — c'est ce que les règles exigent (inviteRoleOk) */
+    const roleKey = invitedByUid(sh) ? uid : me.email;
+    const roles = inviteRolesOf(sh);
+    const role = safeRole(Object.prototype.hasOwnProperty.call(roles, roleKey) ? roles[roleKey] : 'read');
+    const member = { role, name: displayName(), since: now() };   // plus d'e-mail dans la fiche de membre (1.53)
+    const upd = { [`members.${uid}`]: member, memberIds: FV.arrayUnion(uid), updatedAt: now() };
+    if (invitedByEmail(sh)) upd.inviteEmails = FV.arrayRemove(me.email);
+    if (invitedByUid(sh)) upd.inviteUids = FV.arrayRemove(uid);
+    if (myInvites.length) upd.invites = FV.arrayRemove(...myInvites);
+    dropInviteRole(sh, upd, roleKey);
     await sharesRef.doc(sid).update(upd);   // résolu quand le serveur a enregistré l'adhésion
     // (les écouteurs ont pu remplacer l'objet dans `shares` entre-temps : on met à jour les deux)
     for (const x of new Set([sh, shares.get(sid)].filter(Boolean))) {
       x.members = Object.assign({}, x.members, { [uid]: member }); x.memberIds = [...new Set([...(x.memberIds || []), uid])];
-      x.inviteEmails = (x.inviteEmails || []).filter(e => e !== me.email); x.invites = (x.invites || []).filter(i => i.email !== me.email);
+      x.inviteEmails = (x.inviteEmails || []).filter(e => e !== me.email); x.inviteUids = (x.inviteUids || []).filter(u => u !== uid);
+      x.invites = (x.invites || []).filter(i => !myInvites.includes(i) && i.email !== me.email && i.uid !== uid);
     }
     if (!shares.has(sid)) shares.set(sid, sh);
     reloadDocs(sid);
@@ -868,11 +1024,59 @@ window.AlixoShare = (() => {
   }
   async function decline(sid) {
     const sh = shares.get(sid); if (!sh) return;
-    const inv = (sh.invites || []).find(x => x.email === me.email);
-    const upd = { inviteEmails: FV.arrayRemove(me.email), updatedAt: now() };
-    if (inv) upd.invites = FV.arrayRemove(inv);
+    const myInvites = (sh.invites || []).filter(x => x && ((x.uid && x.uid === uid) || (x.email && x.email === me.email)));
+    const upd = { updatedAt: now() };
+    if (invitedByEmail(sh)) upd.inviteEmails = FV.arrayRemove(me.email);
+    if (invitedByUid(sh)) upd.inviteUids = FV.arrayRemove(uid);
+    if (myInvites.length) upd.invites = FV.arrayRemove(...myInvites);
+    dropInviteRole(sh, upd, invitedByUid(sh) ? uid : me.email);
     await sharesRef.doc(sid).update(upd);
     shares.delete(sid); refreshUI();
+  }
+  /* ---------------- 1.53 : lien de partage (sharelinks/{code}) ---------------- */
+  const linksRef = () => db.collection('sharelinks');
+  const CODE_RE = /^[A-Za-z0-9]{20}$/;
+  /* active (role 'read' | 'write'), change le droit ou désactive (role null) le lien d'un partage que je possède */
+  async function setLink(sid, role) {
+    const sh = shares.get(sid); if (!sh || !isOwner(sh)) throw new Error('Partage introuvable');
+    const cur = sh.link && CODE_RE.test(String(sh.link.code || '')) ? sh.link : null;
+    if (!role) {
+      if (cur) await linksRef().doc(cur.code).delete().catch(() => {});   // la fiche du lien d'abord (sa règle relit le partage)
+      await sharesRef.doc(sid).update({ link: FV.delete(), updatedAt: now() });
+      delete sh.link; const x = shares.get(sid); if (x) delete x.link;
+      log(sid, 'link', '', '', 'off');
+      return null;
+    }
+    role = safeRole(role);
+    const code = cur ? cur.code : randomCode(20);
+    const link = { code, role };
+    await sharesRef.doc(sid).update({ link, updatedAt: now() });   // le partage d'abord : la règle d'adhésion compare au code du partage
+    await linksRef().doc(code).set({ sid, title: sh.title || '', ownerPseudo: displayName(), role, createdAt: cur && cur.createdAt ? cur.createdAt : now() });
+    sh.link = link; const x = shares.get(sid); if (x) x.link = link;
+    if (!cur) log(sid, 'link', '', '', role);
+    return link;
+  }
+  const joinUrl = code => `${typeof ALIXO_WEB_URL === 'string' ? ALIXO_WEB_URL : 'https://alixoapp.com/docs/'}?join=${code}`;
+  /* quelqu'un ouvre un lien ?join=<code> ou alixo://join/<code> : lecture de la fiche du lien, confirmation, adhésion */
+  async function joinByCode(code) {
+    code = String(code || '').trim();
+    if (!CODE_RE.test(code)) { toast('Ce lien de partage n’est pas valide'); return false; }
+    let l = null;
+    try { const s = await linksRef().doc(code).get(); l = s.exists ? s.data() : null; }
+    catch (err) { console.error('Share (lien) :', err); toast(friendly(err), { duration: 7000 }); return false; }
+    if (!l || !safeId(l.sid)) { toast('Ce lien de partage n’est plus valable (le propriétaire l’a désactivé)', { duration: 6000 }); return false; }
+    const have = shares.get(l.sid);
+    if (have && (isOwner(have) || isMember(have))) { toast(isOwner(have) ? 'C’est votre propre partage' : `Vous faites déjà partie de « ${have.title} »`); openShared(l.sid); return true; }
+    const role = safeRole(l.role);
+    const okk = await confirmDialog({ title: `Rejoindre « ${String(l.title || '')} » ?`, text: `Partagé par ${l.ownerPseudo ? '@' + String(l.ownerPseudo) : 'un membre d’Alixo'} · ${role === 'write' ? 'vous pourrez consulter et modifier' : 'vous pourrez consulter'}. Votre pseudo (${displayName()}) sera visible des autres membres.`, ok: 'Rejoindre', danger: false });
+    if (!okk) return false;
+    const member = { role, name: displayName(), since: now(), via: code };
+    try { await sharesRef.doc(l.sid).update({ [`members.${uid}`]: member, memberIds: FV.arrayUnion(uid), updatedAt: now() }); }
+    catch (err) { console.error('Share (rejoindre) :', err); toast(/permission-denied/.test((err && err.code) || '') ? 'Ce lien n’est plus valable' : friendly(err), { duration: 7000 }); return false; }
+    log(l.sid, 'accept', '', '', role);
+    toast(`Vous avez rejoint « ${String(l.title || '')} »`);
+    openSharedHome();
+    return true;
   }
   async function leave(sid) {
     const sh = shares.get(sid); if (!sh) return;
@@ -900,8 +1104,10 @@ window.AlixoShare = (() => {
   /* où en est la réception d'un partage (texte court pour une carte, bloc avec « Réessayer » pour un dossier) */
   function stateText(sh) {
     const st = docsState.get(sh.id) || {};
-    return st.st === 'error' ? 'Chargement impossible — cliquez pour réessayer' : st.st === 'ready' ? 'En attente : le propriétaire doit ouvrir Alixo pour envoyer la séance' : 'Chargement…';
+    return st.st === 'error' ? 'Chargement impossible — cliquez pour réessayer' : st.st === 'ready' ? 'Pas encore reçu — le propriétaire doit ouvrir Alixo, connecté, pour l’envoyer' : 'Chargement…';
   }
+  /* 1.53 : segment affiché sur la page « Partagés avec moi » : 'received' (Reçus) | 'mine' (Mes partages) */
+  let shSeg = 'received';
   function stateHint(sh, emptyMsg) {
     const st = docsState.get(sh.id) || {};
     if (st.st === 'error') return `<div class="po-hint sh-err">Impossible de charger ce partage : ${esc(st.msg)} <button class="cta ghost small" data-sh="reload" data-sid="${esc(sh.id)}" type="button">Réessayer</button></div>`;
@@ -914,9 +1120,21 @@ window.AlixoShare = (() => {
     const received = [...shares.values()].filter(sh => isMember(sh) && !isOwner(sh));
     const mine = [...shares.values()].filter(isOwner);
     let html = '';
-    if (invites.length) html += `<div class="sh-section"><div class="sh-stitle">Invitations</div>${invites.map(sh => `<div class="sh-invite"><div class="sh-ico">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-txt"><b>${esc(sh.ownerName || sh.ownerEmail || 'Un membre')} partage ${kindThe(sh.kind)} « ${esc(sh.title || '')} »</b><span>${((sh.invites || []).find(x => x.email === me.email) || {}).role === 'write' ? 'Lecture et écriture' : 'Lecture seule'} · ${esc(sh.ownerEmail || '')}</span></div><button class="cta small" data-sh="accept" data-sid="${esc(sh.id)}">Accepter</button><button class="cta ghost small" data-sh="decline" data-sid="${esc(sh.id)}">Refuser</button></div>`).join('')}</div>`;
-    html += `<div class="sh-section"><div class="sh-stitle">Partagés avec moi</div>`;
-    if (!received.length) html += `<div class="sh-empty">Personne ne partage encore de cours avec vous.<br>Les cours, dossiers et événements que d’autres membres d’Alixo vous partagent apparaîtront ici (invitation par e-mail ou par pseudo).${profile.pseudo ? `<br><br>Votre pseudo : <b>${esc(profile.pseudo)}</b>` : '<br><br>Choisissez un pseudo dans Paramètres › Compte pour être invité plus facilement.'}</div>`;
+    /* 1.53 : invitations en bandeau (toujours visibles), puis segments « Reçus » / « Mes partages ». Le propriétaire
+       n'apparaît que par son pseudo (ownerName) — jamais son e-mail. */
+    const myInvRole = sh => (((sh.invites || []).find(x => (x.uid && x.uid === uid) || (x.email && x.email === me.email)) || {}).role === 'write' ? 'Peut modifier' : 'Peut consulter');
+    if (invites.length) html += `<div class="sh-section sh-banner">${invites.map(sh => `<div class="sh-invite"><div class="sh-ico">${esc(initial(ownerLabel(sh)))}</div><div class="sh-txt"><b>@${esc(ownerLabel(sh))} vous invite à ${kindThe(sh.kind)} « ${esc(sh.title || '')} »</b><span>${myInvRole(sh)} · ${kindLabel(sh.kind)}</span></div><button class="cta small" data-sh="accept" data-sid="${esc(sh.id)}">Accepter</button><button class="cta ghost small" data-sh="decline" data-sid="${esc(sh.id)}">Refuser</button></div>`).join('')}</div>`;
+    html += `<div class="sh-seghead"><div class="seg sh-seg" role="group" aria-label="Partages affichés"><button type="button" data-shseg="received" class="${shSeg === 'received' ? 'on' : ''}" aria-pressed="${shSeg === 'received'}">Reçus${received.length ? ` <span class="sh-count">${received.length}</span>` : ''}</button><button type="button" data-shseg="mine" class="${shSeg === 'mine' ? 'on' : ''}" aria-pressed="${shSeg === 'mine'}">Mes partages${mine.length ? ` <span class="sh-count">${mine.length}</span>` : ''}</button></div>${profile.pseudo ? `<span class="sh-mypseudo" title="Votre pseudo Alixo — modifiable dans Paramètres › Compte">Votre pseudo : <b>@${esc(profile.pseudo)}</b></span>` : ''}</div>`;
+    if (shSeg === 'mine') {
+      html += `<div class="sh-section">`;
+      if (!mine.length) html += `<div class="sh-empty">Vous ne partagez rien pour l’instant.<br>Clic droit sur une séance, un dossier ou un fichier › <b>Partager…</b> — ou le bouton Partager d’une séance ouverte.</div>`;
+      else html += `<div class="sh-mine">${mine.map(sh => { const nM = Object.keys(sh.members || {}).filter(u => u !== sh.owner).length, nI = (sh.invites || []).length, hasLink = !!(sh.link && sh.link.code); return `<div class="sh-member"><div class="sh-av" style="background:${esc(safeColor(sh.color))}">${sh.kind === 'doc' ? '📄' : sh.kind === 'folder' ? '📁' : sh.kind === 'file' ? '📎' : '📅'}</div><div class="sh-mi"><b>${esc(sh.title || '')}</b><span>${kindLabel(sh.kind)} · ${sh.org ? 'entreprise' : nM ? `${nM} personne${nM > 1 ? 's' : ''}` : 'vous seul'}${nI ? ` · ${nI} invitation${nI > 1 ? 's' : ''} en attente` : ''}${hasLink ? ' · lien actif' : ''}</span></div><button class="cta ghost small" data-sh="manage" data-sid="${esc(sh.id)}">Gérer…</button></div>`; }).join('')}</div>`;
+      html += `</div>`;
+      root.innerHTML = html;
+      return;
+    }
+    html += `<div class="sh-section">`;
+    if (!received.length) html += `<div class="sh-empty">Personne ne partage encore de cours avec vous.<br>Les séances, dossiers, fichiers et événements que d’autres membres d’Alixo vous partagent apparaîtront ici.${profile.pseudo ? `<br><br>Pour être invité, donnez votre pseudo : <b>@${esc(profile.pseudo)}</b> (ou ouvrez un lien de partage).` : ''}</div>`;
     else {
       const evs = received.filter(sh => sh.kind === 'event');
       const folders = received.filter(sh => sh.kind === 'folder');
@@ -935,25 +1153,23 @@ window.AlixoShare = (() => {
         const render = pid => fs.filter(f => (f.parentId || null) === pid).map(f => `<button class="sh-sf" data-shf="${esc(f.id)}" style="--mc:${esc(safeColor(f.couleur || sh.color))}">${f.icone ? AlixoIcons.svg(f.icone, 'ficon-ico') : FOLDER_ICON}${esc(f.nom)}</button><div style="margin-left:18px">${render(f.id)}${docsIn(f.id)}${filesIn(f.id)}</div>`).join('');
         const orphanFiles = [...fileMap.values()].filter(f => !known.has(f.folderId || null)).map(fileBtn).join('');
         const sub = render(rootId), rootLeaves = docsIn(rootId) + orphans + filesIn(rootId) + orphanFiles;
-        html += `<div class="sh-folder" style="--mc:${esc(safeColor(sh.color))}"><div class="sh-fhead">${sh.folder && sh.folder.root && sh.folder.root.icone ? AlixoIcons.svg(sh.folder.root.icone, 'ficon-ico') : FOLDER_ICON}<span>${esc(sh.title || 'Dossier')}</span><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span class="sh-sub">par ${esc(sh.ownerName || sh.ownerEmail || '')} · ${map.size} séance${map.size > 1 ? 's' : ''}${fileMap.size ? ` · ${fileMap.size} fichier${fileMap.size > 1 ? 's' : ''}` : ''}</span><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}" title="Ne plus recevoir ce partage">Quitter</button></div><div class="sh-tree">${sub}${rootLeaves}${!map.size && !fileMap.size ? stateHint(sh, 'Aucune séance ni fichier pour l’instant.') : ''}</div></div>`;
+        html += `<div class="sh-folder" style="--mc:${esc(safeColor(sh.color))}"><div class="sh-fhead">${sh.folder && sh.folder.root && sh.folder.root.icone ? AlixoIcons.svg(sh.folder.root.icone, 'ficon-ico') : FOLDER_ICON}<span>${esc(sh.title || 'Dossier')}</span><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span class="sh-sub">par ${esc(ownerLabel(sh))} · ${map.size} séance${map.size > 1 ? 's' : ''}${fileMap.size ? ` · ${fileMap.size} fichier${fileMap.size > 1 ? 's' : ''}` : ''}</span><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}" title="Ne plus recevoir ce partage">Quitter</button></div><div class="sh-tree">${sub}${rootLeaves}${!map.size && !fileMap.size ? stateHint(sh, 'Aucune séance ni fichier pour l’instant.') : ''}</div></div>`;
       }
-      if (docs.length) html += `<div class="sh-grid">${docs.map(sh => { const d = (docsBy.get(sh.id) || new Map()).get(sh.target); const first = d && (d.blocks || []).find(b => ['p', 'callout', 'quote', 'li'].includes(b.type)); const isSl = d && d.kind === 'slides', isBd = d && d.kind === 'board', isQz = d && d.kind === 'quiz', nBd = isBd ? (d.items || []).filter(it => it.t !== 'arrow').length : 0, nQz = isQz ? (d.questions || []).length : 0; return `<button class="sh-card" data-shdoc="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${isSl ? SLIDES_ICON : isBd ? BOARD_ICON : isQz ? QUIZ_ICON : ''}${esc((d && d.titre) || sh.title || 'Sans titre')}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${isSl ? `Présentation · ${(d.slides || []).length} diapositive${(d.slides || []).length > 1 ? 's' : ''}` : isBd ? `Planche · ${nBd} élément${nBd > 1 ? 's' : ''}` : isQz ? `Quiz · ${nQz} question${nQz > 1 ? 's' : ''}` : esc(first ? stripTags(first.text).slice(0, 140) : (d ? '' : stateText(sh)))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span>${d ? `<span>${fmtDate(d.updatedAt || now())}</span>` : ''}</div></button>`; }).join('')}</div>`;
+      if (docs.length) html += `<div class="sh-grid">${docs.map(sh => { const d = (docsBy.get(sh.id) || new Map()).get(sh.target); const first = d && (d.blocks || []).find(b => ['p', 'callout', 'quote', 'li'].includes(b.type)); const isSl = d && d.kind === 'slides', isBd = d && d.kind === 'board', isQz = d && d.kind === 'quiz', nBd = isBd ? (d.items || []).filter(it => it.t !== 'arrow').length : 0, nQz = isQz ? (d.questions || []).length : 0; return `<button class="sh-card" data-shdoc="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${isSl ? SLIDES_ICON : isBd ? BOARD_ICON : isQz ? QUIZ_ICON : ''}${esc((d && d.titre) || sh.title || 'Sans titre')}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${isSl ? `Présentation · ${(d.slides || []).length} diapositive${(d.slides || []).length > 1 ? 's' : ''}` : isBd ? `Planche · ${nBd} élément${nBd > 1 ? 's' : ''}` : isQz ? `Quiz · ${nQz} question${nQz > 1 ? 's' : ''}` : esc(first ? stripTags(first.text).slice(0, 140) : (d ? '' : stateText(sh)))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">${myRole(sh) === 'write' ? 'écriture' : 'lecture'}</span><span>par ${esc(ownerLabel(sh))}</span>${d ? `<span>${fmtDate(d.updatedAt || now())}</span>` : ''}</div></button>`; }).join('')}</div>`;
       const fls = received.filter(sh => sh.kind === 'file');
       if (fls.length) html += `<div class="sh-stitle" style="margin-top:14px">Fichiers partagés</div><div class="sh-grid">${fls.map(sh => {
         const f = (filesBy.get(sh.id) || new Map()).get(sh.target);
         const name = (f && f.name) || sh.title || 'Fichier';
-        return `<button class="sh-card sh-filecard" data-shfile="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${window.AlixoFiles ? AlixoFiles.iconHTML(name) : SH_ICO}${esc(name)}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${f && window.AlixoFiles ? esc(AlixoFiles.fmtSize(f.size)) : esc(stateText(sh))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">lecture</span><span>par ${esc(sh.ownerName || sh.ownerEmail || '')}</span></div></button>`;
+        return `<button class="sh-card sh-filecard" data-shfile="${esc(sh.target)}" data-sid="${esc(sh.id)}" style="--mc:${esc(safeColor(sh.color))}"><h3>${window.AlixoFiles ? AlixoFiles.iconHTML(name) : SH_ICO}${esc(name)}</h3><div class="preview" style="font-size:12.5px;color:var(--ink-2)">${f && window.AlixoFiles ? esc(AlixoFiles.fmtSize(f.size)) : esc(stateText(sh))}</div><div class="meta"><span class="sh-role ${myRole(sh)}">lecture</span><span>par ${esc(ownerLabel(sh))}</span></div></button>`;
       }).join('')}</div>`;
-      if (evs.length) html += `<div class="sh-stitle" style="margin-top:14px">Événements partagés</div>${evs.map(sh => `<div class="sh-member"><div class="sh-av">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="sh-mi"><b>${esc(sh.title || 'Événement')}</b><span>${sh.event ? esc(sh.event.date + ' · ' + sh.event.start + '–' + sh.event.end + (sh.event.lieu ? ' · ' + sh.event.lieu : '')) : ''} — par ${esc(sh.ownerName || '')}</span></div><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}">Retirer</button></div>`).join('')}`;
+      if (evs.length) html += `<div class="sh-stitle" style="margin-top:14px">Événements partagés</div>${evs.map(sh => `<div class="sh-member"><div class="sh-av">${esc(initial(ownerLabel(sh)))}</div><div class="sh-mi"><b>${esc(sh.title || 'Événement')}</b><span>${sh.event ? esc(sh.event.date + ' · ' + sh.event.start + '–' + sh.event.end + (sh.event.lieu ? ' · ' + sh.event.lieu : '')) : ''} — par ${esc(sh.ownerName || '')}</span></div><button class="cta ghost small" data-sh="leave" data-sid="${esc(sh.id)}">Retirer</button></div>`).join('')}`;
     }
-    html += `</div>`;
-    html += `<div class="sh-section"><div class="sh-stitle">Mes partages <span class="po-hint" style="margin:0; text-transform:none; letter-spacing:0; font-weight:400">— clic droit sur une séance ou un dossier › Partager…</span></div>`;
-    if (!mine.length) html += `<div class="po-hint" style="padding:0 4px">Vous ne partagez rien pour l’instant.</div>`;
-    else html += mine.map(sh => { const nM = (sh.memberIds || []).length, nI = (sh.invites || []).length; return `<div class="sh-member"><div class="sh-av" style="background:${esc(sh.color || DEFAULT_TINT)}">${sh.kind === 'doc' ? '📄' : sh.kind === 'folder' ? '📁' : sh.kind === 'file' ? '📎' : '📅'}</div><div class="sh-mi"><b>${esc(sh.title || '')}</b><span>${kindLabel(sh.kind)} · ${nM} membre${nM > 1 ? 's' : ''}${nI ? ` · ${nI} invitation${nI > 1 ? 's' : ''} en attente` : ''}</span></div><button class="cta ghost small" data-sh="manage" data-sid="${esc(sh.id)}">Gérer…</button></div>`; }).join('');
     html += `</div>`;
     root.innerHTML = html;
   }
   $('#lib-shared').addEventListener('click', async e => {
+    const seg = e.target.closest('[data-shseg]');
+    if (seg) { shSeg = seg.dataset.shseg === 'mine' ? 'mine' : 'received'; renderSharedHome(); return; }
     const act = e.target.closest('[data-sh]');
     if (act) {
       const sid = act.dataset.sid, k = act.dataset.sh;
@@ -961,7 +1177,7 @@ window.AlixoShare = (() => {
         if (k === 'accept') await accept(sid);
         else if (k === 'decline') await decline(sid);
         else if (k === 'leave') { if (await confirmDialog({ title: 'Quitter ce partage ?', text: 'Vous n’y aurez plus accès ; le propriétaire pourra vous réinviter.', ok: 'Quitter' })) await leave(sid); }
-        else if (k === 'manage') openShareManager(sid);
+        else if (k === 'manage') { const sh = shares.get(sid); if (sh) openShareDialog(sh.kind, sh.target); }
         else if (k === 'reload') { reloadDocs(sid); toast('Nouvel essai…'); }
       } catch (err) { console.error(err); toast('Action impossible : ' + friendly(err), { duration: 7000 }); }
       renderSharedHome();
@@ -1013,65 +1229,113 @@ window.AlixoShare = (() => {
     content: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>',
     log: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l3 2"/></svg>'
   };
-  const roleHelpHTML = `<div class="sh-roles"><div><b>Lecture</b><span>Consulte les séances, les présente (F5), ouvre et enregistre les fichiers, copie le tout dans sa bibliothèque.</span></div><div><b>Écriture</b><span>Modifie les séances en direct ; ses modifications sont notées dans le journal. Les fichiers restent en lecture.</span></div></div>`;
-  async function openShareFor(kind, target) {
-    const existing = mySharesOf(kind, target)[0];
-    if (existing) { openShareManager(existing.id); return; }
-    const name = kind === 'doc' ? ((state.docs.find(d => d.id === target) || {}).titre || 'Sans titre')
-      : kind === 'folder' ? (folder(target) || {}).nom
-      : kind === 'file' ? ((sharedFileSource(target) || {}).name || 'Fichier')
-      : ((state.events || []).find(e => e.id === target) || {}).title;
-    const what = kind === 'doc' ? 'cette séance'
-      : kind === 'folder' ? 'ce dossier (séances, sous-dossiers et fichiers de moins de 20 Mo)'
-      : kind === 'file' ? 'ce fichier (il s’ouvre dans leur Alixo, comme chez vous)'
-      : 'cet événement (il apparaît dans l’agenda des membres)';
-    openDialog({
-      id: 'shareov', cls: 'share-dlg', eyebrow: 'Alixo Share',
-      title: `Partager « ${esc(name || '')} »`,
-      sub: `Invitez un membre d’Alixo à ${what}. L’invitation apparaît dans son Alixo (Bibliothèque › Partagés avec moi).`,
-      body: `<div class="sh-dlg2">
-        <div class="sh-dlg-main">
-          <div class="po-label" style="margin-top:0">Inviter quelqu’un</div>
-          <div class="sh-inv"><input id="sh-who" placeholder="e-mail ou pseudo Alixo" autocomplete="off" spellcheck="false"><select id="sh-role"><option value="read">Lecture</option><option value="write">Écriture</option></select></div>
-          <div class="ai-keymsg" id="sh-msg"></div>
-          <div class="po-hint">Par <b>e-mail</b> (celui de son compte Alixo) ou par son <b>pseudo</b> (Paramètres › Compte). Si la personne n’a pas encore de compte, l’invitation l’attend à sa première connexion ; vous pourrez aussi lui envoyer l’e-mail d’invitation en un clic.</div>
-        </div>
-        <aside class="sh-dlg-side">
-          <div class="sh-how"><b>Comment ça marche</b><ol><li>Vous invitez par e-mail ou pseudo.</li><li>La personne accepte dans « Partagés avec moi ».</li><li>Elle voit vos modifications en direct ; vous gérez les droits et le contenu à tout moment.</li></ol></div>
-          ${roleHelpHTML}
-        </aside></div>`,
-      foot: `<button class="cta ghost" type="button" data-dlg-close>Annuler</button>${window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.isMod() ? '<button class="cta ghost biz-share-btn" id="sh-org" type="button" title="Tous les membres de l’entreprise le voient, en lecture">Partager à l’entreprise</button>' : ''}<button class="cta" id="sh-ok" type="button">Inviter</button>`,
-      onMount: (card, close) => {
-        const who = card.querySelector('#sh-who'), msg = card.querySelector('#sh-msg');
-        const ok = async () => {
-          const w = who.value.trim(); if (!w) { who.focus(); return; }
-          msg.textContent = 'Envoi…'; msg.className = 'ai-keymsg';
-          card.querySelector('#sh-ok').disabled = true;
-          try {
-            const sh = await createShare(kind, target);
-            const inv = await invite(sh.id, w, card.querySelector('#sh-role').value);
-            close();
-            if (inv.pending) { toast(`Demande envoyée : un modérateur de l’entreprise doit autoriser le partage avec ${inv.email}. L’invitation partira toute seule.`, { duration: 10000 }); return; }
-            openShareManager(sh.id);
-            afterInvite(sh, inv);
-          } catch (err) { console.error('Share :', err); msg.textContent = friendly(err); msg.className = 'ai-keymsg err'; card.querySelector('#sh-ok').disabled = false; }
-        };
-        card.querySelector('#sh-ok').addEventListener('click', ok);
-        who.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
-        /* 1.32 : collègues de l'entreprise (4 lettres du nom) et partage à toute l'entreprise (dirigeant, modérateurs) */
-        if (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active()) {
-          AlixoBusiness.attachSearch(who);
-          const org = card.querySelector('#sh-org');
-          if (org) org.addEventListener('click', async () => {
-            org.disabled = true; msg.textContent = 'Partage…'; msg.className = 'ai-keymsg';
-            try { const sh = await createShare(kind, target); await AlixoBusiness.shareToOrg(sh.id, true); close(); toast(`« ${sh.title} » est partagé à toute l’entreprise (lecture)`); }
-            catch (err) { msg.textContent = friendly(err); msg.className = 'ai-keymsg err'; org.disabled = false; }
+  /* 1.53 : UNE fenêtre « Partager » — personnes (rôles, retrait, invitations), champ d'ajout unique, lien de partage,
+     pied (contenu, journal, arrêt). Le partage n'est créé qu'à la première action (invitation, lien, entreprise) : tant
+     qu'il n'existe pas, la fenêtre montre un partage « virtuel » (id null). Réutilisée tant qu'elle est ouverte sur la
+     même cible : la liste se rafraîchit sans clignoter. `openShareFor` reste un alias (appels existants). */
+  function openShareDialog(kind, target) {
+    const key = kind + ':' + target;
+    const cur = () => mySharesOf(kind, target)[0] || null;
+    const virt = () => { const v = { id: null, owner: uid, kind, target, title: '', color: '', members: {}, invites: [] }; v.title = titleOf(v); v.color = colorOf(v); return v; };
+    const sh = cur() || virt();
+    const biz = () => (window.AlixoBusiness && AlixoBusiness.enabled ? AlixoBusiness : null);
+    const ctx = { uid, me: displayName(), webUrl: typeof ALIXO_WEB_URL === 'string' ? ALIXO_WEB_URL : undefined, pushErr: sh.id ? pushErr.get(sh.id) : '', canOrg: !!(biz() && AlixoBusiness.isMod()) };
+    const sub = kind === 'doc' ? 'Les personnes ajoutées voient cette séance en direct dans leur Alixo (« Partagés avec moi »).'
+      : kind === 'folder' ? 'Séances, sous-dossiers et fichiers de moins de 20 Mo de ce dossier, en direct dans leur Alixo.'
+      : kind === 'file' ? 'Le fichier s’ouvre dans leur Alixo, comme chez vous.'
+      : 'L’événement apparaît dans l’agenda des personnes ajoutées.';
+    let ov = $('#shareov');
+    const fresh = !(ov && ov.dataset.mode === 'share' && ov.dataset.key === key);
+    if (fresh) {
+      ov = openDialog({
+        id: 'shareov', cls: 'share-dlg', eyebrow: 'Alixo Share', title: '', sub, body: '', foot: ' ',   // pied rempli juste après (openDialog ne le crée que s'il est non vide)
+        onMount: (card, close) => {
+          const refresh = (text, isErr) => { ov._shMsg = text ? { text, err: !!isErr } : null; openShareDialog(kind, target); };
+          const msgEl = () => card.querySelector('#sh-msg');
+          const say = (text, isErr) => { const m = msgEl(); if (m) { m.textContent = text; m.className = 'ai-keymsg' + (isErr ? ' err' : ''); } };
+          const err = e => { console.error('Share :', e); say(friendly(e), true); };
+          /* le partage existe-t-il déjà ? sinon on le crée maintenant (première invitation, premier lien) */
+          const ensure = async () => cur() || createShare(kind, target);
+          const add = async () => {
+            const who = card.querySelector('#sh-who'); const w = who ? who.value.trim() : ''; if (!w) { if (who) who.focus(); return; }
+            const b = card.querySelector('#sh-add'); if (b) b.disabled = true;
+            say('Envoi…');
+            try {
+              const s = await ensure();
+              const inv = await invite(s.id, w, card.querySelector('#sh-role').value);
+              if (inv.pending) { refresh(`Demande envoyée : un modérateur de l’entreprise doit autoriser le partage avec ${inv.email}. L’invitation partira toute seule.`); return; }
+              /* un seul message, selon le chemin : pseudo (toujours visible dans « Partagés avec moi ») ou e-mail */
+              if (inv.uid) refresh(`Invitation envoyée à @${inv.pseudo || inv.name} — elle apparaîtra dans son espace « Partagés avec moi ».`);
+              else if (inv.mailed && serverQueued.has(inv)) refresh(`Invitation enregistrée pour ${inv.email} ; un e-mail part si cette adresse a un compte Alixo. Sinon, « Renvoyer l’invitation » pour la prévenir.`);
+              else if (inv.mailed) refresh(`Invitation et e-mail envoyés à ${inv.email}.`);
+              else refresh(`Invitation enregistrée pour ${inv.email}. Aucun e-mail n’est parti : « Renvoyer l’invitation » ouvre un message prêt à envoyer.`);
+            } catch (x) { err(x); if (b) b.disabled = false; }
+          };
+          card.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'sh-who') { e.preventDefault(); add(); } });
+          card.addEventListener('change', async e => {
+            const r = e.target.closest('[data-role]');
+            if (r) { const s = cur(); if (!s) return; try { await setRole(s.id, r.dataset.role, r.value); toast('Droit mis à jour'); } catch (x) { err(x); } return; }
+            if (e.target.id === 'sh-link-role') { const s = cur(); if (!s) return; try { await setLink(s.id, e.target.value); toast('Droit du lien mis à jour'); refresh(); } catch (x) { err(x); } return; }
+            if (e.target.id === 'sh-link-on') {
+              const on = e.target.checked; e.target.disabled = true;
+              try {
+                if (on) { const s = await ensure(); await setLink(s.id, 'read'); refresh('Lien activé — copiez-le pour l’envoyer.'); }
+                else { const s = cur(); if (s) await setLink(s.id, null); refresh('Lien désactivé : il ne permet plus de rejoindre ce partage.'); }
+              } catch (x) { err(x); e.target.disabled = false; e.target.checked = !on; }
+            }
+          });
+          card.addEventListener('click', async e => {
+            if (e.target.closest('#sh-add')) { add(); return; }
+            const s = cur();
+            const rm = e.target.closest('[data-rm]');
+            if (rm && s) { try { await removeMember(s.id, rm.dataset.rm); refresh('Accès retiré.'); } catch (x) { err(x); } return; }
+            const ca = e.target.closest('[data-cancel]');
+            if (ca && s) {
+              const k = ca.dataset.cancel; const inv = (s.invites || []).find(x => (k.startsWith('u:') ? x.uid === k.slice(2) : x.email === k.slice(2)));
+              if (inv) { try { await cancelInvite(s.id, inv); refresh('Invitation annulée.'); } catch (x) { err(x); } }
+              return;
+            }
+            const rs = e.target.closest('[data-resend]');
+            if (rs && s) {
+              const inv = (s.invites || []).find(x => x.email === rs.dataset.resend); if (!inv) return;
+              showPopover(`<h4>Renvoyer l’invitation</h4><div class="po-hint" style="margin:0 0 8px">Un message prêt à envoyer à ${esc(inv.email)}.</div><div class="sh-resend"><button data-how="gmail" type="button">Brouillon Gmail</button><button data-how="mailto" type="button">Application de messagerie</button><button data-how="copy" type="button">Copier le message</button></div>`, rs.getBoundingClientRect(), pop => {
+                pop.addEventListener('click', ev => { const b = ev.target.closest('[data-how]'); if (!b) return; hidePopover(); openMail(cur() || s, inv, b.dataset.how); });
+              });
+              return;
+            }
+            if (e.target.closest('#sh-link-copy') && s && s.link && s.link.code) {
+              try { await navigator.clipboard.writeText(joinUrl(s.link.code)); toast('Lien de partage copié'); } catch { toast('Copie impossible'); }
+              return;
+            }
+            if (e.target.closest('#sh-content') && s) { openShareManager(s.id, 'content'); return; }
+            if (e.target.closest('#sh-log') && s) { openShareManager(s.id, 'log'); return; }
+            if (e.target.closest('#sh-stop') && s) {
+              if (await confirmDialog({ title: `Arrêter le partage de « ${s.title} » ?`, text: 'Les personnes n’y auront plus accès et le lien ne fonctionnera plus. Vos cours restent intacts.', ok: 'Arrêter' })) { close(); await deleteShare(s.id); if (!currentDocId) renderLibrary(); }
+              return;
+            }
+            /* 1.32 : partage à toute l'entreprise (dirigeant, modérateurs) */
+            if (e.target.closest('#sh-org')) {
+              const org = e.target.closest('#sh-org'); org.disabled = true; say('Partage…');
+              try { const x = await ensure(); await AlixoBusiness.shareToOrg(x.id, true); refresh(`« ${x.title} » est partagé à toute l’entreprise (lecture).`); }
+              catch (x) { err(x); org.disabled = false; }
+            }
           });
         }
-        setTimeout(() => who.focus(), 60);
-      }
-    });
+      });
+      ov.dataset.mode = 'share'; ov.dataset.key = key;
+    }
+    const r = shareDialogHTML(sh, ctx);
+    ov.querySelector('.set-htitle').innerHTML = `Partager « ${esc(sh.title || '')} »<span class="dlg-chip">${esc(r.chip)}</span>`;
+    const body = ov.querySelector('.dlg-body');
+    const keepScroll = fresh ? 0 : body.scrollTop;
+    body.innerHTML = r.body; body.scrollTop = keepScroll;
+    ov.querySelector('.dlg-foot').innerHTML = r.foot;
+    if (ov._shMsg) { const m = body.querySelector('#sh-msg'); if (m) { m.textContent = ov._shMsg.text; m.className = 'ai-keymsg' + (ov._shMsg.err ? ' err' : ''); } ov._shMsg = null; }
+    /* 1.32 : collègues de l'entreprise (4 lettres du nom) */
+    if (biz() && AlixoBusiness.active()) { const w0 = body.querySelector('#sh-who'); if (w0) AlixoBusiness.attachSearch(w0); }
+    if (fresh) setTimeout(() => { const w = ov.querySelector('#sh-who'); if (w) w.focus(); }, 80);
   }
+  const openShareFor = openShareDialog;
   /* l'invitation est enregistrée : si aucun envoi automatique n'est configuré, on propose le brouillon d'e-mail */
   function afterInvite(sh, inv) {
     const who = inv.name || inv.email;
@@ -1081,23 +1345,9 @@ window.AlixoShare = (() => {
     if (inv.mailed) { toast(`Invitation et e-mail envoyés à ${who}`); return; }
     toast(`Invitation enregistrée pour ${who}. Aucun e-mail n’est parti : prévenez cette personne vous-même.`, Object.assign({ duration: 12000 }, write));
   }
-  /* gestionnaire de partage : fenêtre à onglets Membres / Contenu / Journal ; réutilisée (pas recréée)
-     tant qu'elle est ouverte sur le même partage, pour que la liste se rafraîchisse sans clignoter */
+  /* gestionnaire de partage : fenêtre à onglets Contenu / Journal (1.53 : les personnes sont dans openShareDialog, que
+     l'entrée « Personnes » de la navigation rouvre) ; réutilisée (pas recréée) tant qu'elle est ouverte sur le même partage */
   function shareTabHTML(sh, tab) {
-    const sid = sh.id;
-    const members = Object.entries(sh.members || {});
-    const invites = sh.invites || [];
-    if (tab === 'members') {
-      return `<div class="po-label" style="margin-top:0">Membres${members.length ? ` <span class="dlg-chip">${members.length}</span>` : ''}</div>
-        <div class="sh-members">${members.map(([u, m]) => `<div class="sh-member"><div class="sh-av">${esc(initial(m.name || m.email))}</div><div class="sh-mi"><b>${esc(m.name || m.email)}</b><span>${esc(m.email || '')}</span></div><select data-role="${esc(u)}"><option value="read" ${m.role !== 'write' ? 'selected' : ''}>Lecture</option><option value="write" ${m.role === 'write' ? 'selected' : ''}>Écriture</option></select><button class="sh-rm" data-rm="${esc(u)}" title="Retirer l’accès">✕</button></div>`).join('')}
-        ${invites.map(inv => `<div class="sh-member pending"><div class="sh-av" style="opacity:.5">${esc(initial(inv.name || inv.email))}</div><div class="sh-mi"><b>${esc(inv.name || inv.email)}</b><span>Invitation en attente · ${inv.role === 'write' ? 'écriture' : 'lecture'} · ${esc(inv.email)}</span></div><button class="sh-mailbtn" data-mail="gmail" data-to="${esc(inv.email)}" title="Ouvrir un brouillon Gmail prêt à envoyer">Gmail</button><button class="sh-mailbtn" data-mail="mailto" data-to="${esc(inv.email)}" title="Ouvrir un brouillon dans l’application de messagerie de l’ordinateur">E-mail</button><button class="sh-rm" data-cancel="${esc(inv.email)}" title="Annuler l’invitation">✕</button></div>`).join('')}
-        ${invites.length ? `<div class="po-hint" style="margin-top:4px">${MAIL.webhook || MAIL.extension ? 'L’e-mail d’invitation part automatiquement. Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.' : serverMail() ? 'Si la personne a déjà un compte Alixo, elle reçoit un e-mail et retrouve l’invitation dans Bibliothèque › Partagés avec moi. Sinon, prévenez-la avec <b>Gmail</b> ou <b>E-mail</b>.' : 'L’invitation apparaît déjà dans l’Alixo de la personne (Bibliothèque › Partagés avec moi). Pour la prévenir vous-même : <b>Gmail</b> ou <b>E-mail</b> ouvre un message prêt à envoyer.'}</div>` : ''}
-        ${!members.length && !invites.length ? '<div class="po-hint">Personne pour l’instant : invitez quelqu’un ci-dessous.</div>' : ''}</div>
-        <div class="po-label">Inviter</div>
-        <div class="sh-inv"><input id="sh-who" placeholder="e-mail ou pseudo Alixo" autocomplete="off" spellcheck="false"><select id="sh-role"><option value="read">Lecture</option><option value="write">Écriture</option></select><button class="pobtn" id="sh-add" type="button">Inviter</button></div>
-        <div class="ai-keymsg${pushErr.get(sid) ? ' err' : ''}" id="sh-msg">${pushErr.get(sid) ? 'Envoi des séances impossible : ' + esc(pushErr.get(sid)) : ''}</div>
-        <div class="sh-link">Lien d’invitation (version PC) : <code>alixo://share/${sh.id}</code> <button class="cta ghost small" id="sh-copy" type="button">Copier le message d’invitation</button></div>`;
-    }
     if (tab === 'content') {
       if (sh.kind !== 'folder') return `<div class="po-label" style="margin-top:0">Contenu</div><div class="po-hint">Ce partage porte sur ${sh.kind === 'doc' ? 'une seule séance' : sh.kind === 'file' ? 'un seul fichier' : 'un événement'} : rien à choisir ici.</div>`;
       const excluded = new Set(sh.excluded || []);
@@ -1121,43 +1371,29 @@ window.AlixoShare = (() => {
   }
   async function openShareManager(sid, tab = 'members') {
     const sh = shares.get(sid); if (!sh) return;
+    /* 1.53 : les personnes se gèrent dans la fenêtre « Partager » (ancien onglet Membres, et appels existants) */
+    if (tab === 'members') { openShareDialog(sh.kind, sh.target); return; }
     let ov = $('#shareov');
     const fresh = !(ov && ov.dataset.mode === 'manage' && ov.dataset.sid === sid);
     if (fresh) {
       ov = openDialog({
         id: 'shareov', cls: 'share-dlg wide', eyebrow: 'Alixo Share',
         title: `${esc(sh.title || '')}<span class="dlg-chip">${kindLabel(sh.kind)}</span>`,
-        sub: 'Membres et invitations, contenu partagé, journal des consultations et des modifications.',
-        nav: `<div class="set-navtitle">Partage</div>${['members', 'content', 'log'].map(t => `<button type="button" class="set-navbtn" data-tab="${t}">${SH_NAV_ICO[t]}<span>${{ members: 'Membres', content: 'Contenu', log: 'Journal' }[t]}</span></button>`).join('')}`,
+        sub: 'Contenu partagé et journal des consultations et des modifications.',
+        nav: `<div class="set-navtitle">Partage</div>${['members', 'content', 'log'].map(t => `<button type="button" class="set-navbtn" data-tab="${t}">${SH_NAV_ICO[t]}<span>${{ members: 'Personnes', content: 'Contenu', log: 'Journal' }[t]}</span></button>`).join('')}`,
         body: '',
         foot: `<button class="cta ghost ev-danger" id="sh-stop" type="button">Arrêter le partage</button><span class="dlg-spacer"></span><button class="cta" type="button" data-dlg-close>Fermer</button>`,
         onMount: (card, close) => {
           const cur = () => shares.get(sid) || sh;
-          const msgEl = () => card.querySelector('#sh-msg');
-          const err = e => { console.error('Share :', e); const msg = msgEl(); if (msg) { msg.textContent = friendly(e); msg.className = 'ai-keymsg err'; } else toast(friendly(e), { duration: 7000 }); };
+          const err = e => { console.error('Share :', e); toast(friendly(e), { duration: 7000 }); };
           card.querySelector('.dlg-nav').addEventListener('click', e => { const t = e.target.closest('[data-tab]'); if (t) openShareManager(sid, t.dataset.tab); });
           card.querySelector('#sh-stop').addEventListener('click', async () => {
-            if (await confirmDialog({ title: `Arrêter le partage de « ${cur().title} » ?`, text: 'Les membres n’y auront plus accès. Vos cours restent intacts.', ok: 'Arrêter' })) { close(); await deleteShare(sid); if (!currentDocId) renderLibrary(); }
+            if (await confirmDialog({ title: `Arrêter le partage de « ${cur().title} » ?`, text: 'Les personnes n’y auront plus accès et le lien ne fonctionnera plus. Vos cours restent intacts.', ok: 'Arrêter' })) { close(); await deleteShare(sid); if (!currentDocId) renderLibrary(); }
           });
           card.addEventListener('change', async e => {
-            const r = e.target.closest('[data-role]'); if (r) { try { await setRole(sid, r.dataset.role, r.value); toast('Droits mis à jour'); } catch (x) { err(x); } return; }
             const inc = e.target.closest('[data-inc]');
             if (inc) { const ex = new Set(cur().excluded || []); if (inc.checked) ex.delete(inc.dataset.inc); else ex.add(inc.dataset.inc); try { await setExcluded(sid, [...ex]); openShareManager(sid, 'content'); } catch (x) { err(x); } }
           });
-          card.addEventListener('click', async e => {
-            const rm = e.target.closest('[data-rm]'); if (rm) { try { await removeMember(sid, rm.dataset.rm); toast('Accès retiré'); openShareManager(sid); } catch (x) { err(x); } return; }
-            const ca = e.target.closest('[data-cancel]'); if (ca) { const inv = (cur().invites || []).find(x => x.email === ca.dataset.cancel); if (inv) { try { await cancelInvite(sid, inv); openShareManager(sid); } catch (x) { err(x); } } return; }
-            const mb = e.target.closest('[data-mail]');
-            if (mb) { const inv = (cur().invites || []).find(x => x.email === mb.dataset.to); if (inv) openMail(cur(), inv, mb.dataset.mail); return; }
-            if (e.target.closest('#sh-copy')) { const m = inviteMessage(cur(), { email: '', name: '', role: 'read' }); try { await navigator.clipboard.writeText(m.subject + '\n\n' + m.text); toast('Message d’invitation copié'); } catch { toast('Copie impossible'); } return; }
-            if (e.target.closest('#sh-add')) {
-              const who = card.querySelector('#sh-who'); const w = who ? who.value.trim() : ''; if (!w) { if (who) who.focus(); return; }
-              const msg = msgEl(); if (msg) { msg.textContent = 'Envoi…'; msg.className = 'ai-keymsg'; }
-              try { const inv = await invite(sid, w, card.querySelector('#sh-role').value); openShareManager(sid); if (inv.pending) toast(`Demande envoyée : un modérateur de l’entreprise doit autoriser le partage avec ${inv.email}.`, { duration: 10000 }); else afterInvite(cur(), inv); } catch (x) { err(x); }
-            }
-          });
-          card.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target.id === 'sh-who') { e.preventDefault(); const b = card.querySelector('#sh-add'); if (b) b.click(); } });
-          if (window.AlixoBusiness && AlixoBusiness.enabled && AlixoBusiness.active()) { const w0 = card.querySelector('#sh-who'); if (w0) AlixoBusiness.attachSearch(w0); }
         }
       });
       ov.dataset.mode = 'manage'; ov.dataset.sid = sid;
@@ -1173,12 +1409,11 @@ window.AlixoShare = (() => {
     if (tab === 'log') {
       sharesRef.doc(sid).collection('log').orderBy('ts', 'desc').limit(80).get().then(q => {
         const box = ov.querySelector('#sh-log'); if (!box) return;
-        const A = { accept: 'a rejoint le partage', edit: 'a modifié', open: 'a consulté', leave: 'a quitté le partage', role: 'droits modifiés', file: 'a partagé le fichier' };
+        const A = { accept: 'a rejoint le partage', edit: 'a modifié', open: 'a consulté', leave: 'a quitté le partage', role: 'droits modifiés', file: 'a partagé le fichier', link: 'lien de partage' };
         const rows = []; q.forEach(s => rows.push(s.data()));
         box.innerHTML = rows.length ? rows.map(r => `<div><span class="sh-lt">${esc(fmtWhen(r.ts))}</span><span><b>${esc(r.name || '')}</b> ${esc(A[r.action] || r.action)}${r.title ? ` « ${esc(r.title)} »` : ''}${r.detail ? ` (${esc(r.detail)})` : ''}</span></div>`).join('') : '<div class="po-hint">Aucune activité pour l’instant : les consultations et modifications des membres apparaîtront ici.</div>';
       }).catch(e => { const box = ov.querySelector('#sh-log'); if (box) box.innerHTML = `<div class="po-hint">Journal indisponible : ${esc(e.message || e)}</div>`; });
     }
-    if (fresh && tab === 'members') setTimeout(() => { const w = ov.querySelector('#sh-who'); if (w && !(sh.members && Object.keys(sh.members).length)) w.focus(); }, 80);
   }
   /* séance reçue : informations et sortie */
   function openInfo(id) {
@@ -1188,7 +1423,7 @@ window.AlixoShare = (() => {
       id: 'shareov', cls: 'share-dlg narrow', eyebrow: 'Alixo Share',
       title: `${sh.kind === 'folder' ? 'Dossier partagé' : 'Séance partagée'}<span class="dlg-chip">${write ? 'lecture et écriture' : 'lecture seule'}</span>`,
       sub: sh.kind === 'folder' ? `Dossier « ${esc(sh.title)} » partagé avec vous.` : 'Séance partagée avec vous.',
-      body: `<div class="sh-ownercard"><div class="po-avatar">${esc(initial(sh.ownerName || sh.ownerEmail))}</div><div class="po-accinfo"><div class="po-accname">${esc(sh.ownerName || '')}</div><div class="po-accmail">${esc(sh.ownerEmail || '')}</div><div class="po-accsync">Propriétaire du partage</div></div></div>
+      body: `<div class="sh-ownercard"><div class="po-avatar">${esc(initial(ownerLabel(sh)))}</div><div class="po-accinfo"><div class="po-accname">@${esc(ownerLabel(sh) || 'membre')}</div><div class="po-accsync">Propriétaire du partage · ${Object.keys(sh.members || {}).length} membre${Object.keys(sh.members || {}).length > 1 ? 's' : ''}</div></div></div>
         <div class="po-hint">${write ? 'Vos modifications sont envoyées au propriétaire en direct et notées dans son journal.' : 'Vous consultez la dernière version du propriétaire ; il peut vous donner le droit d’écriture.'} « Copier dans mes cours » en fait une copie indépendante dans votre bibliothèque.</div>`,
       foot: `<button class="cta ghost ev-danger" id="sh-leave" type="button">Quitter le partage</button><span class="dlg-spacer"></span><button class="cta ghost" id="sh-copy2" type="button">Copier dans mes cours</button><button class="cta" type="button" data-dlg-close>Fermer</button>`,
       onMount: (card, close) => {
@@ -1200,6 +1435,9 @@ window.AlixoShare = (() => {
 
   /* ---------------- lien profond alixo://share/{sid} ---------------- */
   function handleDeepLink(url) {
+    /* 1.53 : alixo://join/<code> — adhésion par lien de partage */
+    const j = String(url || '').match(/join\/([A-Za-z0-9]{20})/);
+    if (j) { joinByCode(j[1]); return; }
     const m = String(url || '').match(/share\/([A-Za-z0-9_-]+)/);
     if (!m) return;
     openSharedHome();
@@ -1211,14 +1449,22 @@ window.AlixoShare = (() => {
   /* ---------------- démarrage ---------------- */
   (async () => {
     await loadProfile();
-    if (!profile.pseudo) saveProfile();
+    /* 1.53 : tout compte a un pseudo — tiré au sort au premier démarrage (message unique), sinon annuaire nettoyé si besoin */
+    if (!profile.pseudo) {
+      try {
+        const p = await ensurePseudo();
+        toast(`Votre pseudo Alixo : ${p} — c’est ce que voient les autres membres. Modifiable dans Paramètres › Compte.`, { duration: 10000 });
+      } catch (err) { console.error('Share (pseudo) :', err); saveProfile(); }
+    } else migrateHandle();
     ready = true;
     start();
     setTimeout(push, 2500);
   })();
 
-  return { enabled: true, docById, sharedDocs, canWrite, infoFor, tintFor, labelFor, onLocalSave: schedulePush, invites: () => [...shares.values()].filter(sh => isInvited(sh) && !isMember(sh)), pendingCount, renderSharedHome, openShareFor, openShareManager, openInfo, setPseudo, pseudo: () => profile.pseudo, noteOpened, leaveEvent, mySharesOf, copyToLibrary, fetchImage, eventDeleted, accessFor, sharedFolders, sharedDocsAlone, sharedFolderView, setPresence, peersFor, colorFor, me: () => me,
+  return { enabled: true, docById, sharedDocs, canWrite, infoFor, tintFor, labelFor, onLocalSave: schedulePush, invites: () => [...shares.values()].filter(sh => isInvited(sh) && !isMember(sh)), pendingCount, renderSharedHome, openShareFor, openShareDialog, openShareManager, openInfo, setPseudo, pseudo: () => profile.pseudo, ensurePseudo, noteOpened, leaveEvent, mySharesOf, copyToLibrary, fetchImage, eventDeleted, accessFor, sharedFolders, sharedDocsAlone, sharedFolderView, setPresence, peersFor, colorFor, me: () => me,
     sharedFilesIn, sharedFileById, shareMeta, fetchFile, openSharedFile,
+    /* 1.53 : lien de partage, pseudo aléatoire, rendu pur de la boîte (tests) */
+    setLink, joinByCode, randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN },
     /* 1.32 : Alixo Business */
     setOrg, orgShares, openShared, inviteDirect: (sid, who, role) => invite(sid, who, role, { direct: true }), afterInvite: (sid, inv) => { const sh = shares.get(sid); if (sh) afterInvite(sh, inv); } };
 })();

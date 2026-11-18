@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.52.1';
+const ALIXO_VERSION = '1.53.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1078,9 +1078,13 @@ function renderLibrary() {
   document.documentElement.style.setProperty('--tint', cur ? folderTint(cur.id) : defaultTint());
 
   // agenda (vue mois) ou partages à la place de la grille
-  document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo');
+  document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo' || libMode === 'workspace');
   renderAgendaNav();
   const lnS = $('#ln-shared'); if (lnS) lnS.classList.toggle('active', libMode === 'shared' && !currentDocId);
+  /* 1.53 : Workspace (js/workspace.js) — dépôts publics de séances ; le conteneur #lib-workspace n'est visible que dans ce mode */
+  const lnW = $('#ln-workspace'); if (lnW) lnW.classList.toggle('active', libMode === 'workspace' && !currentDocId);
+  const lw = $('#lib-workspace'); if (lw) lw.hidden = libMode !== 'workspace';
+  if (libMode === 'workspace') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-galaxy').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; const ltw = $('#lib-todo'); if (ltw) ltw.hidden = true; $('#lib-title').textContent = 'Workspace'; $('#lib-path').innerHTML = '<span>Cours déposés par les membres</span>'; if (window.AlixoWorkspace) AlixoWorkspace.render(); else if (lw) lw.innerHTML = '<div class="sh-empty">Connectez-vous pour accéder au Workspace.</div>'; return; }
   const lnT = $('#ln-todo'); if (lnT) lnT.classList.toggle('active', libMode === 'todo' && !currentDocId);
   const lt = $('#lib-todo');
   $('#lib-galaxy').hidden = true;
@@ -1985,7 +1989,9 @@ const CM_ICO = {
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
   zip: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-  share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>'
+  share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
+  /* 1.53 : même dessin que le bouton latéral « Workspace » (dossier avec un +) */
+  ws: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 14h8M12 10v8"/></svg>'
 };
 
 function placeCtxMenu(menu, x, y) {
@@ -2009,6 +2015,7 @@ function openDocCtxMenu(x, y, did, srcEl) {
     <button data-cm="ddup">${CM_ICO.dup}Dupliquer</button>
     <button data-cm="dalx" title="Fichier .alx : se rouvre dans Alixo (sur un autre ordinateur, par e-mail, en double-cliquant sur la version PC)">${CM_ICO.share}Exporter (.alx)</button>
     <button data-cm="dshare">${CM_ICO.share}Partager…</button>
+    <button data-cm="dws" title="Workspace : rendre cette séance disponible à tous les membres d’Alixo (retirable à tout moment)">${CM_ICO.ws}Déposer dans le Workspace…</button>
     <button data-cm="ddelete" class="danger">${CM_ICO.trash}Supprimer</button>`;
   menu.dataset.fid = ''; menu.dataset.did = did; menu.dataset.tbl = ''; menu.dataset.img = '';
   placeCtxMenu(menu, x, y);
@@ -2548,6 +2555,7 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'ddup') duplicateDoc(d.id);
     if (cm === 'dalx' && window.AlixoAlx) AlixoAlx.exportDoc(d.id);
     if (cm === 'dshare') openShare('doc', d.id);
+    if (cm === 'dws' && window.AlixoWorkspace) AlixoWorkspace.openPublish(d.id);   // 1.53
     if (cm === 'ddelete') deleteDoc(d.id);
     return;
   }
@@ -2924,10 +2932,10 @@ function accountSectionHTML() {
       </div>
       <div class="po-label">Stockage</div>
       <div class="acc-card"><div id="po-storage" class="po-hint" style="margin:0">Calcul de l’espace utilisé…</div></div>
-      <div class="po-label">Pseudo Alixo (Alixo Share)</div>
+      <div class="po-label">Pseudo Alixo</div>
       <div class="acc-card acc-pseudo">
-        <div class="po-row"><input id="po-pseudo" placeholder="Ex. fayze_droit" maxlength="24" autocomplete="off" spellcheck="false" value="${esc(pseudo)}"><button class="pobtn" id="po-pseudo-ok" type="button">Enregistrer</button></div>
-        <div class="po-hint" style="margin-bottom:0">Vos amis peuvent vous inviter à un cours partagé avec ce pseudo au lieu de votre e-mail.${pseudo ? ` Le vôtre : <b>@${esc(pseudo)}</b>.` : ''}</div>
+        <div class="po-row"><input id="po-pseudo" placeholder="Ex. RenardLucide42" maxlength="24" autocomplete="off" spellcheck="false" value="${esc(pseudo)}"><button class="pobtn" id="po-pseudo-ok" type="button">Enregistrer</button><button class="cta ghost small" id="po-pseudo-rand" type="button" title="Tirer un nouveau pseudo au sort">Un autre au hasard</button></div>
+        <div class="po-hint" style="margin-bottom:0">${pseudo ? `Votre pseudo : <b>@${esc(pseudo)}</b>. ` : ''}C’est ce que voient les autres membres d’Alixo à la place de votre nom et de votre e-mail : dans les partages (personnes, journal, lien), dans le Workspace (dépôts, commentaires) et dans les invitations. Il a été tiré au sort ; vous pouvez le changer quand vous voulez (3 à 24 caractères). Évitez d’y mettre votre vrai nom. Les personnes qui le connaissent peuvent vous inviter ; seuls les administrateurs d’Alixo peuvent le relier à votre compte. Les dépôts et commentaires déjà publiés gardent le pseudo du moment.</div>
       </div>`;
   }
   return `<div class="po-label">Compte</div>
@@ -3662,7 +3670,7 @@ function applyDocFont() {
   if (pagesActive()) schedulePaginate(true);
 }
 const SET_CATS = [
-  { k: 'compte', name: 'Compte', sub: 'Connexion, profil, stockage, pseudo Alixo Share' },
+  { k: 'compte', name: 'Compte', sub: 'Connexion, profil, stockage, pseudo Alixo' },
   { k: 'plus', name: 'Alixo+', sub: 'Votre formule, clé d’activation' },
   { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fenêtres, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Police, plan du cours et remplacements automatiques' },
@@ -3807,6 +3815,12 @@ function settingsSectionHTML(k) {
         ${APP_THEMES.map(t => `<button type="button" class="set-tile ${theme === t.k ? 'on' : ''} ${themeLocked(t.k) ? 'locked' : ''}" data-theme="${t.k}"><span class="set-tile-prev set-skin ${t.k === 'auto' ? 'th-auto' : ''}" style="--p0:${t.c[0]};--p1:${t.c[1]};--p2:${t.c[2]};--p3:${t.c[3]}"><i></i><i></i><i></i><em></em></span><b>${t.name}${themeLocked(t.k) ? plusBadge() : ''}</b><span>${t.sub}</span></button>`).join('')}
       </div>${isPlus() ? '' : `<div class="po-hint">Clair, sombre et automatique sont gratuits ; les autres thèmes font partie d’<b>Alixo+</b> (Paramètres › Alixo+).</div>`}
       <div class="set-checks" id="set-themebtn" style="margin-top:12px"><label><input type="checkbox" role="switch" data-set="showThemeBtn" ${state.settings.showThemeBtn ? 'checked' : ''}><span><b>Bouton clair / sombre dans la barre du haut</b><small>Le soleil à droite de la barre, pour basculer d’un clic entre le thème clair et le thème sombre.</small></span></label></div></div>
+    <div class="set-sect"><div class="po-label">Couleurs des encadrés</div>
+      <div class="po-hint" style="margin:0 0 10px">La couleur de chaque type d’encadré, dans les cours comme à l’impression et dans les exports. La nuance pour le thème sombre en est déduite.</div>
+      <div class="set-callouts" id="set-callouts">
+        ${Object.keys(CALLOUTS).filter(k => specAllowed(CALLOUTS[k].spec)).map(k => `<label class="set-callout${state.settings.calloutColors && state.settings.calloutColors[k] ? ' changed" title="Couleur modifiée' : ''}"><span class="set-cprev" style="--cc:${calloutColor(k)}">${AlixoIcons.svg(CALLOUTS[k].ico)}<b>${CALLOUTS[k].name}</b></span><input type="color" value="${calloutColor(k)}" data-ct="${k}" aria-label="Couleur de l’encadré ${esc(CALLOUTS[k].name)}"></label>`).join('')}
+      </div>
+      <div class="po-row" style="margin-top:10px; align-items:center; gap:10px"><button type="button" id="set-callouts-reset" class="cta ghost small">Réinitialiser</button><span class="po-hint" style="margin:0">Couleurs d’origine pour tous les encadrés.</span></div></div>
     <div class="set-sect"><div class="po-label">Affichage de la bibliothèque</div>
       <div class="set-tiles set-tiles4" id="set-view">
         ${[['grid', 'Grille', 'Dossiers en cartes, séances en liste'], ['list', 'Liste', 'Dossiers et séances en lignes'], ['tree', 'Arbre', 'Arborescence reliée, façon Obsidian'], ['galaxy', 'Galaxie', 'Dossiers et séances qui flottent, liens animés']].map(([v, l, h]) => `<button type="button" class="set-tile ${view === v ? 'on' : ''}" data-view="${v}"><span class="set-tile-prev vw-${v}"><i></i><i></i><i></i><i></i></span><b>${l}</b><span>${h}</span></button>`).join('')}
@@ -3888,7 +3902,14 @@ function bindSettingsSection(k, root) {
     const wk = root.querySelector('#po-weekly');
     if (wk) wk.addEventListener('click', () => { closeSettings(); if (window.AlixoStats) AlixoStats.open(true); });
     const pseudoOk = root.querySelector('#po-pseudo-ok');
-    if (pseudoOk) { const go = () => { if (window.AlixoShare && AlixoShare.enabled) AlixoShare.setPseudo(root.querySelector('#po-pseudo').value); else toast('Connexion requise'); }; pseudoOk.addEventListener('click', go); root.querySelector('#po-pseudo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(); } }); }
+    if (pseudoOk) {
+      /* 1.53 : un pseudo existe toujours ; champ vide ou bouton « Un autre au hasard » → nouveau tirage, puis la carte se rafraîchit */
+      const go = async v => { if (!(window.AlixoShare && AlixoShare.enabled)) { toast('Connexion requise'); return; } const okp = await AlixoShare.setPseudo(v); if (okp && $('#setov') && !$('#setov').hidden && settingsCat === 'compte') renderSettingsBody(); };
+      pseudoOk.addEventListener('click', () => go(root.querySelector('#po-pseudo').value));
+      root.querySelector('#po-pseudo').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); go(e.target.value); } });
+      const rand = root.querySelector('#po-pseudo-rand');
+      if (rand) rand.addEventListener('click', () => { rand.disabled = true; go('').finally(() => { rand.disabled = false; }); });
+    }
     const editProfil = root.querySelector('#po-editprofil');
     if (editProfil) editProfil.addEventListener('click', () => openProfileModal(editProfil));   // 1.51 : fenêtre dédiée, par-dessus les Paramètres
     const login = root.querySelector('#po-login');
@@ -3911,6 +3932,29 @@ function bindSettingsSection(k, root) {
       root.querySelectorAll('#set-theme .set-tile').forEach(t => t.classList.toggle('on', t === b));
     });
     root.querySelector('#set-themebtn').addEventListener('change', e => { if (e.target.dataset.set !== 'showThemeBtn') return; state.settings.showThemeBtn = e.target.checked; save(); applyTheme(); });
+    /* 1.53 : couleurs des encadrés — un sélecteur par type visible ; la valeur par défaut n'est pas stockée */
+    const sc = root.querySelector('#set-callouts');
+    if (sc) {
+      /* marque « modifiée » sur la tuile d'un encadré dont la couleur n'est plus celle d'origine */
+      const markChanged = inp => { const cc = state.settings.calloutColors || {}, on = !!cc[inp.dataset.ct]; inp.parentElement.classList.toggle('changed', on); inp.parentElement.title = on ? 'Couleur modifiée' : ''; };
+      const refreshPrev = () => sc.querySelectorAll('input[type="color"][data-ct]').forEach(inp => { inp.value = calloutColor(inp.dataset.ct); const prev = inp.parentElement.querySelector('.set-cprev'); if (prev) prev.style.setProperty('--cc', calloutColor(inp.dataset.ct)); markChanged(inp); });
+      sc.addEventListener('input', e => {
+        const inp = e.target.closest('input[type="color"][data-ct]'); if (!inp) return;
+        const ct = inp.dataset.ct, v = String(inp.value || '').toLowerCase();
+        if (!ownOf(DEFAULT_CALLOUT_COLORS, ct) || !HEX6.test(v)) return;
+        const cc = state.settings.calloutColors && typeof state.settings.calloutColors === 'object' ? state.settings.calloutColors : {};
+        if (v === DEFAULT_CALLOUT_COLORS[ct][0]) delete cc[ct]; else cc[ct] = v;
+        if (Object.keys(cc).length) state.settings.calloutColors = cc; else delete state.settings.calloutColors;
+        save(); applyCalloutColors();
+        const prev = inp.parentElement.querySelector('.set-cprev'); if (prev) prev.style.setProperty('--cc', v);
+        markChanged(inp);
+      });
+      root.querySelector('#set-callouts-reset').addEventListener('click', () => {
+        if (!state.settings.calloutColors) { toast('Les encadrés ont déjà leurs couleurs d’origine'); return; }
+        delete state.settings.calloutColors; save(); applyCalloutColors(); refreshPrev();
+        toast('Couleurs d’origine des encadrés rétablies');
+      });
+    }
     /* 1.45 : une fenêtre par document (js/solo.js) */
     if (root.querySelector('#set-windows')) root.querySelector('#set-windows').addEventListener('change', e => { if (e.target.dataset.set !== 'windowPerDoc') return; state.settings.windowPerDoc = e.target.checked; save(); if (window.AlixoSolo) AlixoSolo.applySetting(); });
     root.querySelector('#set-view').addEventListener('click', e => {
@@ -4209,6 +4253,46 @@ const CALLOUTS = {
   mnemo: Object.assign({ spec: 'sante' }, AlixoMed.CALLOUTS.mnemo),
   objectifs: Object.assign({ spec: 'sante' }, AlixoMed.CALLOUTS.objectifs)
 };
+/* 1.53 — couleur des encadrés : [clair, sombre] par type (mêmes valeurs que les replis de styles.css ; Santé : js/med.js).
+   Réglable dans Paramètres › Apparence : state.settings.calloutColors = { type: '#rrggbb' } (seules les clés modifiées sont stockées) ;
+   la variante sombre d'une couleur choisie est dérivée (éclaircie jusqu'à rester lisible sur la feuille sombre). */
+const DEFAULT_CALLOUT_COLORS = {
+  definition: ['#3d6bb5', '#7fa4dc'], arret: ['#8c4351', '#c98795'], controverse: ['#7a6852', '#b3a186'], retenir: ['#b3762a', '#d3a05e'],
+  exemple: ['#2e8b6a', '#5cb896'], bilan: ['#2e8b8b', '#5cc0c0'],
+  drapeau: [AlixoMed.CALLOUTS.drapeau.color, AlixoMed.CALLOUTS.drapeau.dark], reflexe: [AlixoMed.CALLOUTS.reflexe.color, AlixoMed.CALLOUTS.reflexe.dark],
+  mnemo: [AlixoMed.CALLOUTS.mnemo.color, AlixoMed.CALLOUTS.mnemo.dark], objectifs: [AlixoMed.CALLOUTS.objectifs.color, AlixoMed.CALLOUTS.objectifs.dark]
+};
+const HEX6 = /^#[0-9a-f]{6}$/i;
+/* couleur choisie par l'utilisateur pour un type d'encadré (validée #rrggbb), sinon '' */
+function customCalloutColor(ct) {
+  const cc = state.settings.calloutColors;
+  const v = cc && typeof cc === 'object' && Object.prototype.hasOwnProperty.call(cc, ct) ? cc[ct] : '';
+  return typeof v === 'string' && HEX6.test(v) ? v.toLowerCase() : '';
+}
+/* variante lisible sur la feuille sombre : même calcul que la frise (js/timeline.js) ; à défaut, éclaircie de 35 % vers le blanc */
+function lightenForDark(hex) {
+  if (window.AlixoTimeline && typeof AlixoTimeline.readable === 'function') { const r = AlixoTimeline.readable(hex, 'dark'); if (HEX6.test(r)) return r; }
+  const v = [1, 3, 5].map(i => Math.round(parseInt(hex.slice(i, i + 2), 16) * 0.65 + 255 * 0.35));
+  return '#' + v.map(x => Math.min(255, x).toString(16).padStart(2, '0')).join('');
+}
+/* couleur d'un type d'encadré (clair ou sombre) : réglage de l'utilisateur ou défaut */
+function calloutColor(ct, dark) {
+  const def = ownOf(DEFAULT_CALLOUT_COLORS, ct) || DEFAULT_CALLOUT_COLORS.retenir;
+  const own = customCalloutColor(ct);
+  if (!own) return def[dark ? 1 : 0];
+  return dark ? lightenForDark(own) : own;
+}
+/* pose --cc-<type> / --cc-<type>-dark sur <html> pour les types personnalisés (styles.css les lit avec un repli) ; retire les autres */
+function applyCalloutColors() {
+  const st = document.documentElement.style;
+  for (const ct of Object.keys(DEFAULT_CALLOUT_COLORS)) {
+    const own = customCalloutColor(ct);
+    if (own) { st.setProperty('--cc-' + ct, own); st.setProperty('--cc-' + ct + '-dark', lightenForDark(own)); }
+    else { st.removeProperty('--cc-' + ct); st.removeProperty('--cc-' + ct + '-dark'); }
+    /* encadrés Santé déjà affichés : leur couleur est posée en style inline au rendu (voir renderBlocks) */
+    if (CALLOUTS[ct] && CALLOUTS[ct].color) $$(`#blocks .block.callout[data-ct="${ct}"]`).forEach(el => { el.style.setProperty('--cc-light', calloutColor(ct)); el.style.setProperty('--cc-dark', calloutColor(ct, true)); });
+  }
+}
 /* 1.18 — fiches Commerce & marketing et STAPS : même mécanique que les fiches Santé (js/med.js) */
 Object.assign(AlixoMed.FICHES, {
   swot: { name: 'Analyse SWOT', ico: 'target', color: '#d4692a', head: 'Entreprise, marque ou projet', spec: 'commerce',
@@ -4389,7 +4473,8 @@ function blockHTML(b, numMap) {
       return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite${b.cite ? '' : ' is-blank'}" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
     case 'callout': {
       const c = ownOf(CALLOUTS, b.ct) || CALLOUTS.retenir;
-      const style = c.color ? ` style="--cc-light:${c.color}; --cc-dark:${c.dark || c.color}"` : '';
+      const ct = ownOf(CALLOUTS, b.ct) ? b.ct : 'retenir';
+      const style = c.color ? ` style="--cc-light:${calloutColor(ct)}; --cc-dark:${calloutColor(ct, true)}"` : '';   // 1.53 : encadrés Santé — couleur réglable (Paramètres › Apparence)
       return `<div class="block callout${alClass(b)}" data-id="${b.id}" data-ct="${esc(b.ct)}"${style}><span class="cico" contenteditable="false">${AlixoIcons.svg(c.ico)}</span><div class="ctitle" contenteditable="false">${c.name}${c.sub ? `<span class="csub">${c.sub}</span>` : ''}</div><div class="btxt" data-ph="${b.ct === 'bilan' || b.ct === 'objectifs' ? 'Points clés… (« - » en début de ligne pour une puce)' : 'Contenu de l’encadré…'}">${b.text || '<br>'}</div></div>`;
     }
     case 'draw':
@@ -4719,7 +4804,9 @@ function focusBlock(id, pos = 'end', key) {
   if (!el) return;
   let target = null;
   if (key) target = findField(el, key);
-  if (!target) target = el.querySelector('.btxt, .fsrc, .jref, .tcell, figcaption, .mcalc-in input, .score-items input, .score-items select');
+  /* 1.53 : les champs des cartes, de l'arbre et de la frise (FIELD_SEL) sont ciblés comme les autres — le bloc entier n'est plus
+     marqué « objsel » (contour bleu) à chaque rendu quand on y écrit */
+  if (!target) target = el.querySelector(FIELD_SEL + ', .fsrc, .mcalc-in input, .score-items input, .score-items select');
   if (target && (target.tagName === 'INPUT' || target.tagName === 'SELECT') && !target.classList.contains('fsrc')) { selectObj(id); return; }
   if (!target) { selectObj(id); return; }
   focusField(target, pos);
@@ -5133,6 +5220,11 @@ document.addEventListener('selectionchange', () => {
     lastBlockId = bl.dataset.id; lastAnchorBlock = lastBlockId;
     const sel = getSelection();
     if (objSel && objSel !== bl.dataset.id && sel.rangeCount && sel.isCollapsed) clearObjSel();
+    /* 1.53 : le curseur est posé dans un champ du bloc sélectionné (cartes, frise, arbre) : on y écrit, la marque de sélection s'efface */
+    else if (objSel && objSel === bl.dataset.id && sel.rangeCount && sel.isCollapsed && /\b(cards|timeline|tree)\b/.test(bl.className)) {
+      const n = sel.focusNode && (sel.focusNode.nodeType === 3 ? sel.focusNode.parentElement : sel.focusNode);
+      if (n && n.closest && n.closest(FIELD_SEL)) clearObjSel();
+    }
   }
   markCurrent();
   updateToolbarState();
@@ -9240,8 +9332,11 @@ $('#lib-agenda').addEventListener('dblclick', e => {
 $('#ln-agenda').addEventListener('click', () => openAgendaHome());
 function openSharedHome() { libMode = 'shared'; if (currentDocId) showLibrary(); else renderLibrary(); }
 function openTodoHome() { if (!requirePlus('taches')) return; libMode = 'todo'; if (currentDocId) showLibrary(); else renderLibrary(); }
+/* 1.53 : Workspace — dépôts publics (js/workspace.js) */
+function openWorkspaceHome() { libMode = 'workspace'; if (currentDocId) showLibrary(); else renderLibrary(); }
 const lnTodo = $('#ln-todo'); if (lnTodo) lnTodo.addEventListener('click', openTodoHome);
 $('#ln-shared').addEventListener('click', openSharedHome);
+const lnWs = $('#ln-workspace'); if (lnWs) lnWs.addEventListener('click', openWorkspaceHome);
 /* partager une séance, un dossier ou un événement (propriétaire) */
 function openShare(kind, id) {
   if (!window.AlixoShare || !AlixoShare.enabled) { toast('Alixo Share nécessite un compte : Paramètres › Compte › Se connecter'); return; }
@@ -10853,6 +10948,7 @@ function applyTheme() {
     else html.dataset.theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
   applyDocFont();
+  applyCalloutColors();   // 1.53 : couleurs des encadrés choisies dans Paramètres › Apparence
   setWindowBg();
   if (window.AlixoGalaxy && AlixoGalaxy.onTheme) AlixoGalaxy.onTheme();
   if (window.AlixoWidgets) AlixoWidgets.publish();
@@ -13074,7 +13170,7 @@ window.AlixoApp = {
   exportPDF: () => { if (!currentDocId) return false; exportPDF(); return true; },
   version: ALIXO_VERSION,
   showWhatsNew,
-  openTodoHome, openSharedHome, openDoc, openSettings,
+  openTodoHome, openSharedHome, openWorkspaceHome, openDoc, openSettings,
   /* Alixo+ (1.16) et fenêtres centrales : utilisés par js/cloudconfig.js, js/share.js, js/files.js, js/todo.js */
   isPlus, setPlan, setPlusOffer, setBillingOffer, setBilling, openPlusDialog, requirePlus, storageAllows, openDialog, closeDialog,
   storageUsage, ageGroup,   /* 1.26 : tailles et tranche d'âge envoyées par js/cloudconfig.js au panneau admin */
@@ -13082,6 +13178,7 @@ window.AlixoApp = {
   mergeRemoteDoc, renderAccess, onPresence: () => { renderAccess(); renderPeers(); if (!currentDocId && (libMode === 'docs' || libMode === 'shfolder')) renderLibrary(); },
   showLibrary: () => { showLibrary(); return true; },
   /* 1.29 : exposés pour les tests automatisés (scripts Playwright) — pas une API pour les modules */
+  calloutColor,   /* 1.53 : couleur d'un type d'encadré (réglage ou défaut) — js/nest.js, js/export.js */
   currentDoc: doc, createDoc: createDocIn, renderBlocks, focusBlock, specAllowed, applyPagesMode, openMathPanel,
   edit: cocoEdit,   // 1.52 : façade d'édition de la séance pour Coco (js/cocotools.js)
   /* 1.38 : documents .alx du disque (js/alx.js) */
@@ -13209,11 +13306,17 @@ setTimeout(() => {
     if (new URLSearchParams(location.search).has('plus')) { settingsCat = 'plus'; openSettings(); }
     /* bouton « Voir l'invitation » de l'e-mail de partage (serveur de paiement) : …/docs/?partages → Bibliothèque › Partagés avec moi */
     else if (new URLSearchParams(location.search).has('partages')) openSharedHome();
+    /* 1.53 : lien de partage …/docs/?join=<code> (ou alixo://join/<code>, traité par share.js) → proposition de rejoindre */
+    else if (new URLSearchParams(location.search).get('join')) {
+      const code = new URLSearchParams(location.search).get('join');
+      if (window.AlixoShare && AlixoShare.enabled) AlixoShare.joinByCode(code);
+      else toast('Connectez-vous à votre compte Alixo pour rejoindre ce partage (Paramètres › Compte)', { duration: 8000 });
+    }
     const prev = state.settings.lastVersion;
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Coco modifie vos cours à la demande (corriger, mettre en forme, compléter), import de fichiers depuis le téléphone par QR code, styles enregistrés, bloc bouton de lien, minuteurs et agenda redessinés.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le Workspace : déposez vos séances et profitez de celles des autres (étoiles, commentaires) ; un pseudo attribué à chacun ; une boîte de partage unique avec lien de partage ; la couleur des encadrés dans Paramètres › Apparence ; cartes et frise sans contour bleu ni espace vide.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

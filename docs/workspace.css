@@ -1,0 +1,99 @@
+/* ============================================================
+   Alixo Workspace (1.53) — espace « Workspace » de la bibliothèque (js/workspace.js) : en-tête (tri, filtres,
+   recherche, dépôt), grille de cartes (réutilise .sh-grid / .sh-card de styles.css), fiche d'un dépôt, formulaires.
+   ============================================================ */
+#lib-workspace { flex: 1; overflow-y: auto; padding: 4px 2px 30px; }
+.ln-workspace svg { width: 18px; height: 18px; flex: none; color: var(--ink-2); }
+
+/* ---- en-tête ---- */
+.ws-head { margin-bottom: 18px; }
+.ws-tools { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.ws-tools .seg.ws-seg { margin-right: 0; flex: none; display: inline-flex; }
+.ws-tools .seg.ws-seg button { width: auto; min-width: 0; height: 34px; padding: 0 12px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.ws-tools select { font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); padding: 7px 9px; outline: none; max-width: 220px; }
+.ws-tools select:focus-visible { border-color: var(--tint); }
+.ws-q { flex: 1; min-width: 180px; font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); padding: 7px 10px; outline: none; }
+.ws-q:focus-visible { border-color: var(--tint); }
+.ws-post { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.ws-post svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ws-intro { margin: 10px 4px 0; }
+
+/* ---- cartes ---- */
+.ws-card .preview { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; min-height: 1.45em; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.ws-card .ws-by { font-weight: 600; color: var(--ink-2); }
+.ws-counts { margin-left: auto; display: inline-flex; gap: 10px; }
+.ws-counts i { font-style: normal; display: inline-flex; align-items: center; gap: 3px; font-weight: 600; }
+.ws-counts svg, .ws-star svg, .ws-info svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ws-state { position: absolute; top: 10px; right: 10px; font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 2px 8px; }
+.ws-state.ws-hidden { color: var(--danger); }
+.ws-more { text-align: center; margin-top: 16px; }
+.ws-empty { padding: 36px 20px; }
+.ws-off b { color: var(--ink); }
+
+/* ---- mes dépôts ---- */
+.ws-mine .sh-av svg { width: 15px; height: 15px; fill: none; stroke: #fff; stroke-width: 1.8; }
+.ws-mine .ws-mrow .cta.small { flex: none; }
+
+/* ---- fiche d'un dépôt ---- */
+.ws-detail { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr); gap: 26px; align-items: start; }
+.ws-desc { font-size: 14px; line-height: 1.55; white-space: pre-wrap; word-break: break-word; margin: 0 0 14px; }
+.ws-desc.muted { color: var(--ink-3); font-style: italic; }
+.ws-ptext { font-size: 13px; color: var(--ink-2); line-height: 1.5; padding: 10px 12px; border-left: 3px solid var(--tint); background: var(--tint-soft); border-radius: 0 var(--r) var(--r) 0; word-break: break-word; }
+.ws-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 4px; }
+.ws-tag { font-size: 12px; font-weight: 600; color: var(--ink-2); background: var(--hover); border-radius: 999px; padding: 3px 10px; }
+.ws-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 4px; }
+.ws-actions .cta { display: inline-flex; align-items: center; gap: 7px; }
+.ws-actions .cta svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.ws-star.on { color: #c98316; border-color: #c98316; }
+.ws-star.on svg { fill: #c98316; stroke: #c98316; }
+.ws-comments { margin-top: 18px; }
+.ws-clist { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.ws-c { border: 1px solid var(--border); border-radius: var(--r); padding: 8px 12px; font-size: 13px; }
+.ws-c.hidden { opacity: .55; border-style: dashed; }
+.ws-chead { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: var(--ink-3); margin-bottom: 3px; }
+.ws-chead b { color: var(--ink); font-size: 12.5px; }
+.ws-clink { margin-left: auto; font-size: 11.5px; color: var(--ink-3); text-decoration: underline; }
+.ws-clink + .ws-clink { margin-left: 0; }
+.ws-clink:hover { color: var(--danger); }
+.ws-ctext { line-height: 1.5; white-space: pre-wrap; word-break: break-word; }
+.ws-cadd { display: flex; gap: 8px; align-items: center; }
+.ws-cadd input { flex: 1; font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; outline: none; }
+.ws-cadd input:focus-visible { border-color: var(--tint); }
+.ws-dside { display: flex; flex-direction: column; gap: 10px; }
+.ws-info { display: flex; flex-direction: column; gap: 2px; font-size: 13px; padding: 8px 12px; border: 1px solid var(--border); border-radius: var(--r); }
+.ws-info b { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); font-weight: 700; }
+.ws-info.ws-warn { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); color: var(--danger); }
+.ws-legal { margin: 4px 0 0; line-height: 1.45; }
+
+/* ---- formulaires (dépôt, signalement) ---- */
+.ws-form { display: flex; flex-direction: column; gap: 12px; }
+.ws-f { display: flex; flex-direction: column; gap: 5px; font-size: 13px; }
+.ws-f > span { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); }
+.ws-f input, .ws-f select, .ws-f textarea { font: inherit; font-size: 13.5px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: var(--r); padding: 8px 10px; outline: none; width: 100%; resize: vertical; }
+.ws-f input:focus-visible, .ws-f select:focus-visible, .ws-f textarea:focus-visible { border-color: var(--tint); }
+.ws-f2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ws-mention { line-height: 1.5; }
+.ws-mention b { color: var(--ink); }
+.ws-mention a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.ws-accept { margin-top: 0; }
+.ws-accept input { margin-top: 2px; flex: none; }
+.ws-busy .ws-form { opacity: .75; }
+.ws-rquote { margin-bottom: 2px; }
+
+/* ---- 1.53.0 : accessibilité et détails de revue ---- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.ws-counts i:first-child { color: #c98316; }
+.ws-quota { margin-left: 8px; font-size: 12px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--ink-3); }
+.ws-stats span { font-weight: 600; color: var(--ink-2); }
+.ws-off-act { margin-top: 14px; }
+.ws-off-act .cta { display: inline-flex; }
+
+@media (max-width: 760px) {
+  .ws-detail { grid-template-columns: 1fr; }
+  .ws-f2 { grid-template-columns: 1fr; }
+  .ws-tools select { max-width: none; flex: 1; }
+}
+@media (max-width: 480px) {
+  .ws-tools .seg.ws-seg { width: 100%; }
+  .ws-tools .seg.ws-seg button { flex: 1; }
+}

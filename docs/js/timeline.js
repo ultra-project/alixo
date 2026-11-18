@@ -220,5 +220,5 @@ window.AlixoTimeline = (() => {
     }, true);
   }
 
-  return { blockHTML, syncFromDom, plain, act, focus, init, eventsOf, safeEvents, safeTitle, safe, hexColor, isEmptyEvent, newEvent, PH };
+  return { blockHTML, syncFromDom, plain, act, focus, init, eventsOf, safeEvents, safeTitle, safe, hexColor, readable, isEmptyEvent, newEvent, PH };   // 1.53 : readable réutilisé par les couleurs d'encadrés (app.js)
 })();

@@ -112,6 +112,7 @@
       <div class="nav-label">Accès</div>
       <button data-view="codes"><svg class="ic"><use href="#i-ticket"/></svg><span>Clés Alixo+</span></button>
       <button data-view="orgs"><svg class="ic"><use href="#i-building"/></svg><span>Entreprises</span><b class="nav-badge" id="nav-orgs" hidden></b></button>
+      <button data-view="workspace"><svg class="ic"><use href="#i-doc"/></svg><span>Workspace</span><b class="nav-badge" id="nav-ws" hidden></b></button>
       <button data-view="keys"><svg class="ic"><use href="#i-spark"/></svg><span>Accès IA</span></button>
       <div class="nav-label">Système</div>
       <button data-view="db"><svg class="ic"><use href="#i-db"/></svg><span>Base de données</span></button>
@@ -252,6 +253,15 @@
         <div class="card"><div class="chead"><div class="ctitle"><span class="cic"><svg class="ic"><use href="#i-doc"/></svg></span><h3>Versions personnalisées (codées dans le code source)</h3></div></div>
           <p class="muted small">Ces clés ne sont pas dans la base : elles sont écrites dans <code>app/js/editions.js</code> (code, nom, note, actif). Saisies dans l’application, elles activent la version personnalisée correspondante (toutes les fonctions ouvertes, nom affiché dans les Paramètres). Pour en ajouter ou en retirer, modifiez ce fichier puis publiez une nouvelle version.</p>
           <div class="table-card flat"><table id="editions-tbl" class="rtable"><thead><tr><th>Clé</th><th>Nom</th><th>Note</th><th>Statut</th></tr></thead><tbody></tbody></table></div></div>
+      </section>
+
+      <!-- Workspace (1.53) : dépôts publics de séances — modération minimale -->
+      <section id="v-workspace" class="view" hidden>
+        <div class="phead">
+          <div><h1>Workspace <span class="count" id="ws-count"></span></h1><p class="sub">Séances déposées par les membres : signalements, masquage, suppression.</p></div>
+        </div>
+        <p class="intro">Les dépôts les plus signalés apparaissent en premier. <b>Masquer</b> retire un dépôt de l’espace public sans l’effacer (l’auteur le voit toujours dans « Mes dépôts ») ; <b>Supprimer</b> efface la fiche et son archive. Un dépôt signalé trois fois est masqué automatiquement par l’application.</p>
+        <div class="card table-card"><table id="ws-tbl" class="rtable"><thead><tr><th>Titre</th><th>Auteur</th><th class="num">Signal.</th><th class="num">Téléch.</th><th class="num">Étoiles</th><th>Statut</th><th>Déposé</th><th aria-label="Actions"></th></tr></thead><tbody></tbody></table></div>
       </section>
 
       <!-- entreprises (Alixo Business, 1.32) -->

@@ -17,6 +17,7 @@ window.AlixoNotify = (() => {
   const KIND = {
     update: { label: 'Mise à jour', ico: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>', color: '#33658a' },
     share: { label: 'Alixo Share', ico: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>', color: '#2f7d68' },
+    workspace: { label: 'Workspace', ico: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 14h8M12 10v8"/></svg>', color: '#5a6fb8' },   // 1.53 : commentaires et masquages de mes dépôts
     admin: { label: 'Alixo', ico: '<svg viewBox="0 0 24 24"><path d="M4 5h16v11H8l-4 4Z"/><path d="M8 9h8M8 12h5"/></svg>', color: '#b3762a' },
     message: { label: 'Message de l’administrateur', ico: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>', color: '#8a4b9c' },
     key: { label: 'Intelligence artificielle', ico: '<svg viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M15 8l2 2M18 5l2 2"/></svg>', color: '#7a6852' },
@@ -56,6 +57,7 @@ window.AlixoNotify = (() => {
     try {
       if (a.type === 'shared') AlixoApp.openSharedHome();
       else if (a.type === 'todo') AlixoApp.openTodoHome();
+      else if (a.type === 'workspace') { if (window.AlixoWorkspace && a.wid) AlixoWorkspace.openItem(a.wid); else AlixoApp.openWorkspaceHome(); }   // 1.53 : fiche d'un dépôt
       else if (a.type === 'doc' && a.id) AlixoApp.openDoc(a.id);
       else if (a.type === 'settings') AlixoApp.openSettings(a.cat || undefined);
       else if (a.type === 'msg' && a.msg) { if (window.AlixoCloud && AlixoCloud.showMessage) AlixoCloud.showMessage(a.id, a.msg); }

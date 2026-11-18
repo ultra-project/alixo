@@ -459,7 +459,6 @@ body.split #toolbar > *, body.pane #toolbar > * { flex: none; }
   background: var(--tint);
 }
 .block.drop-before::before { top: -3px; } .block.drop-after::after { bottom: -3px; }
-.block.blocksel { outline: 2px solid var(--tint); outline-offset: 2px; background: var(--tint-soft); }
 
 /* Paragraphe / texte */
 .block.p .btxt { font-family: var(--font-serif); font-size: 16.5px; line-height: 1.62; color: var(--ink); padding: 3px 0; }
@@ -499,16 +498,18 @@ html[data-theme="dark"] .block.callout { background: color-mix(in srgb, var(--cc
 .block.callout .cico svg { width: 15px; height: 15px; }
 .block.callout .ctitle { font-family: var(--font-ui); font-size: 11.5px; line-height: 15px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--cc-label); padding-left: 22px; margin-bottom: 4px; user-select: none; }
 .block.callout .btxt { font-family: var(--font-serif); font-size: 15.5px; line-height: 1.55; }
-.block.callout[data-ct="definition"]  { --cc: #3d6bb5; }
-.block.callout[data-ct="arret"]       { --cc: #8c4351; }
-.block.callout[data-ct="controverse"] { --cc: #7a6852; }
-.block.callout[data-ct="retenir"]     { --cc: #b3762a; }
-.block.callout[data-ct="exemple"]     { --cc: #2e8b6a; }
-html[data-theme="dark"] .block.callout[data-ct="definition"]  { --cc: #7fa4dc; }
-html[data-theme="dark"] .block.callout[data-ct="arret"]       { --cc: #c98795; }
-html[data-theme="dark"] .block.callout[data-ct="controverse"] { --cc: #b3a186; }
-html[data-theme="dark"] .block.callout[data-ct="retenir"]     { --cc: #d3a05e; }
-html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: #5cb896; }
+/* 1.53 : --cc-<type> / --cc-<type>-dark sont posées sur <html> par app.js (applyCalloutColors) quand l'utilisateur a choisi une
+   couleur dans Paramètres › Apparence ; sinon les replis ci-dessous (mêmes valeurs que DEFAULT_CALLOUT_COLORS) */
+.block.callout[data-ct="definition"]  { --cc: var(--cc-definition, #3d6bb5); }
+.block.callout[data-ct="arret"]       { --cc: var(--cc-arret, #8c4351); }
+.block.callout[data-ct="controverse"] { --cc: var(--cc-controverse, #7a6852); }
+.block.callout[data-ct="retenir"]     { --cc: var(--cc-retenir, #b3762a); }
+.block.callout[data-ct="exemple"]     { --cc: var(--cc-exemple, #2e8b6a); }
+html[data-theme="dark"] .block.callout[data-ct="definition"]  { --cc: var(--cc-definition-dark, #7fa4dc); }
+html[data-theme="dark"] .block.callout[data-ct="arret"]       { --cc: var(--cc-arret-dark, #c98795); }
+html[data-theme="dark"] .block.callout[data-ct="controverse"] { --cc: var(--cc-controverse-dark, #b3a186); }
+html[data-theme="dark"] .block.callout[data-ct="retenir"]     { --cc: var(--cc-retenir-dark, #d3a05e); }
+html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: var(--cc-exemple-dark, #5cb896); }
 
 /* Fiche d'arrêt */
 .block.juris {
@@ -936,11 +937,11 @@ body.mode-editor .tbtn.only-editor { display: grid; }
     --ink: #1a1a1a; --ink-2: #46494e; --ink-3: #85898f; --hover: transparent;
     --c-demand: #b0483f; --c-supply: #2f7d68; --c-third: #3d6bb5;
   }
-  html[data-theme="dark"] .block.callout[data-ct="definition"]  { --cc: #3d6bb5; }
-  html[data-theme="dark"] .block.callout[data-ct="arret"]       { --cc: #8c4351; }
-  html[data-theme="dark"] .block.callout[data-ct="controverse"] { --cc: #7a6852; }
-  html[data-theme="dark"] .block.callout[data-ct="retenir"]     { --cc: #b3762a; }
-  html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: #2e8b6a; }
+  html[data-theme="dark"] .block.callout[data-ct="definition"]  { --cc: var(--cc-definition, #3d6bb5); }
+  html[data-theme="dark"] .block.callout[data-ct="arret"]       { --cc: var(--cc-arret, #8c4351); }
+  html[data-theme="dark"] .block.callout[data-ct="controverse"] { --cc: var(--cc-controverse, #7a6852); }
+  html[data-theme="dark"] .block.callout[data-ct="retenir"]     { --cc: var(--cc-retenir, #b3762a); }
+  html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: var(--cc-exemple, #2e8b6a); }
   /* imprimer les fonds et couleurs (encadrés, surlignages, graphiques) */
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   @page { size: A4; margin: 18mm 16mm; }
@@ -955,7 +956,6 @@ body.mode-editor .tbtn.only-editor { display: grid; }
   /* neutralise le décalage dû aux volets ouverts (plan / palette maths) */
   #view-editor.plan-open #docwrap, #view-editor.math-open #docwrap { padding: 0; }
   #doc { box-shadow: none; border: none; width: auto; max-width: none; padding: 0; border-radius: 0; min-height: 0; }
-  .block.blocksel { outline: none; background: transparent; }
   /* sommaire en tête du document, sans saut de page forcé (un cours d'une page tenait sur deux) */
   #print-summary { display: block; padding: 0 0 18px; margin-bottom: 22px; border-bottom: 1px solid #c9ccd1; }
   #print-summary:empty { display: none; }
@@ -1214,7 +1214,7 @@ html[data-theme="dark"] #save-status[data-st="saving"] { --ss: #ff9f43; }
 }
 .tbl-tools::-webkit-scrollbar { display: none; }
 @keyframes ttpop { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-.block.table:focus-within .tbl-tools, .block.table.blocksel .tbl-tools { display: flex; }
+.block.table:focus-within .tbl-tools, .block.table.objsel .tbl-tools { display: flex; }
 /* premier bloc du cours (ou d'une page) : rien au-dessus, la barre passe sous le tableau */
 #blocks > .block.table:first-child .tbl-tools, .block.table.pg-first .tbl-tools { bottom: auto; top: calc(100% + 5px); }
 .tbl-tools .tt-grp { display: inline-flex; align-items: center; gap: 1px; }
@@ -1542,8 +1542,30 @@ body.printing #blocks [data-ph]::before, body.printing #blocks .jref::before, bo
 .card-item .cd-t { font-family: var(--font-ui); font-weight: 700; font-size: 13.5px; color: var(--ink); outline: none; min-height: 1.3em; position: relative; }
 .card-item .cd-x { font-size: 14px; line-height: 1.45; color: var(--ink-2); outline: none; min-height: 1.4em; flex: 1; position: relative; }
 .card-item .cd-t.is-blank::before, .card-item .cd-x.is-blank::before { content: attr(data-ph); position: absolute; left: 0; top: 0; color: var(--ink-3); opacity: .5; pointer-events: none; white-space: nowrap; }
-.cards-tools { display: flex; gap: 4px; margin-top: 6px; opacity: 0; transition: opacity .15s; }
-.block.cards:hover .cards-tools, .block.cards:focus-within .cards-tools { opacity: 1; }
+/* 1.53 : barres d'outils des blocs objets (cartes, frise, arbre, graphique, table des matières) — superposées sous le bloc, hors du
+   flux, sur le modèle de .tbl-tools : plus d'espace vide réservé sous chaque bloc. Affichées au survol, pendant la saisie
+   (focus-within : Tab y mène toujours ; cartes : .cur, leurs champs vivent dans la zone éditable du cours) ou quand le bloc
+   est sélectionné (Échap). Les blocs sont déjà position: relative. */
+.cards-tools, .tml-tools, .tree-tools, .chart-tools, .toc-tools {
+  position: absolute; left: 0; top: calc(100% + 4px); z-index: 30; display: none; align-items: center; gap: 4px; margin: 0;
+  padding: 3px; max-width: 100%; white-space: nowrap; font-size: 12px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(10px) saturate(1.3); -webkit-backdrop-filter: blur(10px) saturate(1.3);
+  border: 1px solid var(--border); border-radius: 11px; box-shadow: 0 8px 24px rgba(0, 0, 0, .14), 0 1px 3px rgba(0, 0, 0, .08);
+  font-family: var(--font-ui); user-select: none; animation: ttpop .14s ease-out;
+}
+/* pendant la saisie (curseur dans une carte, souris ailleurs) : la barre passe au-dessus du bloc, comme .tbl-tools, pour ne pas
+   recouvrir la première ligne du bloc suivant ; au survol elle reste sous le bloc. Premier bloc du cours ou d'une page : rien au-dessus. */
+.block.cards.cur:not(:hover) > .cards-tools { top: auto; bottom: calc(100% + 4px); left: auto; right: 0; }
+#blocks > .block.cards.cur:first-child:not(:hover) > .cards-tools, .block.cards.cur.pg-first:not(:hover) > .cards-tools { bottom: auto; top: calc(100% + 4px); }
+.block.cards:is(:hover, :focus-within, .objsel, .cur) > .cards-tools, .block.timeline:is(:hover, :focus-within, .objsel) > .tml-tools,
+.block.tree:is(:hover, :focus-within, .objsel) > .tree-tools, .block.chart:is(:hover, :focus-within, .objsel) .chart-tools,
+.block.toc:is(:hover, :focus-within, .objsel) .toc-tools { display: flex; }
+/* lecture seule : aucune barre d'outils de bloc */
+body.readonly #blocks .block :is(.cards-tools, .tml-tools, .tree-tools, .chart-tools, .toc-tools) { display: none; }
+/* pointeur tactile : pas de survol — la barre revient dans le flux, sous le bloc */
+@media (pointer: coarse) {
+  .cards-tools, .tml-tools, .tree-tools, .chart-tools, .toc-tools { position: static; display: flex; flex-wrap: wrap; white-space: normal; margin-top: 8px; padding: 0; background: none; border: 0; border-radius: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; animation: none; }
+}
 .cards-tools button { font-family: var(--font-ui); font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
 .cards-tools button:hover { background: var(--hover); color: var(--ink); }
 .cards-tools button.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
@@ -1774,6 +1796,9 @@ body.lib-agenda .lib-head { display: none; }
 .block.formula, .block.graph, .block.table, .block.img { position: relative; }
 .block.objsel { outline: 2px solid var(--tint); outline-offset: 3px; border-radius: 4px; }
 .block.objsel .graph-card, .block.objsel .frender { background: var(--tint-soft); }
+/* 1.53 : blocs-conteneurs de texte (cartes, frise) sélectionnés comme objet (Échap, flèches) : une barre discrète à gauche plutôt
+   qu'un cadre autour de tout le bloc */
+.block.cards.objsel, .block.timeline.objsel { outline: none; box-shadow: -4px 0 0 0 var(--tint); border-radius: 0; }   /* -4px : se distingue de la barre -3px des blocs modifiés par un pair */
 .block.formula::selection, .block.graph::selection, .block.graph *::selection { background: transparent; }
 /* poignée de déplacement des objets (glisser pour déplacer) */
 .mv-handle {
@@ -1867,6 +1892,7 @@ body.mobile #imgbar .ib-size { width: auto; }
   .block.li.cl::before { content: "☐"; width: 24px; }
   .block.li.cl.done::before { content: "☑"; }
   .block.objsel { outline: none; }
+  .block.cards.objsel, .block.timeline.objsel { box-shadow: none; }
   .block.objsel .imgbox { box-shadow: none; }
   .block.h::before { color: #33658a; }
 }
@@ -1886,12 +1912,12 @@ body.mobile #imgbar .ib-size { width: auto; }
    ============================================================ */
 /* encadré Bilan : synthèse de fin de partie */
 /* 1.51 : même gabarit que les autres encadrés (ni cadre ni retrait), fond un peu plus soutenu, étiquette un peu plus marquée */
-.block.callout[data-ct="bilan"] { --cc: #2e8b8b; background: color-mix(in srgb, var(--cc) 7%, var(--paper)); }
-html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: #5cc0c0; background: color-mix(in srgb, var(--cc) 9%, var(--paper)); }
+.block.callout[data-ct="bilan"] { --cc: var(--cc-bilan, #2e8b8b); background: color-mix(in srgb, var(--cc) 7%, var(--paper)); }
+html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: var(--cc-bilan-dark, #5cc0c0); background: color-mix(in srgb, var(--cc) 9%, var(--paper)); }
 .block.callout[data-ct="bilan"] .ctitle { font-weight: 700; }
 .block.callout .ctitle .csub { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--ink-3); font-size: 11px; }
 .block.callout[data-ct="bilan"] .btxt { font-size: 10.5pt; line-height: 1.6; }
-@media print { html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: #2e8b8b; } }
+@media print { html[data-theme="dark"] .block.callout[data-ct="bilan"] { --cc: var(--cc-bilan, #2e8b8b); } }
 
 /* alignement du texte (blocs) et des cases */
 .block.al-center > .btxt { text-align: center; }
@@ -2160,11 +2186,10 @@ body.health .only-health { display: inline-flex !important; }
 :is(#popover, .po-scope) .cd-data:focus { border-color: var(--tint); }
 
 /* graphiques de données */
-.block.chart { margin: 14px 0; display: flow-root; }
+.block.chart { margin: 12px 0; display: flow-root; }   /* 1.53 : même marge que les autres blocs objets */
 .chart-card { border: 1px solid var(--border); border-radius: var(--r); background: var(--paper); padding: 10px 12px 8px; }
 .chart-card .cwrap svg { display: block; width: 100%; height: auto; }
-.chart-tools { display: none; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; }
-.block.chart:hover .chart-tools, .block.chart.objsel .chart-tools { display: flex; }
+/* 1.53 : position, fond et affichage (survol / sélection) dans la règle groupée des barres d'outils de blocs (voir .cards-tools) */
 .chart-tools button { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--bg); color: var(--ink-2); font-family: var(--font-ui); display: inline-flex; align-items: center; gap: 4px; }
 .chart-tools button svg { width: 15px; height: 15px; }
 .chart-tools button:hover { background: var(--hover); color: var(--ink); }
@@ -2958,7 +2983,8 @@ html[data-theme="dark"] .gx-legend, html[data-theme="dark"] .gx-btns button { ba
 .t-list li { margin: .18em 0; padding-left: .2em; }
 .t-list li::marker { color: var(--elc, var(--acc)); }
 .sl-el.t-callout { --cc: var(--elc, #3d6bb5); background: color-mix(in srgb, var(--cc) 6%, var(--sl-paper)); border-left: 5px solid var(--cc); border-radius: 4px 14px 14px 4px; padding: 14px 20px 16px 22px; }   /* 1.51 : aligné sur les encadrés des séances (fond plus léger, barre plus fine) */
-.sl-el.ct-definition { --cc: var(--elc, #3d6bb5); } .sl-el.ct-arret { --cc: var(--elc, #8c4351); } .sl-el.ct-controverse { --cc: var(--elc, #7a6852); } .sl-el.ct-retenir { --cc: var(--elc, #b3762a); } .sl-el.ct-exemple { --cc: var(--elc, #2e8b6a); } .sl-el.ct-bilan { --cc: var(--elc, #2e8b8b); } .sl-el.ct-drapeau { --cc: var(--elc, #c04343); } .sl-el.ct-reflexe { --cc: var(--elc, #d06a3a); } .sl-el.ct-mnemo { --cc: var(--elc, #7a5ca8); } .sl-el.ct-objectifs { --cc: var(--elc, #33658a); }
+/* 1.53 : la couleur propre de l'élément (--elc) prime ; sinon la couleur choisie dans Paramètres › Apparence (--cc-<type>), sinon le défaut */
+.sl-el.ct-definition { --cc: var(--elc, var(--cc-definition, #3d6bb5)); } .sl-el.ct-arret { --cc: var(--elc, var(--cc-arret, #8c4351)); } .sl-el.ct-controverse { --cc: var(--elc, var(--cc-controverse, #7a6852)); } .sl-el.ct-retenir { --cc: var(--elc, var(--cc-retenir, #b3762a)); } .sl-el.ct-exemple { --cc: var(--elc, var(--cc-exemple, #2e8b6a)); } .sl-el.ct-bilan { --cc: var(--elc, var(--cc-bilan, #2e8b8b)); } .sl-el.ct-drapeau { --cc: var(--elc, var(--cc-drapeau, #c04343)); } .sl-el.ct-reflexe { --cc: var(--elc, var(--cc-reflexe, #d06a3a)); } .sl-el.ct-mnemo { --cc: var(--elc, var(--cc-mnemo, #7a5ca8)); } .sl-el.ct-objectifs { --cc: var(--elc, var(--cc-objectifs, #33658a)); }
 .sl-ctitle { display: flex; align-items: center; gap: 8px; font-size: calc(17px * var(--fs)); font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--cc); margin-bottom: 8px; pointer-events: none; }
 .sl-ctitle svg { width: calc(20px * var(--fs)); height: calc(20px * var(--fs)); }
 .t-callout .sl-text { font-size: calc(24px * var(--fs)); line-height: 1.45; color: var(--sl-ink); }
@@ -3323,6 +3349,21 @@ body.readonly .sl-side .sl-pal, body.readonly .sl-side .sl-palsearch, body.reado
 .set-checks input { accent-color: var(--tint); margin-top: 3px; flex: none; }
 .set-checks span { display: flex; flex-direction: column; gap: 2px; font-size: 13px; }
 .set-checks small { font-size: 11.5px; color: var(--ink-3); line-height: 1.35; }
+/* 1.53 : Paramètres › Apparence › Couleurs des encadrés — une ligne par type : aperçu miniature (icône + nom sur la couleur) et sélecteur */
+.set-callouts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 640px; }
+.set-callout { display: flex; align-items: center; gap: 10px; padding: 6px 8px 6px 6px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); cursor: pointer; }
+.set-callout:hover { border-color: var(--ink-3); }
+/* couleur modifiée par l'utilisateur : bord teinté et point dans l'angle */
+.set-callout.changed { position: relative; border-color: color-mix(in srgb, var(--cc, var(--tint)) 55%, var(--border)); }
+.set-callout.changed::after { content: ""; position: absolute; top: -4px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: var(--tint); box-shadow: 0 0 0 2px var(--bg); }
+.set-callout .set-cprev { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 7px 10px; border-radius: 6px; background: color-mix(in srgb, var(--cc) 6%, var(--paper)); box-shadow: inset 3px 0 0 var(--cc); font-family: var(--font-ui); font-size: 11.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: color-mix(in srgb, var(--cc) 70%, var(--ink)); }
+.set-callout .set-cprev svg { width: 14px; height: 14px; flex: none; color: var(--cc); fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.set-callout .set-cprev b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* (préfixe :is(#popover, .po-scope) : la règle générale des champs des fenêtres l'emporterait sinon — même motif que .pal-custom) */
+:is(#popover, .po-scope) .set-callout input[type="color"] { flex: none; width: 40px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); cursor: pointer; }
+:is(#popover, .po-scope) .set-callout input[type="color"]::-webkit-color-swatch-wrapper { padding: 2px; }
+:is(#popover, .po-scope) .set-callout input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 4px; }
+@media (max-width: 600px) { .set-callouts { grid-template-columns: 1fr; } }
 #set-ailevel { grid-template-columns: repeat(3, minmax(0, 1fr)); max-width: 640px; }
 #set-ailevel .set-tile { gap: 4px; }
 
@@ -3402,12 +3443,52 @@ body.has-dlg #popover, body.has-dlg #ctxmenu { z-index: 1600; }
 :is(#popover, .po-scope) .share-dlg .sh-inv input, .share-dlg .sh-inv input { flex: 1; max-width: none; }
 .share-dlg .sh-inv select { border: 1px solid var(--border); background: var(--bg); border-radius: 6px; padding: 7px 9px; font: inherit; font-size: 13px; color: var(--ink); }
 .share-dlg .sh-content { max-height: 360px; }
+/* petits écrans : le champ d'ajout passe sur deux lignes (champ pleine largeur, puis rôle et bouton) */
+@media (max-width: 480px) {
+  .share-dlg .sh-inv { flex-wrap: wrap; }
+  :is(#popover, .po-scope) .share-dlg .sh-inv input, .share-dlg .sh-inv input { min-width: 100%; }
+}
 .share-dlg .sh-log { max-height: 420px; overflow-y: auto; }
 .share-dlg .sh-link { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-2); margin-top: 10px; }
 .share-dlg .sh-link code { font-family: var(--font-mono); font-size: 12px; background: var(--bg); border: 1px solid var(--border); padding: 3px 8px; border-radius: 6px; color: var(--ink); }
 .sh-ownercard { display: flex; align-items: center; gap: 14px; padding: 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--bg); }
 .sh-ownercard .po-avatar { width: 44px; height: 44px; font-size: 18px; }
 @media (max-width: 720px) { .sh-dlg2 { grid-template-columns: 1fr; } }
+/* 1.53 : boîte « Partager » unique (personnes, ajout, lien) et page « Partagés avec moi » (segments Reçus / Mes partages) */
+.sh-people { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.sh-person { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; font-size: 13.5px; border: 1px solid var(--border); }
+.sh-person .sh-av { width: 30px; height: 30px; border-radius: 50%; background: var(--tint); color: #fff; display: grid; place-items: center; font-size: 13px; font-weight: 700; flex: none; }
+.sh-person.owner .sh-av { background: var(--ink-2); }
+.sh-person.pending { border-style: dashed; }
+.sh-person.pending .sh-av { opacity: .5; }
+.sh-person .sh-mi { flex: 1; min-width: 0; }
+.sh-person .sh-mi b { display: block; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-person .sh-mi span { display: block; font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-person .sh-status { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-3); padding: 0 6px; }
+.sh-person .sh-rolesel, .sh-linkrow select { font: inherit; font-size: 12.5px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 5px 8px; outline: none; flex: none; }
+.sh-person .sh-rolesel:focus-visible, .sh-linkrow select:focus-visible { border-color: var(--tint); }
+.sh-person .sh-rm { font-size: 12px; font-weight: 600; color: var(--ink-3); padding: 4px 8px; border-radius: 6px; flex: none; }
+.sh-person .sh-rm:hover { background: var(--hover); color: var(--danger); }
+.sh-rolehelp { display: flex; flex-direction: column; gap: 3px; margin: 8px 2px 0; font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.sh-rolehelp b { color: var(--ink-2); font-weight: 600; }
+.sh-linkbox { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; background: var(--bg); display: flex; flex-direction: column; gap: 8px; }
+.sh-linkbox.on { border-color: color-mix(in srgb, var(--tint) 45%, var(--border)); }
+.sh-switch { display: flex; align-items: center; gap: 10px; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.sh-switch input { accent-color: var(--tint); width: 16px; height: 16px; margin: 0; flex: none; }
+.sh-linkrow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.sh-linkrow code { flex: 1; min-width: 160px; font-family: var(--font-mono); font-size: 12px; background: var(--paper); border: 1px solid var(--border); padding: 5px 9px; border-radius: 6px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sh-resend { display: flex; flex-direction: column; gap: 2px; }
+.sh-resend button { text-align: left; padding: 7px 10px; border-radius: 6px; font-size: 13px; color: var(--ink); }
+.sh-resend button:hover { background: var(--hover); }
+.sh-seghead { display: flex; align-items: center; gap: 12px; margin: 2px 0 16px; flex-wrap: wrap; }
+#lib-shared .sh-seg button { width: auto; height: 32px; padding: 0 14px; font-size: 13px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; border-radius: 0; }   /* prime sur les .seg button de la bibliothèque (34 px, icône seule) */
+.sh-count { font-size: 11px; font-weight: 700; padding: 0 6px; border-radius: 999px; background: var(--tint-soft); color: var(--tint); line-height: 17px; }
+#lib-shared .sh-seg button.on .sh-count { background: var(--tint); color: #fff; }
+.sh-mypseudo { margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
+.sh-mypseudo b { color: var(--ink); font-weight: 600; }
+.sh-banner { margin-bottom: 14px; }
+.sh-mine { display: flex; flex-direction: column; gap: 6px; }
+.acc-pseudo .po-row { flex-wrap: wrap; align-items: center; }
 
 /* --- Alixo+ --- */
 .plus-badge { display: inline-flex; align-items: center; font-size: 10px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; padding: 1px 7px; border-radius: 999px; background: linear-gradient(120deg, #b3762a, #d9a441); color: #fff; margin-left: 7px; vertical-align: 2px; line-height: 1.5; }
@@ -3713,10 +3794,10 @@ body.printing-sheet #toast, body.printing-sheet #print-summary, body.printing-sh
 .tr-tools button { font-size: 11px; padding: 2px 7px; border-radius: 5px; color: var(--ink-2); }
 .tr-tools button:hover { background: var(--hover); color: var(--ink); }
 .tr-tools button.danger:hover { color: var(--danger); }
-.tree-tools { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin-top: 6px; font-family: var(--font-ui); }
-.tree-tools button { font-size: 11.5px; color: var(--ink-3); padding: 3px 8px; border-radius: 6px; opacity: 0; }
-.block.tree:hover .tree-tools button, .block.tree:focus-within .tree-tools button { opacity: 1; }
+/* 1.53 : position, fond et affichage (survol / saisie / sélection) dans la règle groupée des barres d'outils de blocs (voir .cards-tools) */
+.tree-tools button { font-size: 11.5px; color: var(--ink-3); padding: 3px 8px; border-radius: 6px; }
 .tree-tools button:hover { background: var(--hover); color: var(--danger); }
+.block.tree { margin: 12px 0; }
 .block.tree.objsel { outline: 2px solid var(--tint); outline-offset: 2px; border-radius: 6px; }
 @media print { .tr-tools, .tree-tools { display: none !important; } .tree-wrap { overflow: visible; } }
 
@@ -4749,7 +4830,7 @@ body.mode-vtab #view-library { display: none !important; }
 .block.toc .toc-item.pl1 { font-weight: 650; }
 .block.toc .toc-item.pl2 { padding-left: 24px; } .block.toc .toc-item.pl3 { padding-left: 44px; font-size: 13.5px; } .block.toc .toc-item.pl4 { padding-left: 62px; font-size: 13px; } .block.toc .toc-item.pl5 { padding-left: 78px; font-size: 12.5px; } .block.toc .toc-item.pl6 { padding-left: 92px; font-size: 12.5px; }
 .block.toc .toc-empty { font-family: var(--font-ui); font-size: 12.5px; color: var(--ink-3); padding: 4px 2px 8px; }
-.block.toc .toc-tools { display: none; align-items: center; gap: 4px; flex-wrap: wrap; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); font-size: 12px; font-family: var(--font-ui); }
+/* 1.53 : position, fond et affichage (survol / sélection) dans la règle groupée des barres d'outils de blocs (voir .cards-tools) */
 .block.toc .toc-tools .toc-tl { color: var(--ink-3); font-weight: 600; margin-right: 2px; }
 .block.toc .toc-tools button { padding: 3px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; background: var(--bg); color: var(--ink-2); }
 .block.toc .toc-tools button:hover { background: var(--hover); color: var(--ink); }
@@ -4757,7 +4838,6 @@ body.mode-vtab #view-library { display: none !important; }
 .block.toc .toc-tools button.danger { color: var(--danger); margin-left: auto; }
 .block.toc .toc-tools .tt-sep { width: 1px; height: 16px; background: var(--border); margin: 0 4px; }
 .block.toc.objsel .toc-card { border-color: var(--tint); box-shadow: 0 0 0 3px var(--tint-soft); }
-.block.toc.objsel .toc-tools, .block.toc:hover .toc-tools { display: flex; }
 @media print { .block.toc .toc-tools { display: none !important; } .block.toc .toc-card { background: none; } }
 .bp-toc { padding: 10px 14px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); }
 .bp-toc b { display: block; font: 700 12px var(--font-ui); margin-bottom: 6px; }

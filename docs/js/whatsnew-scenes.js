@@ -11,9 +11,32 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.51.0 (ou nouveautes.html?v=1.51.0 en page seule).
+   Aperçu : index.html?nouveautes=1.53.0 (ou nouveautes.html?v=1.53.0 en page seule).
    ============================================================ */
 'use strict';
+
+/* 1.53 : Workspace, pseudo, partage, couleur des encadrés, blocs cartes et frise */
+AlixoWhatsNew.register('1.53.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Le <em>Workspace</em>,<br>et un partage plus clair', text: 'Six nouveautés, en moins d’une minute.', dur: 5500 },
+    { title: 'Le <em>Workspace</em> : vos cours, pour tous', text: 'Un nouvel espace où chacun dépose ses cours et profite de ceux des autres.',
+      bullets: ['<b>Déposer une séance</b> : titre, matière, niveau, étiquettes', '<b>Ajouter à ma bibliothèque</b> en un clic', '<b>Étoiles, commentaires</b> : les plus utiles remontent'],
+      art: 'cards', accent: '#3d6bb5', accent2: '#b3762a', dur: 9000 },
+    { title: 'Un <em>pseudo</em> pour chacun', text: 'C’est lui que voient les autres membres, jamais votre nom ni votre e-mail.',
+      bullets: ['<b>Attribué</b> dès la connexion, par exemple « RenardLucide42 »', '<b>Modifiable</b> dans Paramètres › Compte, ou un autre au hasard'],
+      art: { icon: '🦊' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
+    { title: 'Le <em>partage</em>, revu', text: 'Une seule fenêtre : qui voit quoi, et comment ajouter quelqu’un.',
+      bullets: ['<b>Peut consulter</b> ou <b>Peut modifier</b>, lisible pour chaque personne', '<b>Par pseudo</b> ou par e-mail, avec un message clair', '<b>Lien de partage</b> à copier, désactivable quand vous voulez'],
+      art: 'list', accent: '#2e8b6a', accent2: '#33658a', dur: 8500 },
+    { title: 'Les <em>encadrés</em> à vos couleurs', text: 'Paramètres › Apparence : une couleur par type d’encadré, avec aperçu.',
+      bullets: ['<b>Définition, À retenir, Exemple, Bilan…</b> chacun sa teinte', '<b>Suit</b> le thème sombre, l’impression, le PDF et Word', '<b>Réinitialiser</b> revient aux couleurs d’origine'],
+      art: 'palette', accent: '#b3762a', accent2: '#8a4b9c', dur: 8000 },
+    { title: 'Des blocs plus <em>nets</em>', text: 'Cartes, frise, arbre, graphique : sans cadre bleu ni espace vide.',
+      bullets: ['<b>Plus de contour bleu</b> quand vous écrivez dans une carte ou une frise', '<b>Plus d’espace vide</b> en dessous : les outils apparaissent au survol'],
+      art: 'text', accent: '#33658a', accent2: '#2e8b6a', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 /* 1.52 : illustrations dessinées (pas encore de captures ni de vidéo) */
 const SCENES_152 = {
@@ -57,27 +80,5 @@ AlixoWhatsNew.register('1.51.0', {
       bullets: ['<b>Profil</b> : niveau, classe et spécialités dans une petite fenêtre', '<b>Menu Nouveau</b> : les icônes en couleur des documents', '<b>Corrigé</b> : « Écrivez, ou tapez… » ne passe plus derrière le texte', '<b>Arbres</b> : la ligne d’aide ne reste plus affichée'],
       art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 9500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-AlixoWhatsNew.register('1.50.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Les dessins se posent<br>sur le <em>cours</em>', text: 'Un panneau de dessin, des clics droits partout, et deux corrections.', dur: 5500 },
-    { title: 'Glissez un objet sur la <em>page</em>', text: 'Le bouton Dessin ouvre un panneau à droite : attrapez une forme et déposez-la où vous voulez.',
-      bullets: ['<b>Quinze objets</b> : formes, flèches, bulle, texte, et la main levée', '<b>Par-dessus le texte</b> : sautez des lignes pour faire de la place', '<b>Accroché</b> à son paragraphe, il suit ce que vous écrivez'],
-      art: { image: 'nouveautes/1.50.0-dessin.png', alt: 'Le panneau Dessin ouvert à droite d’un cours, des objets posés sur le texte' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 9000 },
-    { title: 'Clic gauche pour <em>régler</em>, clic droit pour agir', text: 'Sélectionnez un objet : ses réglages s’affichent dans le panneau.',
-      bullets: ['<b>Trait</b>, remplissage, opacité, texte : tout se change après coup', '<b>Clic droit</b> : avancer, reculer d’un niveau, dupliquer, supprimer', '<b>Anciens dessins</b> conservés et modifiables avec le même panneau'],
-      art: 'palette', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 9000 },
-    { title: 'Le clic droit arrive sur les <em>onglets</em>', text: 'Dans la barre d’onglets, un clic droit ouvre un petit menu.',
-      bullets: ['<b>Renommer</b> l’onglet sur place', '<b>Afficher dans la bibliothèque</b> : le bon dossier, la séance en évidence', '<b>Afficher à côté</b> : un second volet, sans glisser'],
-      art: 'storage', accent: '#2e8b6a', accent2: '#33658a', dur: 8500 },
-    { title: 'Un accueil plus <em>direct</em>', text: 'Moins de fenêtres, plus de place pour vos cours.',
-      bullets: ['<b>Renommer</b> une séance là où elle est : Entrée valide, Échap annule', '<b>Cours récents</b> : le même clic droit que dans la liste', '<b>Barre latérale</b> : un bouton la masque, le choix est mémorisé'],
-      art: 'cards', accent: '#b3762a', accent2: '#2e8b6a', dur: 8500 },
-    { title: 'Deux <em>corrections</em>', text: 'Deux petits agacements en moins.',
-      bullets: ['<b>Fautes dans les tableaux</b> : le clic droit propose enfin les corrections', '<b>Menu des onglets</b> : il ne saute plus à gauche quand on ferme un onglet'],
-      art: 'spell', accent: '#c04343', accent2: '#33658a', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6500 }
   ]
 });

@@ -76,7 +76,7 @@ window.AlixoAlx = (() => {
   const publicJSON = v => (window.AlixoImgTools && AlixoImgTools.publicJSON ? AlixoImgTools.publicJSON(v)
     : JSON.stringify(v, function (k, x) { return k === 'o' && this && this.type === 'img' ? undefined : x; }));
   /* l'archive d'un document → ArrayBuffer */
-  async function build(d) {
+  async function build(d, imgSource) {
     if (!d) throw new Error('document introuvable');
     if (typeof JSZip === 'undefined') throw new Error('archive indisponible (JSZip)');
     const zip = new JSZip();
@@ -84,7 +84,8 @@ window.AlixoAlx = (() => {
     const images = {};
     for (const iid of imageIds(d)) {
       let v = null;
-      try { v = await AlixoImages.get(iid); } catch { v = null; }
+      /* 1.53.0 : `imgSource` (Map iid → data URL) remplace le magasin d'images — archive reconstruite à partir d'une autre archive */
+      try { v = imgSource instanceof Map ? (imgSource.get(iid) || null) : await AlixoImages.get(iid); } catch { v = null; }
       if (!v) continue;
       const bin = dataUrlToBytes(v);
       if (bin) { const name = `images/${iid}.${EXT_OF_MIME[bin.mime] || 'bin'}`; zip.file(name, bin.bytes); images[iid] = name; }
@@ -107,7 +108,12 @@ window.AlixoAlx = (() => {
     toast(`Préparation du fichier .${k.ext}…`, { duration: 2500 });
     let buf;
     try { buf = await build(d); } catch (e) { console.error(e); toast('Export impossible : ' + (e && e.message || e)); return false; }
-    const name = fileName(d);
+    return saveBuffer(fileName(d), buf);
+  }
+  /* 1.53 : enregistre une archive déjà construite (version PC : boîte « Enregistrer sous » ; navigateur : téléchargement).
+     Factorisé depuis exportDoc pour le Workspace (js/workspace.js) : le type vient de l'extension du nom. */
+  async function saveBuffer(name, buf) {
+    const k = KINDS[kindOf(name) || 'docs'];
     const desk = window.alixoDesktop;
     if (desk && desk.saveFile) {
       const r = await desk.saveFile({ name, data: new Uint8Array(buf), filters: [{ name: k.name + ' (.' + k.ext + ')', extensions: [k.ext] }] });
@@ -179,8 +185,48 @@ window.AlixoAlx = (() => {
     }
     return { meta, kind, images };
   }
-  /* importe des fichiers (File, Blob ou { name, data }) dans le dossier `folderId` ; renvoie les documents créés et ouvre le dernier */
-  async function importFiles(list, folderId, { open = true, quiet = false } = {}) {
+  /* ---- 1.53 : import assaini (fichier venu d'un inconnu : Workspace) ----
+     read() valide la forme de l'archive, pas le contenu des champs HTML. Un document reçu du Workspace est donc RECONSTRUIT :
+     seuls les champs connus d'une séance sont repris, les blocs passent par AlixoSanitize.blocks (liste blanche, identifiants
+     régénérés), le titre et les noms d'onglets deviennent du texte simple. Seules les séances (texte) ont un assainisseur :
+     les autres types sont refusés. Les images ne sont gardées que si un bloc les référence encore et si elles sont des images
+     matricielles en data URL — jamais de SVG (scripts possibles), jamais d'adresse. */
+  const SANITIZED_KINDS = ['docs'];
+  const SAFE_IMAGE_RE = /^data:image\/(png|jpeg|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=\s]+$/;
+  const ID_RE = /^[\w-]{1,64}$/;
+  const plainText = (v, max) => String(typeof v === 'string' ? v : '').replace(/<[^>]*>/g, '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max);
+  /* opts.keepProf : le nom du professeur est conservé (fichier du disque, import local) — jamais pour un contenu venu du Workspace */
+  function sanitizeDoc(raw, opts) {
+    const AS = window.AlixoSanitize;
+    if (!AS || typeof AS.blocks !== 'function') throw new Error('assainisseur indisponible');
+    const d = raw && typeof raw === 'object' ? raw : {};
+    /* bloc par bloc : la date du bloc (jour de cours, « AAAA-MM-JJ ») est un scalaire sûr que AlixoSanitize ne connaît pas — conservée */
+    const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+    const cleanBlocks = arr => (Array.isArray(arr) ? arr.slice(0, 5000).flatMap(b => { const c = AS.blocks([b])[0]; if (!c) return []; if (b && DAY_RE.test(String(b.day || ''))) c.day = b.day; return [c]; }) : []);
+    const out = { id: uid(), folderId: null, titre: plainText(d.titre, 200), createdAt: Date.now(), updatedAt: Date.now(), pinned: false, blocks: cleanBlocks(d.blocks) };
+    const prof = opts && opts.keepProf ? plainText(d.prof, 120) : ''; if (prof) out.prof = prof;   // nom du professeur en texte simple
+    if (Array.isArray(d.pages) && d.pages.length) {
+      out.pages = d.pages.slice(0, 50).filter(p => p && typeof p === 'object').map(p => ({ id: p.id === 'main' ? 'main' : uid(), titre: plainText(p.titre, 80) || 'Onglet', blocks: Array.isArray(p.blocks) ? cleanBlocks(p.blocks) : null }));
+      const cur = d.pages.findIndex(p => p && p.id === d.page);
+      out.page = cur >= 0 && out.pages[cur] ? out.pages[cur].id : (out.pages[0] ? out.pages[0].id : undefined);
+    }
+    if (typeof d.font === 'string' && typeof fontByKey === 'function' && fontByKey(d.font)) out.font = d.font;
+    if (typeof d.planMode === 'string' && ['auto', 'adaptive', 'none'].includes(d.planMode)) out.planMode = d.planMode;
+    if (d.plan && Array.isArray(d.plan.levels) && typeof normLevels === 'function') { try { const lv = normLevels(d.plan.levels); if (Array.isArray(lv) && lv.length) out.plan = { levels: lv.slice(0, 6) }; } catch { /* plan ignoré */ } }
+    return out;
+  }
+  /* importe des fichiers (File, Blob ou { name, data }) dans le dossier `folderId` ; renvoie les documents créés et ouvre le dernier.
+     `sanitize` (1.53) : true → contenu non digne de confiance (Workspace) : document reconstruit par sanitizeDoc, séances SEULEMENT,
+     images SVG refusées ; absent (1.53.0, par défaut) → toute séance est assainie de même, les autres types passent tels quels ;
+     false → import brut (réservé aux tests). */
+  const safeImage = (iid, data) => ID_RE.test(iid) && typeof data === 'string' && SAFE_IMAGE_RE.test(data);
+  /* un bloc image dont l'image a été refusée ou manque disparaît (pas de référence qui pointe ailleurs) */
+  function dropOrphanImages(raw, has) {
+    const keep = bl => (Array.isArray(bl) ? bl.filter(b => !(b && b.type === 'img' && !has(b.iid))) : bl);
+    raw.blocks = keep(raw.blocks);
+    (raw.pages || []).forEach(p => { p.blocks = keep(p.blocks); });
+  }
+  async function importFiles(list, folderId, { open = true, quiet = false, sanitize } = {}) {
     const arr = [...(list || [])].filter(Boolean);
     const made = []; const errors = [];
     for (const f of arr) {
@@ -188,9 +234,18 @@ window.AlixoAlx = (() => {
       try {
         const buf = f.data ? f.data : (typeof f.arrayBuffer === 'function' ? await f.arrayBuffer() : f);
         const { meta, kind, images } = await read(buf, name);
+        if (sanitize === true && !SANITIZED_KINDS.includes(kind)) throw new Error(`${KINDS[kind].label} : ce type de document ne peut pas encore être importé depuis le Workspace (séances seulement)`);
+        const clean = sanitize === true || (sanitize !== false && SANITIZED_KINDS.includes(kind));
+        let raw = JSON.parse(JSON.stringify(meta.doc));
+        if (clean) raw = sanitizeDoc(raw, { keepProf: sanitize !== true });
+        const wanted = clean ? new Set(imageIds(raw)) : null;   // assaini : seules les images encore référencées, et sûres
         const imap = new Map();
-        for (const [iid, data] of images) { const nid = uid(); imap.set(iid, nid); try { await AlixoImages.put(nid, data); } catch (e) { console.error('Image non importée :', e); } }
-        const copy = freshIds(JSON.parse(JSON.stringify(meta.doc)), imap);
+        for (const [iid, data] of images) {
+          if (wanted && (!wanted.has(iid) || !safeImage(iid, data))) continue;
+          const nid = uid(); imap.set(iid, nid); try { await AlixoImages.put(nid, data); } catch (e) { console.error('Image non importée :', e); }
+        }
+        if (clean) dropOrphanImages(raw, iid => imap.has(iid));
+        const copy = freshIds(raw, imap);
         copy.folderId = folderId || null;
         copy.titre = S(copy.titre) || S(meta.title) || name.replace(EXT_RE, '');
         copy.createdAt = copy.updatedAt = Date.now(); copy.pinned = false;
@@ -246,9 +301,18 @@ window.AlixoAlx = (() => {
         d.titre = f.name.replace(EXT_RE, '').replace(/^Nouveau (document |fichier )?/i, '').trim() || KINDS[kind].name;
       } else {
         const { meta, images } = await read(data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength), f.name);
+        /* 1.53.0 : une séance venue du disque est reconstruite comme un import (sanitizeDoc, images matricielles seulement) */
+        const clean = SANITIZED_KINDS.includes(kind);
+        let raw = JSON.parse(JSON.stringify(meta.doc));
+        if (clean) raw = sanitizeDoc(raw, { keepProf: true });
+        const wanted = clean ? new Set(imageIds(raw)) : null;
         const imap = new Map();
-        for (const [iid, v] of images) { const nid = uid(); imap.set(nid, nid); imap.set(iid, nid); try { await AlixoImages.put(nid, v); } catch (e) { console.error('Image non lue :', e); } }
-        d = freshIds(JSON.parse(JSON.stringify(meta.doc)), imap);
+        for (const [iid, v] of images) {
+          if (wanted && (!wanted.has(iid) || !safeImage(iid, v))) continue;
+          const nid = uid(); imap.set(nid, nid); imap.set(iid, nid); try { await AlixoImages.put(nid, v); } catch (e) { console.error('Image non lue :', e); }
+        }
+        if (clean) dropOrphanImages(raw, iid => imap.has(iid));
+        d = freshIds(raw, imap);
         d.titre = S(d.titre) || S(meta.title) || f.name.replace(EXT_RE, '');
         delete d.vwOpen; d.pinned = false;
       }
@@ -318,5 +382,18 @@ window.AlixoAlx = (() => {
     alixoDesktop.onOpenFile(f => { openFromDisk(f); });
   }
 
-  return { KINDS, MIME, isAlx, kindOf, kindOfDoc, extFor, fileName, build, exportDoc, importFiles, read, openFromDisk, onLocalSave, goOnline, dirName };
+  /* 1.53.0 : archive reçue d'un inconnu → archive reconstruite (séance assainie, images sûres seulement) — « Enregistrer le fichier Alixo »
+     du Workspace ne livre jamais l'archive brute */
+  async function sanitizeArchive(buf, name) {
+    const { meta, kind, images } = await read(buf, name);
+    if (!SANITIZED_KINDS.includes(kind)) throw new Error(`${KINDS[kind].label} : ce type de document ne peut pas encore être assaini (séances seulement)`);
+    const raw = sanitizeDoc(JSON.parse(JSON.stringify(meta.doc)));
+    const wanted = new Set(imageIds(raw));
+    const safe = new Map();
+    for (const [iid, data] of images) if (wanted.has(iid) && safeImage(iid, data)) safe.set(iid, data);
+    dropOrphanImages(raw, iid => safe.has(iid));
+    raw.titre = raw.titre || S(meta.title) || 'Sans titre';
+    return build(raw, safe);
+  }
+  return { KINDS, MIME, isAlx, kindOf, kindOfDoc, extFor, fileName, build, exportDoc, saveBuffer, importFiles, read, openFromDisk, onLocalSave, goOnline, dirName, SANITIZED_KINDS, sanitizeDoc, sanitizeArchive };
 })();

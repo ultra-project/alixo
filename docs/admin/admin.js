@@ -109,7 +109,7 @@
 
   /* ---------------- navigation ----------------
      refonte 2026 : barre latérale (tiroir sur tablette / téléphone) + barre d'onglets en bas sur téléphone ; les deux portent data-view */
-  const TITLES = { dash: 'Tableau de bord', users: 'Utilisateurs', msg: 'Messages', ann: 'Annonces et version', codes: 'Clés Alixo+', orgs: 'Entreprises', keys: 'Accès IA', db: 'Base de données', admins: 'Administrateurs' };
+  const TITLES = { dash: 'Tableau de bord', users: 'Utilisateurs', msg: 'Messages', ann: 'Annonces et version', codes: 'Clés Alixo+', orgs: 'Entreprises', workspace: 'Workspace', keys: 'Accès IA', db: 'Base de données', admins: 'Administrateurs' };
   function showView(name) {
     $$('[data-view]').forEach(x => x.classList.toggle('on', x.dataset.view === name));
     /* « Plus » (téléphone) reste allumé pour les vues qui ne sont pas dans la barre d'onglets */
@@ -164,6 +164,14 @@
     /* 1.32 : entreprises Alixo Business + tous leurs membres (requête de groupe de collections) */
     unsubs.push(db.collection('orgs').onSnapshot(s => { state.orgs = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderOrgs(); }, err => toast('Entreprises : ' + err.message + ' (règles Firestore à redéployer : npm run rules)')));
     unsubs.push(db.collectionGroup('members').onSnapshot(s => { state.orgMembers = s.docs.map(d => Object.assign({ uid: d.id, orgId: d.ref.parent.parent.id }, d.data())); renderOrgs(); }, err => console.warn('Membres des entreprises :', err.message)));
+    /* 1.53 : dépôts du Workspace, les plus signalés d'abord */
+    unsubs.push(db.collection('workspace').orderBy('reports', 'desc').limit(300).onSnapshot(s => { state.workspace = s.docs.map(d => Object.assign({ id: d.id }, d.data())); renderWorkspace(); }, err => console.warn('Workspace :', err.message)));
+    /* 1.53.0 : les signalements (dépôts et commentaires) — groupe de collections `reports`, lisible par les administrateurs ;
+       le chemin du parent dit s'il s'agit d'une fiche (workspace/{wid}) ou d'un commentaire (workspace/{wid}/comments/{cid}) */
+    unsubs.push(db.collectionGroup('reports').onSnapshot(s => {
+      state.wsReports = s.docs.map(d => { const p = d.ref.parent.parent; const seg = p ? p.path.split('/') : []; return Object.assign({ by: d.id, wid: seg[0] === 'workspace' ? seg[1] : '', cid: seg[2] === 'comments' ? seg[3] : '' }, d.data()); }).filter(r => r.wid);
+      renderWorkspace();
+    }, err => console.warn('Signalements :', err.message)));
     unsubs.push(db.collection('audit').orderBy('ts', 'desc').limit(7).onSnapshot(s => renderAudit(s.docs.map(d => d.data())), err => { $('#dash-audit').innerHTML = `<div class="empty">Journal illisible : ${esc(err.message)}</div>`; }));
     unsubs.push(db.collection('config').doc('msglog').onSnapshot(s => { const d = s.exists ? s.data() : {}; state.msglog = Array.isArray(d.items) ? d.items : []; renderMsgLog(); }, err => toast('Journal des messages : ' + err.message)));
     /* les durées relatives (« il y a 3 min », présence) se rafraîchissent d'elles-mêmes */
@@ -701,6 +709,94 @@
       if (!await confirmBox('Supprimer cette clé ?', `${code} ne pourra plus être activée.`, 'Supprimer', true)) return;
       await db.collection('codes').doc(code).delete(); audit('code.delete', code); toast('Clé supprimée');
     }
+  });
+
+  /* ---------------- Workspace (1.53) : modération minimale ----------------
+     workspace/{wid} → fiche publique { uid, pseudo, title, kind, reports, downloads, stars, comments, ready, hidden, pub, createdAt… }
+     + chunks/{n} (archive). L'administrateur masque (hidden: true, pub: false), réaffiche, ou supprime fiche et morceaux. */
+  state.workspace = []; state.wsReports = []; state.wsOpen = new Set(); state.wsComments = {}; state.wsShowBy = new Set();
+  const WS_ID = /^[\w-]{1,64}$/;
+  const WS_REASON = { droits: 'Droits d’auteur', inapproprie: 'Contenu inapproprié', perso: 'Données personnelles', autre: 'Autre' };
+  /* 1.53.0 : motifs, textes et dates des signalements d'un dépôt et de ses commentaires ; le signaleur n'apparaît qu'à la demande */
+  function reportsHTML(w) {
+    const reps = state.wsReports.filter(r => r.wid === w.id).sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const line = r => `<li><span class="chip ${r.reason === 'droits' ? 'bad' : 'warn'}">${esc(WS_REASON[r.reason] || 'Autre')}</span> <span class="muted">${when(r.ts)}</span>${r.text ? `<div class="ws-rtext">${esc(String(r.text).slice(0, 400))}</div>` : ''}<div class="u-sub">${state.wsShowBy.has(w.id + '/' + r.cid + '/' + r.by) ? `signalé par ${esc(r.by)}${userOf(r.by) ? ' · ' + esc(userOf(r.by).email || '') : ''}` : `<button class="lnk" data-wa="who" data-rk="${esc(w.id + '/' + r.cid + '/' + r.by)}">afficher le signaleur</button>`}</div></li>`;
+    const onFiche = reps.filter(r => !r.cid), onComs = reps.filter(r => r.cid);
+    const byCom = {}; onComs.forEach(r => { (byCom[r.cid] = byCom[r.cid] || []).push(r); });
+    const coms = state.wsComments[w.id];
+    let html = `<div class="ws-reps"><h4>Signalements du dépôt (${onFiche.length})</h4>${onFiche.length ? `<ul>${onFiche.map(line).join('')}</ul>` : '<p class="muted">Aucun.</p>'}`;
+    html += `<h4>Commentaires signalés (${Object.keys(byCom).length})</h4>`;
+    if (!Object.keys(byCom).length) html += '<p class="muted">Aucun.</p>';
+    else html += `<ul>${Object.entries(byCom).map(([cid, rs]) => { const c = coms && coms.find(x => x.id === cid); return `<li class="ws-rcom"><div><b>${c ? esc(String(c.pseudo || '').slice(0, 24)) : 'Commentaire'}</b> ${c && c.hidden ? '<span class="chip bad">masqué</span>' : ''} <span class="muted">${rs.length} signalement${rs.length > 1 ? 's' : ''}</span>${c ? `<div class="ws-rtext">${esc(String(c.text || '').slice(0, 400))}</div>` : coms ? '<div class="muted">commentaire supprimé</div>' : '<div class="muted">chargement…</div>'}</div><ul>${rs.map(line).join('')}</ul>${c ? `<div class="acts">${c.hidden ? `<button data-wa="cshow" data-cid="${esc(cid)}">Réafficher</button>` : `<button data-wa="chide" data-cid="${esc(cid)}">Masquer</button>`}<button data-wa="cdel" data-cid="${esc(cid)}" class="danger">Supprimer</button></div>` : ''}</li>`; }).join('')}</ul>`;
+    return html + '</div>';
+  }
+  async function loadWsComments(wid) {
+    try { const qs = await db.collection('workspace').doc(wid).collection('comments').get(); state.wsComments[wid] = qs.docs.map(d => Object.assign({ id: d.id }, d.data())); }
+    catch (err) { state.wsComments[wid] = []; console.warn('Commentaires :', err.message); }
+    renderWorkspace();
+  }
+  function renderWorkspace() {
+    const W = state.workspace.filter(w => WS_ID.test(w.id)).slice().sort((a, b) => ((b.reports || 0) - (a.reports || 0)) || ((b.createdAt || 0) - (a.createdAt || 0)));
+    const nRep = W.filter(w => (w.reports || 0) > 0).length;
+    $('#ws-count').textContent = W.length ? `${W.length}${nRep ? ` · ${nRep} signalé${nRep > 1 ? 's' : ''}` : ''}` : '';
+    const badge = $('#nav-ws'); if (badge) { badge.hidden = !nRep; badge.textContent = nRep; }
+    $('#ws-tbl tbody').innerHTML = W.length ? W.map(w => {
+      const u = w.uid ? userOf(w.uid) : null;
+      const st = !w.ready ? '<span class="chip dim">incomplet</span>' : w.hidden ? '<span class="chip bad">masqué</span>' : '<span class="chip ok">en ligne</span>';
+      const nR = state.wsReports.filter(r => r.wid === w.id).length;
+      const open = state.wsOpen.has(w.id);
+      return `<tr data-wid="${esc(w.id)}"><td><b>${esc(String(w.title || 'Sans titre').slice(0, 120))}</b><div class="u-sub">${esc(String(w.kind || ''))}${w.subject ? ' · ' + esc(String(w.subject)) : ''}${w.level ? ' · ' + esc(String(w.level)) : ''}</div></td><td>${esc(String(w.pseudo || '').slice(0, 24))}${u ? `<div class="u-sub">${esc(u.email || '')}</div>` : ''}</td><td class="num">${(w.reports || 0) > 0 ? `<b class="bad">${+w.reports || 0}</b>` : '0'}</td><td class="num">${+w.downloads || 0}</td><td class="num">${+w.stars || 0}</td><td>${st}</td><td>${when(w.createdAt)}</td><td><div class="acts">${nR || (w.comments || 0) > 0 ? `<button data-wa="reps" aria-expanded="${open}">${open ? 'Replier' : 'Signalements'}${nR ? ` (${nR})` : ''}</button>` : ''}${w.hidden ? '<button data-wa="show">Réafficher</button>' : '<button data-wa="hide">Masquer</button>'}<button data-wa="del" class="danger">Supprimer</button></div></td></tr>${open ? `<tr class="ws-detail" data-wid="${esc(w.id)}"><td colspan="8">${reportsHTML(w)}</td></tr>` : ''}`;
+    }).join('') : '<tr><td colspan="8" class="empty">Aucun dépôt dans le Workspace (ou règles Firestore à redéployer).</td></tr>';
+  }
+  /* efface tous les documents d'une collection par lots de 200 */
+  async function purgeCol(col) {
+    const qs = await col.get();
+    let batch = db.batch(), n = 0;
+    for (const c of qs.docs) { batch.delete(c.ref); if (++n >= 200) { await batch.commit(); batch = db.batch(); n = 0; } }
+    if (n) await batch.commit();
+    return qs.docs;
+  }
+  $('#v-workspace').addEventListener('click', async e => {
+    const b = e.target.closest('[data-wa]'); if (!b) return;
+    const wid = b.closest('tr').dataset.wid; const w = state.workspace.find(x => x.id === wid); if (!w || !WS_ID.test(wid)) return;
+    const ref = db.collection('workspace').doc(wid);
+    const cid = b.dataset.cid && WS_ID.test(b.dataset.cid) ? b.dataset.cid : '';
+    try {
+      if (b.dataset.wa === 'reps') {
+        if (state.wsOpen.has(wid)) state.wsOpen.delete(wid); else { state.wsOpen.add(wid); if (!state.wsComments[wid]) loadWsComments(wid); }
+        renderWorkspace();
+      } else if (b.dataset.wa === 'who') {
+        state.wsShowBy.add(b.dataset.rk); renderWorkspace(); audit('workspace.reporter', wid, { key: b.dataset.rk });
+      } else if (b.dataset.wa === 'chide' || b.dataset.wa === 'cshow') {
+        if (!cid) return;
+        await ref.collection('comments').doc(cid).update({ hidden: b.dataset.wa === 'chide' }); audit('workspace.comment.' + (b.dataset.wa === 'chide' ? 'hide' : 'show'), wid, { cid });
+        await loadWsComments(wid); toast(b.dataset.wa === 'chide' ? 'Commentaire masqué' : 'Commentaire réaffiché');
+      } else if (b.dataset.wa === 'cdel') {
+        if (!cid) return;
+        if (!await confirmBox('Supprimer ce commentaire ?', 'Le commentaire et ses signalements seront effacés définitivement.', 'Supprimer', true)) return;
+        await purgeCol(ref.collection('comments').doc(cid).collection('reports'));
+        await ref.collection('comments').doc(cid).delete(); audit('workspace.comment.delete', wid, { cid });
+        await loadWsComments(wid); toast('Commentaire supprimé');
+      } else if (b.dataset.wa === 'hide') {
+        if (!await confirmBox('Masquer ce dépôt ?', `« ${w.title || ''} » ne sera plus visible des membres ; son auteur le verra toujours dans « Mes dépôts ».`, 'Masquer', true)) return;
+        await ref.update({ hidden: true, pub: false, updatedAt: Date.now() }); audit('workspace.hide', wid, { title: w.title || '', uid: w.uid || '' }); toast('Dépôt masqué');
+      } else if (b.dataset.wa === 'show') {
+        await ref.update({ hidden: false, pub: w.ready === true, updatedAt: Date.now() }); audit('workspace.show', wid, { title: w.title || '', uid: w.uid || '' }); toast('Dépôt réaffiché');
+      } else if (b.dataset.wa === 'del') {
+        if (!await confirmBox('Supprimer ce dépôt ?', `« ${w.title || ''} », son archive, ses étoiles, ses commentaires et ses signalements seront effacés définitivement. L’auteur garde son document dans sa bibliothèque.`, 'Supprimer', true)) return;
+        /* 1.53.0 : sous-collections purgées avant la fiche (rien ne reste orphelin) */
+        await purgeCol(ref.collection('chunks'));
+        await purgeCol(ref.collection('stars'));
+        await purgeCol(ref.collection('downloads'));
+        const coms = await ref.collection('comments').get();
+        for (const c of coms.docs) await purgeCol(c.ref.collection('reports'));
+        await purgeCol(ref.collection('comments'));
+        await purgeCol(ref.collection('reports'));
+        await ref.delete();
+        state.wsOpen.delete(wid); delete state.wsComments[wid];
+        audit('workspace.delete', wid, { title: w.title || '', uid: w.uid || '', reports: w.reports || 0 }); toast('Dépôt supprimé');
+      }
+    } catch (err) { toast('Action impossible : ' + err.message); }
   });
 
   /* ---------------- entreprises (Alixo Business, 1.32) ----------------

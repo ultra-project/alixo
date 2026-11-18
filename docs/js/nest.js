@@ -35,7 +35,10 @@ window.AlixoNest = (() => {
   const quoteHTML = t => `<blockquote class="nb nb-quote">${t || '<br>'}</blockquote>`;
   function calloutHTML(ct, t) {
     const c = CALLOUTS[ct] || CALLOUTS.retenir;
-    const col = c.color ? [c.color, c.dark || c.color] : (CC[ct] || CC.retenir);
+    const key = CALLOUTS[ct] ? ct : 'retenir';
+    /* 1.53 : couleur réglable (Paramètres › Apparence) via la façade ; repli sur les tables locales si elle manque */
+    const col = window.AlixoApp && typeof AlixoApp.calloutColor === 'function' ? [AlixoApp.calloutColor(key), AlixoApp.calloutColor(key, true)]
+      : (c.color ? [c.color, c.dark || c.color] : (CC[ct] || CC.retenir));
     return `<div class="nb nb-call" data-ct="${esc(ct)}" style="--cc-light:${col[0]}; --cc-dark:${col[1]}"><div class="nb-title" contenteditable="false">${esc(c.name)}</div><div class="nb-body">${t || '<br>'}</div></div>`;
   }
 
