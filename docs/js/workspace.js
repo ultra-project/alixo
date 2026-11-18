@@ -393,12 +393,16 @@ window.AlixoWorkspace = (() => {
     if (!safeId(wid)) return false;
     const ref = wsRef.doc(wid);
     await purge(ref.collection('chunks'));
-    await purge(ref.collection('stars'));
-    await purge(ref.collection('downloads'));
+    /* étoiles, téléchargements et signalements d'autrui ne sont lisibles que par leur titulaire et les administrateurs :
+       un auteur qui n'est pas administrateur ne peut pas les lister, donc pas les effacer — on passe (permission-denied)
+       et la fiche est retirée quand même ; ces restes ne contiennent qu'un horodatage ou un signalement, jamais la séance */
+    const tryPurge = col => purge(col).catch(e => { if (isDenied(e)) return []; throw e; });
+    await tryPurge(ref.collection('stars'));
+    await tryPurge(ref.collection('downloads'));
     const coms = await ref.collection('comments').get();
-    for (const c of coms.docs) await purge(c.ref.collection('reports'));
+    for (const c of coms.docs) await tryPurge(c.ref.collection('reports'));
     await purge(ref.collection('comments'));
-    const reps = await ref.collection('reports').get();
+    const reps = await ref.collection('reports').get().catch(e => { if (isDenied(e)) return { docs: [] }; throw e; });
     const me = await usersRef.doc(uid).get().catch(() => null);
     const posts = me && me.exists ? N(me.data().posts) : 0;
     const b = db.batch();
