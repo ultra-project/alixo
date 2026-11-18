@@ -318,6 +318,9 @@
     ['Intelligence artificielle', 'Correction, quiz et fiches de révision générés depuis les documents'],
     ['Tous les thèmes et toutes les polices', 'Apparence de l’application et police des documents'],
     ['Fond d’écran des documents', 'Une image ou un dégradé derrière les pages'],
+    ['Suppression du fond d’une image', 'Détourage automatique des photos insérées'],
+    ['Thèmes signature des présentations', '12 thèmes supplémentaires avec motif de fond et forme signature'],
+    ['Sans la mention « Fait avec Alixo »', 'Exports PDF, Word, pages web et mode présentation sans filigrane'],
     ['Widgets de bureau', 'Tâches, agenda et minuteur sur le bureau (version PC)'],
     ['Tâches et bilan de la semaine', 'À faire, échéances, statistiques d’écriture'],
     ['Stockage au-delà de 3 Go', 'Fichiers, images et cours sans la limite du compte gratuit']

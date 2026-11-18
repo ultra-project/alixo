@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.53.0';
+const ALIXO_VERSION = '1.54.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -64,8 +64,12 @@ window.ALIXO_PANE = ALIXO_PANE;
 const ALIXO_SOLO = /[?&]solo=1/.test(location.search);
 const ALIXO_SOLO_ID = ALIXO_SOLO ? (new URLSearchParams(location.search).get('doc') || '') : '';
 window.ALIXO_SOLO = ALIXO_SOLO;
-/* fenêtre auxiliaire (volet ou fenêtre de document) : l'accueil garde la synchronisation, les widgets et les fenêtres de démarrage */
-const ALIXO_AUX = ALIXO_PANE || ALIXO_SOLO;
+/* 1.54 : écran public d'une présentation (js/slides-present.js) — cette fenêtre (index.html?doc=<id>&present=1) n'affiche que la
+   présentation en plein écran, pilotée par la fenêtre du présentateur ; ni bibliothèque, ni nouveautés, ni bilan de semaine */
+const ALIXO_PRESENT = /[?&]present=1/.test(location.search);
+window.ALIXO_PRESENT = ALIXO_PRESENT;
+/* fenêtre auxiliaire (volet, fenêtre de document ou écran public) : l'accueil garde la synchronisation, les widgets et les fenêtres de démarrage */
+const ALIXO_AUX = ALIXO_PANE || ALIXO_SOLO || ALIXO_PRESENT;
 window.ALIXO_AUX = ALIXO_AUX;
 let state = null;
 let saveTm = null;
@@ -286,7 +290,7 @@ const FOLDER_ICON_BIG = '<svg class="fbig" viewBox="0 0 24 24"><path d="M3 7a2 2
    ============================================================ */
 /* position de lecture de chaque séance ouverte en onglet : on la retrouve en revenant sur l'onglet ;
    un onglet fermé (ou une séance rouverte depuis la bibliothèque) repart du haut */
-const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
+const TABSCROLL_LS = 'alixo.tabscroll' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : ALIXO_PRESENT ? '.present' : '');
 let tabScroll = {};
 function loadTabScroll() { try { const t = JSON.parse(localStorage.getItem(TABSCROLL_LS)); tabScroll = t && typeof t === 'object' ? t : {}; } catch { tabScroll = {}; } }
 function saveTabScroll() { try { localStorage.setItem(TABSCROLL_LS, JSON.stringify(tabScroll)); } catch { /* stockage indisponible */ } }
@@ -584,7 +588,7 @@ $('#page-tabs').addEventListener('contextmenu', e => {
 const ppPage = $('#pp-page'); if (ppPage) ppPage.addEventListener('click', addPage);
 
 /* ---------------- onglets : plusieurs séances ouvertes en même temps ---------------- */
-const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
+const TABS_LS = 'alixo.tabs' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : ALIXO_PRESENT ? '.present' : '');
 let openTabs = [];
 function loadTabs() { try { const t = JSON.parse(localStorage.getItem(TABS_LS)); openTabs = Array.isArray(t) ? t : []; } catch { openTabs = []; } }
 function renderTabs() {
@@ -1489,7 +1493,7 @@ function libHTML(fid, listAll) {
 /* ---------------- Reprendre (1.47) : cours en ce moment / prochain cours, derniers documents ouverts ---------------- */
 /* derniers documents ouverts : sur l'appareil seulement (localStorage), jamais dans la fiche du document — la synchronisation
    pousserait le document entier à chaque ouverture */
-const RECENT_LS = 'alixo.recent' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : '');
+const RECENT_LS = 'alixo.recent' + (window.AlixoAuth ? window.AlixoAuth.storageSuffix() : '') + (ALIXO_PANE ? '.pane' : ALIXO_SOLO ? '.solo' : ALIXO_PRESENT ? '.present' : '');
 let recentDocs = (() => { try { const t = JSON.parse(localStorage.getItem(RECENT_LS)); return Array.isArray(t) ? t.filter(r => r && typeof r.id === 'string' && typeof r.ts === 'number').slice(0, 10) : []; } catch { return []; } })();
 function noteRecent(id) {
   if (!id || isVTabId(id)) return;
@@ -2985,17 +2989,21 @@ const PLUS_ICO = {
   widgets: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>',
   fond: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><rect x="8" y="7" width="8" height="10" rx="1"/><path d="m3 15 4-4M17 9l4-3"/></svg>',
   detourage: '<svg viewBox="0 0 24 24"><path d="m4 20 11-11M15 4v3M13.5 5.5h3M19 9v2M18 10h2M9 3v2M8 4h2"/></svg>',   // 1.52
+  slidesthemes: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M6 15h7M6 11.5h4"/></svg>',   // 1.54
+  filigrane: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4"/><path d="M9 17h6" opacity=".5"/><path d="m4 20 16-16" stroke-dasharray="2 2"/></svg>',   // 1.54
   star: '<svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/></svg>'
 };
 const PLUS_FEATURES = [
   { k: 'stockage', name: 'Plus de 3 Go de stockage', free: '3 Go', plus: 'Au-delà de 3 Go', text: 'Fichiers, images et cours au-delà de la limite de 3 Go du compte gratuit.' },
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
+  { k: 'slidesthemes', name: 'Thèmes signature des présentations', free: '12 thèmes', plus: '24 thèmes', text: 'Douze thèmes supplémentaires avec motif de fond et forme signature (Aurore, Granit, Lagon, Kraft, Bauhaus, Prisme, Olive, Cobalt, Pointillé, Rubis, Nuit étoilée, Menthe).' },   // 1.54
   { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI, sur votre ordinateur et sans limite, relit tout le cours (F7), propose la mise en forme et des reformulations.' },
   { k: 'quizia', name: 'Alixo AI : Coco, quiz et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation, un tableur, une planche ou un quiz : Coco, la mascotte, répond à vos questions sur le cours et peut modifier le document à votre demande (corriger, mettre en forme, compléter), avec annulation ; quiz (QCM, vrai / faux, réponses courtes) corrigés sur place ; fiches de révision colorées (à retenir, grandes idées, définitions, dates, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'detourage', name: 'Supprimer le fond d’une image', free: '—', plus: 'Inclus', text: 'Retirez le fond d’une photo ou d’un schéma (clic droit sur l’image › Retouches › Supprimer le fond). Le calcul se fait sur votre appareil, sans service externe.' },   // 1.52
-  { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' }
+  { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' },
+  { k: 'filigrane', name: 'Documents et présentations sans mention « Fait avec Alixo »', free: 'Mention discrète sur les exports et en mode présentation', plus: 'Aucune mention', text: 'Sans Alixo+, une petite mention « Fait avec Alixo · alixoapp.com » figure au bas des documents exportés (PDF, Word, page web) et dans un coin de l’écran pendant une présentation. Alixo+ l’enlève.' }   // 1.54
 ];
 let planInfo = (() => { try { return JSON.parse(localStorage.getItem(PLUS_LS)) || {}; } catch { return {}; } })();
 let plusOffer = { price: '', url: '', note: '' };
@@ -3808,7 +3816,8 @@ function settingsSectionHTML(k) {
   const desk = window.alixoDesktop;
   if (k === 'compte') return `<div class="set-sect">${accountSectionHTML()}</div>${shareMailPrefHTML()}
     <div class="set-sect"><div class="po-label">Activité</div>
-      <div class="po-row" style="align-items:center; gap:10px"><button id="po-weekly" class="cta ghost small" type="button">Voir mon bilan de la semaine</button><span class="po-hint" style="margin:0">Le bilan s’affiche à chaque ouverture d’Alixo.</span></div></div>`;
+      <div class="po-row" style="align-items:center; gap:10px"><button id="po-weekly" class="cta ghost small" type="button">Voir mon bilan de la semaine</button><span class="po-hint" style="margin:0">Le bilan s’affiche à chaque ouverture d’Alixo.</span></div></div>
+    ${window.AlixoSlidesMedia && AlixoSlidesMedia.settingsHTML ? AlixoSlidesMedia.settingsHTML() : ''}`;   // 1.54 : « Oublier les autorisations vidéo » (js/slides-media.js)
   if (k === 'apparence') return `<div class="set-sect"><div class="po-label">Thème de couleurs</div>
       <div class="po-hint" style="margin:0 0 10px">Les couleurs des dossiers et l’accent bleu d’Alixo restent les mêmes ; le thème change le fond, les panneaux et le texte.</div>
       <div class="set-tiles set-tiles4" id="set-theme">
@@ -3901,6 +3910,7 @@ function bindSettingsSection(k, root) {
     if (stor) storageUsage().then(u => { if (stor.isConnected) { stor.className = ''; stor.innerHTML = storageHTML(u, !!(window.AlixoSync && window.AlixoSync.enabled)); bindStorageCard(stor); const pb = stor.querySelector('#po-plus'); if (pb) pb.addEventListener('click', () => { settingsCat = 'plus'; renderSettingsBody(); }); } }).catch(() => { stor.textContent = 'Espace utilisé : calcul impossible'; });
     const wk = root.querySelector('#po-weekly');
     if (wk) wk.addEventListener('click', () => { closeSettings(); if (window.AlixoStats) AlixoStats.open(true); });
+    if (window.AlixoSlidesMedia && AlixoSlidesMedia.bindSettings) AlixoSlidesMedia.bindSettings(root);   // 1.54 : autorisations vidéo
     const pseudoOk = root.querySelector('#po-pseudo-ok');
     if (pseudoOk) {
       /* 1.53 : un pseudo existe toujours ; champ vide ou bouton « Un autre au hasard » → nouveau tirage, puis la carte se rafraîchit */
@@ -11218,12 +11228,14 @@ function openExportMenu(btn) {
   const formats = Object.entries(EXPORT_FORMATS).filter(([k]) => !special || k === 'pdf' || k === 'alx');
   if (isSheetDoc(d) && window.AlixoSheets && AlixoSheets.exportCSV) formats.push(['csv', { label: 'Feuille en CSV (.csv)' }]);
   const r = btn.getBoundingClientRect();
-  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque', csv: 'La feuille affichée, pour Excel ou un autre tableur' };
+  /* 1.54 : les vidéos importées depuis l'ordinateur ne sont pas incluses dans le fichier Alixo (seule leur affiche voyage) */
+  const localVideo = Array.isArray(d.slides) && d.slides.some(s => (s.els || []).some(e => e && e.t === 'video' && e.vk === 'file'));
+  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque' + (localVideo ? ' — sans les vidéos importées depuis l’ordinateur' : ''), csv: 'La feuille affichée, pour Excel ou un autre tableur' };
   const alxKind = window.AlixoAlx && AlixoAlx.kindOfDoc ? AlixoAlx.kindOfDoc(d) : 'docs';
   const icon = k => k === 'alx' ? EXPORT_FORMAT_ICONS.alx(alxKind) : (EXPORT_FORMAT_ICONS[k] || EXPORT_FORMAT_ICONS.csv).replace('<svg', '<svg class="po-ico"');
   showPopover(`<h4>Télécharger « ${esc(d.titre || 'Sans titre')} »</h4><div class="po-list po-export">
       ${formats.map(([k, v]) => `<button data-fmt="${k}">${icon(k)}<span><b>${esc(v.label)}</b><small>${hint[k]}</small></span></button>`).join('')}
-    </div>${isPlus() ? '' : '<div class="po-hint" style="margin:6px 0 0">Une petite mention « Fait avec Alixo » figure au bas de chaque page des PDF, Word et pages web ; Alixo+ l’enlève.</div>'}`,
+    </div>${isPlus() ? '' : '<div class="po-hint" style="margin:6px 0 0">Une petite mention « Fait avec Alixo » figure sur chaque page des PDF, Word et pages web (au bas de la page, ou dans un coin libre pour une présentation) et dans un coin de l’écran en mode présentation ; Alixo+ l’enlève.</div>'}`,
     { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
       const b = ev.target.closest('[data-fmt]'); if (!b) return;
       hidePopover();
@@ -11598,7 +11610,8 @@ function docRefMeta(d, shared) {
    onPick(t) : t = { kind: 'cours' | 'slides' | 'sheet' | 'board' | 'quiz' | 'file', ref, title } ou { kind: 'url', url, title: hôte } */
 function openTargetPicker(o) {
   const here = currentDocId;
-  const docs = state.docs.filter(d => d.id !== here && !isLocalOnly(d) && d.folderId !== LOCAL_FOLDER_ID)
+  /* 1.54 : o.kinds = ['quiz'] limite la liste à certains types de documents (bloc Quiz des présentations) */
+  const docs = state.docs.filter(d => d.id !== here && !isLocalOnly(d) && d.folderId !== LOCAL_FOLDER_ID && (!Array.isArray(o.kinds) || o.kinds.includes(d.kind || 'cours')))
     .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
     .map(d => ({ kind: d.kind || 'cours', ref: d.id, title: d.titre || 'Sans titre', key: norm((d.titre || '') + ' ' + folderPath(d.folderId).map(f => f.nom).join(' ') + ' ' + (DREF_KINDS[d.kind] || '')), html: `${docIcon(d)}<span class="dref-po-nm"><b>${esc(d.titre || 'Sans titre')}</b><small>${esc(docRefMeta(d, false))}</small></span>` }));
   const files = o.files && window.AlixoFiles && Array.isArray(state.files) ? state.files.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).map(f => {
@@ -11621,7 +11634,7 @@ function openTargetPicker(o) {
         list = all.filter(t => !q || t.key.includes(q)).slice(0, 60);
         sel = Math.max(0, Math.min(sel, list.length - 1));
         box.innerHTML = list.map((t, i) => `<button type="button" role="option" id="po-dref-${i}" data-i="${i}" class="${i === sel ? 'sel' : ''}" aria-selected="${i === sel}">${t.html}</button>`).join('')
-          || `<div class="po-empty">${all.length ? 'Aucun document ne correspond.' : (files.length || o.files ? 'Aucun autre document ni fichier dans votre bibliothèque.' : 'Aucun autre document dans votre bibliothèque.')}</div>`;
+          || `<div class="po-empty">${all.length ? 'Aucun document ne correspond.' : (o.empty ? esc(o.empty) : (files.length || o.files ? 'Aucun autre document ni fichier dans votre bibliothèque.' : 'Aucun autre document dans votre bibliothèque.'))}</div>`;
         if (list.length) inp.setAttribute('aria-activedescendant', 'po-dref-' + sel); else inp.removeAttribute('aria-activedescendant');
       };
       const move = k => { if (!list.length) return; sel = Math.max(0, Math.min(list.length - 1, sel + k)); box.querySelectorAll('[data-i]').forEach(x => { const on = +x.dataset.i === sel; x.classList.toggle('sel', on); x.setAttribute('aria-selected', on); }); inp.setAttribute('aria-activedescendant', 'po-dref-' + sel); const c = box.querySelector('.sel'); if (c) c.scrollIntoView({ block: 'nearest' }); };
@@ -12392,6 +12405,13 @@ if (!Array.isArray(state.events)) state.events = [];
 loadTabs(); loadTabScroll();
 showLibrary();
 renderCalNow();
+/* 1.54 : écran public d'une présentation — à la place du flux normal, la présentation demandée s'ouvre en plein écran et attend
+   le présentateur (js/slides-present.js › audienceBoot) ; le script est chargé après celui-ci, d'où l'attente du DOM */
+if (ALIXO_PRESENT) {
+  document.body.classList.add('present-window');
+  const bootAudience = () => { if (window.AlixoSlidesPresent && AlixoSlidesPresent.audienceBoot) AlixoSlidesPresent.audienceBoot(new URLSearchParams(location.search).get('doc') || ''); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAudience); else setTimeout(bootAudience, 0);
+}
 
 /* ============================================================
    Raccourcis de frappe — « tkt » + espace → « t’inquiète »
@@ -13316,7 +13336,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le Workspace : déposez vos séances et profitez de celles des autres (étoiles, commentaires) ; un pseudo attribué à chacun ; une boîte de partage unique avec lien de partage ; la couleur des encadrés dans Paramètres › Apparence ; cartes et frise sans contour bleu ni espace vide.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les présentations font peau neuve : animations et transitions, vidéos et quiz liés, douze thèmes signature, banque d’images libres avec crédit, et un vrai mode présentation avec vue présentateur sur second écran.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

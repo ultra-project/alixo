@@ -1,5 +1,5 @@
 /* ============================================================
-   Alixo — présentations (diapositives) 1.14
+   Alixo — présentations (diapositives) 1.54
    Une présentation est une séance particulière : { kind: 'slides', slides: [...], theme: { id, accent } }
    (d.blocks reste vide : synchronisation, onglets, bibliothèque et corbeille
    n'ont rien à connaître). Chaque diapositive = { id, bg, notes, els: [...] } ;
@@ -42,7 +42,21 @@ window.AlixoSlides = (() => {
     { id: 'sable', name: 'Sable', sub: 'Beige, Garamond', acc: '#b3762a', paper: '#f6efe3', ink: '#2c251c', ink2: '#6b5d4b', head: 'Garamond, "EB Garamond", "Times New Roman", serif', body: 'Georgia, "Times New Roman", serif' },
     { id: 'craie', name: 'Tableau noir', sub: 'Vert ardoise, craie jaune', acc: '#f5d76e', paper: '#223629', ink: '#f7f4e8', ink2: '#c8cbbd', head: '"Trebuchet MS", "Segoe UI", sans-serif', body: F_UI, dark: true },
     { id: 'journal', name: 'Journal', sub: 'Noir et rouge, Times', acc: '#c0392b', paper: '#fbfaf6', ink: '#111111', ink2: '#555555', head: '"Times New Roman", Times, serif', body: 'Georgia, "Times New Roman", serif' },
-    { id: 'neon', name: 'Néon', sub: 'Anthracite, vert menthe', acc: '#19d3a2', paper: '#101418', ink: '#e8f6f0', ink2: '#9fb5ad', head: 'Bahnschrift, "Segoe UI Semibold", "Segoe UI", sans-serif', body: F_UI, dark: true }
+    { id: 'neon', name: 'Néon', sub: 'Anthracite, vert menthe', acc: '#19d3a2', paper: '#101418', ink: '#e8f6f0', ink2: '#9fb5ad', head: 'Bahnschrift, "Segoe UI Semibold", "Segoe UI", sans-serif', body: F_UI, dark: true },
+    /* 1.54 : thèmes signature (Alixo+ : verrou au choix, jamais au rendu) — `bg` : image de fond CSS (ou ''), `bgsize` : background-size,
+       `sig` : forme signature dessinée par .sl-slide.sig-<k>::after (slides.css), `sigc` : sa couleur (défaut : l'accent). Piles système. */
+    { id: 'aurore', name: 'Aurore', sub: 'Dégradé pêche → rose, grand cercle', acc: '#d9574a', paper: '#fff1e6', ink: '#3a2420', ink2: '#86605a', head: 'Georgia, "Times New Roman", serif', body: F_UI, plus: true, bg: 'linear-gradient(135deg, #ffe3c9 0%, #ffd0d8 60%, #f7c1e0 100%)', sig: 'circle', sigc: '#ff9a7a' },
+    { id: 'granit', name: 'Granit', sub: 'Anthracite, bande verticale', acc: '#e0a53a', paper: '#2b2d31', ink: '#f1f1ee', ink2: '#b6b8bd', head: 'Bahnschrift, "Segoe UI Semibold", "Segoe UI", Arial, sans-serif', body: F_UI, dark: true, plus: true, bg: 'linear-gradient(180deg, #2f3136, #26282c)', sig: 'band' },
+    { id: 'lagon', name: 'Lagon', sub: 'Turquoise, vague en pied', acc: '#0e8f8a', paper: '#eefaf9', ink: '#10353a', ink2: '#4f777a', head: '"Trebuchet MS", "Segoe UI", sans-serif', body: F_UI, plus: true, bg: 'linear-gradient(180deg, #f3fdfc, #e2f6f4)', sig: 'wave', sigc: '#7fd3cf' },
+    { id: 'kraft', name: 'Kraft', sub: 'Papier brun, cadre fin', acc: '#8a4b2a', paper: '#e9d9c3', ink: '#3b2a1c', ink2: '#7a6250', head: 'Georgia, "Times New Roman", serif', body: 'Georgia, "Times New Roman", serif', plus: true, bg: 'repeating-linear-gradient(0deg, rgba(120, 80, 40, .07) 0 1px, transparent 1px 7px)', sig: 'frame', sigc: '#8a4b2a' },
+    { id: 'bauhaus', name: 'Bauhaus', sub: 'Crème, jaune, rouge et noir', acc: '#e63b2e', paper: '#f6efe0', ink: '#141414', ink2: '#5a5550', head: 'Bahnschrift, "Segoe UI Semibold", "Segoe UI", Arial, sans-serif', body: F_UI, plus: true, bg: 'linear-gradient(90deg, #141414 0 18px, transparent 18px)', sig: 'corner', sigc: '#f2c230' },
+    { id: 'prisme', name: 'Prisme', sub: 'Violet → bleu nuit, bande oblique', acc: '#c9a8ff', paper: '#1f1538', ink: '#f3eefc', ink2: '#b9addb', head: '"Segoe UI Semibold", "Segoe UI", Arial, sans-serif', body: F_UI, dark: true, plus: true, bg: 'linear-gradient(135deg, #2d1b5a 0%, #1a1f4a 55%, #0f2a4a 100%)', sig: 'diag', sigc: '#7a5cc7' },
+    { id: 'olive', name: 'Olive', sub: 'Vert olive, cadre discret', acc: '#6b7b2a', paper: '#f4f3ea', ink: '#2a2e1c', ink2: '#6a6e58', head: 'Cambria, "Book Antiqua", Georgia, serif', body: 'Calibri, Carlito, "Segoe UI", sans-serif', plus: true, bg: 'linear-gradient(180deg, #f7f6ee, #eeeddf)', sig: 'frame', sigc: '#9aa66a' },
+    { id: 'cobalt', name: 'Cobalt', sub: 'Bleu profond, cercle hors-champ', acc: '#ffb94a', paper: '#0f2a6b', ink: '#f2f5ff', ink2: '#b7c3e6', head: '"Segoe UI Semibold", "Segoe UI", Arial, sans-serif', body: F_UI, dark: true, plus: true, bg: 'linear-gradient(160deg, #10307a, #0b1f52)', sig: 'bigcircle', sigc: '#1d4bb0' },
+    { id: 'pointille', name: 'Pointillé', sub: 'Gris clair, trame de points', acc: '#3d6bb5', paper: '#f4f5f7', ink: '#1f2933', ink2: '#5d6773', head: '"Segoe UI Semibold", "Segoe UI", Arial, sans-serif', body: F_UI, plus: true, bg: 'radial-gradient(rgba(60, 70, 90, .16) 1.6px, transparent 2px)', bgsize: '26px 26px', sig: '' },
+    { id: 'rubis', name: 'Rubis', sub: 'Bordeaux, bande haute', acc: '#9b1b30', paper: '#fbf6f6', ink: '#2b1a1e', ink2: '#755a60', head: 'Georgia, "Times New Roman", serif', body: F_UI, plus: true, bg: 'linear-gradient(180deg, #fdf9f9, #f6eef0)', sig: 'top' },
+    { id: 'etoile', name: 'Nuit étoilée', sub: 'Nuit profonde, étoiles', acc: '#ffd369', paper: '#0b1026', ink: '#eef0ff', ink2: '#a9afd1', head: 'Georgia, "Times New Roman", serif', body: F_UI, dark: true, plus: true, bg: 'radial-gradient(ellipse at 70% 20%, #1d2a5e 0%, #0b1026 60%)', sig: 'dots', sigc: '#ffffff' },
+    { id: 'menthe', name: 'Menthe', sub: 'Vert d’eau, double cadre', acc: '#2a8c7a', paper: '#eaf7f3', ink: '#17302b', ink2: '#56746d', head: 'Palatino, "Palatino Linotype", "Book Antiqua", serif', body: F_UI, plus: true, bg: 'linear-gradient(180deg, #eef9f5, #e3f3ee)', sig: 'frame2', sigc: '#7cc4b4' }
   ];
   const I = {
     title: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7"/></svg>',
@@ -80,6 +94,7 @@ window.AlixoSlides = (() => {
     qr: '<svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM19 14h2M14 19h2M19 19h2v2"/></svg>',
     pagenum: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M14 16h4"/></svg>',
     play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8Z"/></svg>',
+    lock: '<svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>',
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
     dup: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
     trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
@@ -91,7 +106,15 @@ window.AlixoSlides = (() => {
     front: '<svg viewBox="0 0 24 24"><rect x="4" y="4" width="11" height="11" rx="2"/><rect x="9" y="9" width="11" height="11" rx="2" fill="var(--surface)"/></svg>',
     back: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><rect x="4" y="4" width="11" height="11" rx="2" fill="var(--surface)"/></svg>',
     palette: '<svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/></svg>',
-    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>'
+    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    /* 1.54 */
+    video: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m10 9 5 3-5 3Z" fill="currentColor"/></svg>',
+    quiz: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 1.5 1.5L11 8M7 15l1.5 1.5L11 14M13 9h5M13 15h5"/></svg>',
+    anim: '<svg viewBox="0 0 24 24"><path d="M4 12h9M9 7l5 5-5 5"/><circle cx="18.5" cy="12" r="2.5"/></svg>',
+    trans: '<svg viewBox="0 0 24 24"><rect x="3" y="6" width="9" height="12" rx="1.5"/><rect x="14" y="6" width="7" height="12" rx="1.5" opacity=".5"/><path d="m12 3 2 2-2 2"/></svg>',
+    timer: '<svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/></svg>',
+    laser: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.2 2.2M16.2 16.2l2.2 2.2M5.6 18.4l2.2-2.2M16.2 7.8l2.2-2.2"/></svg>',
+    pen: '<svg viewBox="0 0 24 24"><path d="m4 20 4-1L19 8l-3-3L5 16Z"/><path d="m14 7 3 3"/></svg>'
   };
   const tableHTML = (r, c) => '<table>' + Array.from({ length: r }, (_, i) => '<tr>' + Array.from({ length: c }, () => `<td>${i === 0 ? '<b>Titre</b>' : '…'}</td>`).join('') + '</tr>').join('') + '</table>';
   /* la palette : blocs que l'on glisse sur la diapositive, par catégorie */
@@ -119,8 +142,10 @@ window.AlixoSlides = (() => {
     { t: 'compare', cat: 'cours', name: 'Comparaison', hint: 'Deux colonnes face à face', kw: 'versus avantages inconvenients', w: 84, h: 40, make: () => ({ lt: 'Avant', lh: '<ul><li>Point</li><li>Point</li></ul>', rt: 'Après', rh: '<ul><li>Point</li><li>Point</li></ul>' }) },
     { t: 'agenda', cat: 'cours', name: 'Plan / sommaire', hint: 'Parties numérotées en grand', kw: 'sommaire plan parties', w: 60, h: 40, make: () => ({ html: '<ol><li>Introduction</li><li>Première partie</li><li>Seconde partie</li><li>Conclusion</li></ol>' }) },
     { t: 'session', cat: 'cours', name: 'Infos de séance', hint: 'Date, professeur, lieu', kw: 'date prof lieu', w: 40, h: 16, make: () => ({ html: `${new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} · Amphi A` }) },
+    { t: 'quiz', cat: 'cours', name: 'Quiz Alixo', hint: 'Lance un de vos quiz pendant la présentation', kw: 'quiz qcm interro test direct', w: 44, h: 30, make: () => ({ ref: '', mode: 'test' }) },   // 1.54 (rendu complet : lot C)
     // --- Visuel ---
     { t: 'image', cat: 'visuel', name: 'Image', hint: 'Photo, schéma, capture', kw: 'photo', w: 40, h: 45, make: () => ({ iid: '' }) },
+    { t: 'video', cat: 'visuel', name: 'Vidéo', hint: 'Fichier vidéo ou YouTube, Vimeo, Dailymotion', kw: 'video film youtube vimeo dailymotion', w: 56, h: 56, make: () => ({ vk: '', vid: '' }) },   // 1.54 (rendu complet : lot C)
     { t: 'icon', cat: 'visuel', name: 'Icône', hint: 'Une icône Alixo, colorée', kw: 'pictogramme symbole', w: 12, h: 20, make: () => ({ icon: 'lightbulb' }) },
     { t: 'shape', cat: 'visuel', name: 'Forme', hint: 'Rectangle, pastille, cercle, losange', kw: 'rectangle cercle fond', w: 30, h: 22, make: () => ({ shape: 'rect', html: '' }) },
     { t: 'arrow', cat: 'visuel', name: 'Flèche', hint: 'Flèche pleine, orientable', kw: 'fleche direction', w: 20, h: 8, make: () => ({ dir: 'right' }) },
@@ -138,7 +163,10 @@ window.AlixoSlides = (() => {
   const TEXT_BLOCKS = ['title', 'subtitle', 'text', 'kicker', 'list', 'olist', 'checklist', 'quote', 'code', 'callout', 'definition', 'juris', 'stat', 'kpis', 'question', 'steps', 'compare', 'agenda', 'session', 'table', 'sticky', 'bubble', 'badge', 'progress', 'qr', 'shape'];
   const LAYOUTS = [
     ['title', 'Diapositive de titre'], ['content', 'Titre et texte'], ['bullets', 'Titre et liste'], ['two', 'Deux colonnes'],
-    ['section', 'Section (fond teinté)'], ['stats', 'Chiffres clés'], ['plan', 'Plan du cours'], ['blank', 'Vide']
+    ['section', 'Section (fond teinté)'], ['stats', 'Chiffres clés'], ['plan', 'Plan du cours'], ['blank', 'Vide'],
+    /* 1.54 */
+    ['imgleft', 'Image et texte'], ['imgfull', 'Image plein cadre'], ['quote', 'Citation'], ['compare', 'Comparaison'],
+    ['video', 'Titre et vidéo'], ['quiz', 'Titre et quiz'], ['three', 'Trois colonnes'], ['end', 'Merci / Questions ?']
   ];
   const HANDLES = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(h => `<i class="sl-h" data-h="${h}"></i>`).join('') + '<i class="sl-grip" title="Déplacer"></i>';
 
@@ -148,7 +176,6 @@ window.AlixoSlides = (() => {
   let hist = { undo: [], redo: [], typingTs: 0, typingEl: null };
   let drag = null;             // { kind: 'move'|'resize'|'marquee', ... }
   let saveTm = null, thumbTm = null;
-  let present = null;          // { i } quand le mode présentation est actif
   let bound = false, ro = null;
   let previewRaf = 0;
   let palCat = 'texte', palQuery = '';
@@ -162,13 +189,20 @@ window.AlixoSlides = (() => {
   const sel = () => (selSet.size ? [...selSet][0] : null);
   const selEls = () => [...selSet].map(el).filter(Boolean);
   const themeOf = dd => THEMES.find(t => t.id === ((dd && dd.theme && dd.theme.id) || 'alixo')) || THEMES[0];
-  const accent = dd => (dd && dd.theme && dd.theme.accent) || themeOf(dd).acc || folderTint(dd ? dd.folderId : null) || '#33658a';
+  /* 1.54 : thème signature verrouillé au CHOIX (pas au rendu) sans Alixo+ ; `api._forceFree` simule la formule gratuite (tests) */
+  const themeLockedSl = t => !!(t && t.plus && (api._forceFree || (typeof isPlus === 'function' && !isPlus())));
+  /* 1.54.0 (sécurité) : une couleur n'entre dans un attribut style que si AlixoSanitize.color l'accepte (sinon repli) */
+  const safeColor = v => { if (typeof v !== 'string' || !v) return ''; if (window.AlixoSanitize && AlixoSanitize.color) return AlixoSanitize.color(v); const s = v.trim(); return /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(s) ? s.toLowerCase() : ''; };
+  const accent = dd => safeColor(dd && dd.theme && dd.theme.accent) || themeOf(dd).acc || folderTint(dd ? dd.folderId : null) || '#33658a';
   const round1 = v => Math.round(v * 10) / 10;
 
   function newSlide(layout, dd) {
-    const s = { id: uid(), bg: layout === 'section' ? 'tint' : 'paper', notes: '', els: [] };
+    const s = { id: uid(), bg: layout === 'section' || layout === 'end' ? 'tint' : 'paper', notes: '', els: [] };
     const add = (t, x, y, w, h, extra) => { const b = BLOCKS.find(b => b.t === t); s.els.push(Object.assign({ id: uid(), t, x, y, w, h }, b ? b.make() : {}, extra || {})); };
     const n = dd ? slides(dd).length + 1 : 1;
+    /* 1.54 : la nouvelle diapositive hérite de la transition de la diapositive courante (ou de la dernière) */
+    const prev = dd ? (slides(dd).find(x => x.id === curSlide) || slides(dd)[slides(dd).length - 1]) : null;
+    if (prev && prev.trans && typeof prev.trans === 'object') s.trans = { ...prev.trans };
     if (layout === 'title') { add('title', 8, 30, 84, 20, { html: dd && dd.titre ? esc(dd.titre) : 'Titre de la présentation', al: 'center', fs: 1.25 }); add('text', 18, 54, 64, 12, { html: 'Sous-titre, cours, date', al: 'center' }); add('divider', 42, 51, 16, 2); }
     else if (layout === 'content') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('text', 6, 25, 88, 62, { html: 'Votre texte…' }); }
     else if (layout === 'bullets') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('list', 6, 25, 88, 62); }
@@ -176,6 +210,15 @@ window.AlixoSlides = (() => {
     else if (layout === 'section') { add('kicker', 8, 30, 30, 7, { html: `Partie ${n}` }); add('title', 8, 38, 84, 20, { html: 'Titre de la partie', al: 'left', fs: 1.3 }); add('text', 8, 60, 60, 10, { html: 'Ce que nous allons voir' }); }
     else if (layout === 'stats') { add('title', 6, 7, 88, 14, { html: 'En chiffres' }); add('kpis', 6, 32, 88, 34); }
     else if (layout === 'plan') { add('title', 6, 7, 88, 14, { html: 'Plan' }); add('agenda', 6, 25, 60, 62); add('shape', 70, 25, 24, 62, { shape: 'rect', html: '' }); }
+    /* 1.54 */
+    else if (layout === 'imgleft') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('image', 6, 25, 42, 62); add('text', 52, 25, 42, 62, { html: 'Votre texte…' }); }
+    else if (layout === 'imgfull') { add('image', 0, 0, 100, 100); add('shape', 0, 74, 100, 26, { shape: 'rect', html: '' }); add('title', 6, 78, 88, 16, { html: `Titre ${n}`, color: '#ffffff' }); }
+    else if (layout === 'quote') { add('kicker', 10, 20, 30, 7, { html: 'Citation' }); add('quote', 10, 30, 80, 40, { fs: 1.25 }); }
+    else if (layout === 'compare') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('compare', 6, 25, 88, 62); }
+    else if (layout === 'video') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('video', 10, 24, 80, 66); }
+    else if (layout === 'quiz') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('quiz', 28, 36, 44, 30); }
+    else if (layout === 'three') { add('title', 6, 7, 88, 14, { html: `Titre ${n}` }); add('text', 6, 25, 27, 62, { html: 'Première colonne…' }); add('text', 36.5, 25, 27, 62, { html: 'Deuxième colonne…' }); add('text', 67, 25, 27, 62, { html: 'Troisième colonne…' }); }
+    else if (layout === 'end') { add('title', 8, 30, 84, 20, { html: 'Merci', al: 'center', fs: 1.4 }); add('divider', 42, 52, 16, 2); add('text', 18, 56, 64, 12, { html: 'Des questions ?', al: 'center' }); }
     return s;
   }
   function newDoc(fid, prof) {
@@ -194,19 +237,30 @@ window.AlixoSlides = (() => {
       return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${p}" fill="currentColor"/></svg>`;
     } catch { return '<span class="sl-ph">QR</span>'; }
   }
-  function elHTML(e, edit) {
-    const st = `left:${e.x}%;top:${e.y}%;width:${e.w}%;height:${e.h}%;${e.fs ? `--fs:${e.fs};` : ''}${e.al ? `text-align:${e.al};` : ''}${e.color ? `--elc:${e.color};` : ''}${e.z ? `z-index:${e.z};` : ''}`;
+  /* 1.54 : opts.mode ∈ edit | thumb | present | pdf | presenter | audience (défaut : edit si `edit`, sinon thumb) */
+  const MODES = ['edit', 'thumb', 'present', 'pdf', 'presenter', 'audience'];
+  const modeOf = (edit, opts) => (opts && MODES.includes(opts.mode) ? opts.mode : (edit ? 'edit' : 'thumb'));
+  function elHTML(e, edit, opts) {
+    const mode = modeOf(edit, opts);
+    /* 1.54.0 (sécurité) : géométrie, taille, alignement, couleur et plan ne sortent du modèle qu'en nombres / valeurs de liste blanche
+       (défense en profondeur derrière normalize : un document partagé ou importé hostile ne peut pas fermer l'attribut style) */
+    const num = v => (Number.isFinite(+v) ? +v : 0);
+    const fs = Number.isFinite(+e.fs) && +e.fs > 0 ? +e.fs : 0;
+    const al = N_ALIGNS.includes(e.al) ? e.al : '';
+    const col = safeColor(e.color);
+    const z = Number.isInteger(+e.z) ? +e.z : 0;
+    const st = `left:${num(e.x)}%;top:${num(e.y)}%;width:${num(e.w)}%;height:${num(e.h)}%;${fs ? `--fs:${fs};` : ''}${al ? `text-align:${al};` : ''}${col ? `--elc:${col};` : ''}${z ? `z-index:${z};` : ''}`;
     const ce = edit ? ' contenteditable="true" spellcheck="true"' : '';
     const T = (f, cls) => `<div class="sl-text${cls ? ' ' + cls : ''}"${ce}${f === 'html' ? '' : ` data-f="${f}"`}>${e[f] || ''}</div>`;
     let inner = '', cls = '';
     switch (e.t) {
       case 'title': case 'subtitle': case 'text': case 'kicker': case 'list': case 'olist': case 'checklist': case 'agenda': case 'code': case 'session': inner = T('html'); break;
-      case 'callout': { const c = (typeof CALLOUTS === 'object' && CALLOUTS[e.ct]) || { name: 'Encadré', ico: 'book-open' }; cls = ' ct-' + (e.ct || 'definition'); inner = `<div class="sl-ctitle">${iconSvg(c.ico)}<span>${esc(c.name)}</span></div>${T('html')}`; break; }
+      case 'callout': { const ctk = typeof CALLOUTS === 'object' && hasOwn(CALLOUTS, e.ct) ? e.ct : 'definition'; const c = (typeof CALLOUTS === 'object' && CALLOUTS[ctk]) || { name: 'Encadré', ico: 'book-open' }; cls = ' ct-' + ctk; inner = `<div class="sl-ctitle">${iconSvg(c.ico)}<span>${esc(c.name)}</span></div>${T('html')}`; break; }
       case 'definition': inner = `${T('term', 'sl-term')}${T('html', 'sl-def')}`; break;
       case 'juris': inner = `<div class="sl-jhead">${iconSvg('scale')}${T('ref', 'sl-jref')}</div><div class="sl-jgrid">${[['faits', 'Faits'], ['probleme', 'Problème'], ['solution', 'Solution'], ['portee', 'Portée']].map(([f, l]) => `<div class="sl-jcell"><b>${l}</b>${T(f)}</div>`).join('')}</div>`; break;
       case 'quote': inner = `${T('html', 'sl-q')}${T('cite', 'sl-cite')}`; break;
-      case 'image': { const src = e.iid && AlixoImages.cache.get(e.iid); inner = src ? `<img src="${src}" draggable="false" alt="">` : `<div class="sl-imgph">${I.image}<span>${edit ? 'Double-clic : choisir une image (ou glissez-en une ici)' : ''}</span></div>`; break; }
-      case 'icon': inner = `<div class="sl-icon">${iconSvg(e.icon || 'star')}</div>`; break;
+      case 'image': { const src = e.iid && AlixoImages.cache.get(e.iid); const ctxt = e.credit && window.AlixoSlidesMedia && AlixoSlidesMedia.creditHTML && window.AlixoImageBank ? AlixoImageBank.creditText(e.credit) : ''; inner = src ? `<img src="${esc(src)}" draggable="false" alt=""${ctxt ? ` title="${esc(ctxt)}"` : ''}>` : `<div class="sl-imgph">${I.image}<span>${edit ? 'Double-clic : choisir une image (ou glissez-en une ici)' : ''}</span></div>`; if (e.credit && mode !== 'thumb' && window.AlixoSlidesMedia && AlixoSlidesMedia.creditHTML) inner += AlixoSlidesMedia.creditHTML(e, { mode }); break; }   // 1.54 : crédit d'une image de la banque
+      case 'icon': inner = `<div class="sl-icon">${iconSvg(window.AlixoIcons && hasOwn(AlixoIcons.ICONS, e.icon) ? e.icon : 'star')}</div>`; break;
       case 'formula': inner = `<div class="sl-formula">${(window.AlixoMath && AlixoMath.render(e.src || '')) || '<span class="sl-ph">Formule</span>'}</div>`; break;
       case 'table': inner = T('html', 'sl-tbl'); break;
       case 'stat': inner = `${T('num', 'sl-num')}${T('html', 'sl-lab')}`; break;
@@ -214,8 +268,8 @@ window.AlixoSlides = (() => {
       case 'question': inner = `${T('q', 'sl-qq')}<div class="sl-answers">${[1, 2, 3, 4].map(i => `<div class="sl-ans ${e.ans === i - 1 ? 'ok' : ''}"><span class="sl-ansl" data-ans="${i - 1}" title="${edit ? 'Cliquer : marquer comme bonne réponse' : ''}">${String.fromCharCode(64 + i)}</span>${T('a' + i)}</div>`).join('')}</div>`; break;
       case 'steps': inner = `<div class="sl-steps">${[1, 2, 3, 4].map(i => `<div class="sl-step"><span class="sl-stepn">${i}</span>${T('s' + i)}</div>`).join('')}</div>`; break;
       case 'compare': inner = `<div class="sl-col">${T('lt', 'sl-colt')}${T('lh', 'sl-colb')}</div><div class="sl-col">${T('rt', 'sl-colt')}${T('rh', 'sl-colb')}</div>`; break;
-      case 'shape': cls = ' sh-' + (e.shape || 'rect'); inner = `<div class="sl-shape"></div>${T('html', 'sl-shlabel')}`; break;
-      case 'arrow': cls = ' dir-' + (e.dir || 'right'); inner = `<svg class="sl-arrow" viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 12h70V0l30 20-30 20V28H0Z" fill="currentColor"/></svg>`; break;
+      case 'shape': cls = ' sh-' + (N_SHAPES.includes(e.shape) ? e.shape : 'rect'); inner = `<div class="sl-shape"></div>${T('html', 'sl-shlabel')}`; break;
+      case 'arrow': cls = ' dir-' + (N_DIRS.includes(e.dir) ? e.dir : 'right'); inner = `<svg class="sl-arrow" viewBox="0 0 100 40" preserveAspectRatio="none"><path d="M0 12h70V0l30 20-30 20V28H0Z" fill="currentColor"/></svg>`; break;
       case 'divider': inner = '<div class="sl-divider"></div>'; break;
       case 'sticky': case 'bubble': case 'badge': inner = T('html'); break;
       case 'progress': { const p = Math.max(0, Math.min(100, +e.pct || 0)); inner = `<div class="sl-prog"><div class="sl-progbar" style="width:${p}%"></div></div><div class="sl-progrow">${T('html', 'sl-lab')}<span class="sl-progpct">${p} %</span></div>`; break; }
@@ -223,18 +277,45 @@ window.AlixoSlides = (() => {
       case 'graph': inner = `<div class="sl-chart">${window.AlixoGraphs ? AlixoGraphs.renderSVG(e.gtype || 'plot', e.params || {}) : '<span class="sl-ph">Graphique</span>'}</div>`; break;
       case 'qr': inner = `<div class="sl-qr">${qrSvg(e.url || '')}</div>${T('html', 'sl-lab')}`; break;
       case 'pagenum': inner = `<div class="sl-pagenum">${renderCtx.i + 1} / ${renderCtx.n}</div>`; break;
+      /* 1.54 : cartes provisoires (le lot C apporte la lecture vidéo et le lien vers un quiz) */
+      case 'video': inner = window.AlixoSlidesMedia && AlixoSlidesMedia.videoHTML ? AlixoSlidesMedia.videoHTML(e, { mode }) : `<div class="sl-vcard">${I.video}<span>Vidéo</span></div>`; break;   // 1.54 : carte vidéo (js/slides-media.js)
+      case 'quiz': inner = window.AlixoSlidesMedia && AlixoSlidesMedia.quizHTML ? AlixoSlidesMedia.quizHTML(e, { mode }) : `<div class="sl-quizcard">${I.quiz}<span>Quiz</span></div>`; break;   // 1.54 : carte quiz (js/slides-media.js)
     }
-    return `<div class="sl-el t-${e.t}${cls}${edit && selSet.has(e.id) ? ' sel' : ''}" data-id="${e.id}" style="${st}">${inner}${edit ? HANDLES : ''}</div>`;
+    /* 1.54 : animation du bloc (slides-fx.js) — présentation / public / présentateur : attributs lus par applyStep ;
+       édition : pastille d'ordre d'apparition ; vignettes et PDF : rien (tout visible) */
+    const an = e.anim && window.AlixoSlidesFx && AlixoSlidesFx.normAnim ? AlixoSlidesFx.normAnim(e.anim) : null;
+    let animAttr = '', animSt = '', tag = '';
+    if (an && ['present', 'audience', 'presenter'].includes(mode)) {
+      animAttr = ` data-ord="${+an.ord || 0}" data-fx="${esc(an.fx)}"`; animSt = `--adur:${+an.dur || 0}s;`;
+      if (an.ord > ((opts && +opts.step) || 0)) cls += ' anim-wait';
+    } else if (an && mode === 'edit' && an.ord >= 1) tag = `<i class="sl-ordtag" title="${esc(AlixoSlidesFx.label(e))}">${an.ord}</i>`;
+    return `<div class="sl-el t-${esc(e.t)}${cls}${edit && selSet.has(e.id) ? ' sel' : ''}" data-id="${esc(e.id)}"${animAttr} style="${st}${animSt}">${inner}${edit ? HANDLES : ''}${tag}</div>`;
   }
-  function slideHTML(s, dd, edit, idx) {
+  /* 1.54 : filigrane « Fait avec Alixo » (présentation, écran public, PDF) tant que le compte n'a pas Alixo+ — même prédicat que les
+     exports (exportWatermarked, app.js). Posé dans le premier coin libre : bas gauche → bas droite → haut gauche → haut droite,
+     sinon centré en bas. Zones en % de la diapositive : { x, y, w, h }. `api._forceFree` (tests) : filigrane même en mode local. */
+  const WM_ZONES = { bl: { x: 0, y: 91, w: 22, h: 9 }, br: { x: 78, y: 91, w: 22, h: 9 }, tl: { x: 0, y: 0, w: 22, h: 9 }, tr: { x: 78, y: 0, w: 22, h: 9 } };
+  const freePlan = () => !!(api._forceFree || (typeof exportWatermarked === 'function' && exportWatermarked()));
+  function watermarkHTML(s) {
+    if (typeof WM_HTML === 'undefined') return '';
+    const els = (s.els || []).filter(e => typeof e.x === 'number' && typeof e.y === 'number');
+    const occupe = (z, e) => e.x < z.x + z.w && e.x + (+e.w || 0) > z.x && e.y < z.y + z.h && e.y + (+e.h || 0) > z.y;
+    const pos = ['bl', 'br', 'tl', 'tr'].find(k => !els.some(e => occupe(WM_ZONES[k], e))) || 'bc';
+    return `<div class="sl-wm pos-${pos}" aria-hidden="true">${WM_HTML}</div>`;
+  }
+  function slideHTML(s, dd, edit, idx, opts) {
+    const mode = modeOf(edit, opts);
+    const o = Object.assign({}, opts || {}, { mode });
     const th = themeOf(dd);
     const list = slides(dd);
     renderCtx = { i: idx === undefined ? Math.max(0, list.indexOf(s)) : idx, n: list.length };
     /* 1.35 : police propre à la présentation (bouton Police) : elle remplace celles du thème, titres et texte */
     const ff = window.AlixoApp && AlixoApp.docFontCss ? AlixoApp.docFontCss(dd) : '';
     const q = f => String(f || '').replace(/"/g, "'");   // les guillemets doubles des piles de polices casseraient l'attribut style
-    const vars = `--acc:${accent(dd)};--sl-paper:${th.paper};--sl-ink:${th.ink};--sl-ink2:${th.ink2};--font-head:${q(ff || th.head)};--font-body:${q(ff || th.body)}`;
-    return `<div class="sl-slide bg-${s.bg || 'paper'}${th.dark ? ' th-dark' : ''}" data-sid="${s.id}" style="${vars}">${(s.els || []).slice().sort((a, b) => (a.z || 0) - (b.z || 0)).map(e => elHTML(e, edit)).join('')}</div>`;
+    const vars = `--acc:${esc(accent(dd))};--sl-paper:${th.paper};--sl-ink:${th.ink};--sl-ink2:${th.ink2};--font-head:${q(ff || th.head)};--font-body:${q(ff || th.body)};--sl-bg:${q(th.bg) || 'none'};--sl-bgsize:${q(th.bgsize) || 'auto'};--sl-sig:${q(th.sigc) || 'var(--acc)'}`;
+    const cls = `sl-slide bg-${BGS.some(b => b[0] === s.bg) ? s.bg : 'paper'} th-${th.id}${th.dark ? ' th-dark' : ''}${th.sig ? ' sig-' + th.sig : ''}`;
+    const wm = ['present', 'audience', 'pdf'].includes(mode) && freePlan() ? watermarkHTML(s) : '';
+    return `<div class="${cls}" data-sid="${esc(s.id)}" style="${vars}">${(s.els || []).slice().sort((a, b) => (a.z || 0) - (b.z || 0)).map(e => elHTML(e, edit, o)).join('')}${wm}</div>`;
   }
 
   /* ---------------- historique (Ctrl+Z / Ctrl+Y) ---------------- */
@@ -276,7 +357,7 @@ window.AlixoSlides = (() => {
     const shared = typeof isSharedDoc === 'function' && isSharedDoc(id);
     readOnly = !!(shared && !(window.AlixoShare && AlixoShare.canWrite(id)));
     document.body.classList.toggle('readonly', readOnly);
-    if (shared && window.AlixoShare && AlixoShare.noteOpened) AlixoShare.noteOpened(id);
+    if (shared && !window.ALIXO_PRESENT && window.AlixoShare && AlixoShare.noteOpened) AlixoShare.noteOpened(id);   // 1.54.0 : jamais depuis la fenêtre du présentateur
     if (!slides(dd).length) { if (readOnly) slides(dd).push({ id: 's0', bg: 'paper', notes: '', els: [] }); else slides(dd).push(newSlide('title', dd)); }
     if (!slides(dd).some(s => s.id === curSlide)) curSlide = slides(dd)[0].id;
     selSet.clear(); hist = { undo: [], redo: [], typingTs: 0, typingEl: null };
@@ -291,10 +372,11 @@ window.AlixoSlides = (() => {
     if (!openTabs.includes(id)) openTabs.push(id);
     renderTabs(); renderCrumbs();
     if (typeof renderAccess === 'function') renderAccess();
-    if (shared && window.AlixoShare) AlixoShare.setPresence(id, null);
+    if (shared && !window.ALIXO_PRESENT && window.AlixoShare) AlixoShare.setPresence(id, null);
     bind();
     const iids = [];
-    for (const s of slides(dd)) for (const e of s.els || []) if (e.t === 'image' && e.iid && !AlixoImages.cache.has(e.iid)) iids.push(e.iid);
+    for (const s of slides(dd)) for (const e of s.els || []) { const iid = e.t === 'image' ? e.iid : e.t === 'video' ? e.poster : '';   // 1.54 : affiches des vidéos aussi
+      if (iid && !AlixoImages.cache.has(iid)) iids.push(iid); }
     if (window.AlixoCoco) AlixoCoco.sync();   // 1.49 : le panneau Alixo AI suit le document affiché
     if (iids.length) { renderAll(); await Promise.all(iids.map(i => AlixoImages.get(i).catch(() => null))); if (currentDocId !== id) return; }
     renderAll();
@@ -314,7 +396,7 @@ window.AlixoSlides = (() => {
   function renderAll() { renderBar(); renderStrip(); renderCanvas(); renderSide(); fit(); }
   function renderCanvas() {
     const dd = d(), s = slide(); const c = $('#sl-canvas'); if (!dd || !s || !c) return;
-    c.innerHTML = slideHTML(s, dd, !readOnly);
+    c.innerHTML = slideHTML(s, dd, !readOnly, undefined, { mode: readOnly ? 'thumb' : 'edit' });
     fit();
   }
   function fit() {
@@ -331,7 +413,7 @@ window.AlixoSlides = (() => {
     const dd = d(); const strip = $('#sl-strip'); if (!dd || !strip) return;
     strip.innerHTML = slides(dd).map((s, i) => `<div class="sl-thumb ${s.id === curSlide ? 'on' : ''}" data-sid="${s.id}" draggable="true" title="Diapositive ${i + 1} — glisser pour réordonner">
         <span class="sl-tnum">${i + 1}</span>
-        <div class="sl-tbox"><div class="sl-tin">${slideHTML(s, dd, false, i)}</div></div>
+        <div class="sl-tbox"><div class="sl-tin">${slideHTML(s, dd, false, i, { mode: 'thumb' })}</div></div>
       </div>`).join('') + `<button class="sl-tadd" type="button" data-sl="add" title="Nouvelle diapositive (Ctrl+M)">${I.plus}<span>Diapositive</span></button>`;
     fitThumbs();
     const on = strip.querySelector('.sl-thumb.on'); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
@@ -345,7 +427,7 @@ window.AlixoSlides = (() => {
     if (readOnly) {
       const info = window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
       const n = slides(dd).length, idx = slides(dd).findIndex(x => x.id === curSlide) + 1;
-      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small" title="Présenter (F5)">${I.play} Présenter</button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr"><span class="sl-access"></span>${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button><button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
+      bar.innerHTML = `<div class="sl-barl"><button data-sl="present" class="cta small sl-present-btn" title="Présenter (F5 : depuis le début · Maj+F5 : cette diapositive)" aria-haspopup="menu">${I.play} Présenter<span class="tcaret">▾</span></button><span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span><span class="sl-ro">Partagée par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}</div><div class="sl-barr"><span class="sl-access"></span>${window.AlixoZoom ? AlixoZoom.controlHTML('slides') : ''}<button data-sl="info" class="cta ghost small">Détails</button><button data-sl="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (Ctrl+P : PDF)" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button></div>`;
       if (typeof renderAccess === 'function') renderAccess();
       return;
     }
@@ -358,6 +440,7 @@ window.AlixoSlides = (() => {
         <button data-sl="al" data-al="left" title="À gauche">${I.left}</button><button data-sl="al" data-al="center" title="Centré">${I.center}</button><button data-sl="al" data-al="right" title="À droite">${I.right}</button>
         <button data-sl="color" title="Couleur des blocs"><span class="sl-swatch" style="background:${accent(dd)}"></span></button>
         <button data-sl="front" title="Passer devant">${I.front}</button><button data-sl="back" title="Passer derrière">${I.back}</button>
+        ${window.AlixoSlidesFx && AlixoSlidesFx.barLabel ? `<button data-sl="anim" class="sl-txtbtn" title="Animation des blocs sélectionnés">${I.anim} <span class="lbl">${esc(AlixoSlidesFx.barLabel([...selSet]))}</span></button>` : ''}
         <button data-sl="dupel" title="Dupliquer (Ctrl+D)">${I.dup}</button><button data-sl="delel" class="danger" title="Retirer (Suppr)">${I.trash}</button>`;
     } else if (e) {
       const txt = TEXT_BLOCKS.includes(e.t);
@@ -371,6 +454,9 @@ window.AlixoSlides = (() => {
       if (e.t === 'progress') tools += `<label class="sl-inl">Valeur <input type="range" data-sl="pct" min="0" max="100" value="${+e.pct || 0}"></label>`;
       if (e.t === 'formula') tools += `<button data-sl="formula" class="sl-txtbtn">Modifier la formule…</button>`;
       if (e.t === 'image') tools += `<button data-sl="img" class="sl-txtbtn">${e.iid ? 'Remplacer l’image…' : 'Choisir une image…'}</button>`;
+      /* 1.54 : vidéo (fichier / en ligne, options de lecture) et quiz lié (js/slides-media.js) */
+      if (e.t === 'video') tools += `<button data-sl="video" class="sl-txtbtn">${e.vid ? 'Changer la vidéo…' : 'Vidéo…'}</button>${[['auto', 'Lecture auto', 'Lecture automatique'], ['loop', 'Boucle', 'Lecture en boucle'], ['mute', 'Muet', 'Sans le son']].map(([k, l, t]) => `<label class="sl-inl" title="${t}"><input type="checkbox" data-sl="vopt" data-opt="${k}" ${e[k] === true ? 'checked' : ''}> ${l}</label>`).join('')}`;
+      if (e.t === 'quiz') tools += `<button data-sl="quiz" class="sl-txtbtn">${e.ref ? 'Changer de quiz…' : 'Choisir un quiz…'}</button><select data-sl="qmode" title="Mode de lancement du quiz"><option value="test" ${e.mode !== 'live' ? 'selected' : ''}>Test en local</option><option value="live" ${e.mode === 'live' ? 'selected' : ''}>En direct (code)</option></select>`;
       if (e.t === 'icon') tools += `<button data-sl="icon" class="sl-txtbtn">Changer d’icône…</button>`;
       if (e.t === 'chart') tools += `<button data-sl="chart" class="sl-txtbtn">Données et type…</button>`;
       if (e.t === 'graph') tools += `<button data-sl="graph" class="sl-txtbtn">Choisir le graphique…</button>`;
@@ -378,18 +464,20 @@ window.AlixoSlides = (() => {
       if (e.t === 'table') tools += `<button data-sl="row+" class="sl-txtbtn" title="Ajouter une ligne">＋ ligne</button><button data-sl="col+" class="sl-txtbtn" title="Ajouter une colonne">＋ colonne</button>`;
       tools += `<button data-sl="color" title="Couleur du bloc"><span class="sl-swatch" style="background:${e.color || accent(dd)}"></span></button>
         <button data-sl="front" title="Passer devant">${I.front}</button><button data-sl="back" title="Passer derrière">${I.back}</button>
+        ${window.AlixoSlidesFx && AlixoSlidesFx.barLabel ? `<button data-sl="anim" class="sl-txtbtn" title="Animation du bloc : effet, durée, moment d’apparition">${I.anim} <span class="lbl">${esc(AlixoSlidesFx.barLabel([e.id]))}</span></button>` : ''}
         <button data-sl="dupel" title="Dupliquer le bloc (Ctrl+D)">${I.dup}</button><button data-sl="delel" class="danger" title="Retirer le bloc (Suppr)">${I.trash}</button>`;
     } else {
       tools = `<span class="sl-sep"></span><span class="sl-barlabel">Diapositive ${idx} / ${n}</span>
         <select data-sl="bg" title="Fond de la diapositive">${BGS.map(([k, l]) => `<option value="${k}" ${(s.bg || 'paper') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
         <button data-sl="theme" title="Thème : couleurs et polices de la présentation">${I.palette} ${esc(themeOf(dd).name)}</button>
         <button data-sl="font" class="sl-font" title="Police de la présentation (titres et texte de toutes les diapositives)"><span class="tb-fontname">${esc(window.AlixoApp && AlixoApp.fontByKey && dd.font && AlixoApp.fontByKey(dd.font) ? AlixoApp.fontByKey(dd.font).name : 'Police du thème')}</span><span class="tcaret">▾</span></button>
-        <button data-sl="accent" title="Couleur d’accent de la présentation"><span class="sl-swatch" style="background:${accent(dd)}"></span> Accent</button>
+        <button data-sl="accent" title="Couleur d’accent de la présentation"><span class="sl-swatch" style="background:${accent(dd)}"></span> <span class="lbl">Accent</span></button>
+        ${window.AlixoSlidesFx && AlixoSlidesFx.transLabel ? `<button data-sl="trans" class="sl-txtbtn" title="Transition à l’arrivée sur cette diapositive">${I.trans} <span class="lbl">${esc(AlixoSlidesFx.transLabel(s))}</span></button>` : ''}
         <button data-sl="dup" title="Dupliquer la diapositive">${I.dup}</button><button data-sl="del" class="danger" title="Supprimer la diapositive" ${n <= 1 ? 'disabled' : ''}>${I.trash}</button>`;
     }
     bar.innerHTML = `<div class="sl-barl">
         <button data-sl="add" class="cta small" title="Nouvelle diapositive (Ctrl+M)">${I.plus} Diapositive</button>
-        <button data-sl="present" class="cta ghost small" title="Présenter depuis le début (F5)">${I.play} Présenter</button>
+        <button data-sl="present" class="cta ghost small sl-present-btn" title="Présenter (F5 : depuis le début · Maj+F5 : cette diapositive · Alt+F5 : vue présentateur)" aria-haspopup="menu">${I.play} Présenter<span class="tcaret">▾</span></button>
         ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-sl="quizia"', 'sl-aiquiz') : ''}
         ${tools}
       </div>
@@ -416,10 +504,13 @@ window.AlixoSlides = (() => {
         <div class="sl-paltabs">${CATS.map(([k, l]) => `<button type="button" data-cat="${k}" class="${k === palCat ? 'on' : ''}">${l}</button>`).join('')}</div>
         <div class="sl-pal" id="sl-pal">${paletteHTML()}</div>
         <div class="sl-sidehead">Notes<span>pour vous, pendant la présentation</span></div>
-        <textarea id="sl-notes" placeholder="Ce que vous voulez dire sur cette diapositive…"></textarea>`;
+        <textarea id="sl-notes" placeholder="Ce que vous voulez dire sur cette diapositive…"></textarea>
+        <label class="sl-target" title="Durée prévue pour cette diapositive : la vue présentateur compare le temps écoulé au cumul des durées visées">Durée visée : <input id="sl-target" type="text" inputmode="numeric" placeholder="1:30" autocomplete="off" spellcheck="false" maxlength="6"><small>mm:ss · laisser vide pour aucune</small></label>`;
       side.dataset.built = '1';
     }
     const ta = side.querySelector('#sl-notes'); if (ta && s) ta.value = s.notes || '';
+    /* 1.54 : durée visée (s.target, secondes entières ; 0 ou absent = aucune) — répétition chronométrée et rythme du présentateur */
+    const tg = side.querySelector('#sl-target'); if (tg && s && document.activeElement !== tg) { const t = Math.max(0, Math.round(+s.target || 0)); tg.value = t ? `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : ''; }
   }
 
   /* ---------------- diapositives ---------------- */
@@ -441,11 +532,17 @@ window.AlixoSlides = (() => {
   function openThemeMenu(anchor) {
     const dd = d(); if (!dd) return;
     const cur = themeOf(dd).id;
-    showPopover(`<h4>Thème de la présentation</h4><div class="sl-themes">${THEMES.map(t => `<button type="button" data-th="${t.id}" class="${t.id === cur ? 'on' : ''}" style="--tp:${t.paper};--ti:${t.ink};--ta:${t.acc || folderTint(dd.folderId)};--th:${t.head.replace(/"/g, '&quot;')}"><span class="sl-thprev"><b>Aa</b><i></i></span><span class="sl-thname">${t.name}</span><small>${esc(t.sub)}</small></button>`).join('')}</div>
+    /* 1.54 : deux sections — « Thèmes » et « Thèmes signature » (Alixo+ : la tuile reste visible, verrouillée ; le rendu d'un document
+       reçu avec un thème signature n'est jamais bloqué) */
+    const tile = t => `<button type="button" data-th="${t.id}" class="${t.id === cur ? 'on' : ''}${themeLockedSl(t) ? ' locked' : ''}" style="--tp:${t.paper};--ti:${t.ink};--ta:${t.acc || folderTint(dd.folderId)};--th:${t.head.replace(/"/g, '&quot;')}${t.bg ? `;--tbg:${t.bg.replace(/"/g, '&quot;')};--tbs:${t.bgsize || 'auto'}` : ''}"><span class="sl-thprev${t.bg ? ' has-bg' : ''}${t.sig ? ' sig-' + t.sig : ''}"><b>Aa</b><i></i></span><span class="sl-thname">${t.name}${themeLockedSl(t) ? `<span class="sl-thlock" title="Réservé à Alixo+" aria-label="Réservé à Alixo+">${I.lock}</span>` : ''}</span><small>${esc(t.sub)}</small></button>`;
+    const base = THEMES.filter(t => !t.plus), sig = THEMES.filter(t => t.plus);
+    showPopover(`<h4>Thème de la présentation</h4><div class="sl-themes"><div class="sl-thsec">Thèmes</div>${base.map(tile).join('')}<div class="sl-thsec">Thèmes signature${sig.some(themeLockedSl) && typeof plusBadge === 'function' ? plusBadge() : ''}</div>${sig.map(tile).join('')}</div>
       <div class="po-hint">Couleurs et polices s’appliquent à toutes les diapositives. La couleur d’accent reste modifiable avec le bouton « Accent ».</div>`,
       anchor ? anchor.getBoundingClientRect() : centerRect(), pop => pop.querySelector('.sl-themes').addEventListener('click', e => {
         const b = e.target.closest('[data-th]'); if (!b) return;
-        pushHist(); dd.theme = Object.assign({}, dd.theme || {}, { id: b.dataset.th, accent: '' }); hidePopover(); commit(); renderAll();
+        const t = THEMES.find(x => x.id === b.dataset.th); if (!t) return;
+        if (themeLockedSl(t)) { if (typeof requirePlus === 'function') requirePlus('slidesthemes'); return; }
+        pushHist(); dd.theme = Object.assign({}, dd.theme || {}, { id: t.id, accent: '' }); hidePopover(); commit(); renderAll();
       }));
   }
   function deleteSlide(id) {
@@ -486,7 +583,9 @@ window.AlixoSlides = (() => {
     s.els.push(e); commit(); renderCanvas(); renderBar();
     select(e.id, ['title', 'subtitle', 'text', 'kicker', 'list', 'olist', 'checklist', 'callout', 'quote', 'table', 'stat', 'code', 'sticky', 'bubble', 'badge', 'session'].includes(t));
     if (t === 'formula') editFormula(e.id);
-    if (t === 'image') pickImage(e.id);
+    if (t === 'image') { if (window.AlixoSlidesMedia && AlixoSlidesMedia.openImageMenu) AlixoSlidesMedia.openImageMenu(e.id); else pickImage(e.id); }   // 1.54 : menu Image (ordinateur, photos du compte, banque)
+    if (t === 'video' && window.AlixoSlidesMedia) AlixoSlidesMedia.videoDialog(e.id);
+    if (t === 'quiz' && window.AlixoSlidesMedia) AlixoSlidesMedia.quizPicker(e.id);
     if (t === 'icon') pickIcon(e.id);
     if (t === 'chart') editChart(e.id);
     if (t === 'graph') pickGraph(e.id);
@@ -647,7 +746,9 @@ window.AlixoSlides = (() => {
   }
   function openEditor(id) {
     const ee = el(id); if (!ee) return;
-    if (ee.t === 'formula') editFormula(id); else if (ee.t === 'image') pickImage(id); else if (ee.t === 'icon') pickIcon(id); else if (ee.t === 'chart') editChart(id); else if (ee.t === 'graph') pickGraph(id); else if (ee.t === 'qr') editUrl(id);
+    const M = window.AlixoSlidesMedia;
+    if (ee.t === 'formula') editFormula(id); else if (ee.t === 'image') { if (M && M.openImageMenu) M.openImageMenu(id, $(`#sl-canvas .sl-el[data-id="${id}"]`)); else pickImage(id); } else if (ee.t === 'icon') pickIcon(id); else if (ee.t === 'chart') editChart(id); else if (ee.t === 'graph') pickGraph(id); else if (ee.t === 'qr') editUrl(id);
+    else if (ee.t === 'video') { if (M) M.videoDialog(id); } else if (ee.t === 'quiz') { if (M) M.quizPicker(id); }   // 1.54 : dialogues de js/slides-media.js
     else if (['arrow', 'divider', 'pagenum'].includes(ee.t)) return; else startEdit(id);
   }
 
@@ -669,7 +770,7 @@ window.AlixoSlides = (() => {
       const b = e.target.closest('[data-sl]'); if (!b || b.tagName === 'SELECT' || b.tagName === 'INPUT') return;
       const a = b.dataset.sl; const id = sel();
       if (a === 'info') { if (window.AlixoShare) AlixoShare.openInfo(currentDocId); return; }
-      if (a === 'present') { startPresent(0); return; }
+      if (a === 'present') { openPresentMenu(b); return; }
       if (a === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (a === 'alx') { if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }
       if (a === 'dl') { if (window.AlixoApp && AlixoApp.openExportMenu) AlixoApp.openExportMenu(b); else if (window.AlixoAlx) AlixoAlx.exportDoc(currentDocId); return; }   // 1.48 : Télécharger (PDF, fichier Alixo) depuis la barre du diaporama
@@ -681,13 +782,16 @@ window.AlixoSlides = (() => {
       if (a === 'del') { deleteSlide(curSlide); return; }
       if (a === 'accent') { openColorPopover(null, b); return; }
       if (a === 'theme') { openThemeMenu(b); return; }
+      if (a === 'trans') { if (window.AlixoSlidesFx) AlixoSlidesFx.transPopover(b); return; }   // 1.54
       if (a === 'font') { const dd = d(); if (!dd || !window.AlixoApp || !AlixoApp.openFontMenu) return; AlixoApp.openFontMenu(b, { current: dd.font && AlixoApp.fontByKey(dd.font) ? dd.font : null, title: 'Police de la présentation', hint: 'Remplace les polices du thème sur toutes les diapositives ; « Police des Paramètres » rend la main au thème.', onPick: k => { pushHist(); if (k === null) delete dd.font; else dd.font = k; commit(); renderAll(); } }); return; }
       if (!selSet.size) return;
       if (a === 'fs-' || a === 'fs+') { forSel(ee => { ee.fs = round1(Math.max(0.4, Math.min(3, (ee.fs || 1) + (a === 'fs+' ? 0.1 : -0.1)))); }); return; }
       if (a === 'cmd') { const n = $(`#sl-canvas .sl-el[data-id="${id}"] .sl-text`); if (!n) return; if (!n.contains(document.activeElement)) { startEdit(id); const r = document.createRange(); r.selectNodeContents(n); const sg = getSelection(); sg.removeAllRanges(); sg.addRange(r); } document.execCommand(b.dataset.cmd); syncAllText(); return; }
       if (a === 'al') { forSel(ee => { ee.al = b.dataset.al; }); return; }
       if (a === 'formula') { editFormula(id); return; }
-      if (a === 'img') { pickImage(id); return; }
+      if (a === 'img') { if (window.AlixoSlidesMedia && AlixoSlidesMedia.openImageMenu) AlixoSlidesMedia.openImageMenu(id, b); else pickImage(id); return; }   // 1.54 : menu Image
+      if (a === 'video') { if (window.AlixoSlidesMedia) AlixoSlidesMedia.videoDialog(id); return; }
+      if (a === 'quiz') { if (window.AlixoSlidesMedia) AlixoSlidesMedia.quizPicker(id); return; }
       if (a === 'icon') { pickIcon(id); return; }
       if (a === 'chart') { editChart(id); return; }
       if (a === 'graph') { pickGraph(id); return; }
@@ -695,6 +799,7 @@ window.AlixoSlides = (() => {
       if (a === 'row+') { tableAdd(id, 'row'); return; }
       if (a === 'col+') { tableAdd(id, 'col'); return; }
       if (a === 'color') { openColorPopover([...selSet], b); return; }
+      if (a === 'anim') { if (window.AlixoSlidesFx) AlixoSlidesFx.animPopover([...selSet], b); return; }   // 1.54
       if (a === 'front') { bringSel(true); return; }
       if (a === 'back') { bringSel(false); return; }
       if (a === 'dupel') { duplicateSel(); return; }
@@ -707,6 +812,9 @@ window.AlixoSlides = (() => {
       if (sl === 'shape' && ee) { pushHist(); ee.shape = e.target.value; commit(); renderCanvas(); paintSel(); }
       if (sl === 'dir' && ee) { pushHist(); ee.dir = e.target.value; commit(); renderCanvas(); paintSel(); }
       if (sl === 'pct' && ee) { pushHist({ typing: true, el: 'pct' }); ee.pct = +e.target.value; commit(); renderCanvas(); paintSel(); }
+      /* 1.54 : options de lecture d'une vidéo, mode de lancement d'un quiz */
+      if (sl === 'vopt' && ee && ee.t === 'video') { const k = e.target.dataset.opt; if (['auto', 'loop', 'mute'].includes(k)) { pushHist(); if (e.target.checked) ee[k] = true; else delete ee[k]; commit(); renderCanvas(); paintSel(); } }
+      if (sl === 'qmode' && ee && ee.t === 'quiz') { pushHist(); ee.mode = e.target.value === 'live' ? 'live' : 'test'; commit(); renderCanvas(); paintSel(); }
     });
     bar.addEventListener('input', e => { if (e.target.dataset.sl === 'pct') { const ee = sel() ? el(sel()) : null; if (!ee) return; ee.pct = +e.target.value; const n = $(`#sl-canvas .sl-el[data-id="${ee.id}"]`); if (n) { const bar2 = n.querySelector('.sl-progbar'); if (bar2) bar2.style.width = ee.pct + '%'; const p = n.querySelector('.sl-progpct'); if (p) p.textContent = ee.pct + ' %'; } } });
     bar.addEventListener('pointerdown', e => { if (e.target.closest('[data-sl="cmd"]')) e.preventDefault(); });
@@ -720,9 +828,9 @@ window.AlixoSlides = (() => {
     strip.addEventListener('contextmenu', e => {
       const t = e.target.closest('.sl-thumb'); if (!t || readOnly) return; e.preventDefault();
       const menu = $('#ctxmenu'); const dd = d(); const i = slides(dd).findIndex(x => x.id === t.dataset.sid);
-      menu.innerHTML = `<div class="cm-title">Diapositive ${i + 1}</div><button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="up">↑ Monter</button><button data-slcm="down">↓ Descendre</button><button data-slcm="del" class="danger">${I.trash}Supprimer</button>`;
+      menu.innerHTML = `<div class="cm-title">Diapositive ${i + 1}</div><button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="up">↑ Monter</button><button data-slcm="down">↓ Descendre</button>${window.AlixoSlidesFx ? `<button data-slcm="trans">${I.trans}Transition…</button>` : ''}<button data-slcm="del" class="danger">${I.trash}Supprimer</button>`;
       menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const id = t.dataset.sid; if (b.dataset.slcm === 'dup') duplicateSlide(id); if (b.dataset.slcm === 'del') deleteSlide(id); if (b.dataset.slcm === 'up') moveSlide(id, i - 1); if (b.dataset.slcm === 'down') moveSlide(id, i + 1); };
+      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const id = t.dataset.sid; if (b.dataset.slcm === 'dup') duplicateSlide(id); if (b.dataset.slcm === 'del') deleteSlide(id); if (b.dataset.slcm === 'up') moveSlide(id, i - 1); if (b.dataset.slcm === 'down') moveSlide(id, i + 1); if (b.dataset.slcm === 'trans') { gotoSlide(id); AlixoSlidesFx.transPopover($('#sl-bar [data-sl="trans"]') || t); } };
       placeCtxMenu(menu, e.clientX, e.clientY);
     });
     strip.addEventListener('dragstart', e => { const t = e.target.closest('.sl-thumb'); if (!t || readOnly) { e.preventDefault(); return; } tdrag = t.dataset.sid; e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', 'slide:' + tdrag); t.classList.add('dragging'); });
@@ -737,8 +845,23 @@ window.AlixoSlides = (() => {
       const p = e.target.closest('.sl-pitem'); if (p) { if (!readOnly) addEl(p.dataset.pt); return; }
       const c = e.target.closest('[data-cat]'); if (c) { palCat = c.dataset.cat; palQuery = ''; side.querySelector('#sl-palq').value = ''; side.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('on', b === c)); side.querySelector('#sl-pal').innerHTML = paletteHTML(); }
     });
+    /* « Durée visée » : à la sortie du champ, la valeur est remise en m:ss ; une saisie invalide est signalée sans toucher la cible */
+    const TARGET_RE = /^(\d{1,3})(?::([0-5]?\d))?$/;
+    const targetSec = m => Math.min(3600, m[2] !== undefined ? +m[1] * 60 + +m[2] : +m[1]);
+    const fmtTarget = t => t > 0 ? `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}` : '';
+    side.addEventListener('change', e => {
+      if (e.target.id !== 'sl-target') return;
+      const s = slide(); const v = e.target.value.trim(); const m = v.match(TARGET_RE);
+      if (!v || m) { e.target.setCustomValidity(''); const t = !v ? 0 : targetSec(m); if (s) { if (t > 0) s.target = t; else delete s.target; commitSoon(); } e.target.value = fmtTarget(t); return; }
+      e.target.setCustomValidity('Format attendu : mm:ss, par exemple 1:30'); e.target.reportValidity();
+    });
     side.addEventListener('input', e => {
       if (e.target.id === 'sl-notes') { const s = slide(); if (s) { s.notes = e.target.value; commitSoon(); } }
+      if (e.target.id === 'sl-target') {   // « mm:ss », « m:ss » ou des secondes ; une saisie incomplète (« 12: ») attend
+        const s = slide(); const v = e.target.value.trim(); const m = v.match(TARGET_RE);
+        e.target.setCustomValidity('');
+        if (s && (!v || m)) { const t = !v ? 0 : targetSec(m); if (t > 0) s.target = t; else delete s.target; commitSoon(); }
+      }
       if (e.target.id === 'sl-palq') { palQuery = e.target.value; side.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('on', !palQuery && b.dataset.cat === palCat)); side.querySelector('#sl-pal').innerHTML = paletteHTML(); }
     });
     stage.addEventListener('dragover', e => {
@@ -758,6 +881,16 @@ window.AlixoSlides = (() => {
         const target = e.target.closest('.sl-el.t-image');
         if (target) { await setImage(target.dataset.id, files[0]); return; }
         for (const f of files) { const s = slide(); if (!s) return; pushHist(); const ee = { id: uid(), t: 'image', x: round1(Math.max(0, Math.min(60, p.x - 20))), y: round1(Math.max(0, Math.min(55, p.y - 22))), w: 40, h: 45, z: s.els.length + 1, iid: '' }; s.els.push(ee); commit(); renderCanvas(); await setImage(ee.id, f); }
+        return;
+      }
+      /* 1.54 : un fichier vidéo (mp4 / webm) déposé sur la scène → nouveau bloc vidéo (js/slides-media.js) */
+      const vids = window.AlixoSlidesMedia && AlixoSlidesMedia.isVideoFile ? [...(e.dataTransfer.files || [])].filter(f => AlixoSlidesMedia.isVideoFile(f)) : [];
+      if (vids.length) {
+        e.preventDefault();
+        const s = slide(); if (!s) return; pushHist();
+        const ee = { id: uid(), t: 'video', x: round1(Math.max(0, Math.min(44, p.x - 28))), y: round1(Math.max(0, Math.min(44, p.y - 28))), w: 56, h: 56, z: s.els.length + 1, vk: '', vid: '' };
+        s.els.push(ee); commit(); renderCanvas(); select(ee.id);
+        AlixoSlidesMedia.importVideoFile(ee.id, vids[0]);
       }
     });
     $('#sl-img-file').addEventListener('change', e => { const f = e.target.files && e.target.files[0]; const id = e.target.dataset.el; if (f && id) setImage(id, f); });
@@ -868,22 +1001,22 @@ window.AlixoSlides = (() => {
     function openElMenu(nid, x, y) {
       if (!selSet.has(nid)) select(nid);
       const menu = $('#ctxmenu'); const many = selSet.size > 1;
-      menu.innerHTML = `<div class="cm-title">${many ? selSet.size + ' blocs' : esc((BLOCKS.find(b => b.t === (el(nid) || {}).t) || {}).name || 'Bloc')}</div>${many ? '' : '<button data-slcm="edit">Modifier</button>'}<button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="front">${I.front}Passer devant</button><button data-slcm="back">${I.back}Passer derrière</button><button data-slcm="del" class="danger">${I.trash}Retirer</button>`;
+      menu.innerHTML = `<div class="cm-title">${many ? selSet.size + ' blocs' : esc((BLOCKS.find(b => b.t === (el(nid) || {}).t) || {}).name || 'Bloc')}</div>${many ? '' : '<button data-slcm="edit">Modifier</button>'}<button data-slcm="dup">${I.dup}Dupliquer</button><button data-slcm="front">${I.front}Passer devant</button><button data-slcm="back">${I.back}Passer derrière</button>${window.AlixoSlidesFx ? `<button data-slcm="anim">${I.anim}Animation…</button>` : ''}<button data-slcm="del" class="danger">${I.trash}Retirer</button>`;
       menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = '';
-      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const a = b.dataset.slcm; if (a === 'dup') duplicateSel(); if (a === 'del') deleteSel(); if (a === 'front') bringSel(true); if (a === 'back') bringSel(false); if (a === 'edit') openEditor(nid); };
+      menu.onclick = ev => { const b = ev.target.closest('[data-slcm]'); if (!b) return; ev.stopPropagation(); closeCtxMenu(); menu.onclick = null; const a = b.dataset.slcm; if (a === 'dup') duplicateSel(); if (a === 'del') deleteSel(); if (a === 'front') bringSel(true); if (a === 'back') bringSel(false); if (a === 'edit') openEditor(nid); if (a === 'anim') AlixoSlidesFx.animPopover([...selSet], $('#sl-bar [data-sl="anim"]') || $(`#sl-canvas .sl-el[data-id="${nid}"]`)); };
       placeCtxMenu(menu, x, y);
     }
 
     /* --- clavier --- */
     document.addEventListener('keydown', e => {
       if (!document.body.classList.contains('mode-slides')) return;
-      if (present) { presentKey(e); return; }
+      if (window.AlixoSlidesPresent && AlixoSlidesPresent.active()) { AlixoSlidesPresent.key(e); return; }   // 1.54 : slides-present.js
       const mod = e.ctrlKey || e.metaKey;
       const inText = e.target.closest && e.target.closest('.sl-text, input, textarea, select, [contenteditable="true"]');
       const popOpen = ($('#popover') && !$('#popover').hidden) || ($('#searchov') && !$('#searchov').hidden) || ($('#setov') && !$('#setov').hidden);
       if (popOpen) return;
       if (window.AlixoZoom && !inText && !$('.dlgov') && AlixoZoom.handleKey(e, 'slides')) return;   // 1.34 : Ctrl + / − / 0
-      if (e.key === 'F5') { e.preventDefault(); startPresent(e.shiftKey ? 'cur' : 0); return; }
+      if (e.key === 'F5') { e.preventDefault(); if (e.altKey) startPresent('cur', { presenter: true }); else startPresent(e.shiftKey ? 'cur' : 0); return; }   // F5 · Maj+F5 · Alt+F5
       if (e.key === 'F8') { e.preventDefault(); if (window.AlixoCoco) AlixoCoco.toggle(d()); return; }
       if (e.altKey && e.key === 'ArrowLeft' && !mod) { e.preventDefault(); showLibrary(); return; }
       if (mod && e.key.toLowerCase() === 'w') { e.preventDefault(); closeTab(currentDocId); return; }
@@ -914,61 +1047,39 @@ window.AlixoSlides = (() => {
       if (e.key === 'PageUp') { e.preventDefault(); stepSlide(-1); }
       if (e.key === 'PageDown') { e.preventDefault(); stepSlide(1); }
     });
-    document.addEventListener('pointerdown', e => { if (!document.body.classList.contains('mode-slides') || present) return; if (!e.target.closest('#sl-stage, #sl-bar, #popover, #ctxmenu')) { if (selSet.size) deselect(); } }, true);
+    document.addEventListener('pointerdown', e => { if (!document.body.classList.contains('mode-slides') || (window.AlixoSlidesPresent && AlixoSlidesPresent.active())) return; if (!e.target.closest('#sl-stage, #sl-bar, #popover, #ctxmenu')) { if (selSet.size) deselect(); } }, true);
   }
 
-  /* ---------------- mode présentation ---------------- */
-  function startPresent(from) {
-    const dd = d(); if (!dd) return;
+  /* ---------------- mode présentation (1.54 : js/slides-present.js) ---------------- */
+  /* from : index, ou 'cur' pour la diapositive affichée ; opts : { presenter, rehearsal } (lot E) */
+  function startPresent(from, opts) {
+    const dd = d(); if (!dd || !window.AlixoSlidesPresent || !AlixoSlidesPresent.start) return;
     syncAllText(); stopEdit();
-    const i = from === 'cur' ? Math.max(0, slides(dd).findIndex(s => s.id === curSlide)) : (from || 0);
-    present = { i };
-    const ov = $('#sl-present');
-    ov.hidden = false;
-    ov.innerHTML = `<div class="sl-pstage"><div class="sl-pin"></div></div><div class="sl-pnav"><button data-p="prev" title="Précédente (←)">‹</button><span class="sl-pcount"></span><button data-p="next" title="Suivante (→, Espace)">›</button><button data-p="exit" title="Quitter (Échap)">${I.x}</button></div><div class="sl-pnotes" hidden></div>`;
-    if (!ov.dataset.bound) {
-      ov.dataset.bound = '1';
-      ov.addEventListener('click', e => {
-        const b = e.target.closest('[data-p]');
-        if (b) { if (b.dataset.p === 'prev') presentStep(-1); else if (b.dataset.p === 'next') presentStep(1); else closePresent(); return; }
-        if (e.target.closest('.sl-pstage')) presentStep(e.clientX < innerWidth / 3 ? -1 : 1);
-      });
-      window.addEventListener('resize', () => { if (present) fitPresent(); });
-    }
-    try { if (document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {}); } catch { /* plein écran refusé */ }
-    renderPresent();
+    const i = from === 'cur' ? Math.max(0, slides(dd).findIndex(s => s.id === curSlide)) : Math.max(0, Math.min(slides(dd).length - 1, +from || 0));
+    AlixoSlidesPresent.start(i, opts || {});
   }
-  function renderPresent() {
-    const dd = d(); if (!dd || !present) return;
-    const list = slides(dd); const s = list[present.i]; if (!s) return;
-    const ov = $('#sl-present');
-    ov.querySelector('.sl-pin').innerHTML = slideHTML(s, dd, false, present.i);
-    ov.querySelector('.sl-pcount').textContent = `${present.i + 1} / ${list.length}`;
-    const notes = ov.querySelector('.sl-pnotes'); notes.hidden = !present.notes || !s.notes; notes.textContent = s.notes || '';
-    fitPresent();
-  }
-  function fitPresent() {
-    const ov = $('#sl-present'); const pin = ov && ov.querySelector('.sl-pin'); if (!pin) return;
-    const st = ov.querySelector('.sl-pstage').getBoundingClientRect();
-    const k = Math.min(st.width / SW, st.height / SH);
-    pin.style.transform = `translate(-50%, -50%) scale(${k})`;
-  }
-  function presentStep(dir) { const dd = d(); if (!dd || !present) return; const n = present.i + dir; if (n < 0 || n >= slides(dd).length) { if (dir > 0) closePresent(); return; } present.i = n; renderPresent(); }
-  function presentKey(e) {
-    if (e.key === 'Escape') { e.preventDefault(); closePresent(); return; }
-    if (['ArrowRight', 'ArrowDown', ' ', 'Enter', 'PageDown'].includes(e.key)) { e.preventDefault(); presentStep(1); return; }
-    if (['ArrowLeft', 'ArrowUp', 'Backspace', 'PageUp'].includes(e.key)) { e.preventDefault(); presentStep(-1); return; }
-    if (e.key === 'Home') { present.i = 0; renderPresent(); }
-    if (e.key === 'End') { const dd = d(); present.i = slides(dd).length - 1; renderPresent(); }
-    if (e.key.toLowerCase() === 'n') { present.notes = !present.notes; renderPresent(); }
-  }
-  function closePresent() {
-    if (!present) return;
-    const dd = d(); if (dd && slides(dd)[present.i]) { curSlide = slides(dd)[present.i].id; }
-    present = null;
-    const ov = $('#sl-present'); ov.hidden = true; ov.innerHTML = '';
-    try { if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(() => {}); } catch { /* ignoré */ }
-    if (document.body.classList.contains('mode-slides')) { renderStrip(); renderCanvas(); renderBar(); renderSide(); }
+  function closePresent() { if (window.AlixoSlidesPresent && AlixoSlidesPresent.active()) AlixoSlidesPresent.close(); }
+  /* menu du bouton « Présenter » de la barre */
+  function openPresentMenu(anchor) {
+    const dd = d(); if (!dd) return;
+    const r = anchor ? anchor.getBoundingClientRect() : centerRect();
+    const idx = Math.max(0, slides(dd).findIndex(s => s.id === curSlide)) + 1;
+    const ico = svg => svg.replace('<svg', '<svg class="po-ico"');
+    const mobile = window.matchMedia && matchMedia('(pointer: coarse)').matches && innerWidth < 900;
+    showPopover(`<h4>Présenter</h4><div class="po-list po-export sl-presentmenu">
+        <button data-pm="start">${ico(I.play)}<span><b>Depuis le début</b><small>F5</small></span></button>
+        <button data-pm="cur">${ico(I.play)}<span><b>Depuis cette diapositive</b><small>Maj+F5 · diapositive ${idx}</small></span></button>
+        ${mobile ? '' : `<button data-pm="presenter">${ico(I.pen)}<span><b>Vue présentateur</b><small>Alt+F5 · notes, suite et chrono sur votre écran</small></span></button>`}
+        <button data-pm="rehearsal">${ico(I.timer)}<span><b>Répétition chronométrée</b><small>Mesure la durée de chaque diapositive</small></span></button>
+      </div>`, { left: r.left, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
+        const b = ev.target.closest('[data-pm]'); if (!b) return;
+        hidePopover();
+        const k = b.dataset.pm;
+        if (k === 'start') startPresent(0);
+        else if (k === 'cur') startPresent('cur');
+        else if (k === 'presenter') startPresent('cur', { presenter: true });
+        else if (k === 'rehearsal') startPresent(0, { rehearsal: true });
+      }));
   }
 
   /* ---------------- export PDF (une page 16:9 par diapositive) ---------------- */
@@ -977,22 +1088,22 @@ window.AlixoSlides = (() => {
     const dd = d(); if (!dd || pdfBusyS) return;
     syncAllText();
     const box = $('#sl-print');
-    box.innerHTML = slides(dd).map((s, i) => `<div class="sl-page">${slideHTML(s, dd, false, i)}</div>`).join('');
+    box.innerHTML = slides(dd).map((s, i) => `<div class="sl-page">${slideHTML(s, dd, false, i, { mode: 'pdf' })}</div>`).join('');
     const title = dd.titre || 'Présentation';
     document.title = title + ' — Alixo';
     document.body.classList.add('printing-slides');
     const desk = window.alixoDesktop;
     const done = () => { document.body.classList.remove('printing-slides'); if (typeof exportWatermark === 'function') exportWatermark(false); box.innerHTML = ''; document.title = 'Alixo — Cockpit d’amphi'; };
-    if (!desk || !desk.printToPDF || !desk.saveFile) { if (typeof exportWatermark === 'function') exportWatermark(true); try { print(); } finally { done(); if (typeof exportWatermark === 'function') exportWatermark(false); } return; }
+    /* 1.54 : la mention « Fait avec Alixo » est dessinée dans chaque page par slideHTML (mode pdf, coin libre) : plus de calque fixe #alixo-wm,
+       qui l'aurait doublée en bas à droite */
+    if (!desk || !desk.printToPDF || !desk.saveFile) { try { print(); } finally { done(); } return; }
     pdfBusyS = true;
     toast('Préparation du PDF…', { duration: 4000 });
     let pdf = null, err = null;
     try {
       await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
       await new Promise(r => setTimeout(r, 150));
-      if (typeof exportWatermark === 'function') exportWatermark(true);
       pdf = await desk.printToPDF({ slides: true, title });
-      if (typeof exportWatermark === 'function') exportWatermark(false);
     } catch (e) { err = e; }
     done(); pdfBusyS = false;
     if (!pdf || err) { console.error(err); toast('Export PDF impossible' + (err && err.message ? ' : ' + err.message : '')); return; }
@@ -1005,7 +1116,7 @@ window.AlixoSlides = (() => {
   function preview(dd) {
     const s = slides(dd)[0]; if (!s) return '';
     if (!previewRaf) previewRaf = requestAnimationFrame(() => { previewRaf = 0; fitPreviews(); });
-    return `<div class="sp-box"><div class="sp-in">${slideHTML(s, dd, false, 0)}</div></div>`;
+    return `<div class="sp-box"><div class="sp-in">${slideHTML(s, dd, false, 0, { mode: 'thumb' })}</div></div>`;
   }
   function fitPreviews() {
     $$('.sp-box').forEach(b => { const w = b.clientWidth; if (w) { const inn = b.querySelector('.sp-in'); inn.style.transform = `scale(${w / SW})`; b.style.height = Math.round(w / SW * SH) + 'px'; } });
@@ -1073,5 +1184,172 @@ window.AlixoSlides = (() => {
     };
   })();
 
-  return { newDoc, open, leave, refresh, remoteChanged, undo, redo, exportPDF, preview, fitPreviews, present: startPresent, THEMES, BLOCKS, SW, SH, edit };
+  /* 1.54 (lot F) : normalisation d'une présentation reçue (import .alx par js/alx.js, partage reçu par js/share.js) — liste blanche
+     stricte des champs 1.54 : `anim` et `trans` (AlixoSlidesFx.normAnim / normTrans), `target`, bloc `video` (service connu, identifiant
+     au format du service, poster = identifiant d'image, textes bornés, booléens forcés ; sinon le bloc devient un texte « Vidéo retirée
+     à l’import »), bloc `quiz` (ref = identifiant Alixo, mode test | live), `credit` d'une image (chaînes tronquées, adresses https
+     seulement, source connue), `theme.id` connu. Les octets d'une vidéo importée ne voyagent pas : un bloc `vk:'file'` valide est gardé
+     tel quel (la carte affiche « Vidéo non disponible » si le fichier manque). Mutation en place ; renvoie le document.
+     1.54.0 (revue Athéna) : liste blanche étendue à TOUT ce qui sort du modèle vers une classe ou un attribut HTML — identifiants
+     (format Alixo, uniques), type de bloc (connu, sinon bloc retiré), géométrie et plan (nombres bornés), `bg`, `ct`, `shape`, `dir`,
+     `icon`, `gtype`, `pct`, `ans`, `params`, `chart` (reconstruit), titre et accent du document, police connue ; les champs inconnus
+     d'une diapositive ou d'un bloc sont retirés. */
+  const N_ID_RE = /^[\w-]{1,64}$/;
+  const N_VID_RE = { yt: /^[A-Za-z0-9_-]{11}$/, vimeo: /^\d{6,12}$/, dm: /^[a-z0-9]{6,12}$/, file: N_ID_RE };
+  const N_CREDIT_SOURCES = ['commons'];
+  const N_QUIZ_MODES = ['test', 'live'];
+  /* champs texte des blocs (rendus tels quels par elHTML › T) : passés par AlixoSanitize — `rich` (listes, tableau) pour le `html` des
+     blocs à structure, `inline` ailleurs ; `src` (formule) et `notes` en texte brut ; `url` (QR) : https seulement */
+  const N_TEXT_FIELDS = ['html', 'term', 'cite', 'ref', 'faits', 'probleme', 'solution', 'portee', 'q', 'a1', 'a2', 'a3', 'a4', 's1', 's2', 's3', 's4', 'lt', 'lh', 'rt', 'rh', 'num', 'n1', 'n2', 'n3', 'l1', 'l2', 'l3'];
+  const N_RICH_BLOCKS = ['list', 'olist', 'checklist', 'agenda', 'table'];
+  const N_ALIGNS = ['left', 'center', 'right', 'justify'];
+  /* 1.54.0 (sécurité, revue Athéna) : valeurs structurelles qui finissent dans une classe ou un attribut du rendu — listes blanches
+     partagées par normalize (import .alx, partage reçu) et par elHTML / slideHTML (défense en profondeur) */
+  const N_SHAPES = ['rect', 'pill', 'circle', 'outline', 'diamond', 'tri'];
+  const N_DIRS = ['right', 'left', 'down', 'up'];
+  const N_SLIDE_KEYS = ['id', 'bg', 'notes', 'els', 'trans', 'target'];
+  /* champs connus d'un bloc : tout autre champ est retiré (« ne garder que ce qu'on connaît ») */
+  const N_BLOCK_KEYS = new Set([...N_TEXT_FIELDS, 'id', 't', 'x', 'y', 'w', 'h', 'z', 'src', 'url', 'color', 'al', 'fs', 'anim', 'ct', 'shape', 'dir', 'icon', 'iid', 'poster', 'pct', 'ans',
+    'gtype', 'params', 'chart', 'credit', 'vk', 'vid', 'fname', 'title', 'auto', 'loop', 'mute', 'ref', 'mode']);
+  const N_CHART_OPTS = { legend: 'bool', values: 'bool', stack: 'bool', ymin: 'num', ymax: 'num', unit: 'text' };   // exactement ce que lit AlixoCharts.svg
+  const hasOwn = (o, k) => !!o && typeof o === 'object' && typeof k === 'string' && Object.prototype.hasOwnProperty.call(o, k);
+  function normalize(dd) {
+    if (!dd || typeof dd !== 'object' || Array.isArray(dd)) return dd;
+    const fx = window.AlixoSlidesFx, sz = window.AlixoSanitize;
+    const vidRe = (window.AlixoSlidesMedia && AlixoSlidesMedia.ID_RE) || N_VID_RE;
+    const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+    const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+    const https = (v, max) => { const s = str(v, max); return /^https:\/\/[^\s"'<>\\]+$/.test(s) ? s : ''; };
+    const numv = v => (typeof v === 'number' || (typeof v === 'string' && v.trim() !== '') ? +v : NaN);
+    const int = (v, lo, hi) => { const n = numv(v); return Number.isFinite(n) ? Math.max(lo, Math.min(hi, Math.round(n))) : null; };
+    const bool = (o, k) => { if (o[k]) o[k] = true; else delete o[k]; };
+    const plain = v => str(v, 20000).replace(/<\/?[a-zA-Z!][^>]*>/g, '');
+    const txt = (v, max) => (typeof v === 'number' && Number.isFinite(v) ? String(v) : plain(v)).slice(0, max);   // texte brut borné (échappé au rendu)
+    const html = (v, rich) => (typeof v !== 'string' ? '' : sz ? (rich ? sz.rich(v) : sz.inline(v)) : esc(plain(v)));
+    const color = v => (sz && sz.color ? sz.color(v) : safeColor(typeof v === 'string' ? v : ''));
+    /* géométrie en % : nombre fini borné [-100, 200], au dixième ; 0 sinon */
+    const pos = v => { const n = numv(v); return Number.isFinite(n) ? round1(Math.max(-100, Math.min(200, n))) : 0; };
+    /* identifiants : format Alixo et uniques dans le document, sinon régénérés */
+    const idOk = v => typeof v === 'string' && N_ID_RE.test(v);
+    const ids = new Set();
+    const freshId = v => { let id = idOk(v) && !ids.has(v) ? v : uid(); while (ids.has(id)) id = uid(); ids.add(id); return id; };
+    const fontOk = typeof fontByKey === 'function' ? fontByKey : (window.AlixoApp && AlixoApp.fontByKey) || null;
+    /* graphique de données : reconstruit champ par champ (AlixoCharts.svg injecte couleurs et textes dans le SVG) */
+    const chart = c => {
+      if (!isObj(c)) return null;
+      const CT = (window.AlixoCharts && AlixoCharts.TYPES) || { bar: 1, hbar: 1, line: 1, area: 1, pie: 1, donut: 1 };
+      const o = {
+        ck: hasOwn(CT, c.ck) ? c.ck : 'bar', title: txt(c.title, 120),
+        labels: (Array.isArray(c.labels) ? c.labels : []).slice(0, 100).map(l => txt(l, 120)),
+        series: (Array.isArray(c.series) ? c.series : []).filter(isObj).slice(0, 12).map(s => {
+          const r = { name: txt(s.name, 60), data: (Array.isArray(s.data) ? s.data : []).slice(0, 100).map(v => { const n = numv(v); return Number.isFinite(n) ? n : null; }) };
+          const col = color(s.color); if (col) r.color = col;
+          if (Array.isArray(s.colors)) r.colors = s.colors.slice(0, 100).map(v => color(v) || null);   // secteurs : une couleur par part
+          return r;
+        }),
+        opts: {}
+      };
+      const op = isObj(c.opts) ? c.opts : {};
+      for (const k of Object.keys(N_CHART_OPTS)) {
+        if (!(k in op)) continue;
+        const kind = N_CHART_OPTS[k];
+        if (kind === 'bool') o.opts[k] = !!op[k];
+        else if (kind === 'num') { const n = numv(op[k]); if (Number.isFinite(n)) o.opts[k] = n; }
+        else { const v = txt(op[k], 12).replace(/[<>&"']/g, ''); if (v) o.opts[k] = v; }   // l'unité est insérée telle quelle dans le SVG par charts.js
+      }
+      return o;
+    };
+    /* graphique économique : formules en texte brut sans caractères de balisage (le libellé de courbe est repris tel quel par
+       graphs.js), décalages numériques bornés, surplus booléen */
+    const params = p => {
+      if (!isObj(p)) return null;
+      const o = {};
+      for (const k of ['f1', 'f2']) if (k in p) o[k] = txt(p[k], 200).replace(/[<>"'&]/g, '');
+      for (const k of ['s1', 's2']) if (k in p) { const n = numv(p[k]); if (Number.isFinite(n)) o[k] = Math.max(-100, Math.min(100, n)); }
+      if ('surplus' in p) o.surplus = !!p.surplus;
+      return o;
+    };
+    /* ---- document ---- */
+    dd.titre = txt(dd.titre, 200);
+    const th = isObj(dd.theme) ? dd.theme : {};
+    dd.theme = { id: THEMES.some(t => t.id === th.id) ? th.id : 'alixo', accent: color(th.accent) || '' };
+    if ('font' in dd && !(typeof dd.font === 'string' && fontOk && fontOk(dd.font))) delete dd.font;
+    dd.slides = (Array.isArray(dd.slides) ? dd.slides : []).filter(isObj).slice(0, 500);
+    for (const s of dd.slides) {
+      for (const k of Object.keys(s)) if (!N_SLIDE_KEYS.includes(k)) delete s[k];
+      s.id = freshId(s.id);
+      if ('bg' in s && !BGS.some(b => b[0] === s.bg)) delete s.bg;
+      if ('trans' in s) { const t = fx && fx.normTrans ? fx.normTrans(s.trans) : null; if (t) s.trans = t; else delete s.trans; }
+      if ('target' in s) { const n = int(s.target, 0, 3600); if (n === null) delete s.target; else s.target = n; }
+      if ('notes' in s) s.notes = sz ? sz.text(str(s.notes, 50000)) : plain(s.notes);
+      if (!Array.isArray(s.els)) { s.els = []; continue; }
+      /* ---- blocs : type connu obligatoire (sinon le bloc est retiré) ---- */
+      s.els = s.els.filter(e => isObj(e) && typeof e.t === 'string' && BLOCKS.some(b => b.t === e.t)).slice(0, 300).map(e => {
+        e.id = freshId(e.id);
+        e.x = pos(e.x); e.y = pos(e.y); e.w = pos(e.w); e.h = pos(e.h);
+        if ('z' in e) { const n = int(e.z, -999, 999); if (n === null) delete e.z; else e.z = n; }
+        for (const f of N_TEXT_FIELDS) if (f in e) e[f] = html(e[f], f === 'html' && N_RICH_BLOCKS.includes(e.t));
+        if ('src' in e) e.src = plain(e.src);
+        if ('url' in e) e.url = https(e.url, 500);
+        if ('color' in e) { const c = color(e.color); if (c) e.color = c; else delete e.color; }
+        if ('al' in e && !N_ALIGNS.includes(e.al)) delete e.al;
+        if ('fs' in e) { const n = numv(e.fs); if (Number.isFinite(n) && n > 0) e.fs = Math.max(0.3, Math.min(6, n)); else delete e.fs; }
+        if ('anim' in e) { const a = fx && fx.normAnim ? fx.normAnim(e.anim) : null; if (a) e.anim = a; else delete e.anim; }
+        /* valeurs qui deviennent des classes ou des attributs : listes blanches (clés propres seulement : « constructor »… refusé) */
+        if ('ct' in e && !(typeof CALLOUTS === 'object' && hasOwn(CALLOUTS, e.ct))) delete e.ct;
+        if ('shape' in e && !N_SHAPES.includes(e.shape)) delete e.shape;
+        if ('dir' in e && !N_DIRS.includes(e.dir)) delete e.dir;
+        if ('icon' in e && !(window.AlixoIcons && hasOwn(AlixoIcons.ICONS, e.icon))) delete e.icon;
+        if ('iid' in e && !idOk(e.iid)) e.iid = '';   // '' : bloc image sans image (état normal d'un bloc tout neuf)
+        if ('poster' in e && (e.t !== 'video' || !idOk(e.poster))) delete e.poster;
+        if ('pct' in e) { const n = int(e.pct, 0, 100); if (n === null) delete e.pct; else e.pct = n; }
+        if ('ans' in e) { const n = numv(e.ans); if (Number.isInteger(n) && n >= 0 && n <= 3) e.ans = n; else delete e.ans; }   // hors bornes : retiré (ne pas désigner une réponse au hasard)
+        if ('gtype' in e && !(window.AlixoGraphs && hasOwn(AlixoGraphs.TYPES, e.gtype))) delete e.gtype;
+        if ('params' in e) { const p = params(e.params); if (p) e.params = p; else delete e.params; }
+        if ('chart' in e) { const c = e.t === 'chart' ? chart(e.chart) : null; if (c) e.chart = c; else delete e.chart; }
+        if (e.t === 'video') {
+          const vk = typeof e.vk === 'string' && Object.prototype.hasOwnProperty.call(vidRe, e.vk) ? e.vk : '';
+          if (!vk || typeof e.vid !== 'string' || !vidRe[vk].test(e.vid)) {
+            const { id, x, y, w, h, z, anim } = e;
+            const out = { id, t: 'text', x, y, w, h, html: esc('Vidéo retirée à l’import') };
+            if (z !== undefined) out.z = z; if (anim) out.anim = anim;
+            return out;
+          }
+          if (!(typeof e.poster === 'string' && N_ID_RE.test(e.poster))) delete e.poster;
+          if ('fname' in e) { const v = str(e.fname, 200); if (v) e.fname = v; else delete e.fname; }
+          if ('title' in e) { const v = str(e.title, 200); if (v) e.title = v; else delete e.title; }
+          bool(e, 'auto'); bool(e, 'loop'); bool(e, 'mute');
+        } else if (e.t === 'quiz') {
+          e.ref = typeof e.ref === 'string' && N_ID_RE.test(e.ref) ? e.ref : '';
+          e.mode = N_QUIZ_MODES.includes(e.mode) ? e.mode : 'test';
+        }
+        if ('credit' in e) {
+          const c = e.credit;
+          if (e.t !== 'image' || !c || typeof c !== 'object' || Array.isArray(c) || !N_CREDIT_SOURCES.includes(c.source)) delete e.credit;
+          else {
+            const at = typeof c.at === 'number' && Number.isFinite(c.at) ? c.at : null;
+            e.credit = { title: str(c.title, 120), author: str(c.author, 200), license: str(c.license, 60), licenseUrl: https(c.licenseUrl, 300), url: https(c.url, 500), source: c.source };
+            if (at !== null) e.credit.at = at;
+          }
+        }
+        for (const k of Object.keys(e)) if (!N_BLOCK_KEYS.has(k)) delete e[k];
+        return e;
+      });
+    }
+    return dd;
+  }
+
+  /* 1.54 : API élargie — les modules slides-fx / slides-media / slides-present travaillent sur le même modèle et le même rendu.
+     `_forceFree` (tests) : simule la formule gratuite (filigrane en présentation / PDF, thèmes signature verrouillés) même en mode local. */
+  const api = {
+    newDoc, open, leave, refresh, remoteChanged, undo, redo, exportPDF, preview, fitPreviews, present: startPresent, THEMES, BLOCKS, LAYOUTS, I, SW, SH, edit,
+    slideHTML, elHTML, watermarkHTML, normalize, TEXT_BLOCKS,
+    doc: d, slides: () => { const dd = d(); return dd ? slides(dd) : []; }, slide, el, selEls,
+    cur: () => curSlide, setCur: id => { curSlide = id; },
+    pushHist, commit, commitSoon, renderAll, renderCanvas, renderBar, renderStrip, paintSel, select, syncAllText, stopEdit,
+    themeOf, accent, isReadOnly: () => !!readOnly,
+    pickImage, closePresent,   // 1.54 lot C : « Mon ordinateur » du menu Image ; fermeture du diaporama avant de lancer un quiz
+    _forceFree: false
+  };
+  return api;
 })();

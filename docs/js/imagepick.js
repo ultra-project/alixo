@@ -87,9 +87,13 @@
   }
 
   let returnFocus = null;
-  function openGallery() {
-    if (!editable()) return;
-    returnFocus = btnEl();
+  /* 1.54 : `onPick(iid, { nw, nh })` — même galerie, mais le choix est remis à l'appelant (présentations : AlixoSlidesMedia)
+     au lieu d'être inséré dans la séance ; l'import depuis l'ordinateur et le collage ne sont alors pas proposés */
+  let pickCb = null;
+  function openGallery(onPick) {
+    pickCb = typeof onPick === 'function' ? onPick : null;
+    if (!pickCb && !editable()) return;
+    returnFocus = pickCb ? null : btnEl();
     const list = cloudPhotos();
     const on = connected();
     const empty = `<div class="ip-empty">
@@ -104,11 +108,11 @@
     openDialog({
       id: 'ip-dlg', cls: 'ip-card',
       eyebrow: on ? `${ICO.cloud} Cloud Alixo` : 'Images',
-      title: 'Insérer une image',
-      sub: list.length ? `${list.length} image${list.length > 1 ? 's' : ''} déjà enregistrée${list.length > 1 ? 's' : ''} — cliquez sur une photo pour l’insérer à l’endroit du curseur.` : '',
+      title: pickCb ? 'Mes photos du compte' : 'Insérer une image',
+      sub: list.length ? `${list.length} image${list.length > 1 ? 's' : ''} déjà enregistrée${list.length > 1 ? 's' : ''} — cliquez sur une photo pour l’insérer${pickCb ? '' : ' à l’endroit du curseur'}.` : '',
       body: note + grid,
-      foot: `<span class="ip-foot-hint">Astuce : vous pouvez aussi coller une image (Ctrl+V) ou la glisser ici.</span><span class="dlg-spacer"></span><button type="button" class="cta" data-ip="import">${ICO.upload}<span>Importer depuis l’ordinateur</span></button>`,
-      onClose: () => { const f = returnFocus; returnFocus = null; if (f && f.isConnected && !document.querySelector('.dlgov')) f.focus({ preventScroll: true }); },
+      foot: pickCb ? '<span class="ip-foot-hint">Les images de vos cours, présentations, planches et quiz, sur tous vos appareils.</span>' : `<span class="ip-foot-hint">Astuce : vous pouvez aussi coller une image (Ctrl+V) ou la glisser ici.</span><span class="dlg-spacer"></span><button type="button" class="cta" data-ip="import">${ICO.upload}<span>Importer depuis l’ordinateur</span></button>`,
+      onClose: () => { pickCb = null; const f = returnFocus; returnFocus = null; if (f && f.isConnected && !document.querySelector('.dlgov')) f.focus({ preventScroll: true }); },
       onMount: card => {
         const ov = card.parentElement;
         ov.setAttribute('aria-modal', 'true'); card.setAttribute('aria-modal', 'true');
@@ -151,7 +155,7 @@
     els.forEach(el => io.observe(el));
   }
   async function insertCloud(p, el) {
-    if (!p || !editable()) return;
+    if (!p || (!pickCb && !editable())) return;
     const data = await AlixoImages.get(p.iid);
     if (!data) { toast('Image introuvable'); return; }
     let w = p.nw, h = p.nh;
@@ -160,6 +164,7 @@
       if (im && im.naturalWidth) { w = im.naturalWidth; h = im.naturalHeight; }
       else { const d = await new Promise(res => { const x = new Image(); x.onload = () => res([x.naturalWidth, x.naturalHeight]); x.onerror = () => res([800, 600]); x.src = data; }); w = d[0]; h = d[1]; }
     }
+    if (pickCb) { const cb = pickCb; closeAll(); cb(p.iid, { nw: w, nh: h }); return; }
     closeAll();
     const nb = insertSpecial({ type: 'img', iid: p.iid, nw: w, nh: h, w: w >= 900 ? 80 : (w < 400 ? 40 : 60), align: 'center' });
     if (nb) { selectObj(nb.id); toast('Image insérée — poignées pour la taille, barre pour recadrer ou aligner'); }
@@ -219,13 +224,14 @@
     importFiles(files);
   }, true);
   function importFiles(files) {
+    if (pickCb) return;   // 1.54 : galerie ouverte pour un autre module (présentations) : pas d'insertion dans la séance
     const imgs = files.filter(f => f.type && f.type.startsWith('image/'));
     if (!imgs.length) { toast('Aucune image dans ce qui a été déposé'); return; }
     if (!editable()) return;
     closeAll();
     addImageFiles(imgs);   // même chemin qu'une image déposée sur la feuille (réduction, magasin, cloud)
   }
-  function closeAll() { returnFocus = null; closeDialog('ip-drop'); closeDialog('ip-dlg'); }
+  function closeAll() { returnFocus = null; pickCb = null; closeDialog('ip-drop'); closeDialog('ip-dlg'); }
 
   window.AlixoImagePick = { openMenu, openGallery, openDrop };
 })();

@@ -27,7 +27,10 @@ window.AlixoCharts = (() => {
   function defaults() {
     return { ck: 'bar', title: '', labels: ['T1', 'T2', 'T3', 'T4'], series: [{ name: 'Série 1', data: [12, 19, 7, 15] }], opts: { legend: true, values: false } };
   }
-  const colorOf = (s, i) => s.color || PALETTE[i % PALETTE.length];
+  /* 1.54.0 (sécurité) : la couleur d'une série n'entre dans fill="…" que si c'est une couleur CSS simple (hex, rgb(a), nom) — un
+     document importé ou partagé hostile ne peut pas fermer l'attribut ; sinon la palette */
+  const COLOR_OK = /^(?:#[0-9a-f]{3,8}|rgba?\([\d\s.,%/]{5,40}\)|[a-z]{3,24})$/i;
+  const colorOf = (s, i) => (s && typeof s.color === 'string' && COLOR_OK.test(s.color.trim()) ? s.color.trim() : PALETTE[i % PALETTE.length]);
 
   /* « joli » pas d'axe */
   function niceTicks(min, max, n = 5) {

@@ -400,7 +400,7 @@ window.AlixoShare = (() => {
     const iids = [];
     for (const d of docs) {
       for (const b of (d.blocks || [])) if (b.type === 'img' && b.iid) iids.push(b.iid);
-      for (const s of (d.slides || [])) for (const e of (s.els || [])) if (e.t === 'image' && e.iid) iids.push(e.iid);   // présentations (1.15)
+      for (const s of (d.slides || [])) for (const e of (s.els || [])) { if (e.t === 'image' && e.iid) iids.push(e.iid); if (e.t === 'video' && e.poster) iids.push(e.poster); }   // présentations (1.15) ; 1.54 : affiche d'une vidéo (jamais la vidéo)
       for (const it of (d.items || [])) if (it.t === 'img' && it.iid) iids.push(it.iid);   // planches (1.23)
     }
     for (const iid of iids) {
@@ -540,11 +540,14 @@ window.AlixoShare = (() => {
   /* informations d'un partage par son identifiant (propriétaire, droit, titre) */
   function shareMeta(sid) { const sh = shares.get(sid); return sh ? { sid, title: sh.title, owner: ownerLabel(sh), role: myRole(sh), kind: sh.kind, color: sh.color || DEFAULT_TINT, isOwner: isOwner(sh) } : null; }
 
+  /* 1.54 : une image reçue d'un autre appareil n'est acceptée que sous la forme d'une data URL image/* en base64 (jamais une chaîne
+     arbitraire qui finirait dans un attribut src) */
+  const isImageDataUrl = v => typeof v === 'string' && v.length < 40 * 1024 * 1024 && /^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(v);
   /* image d'une séance partagée, pour AlixoImages.get (appareil qui ne l'a pas) */
   async function fetchImage(iid) {
     const cands = [...shares.values()].filter(sh => (isMember(sh) || isOwner(sh)) && sh.kind !== 'event' && (sh.imgIds || []).includes(iid));
     for (const sh of cands.slice(0, 4)) {
-      try { const s = await sharesRef.doc(sh.id).collection('imgs').doc(iid).get(); const raw = s.exists ? s.data() : null; if (raw && raw.data) return raw.data; } catch { /* règles ou hors ligne */ }
+      try { const s = await sharesRef.doc(sh.id).collection('imgs').doc(iid).get(); const raw = s.exists ? s.data() : null; if (raw && isImageDataUrl(raw.data)) return raw.data; } catch { /* règles ou hors ligne */ }
     }
     return null;
   }
@@ -606,6 +609,7 @@ window.AlixoShare = (() => {
         if (!remote || typeof remote !== 'object') return;
         remote.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
         if (!safeId(remote.folderId)) remote.folderId = null;
+        if (remote.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { AlixoSlides.normalize(remote); } catch (err) { console.error('Share (normalisation) :', err); } }   // 1.54 : liste blanche des champs d'une présentation reçue (anim, trans, video, quiz, credit)
         if (owner) {
           if (raw.by === uid) { lastPushed.set(k, raw.data); return; }
           const local = state.docs.find(d => d.id === id);

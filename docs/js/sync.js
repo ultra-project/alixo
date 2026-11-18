@@ -43,8 +43,10 @@ window.AlixoSync = (() => {
     try { await imgsRef.doc(id).set({ ts: Date.now(), data }); }
     catch (err) { console.error('Sync (image) :', err); }
   }
+  /* 1.54 : seule une data URL image/* en base64 est acceptée (défense contre une donnée corrompue ou hostile dans le nuage) */
+  const isImageDataUrl = v => typeof v === 'string' && v.length < 40 * 1024 * 1024 && /^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(v);
   async function fetchImage(id) {
-    try { const snap = await imgsRef.doc(id).get(); const raw = snap.exists ? snap.data() : null; return raw && raw.data ? raw.data : null; }
+    try { const snap = await imgsRef.doc(id).get(); const raw = snap.exists ? snap.data() : null; return raw && isImageDataUrl(raw.data) ? raw.data : null; }
     catch (err) { console.error('Sync (image) :', err); return null; }
   }
 

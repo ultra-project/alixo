@@ -1,0 +1,566 @@
+/* ============================================================
+   Alixo — présentations 1.54 (js/slides.js, slides-fx.js, slides-media.js, slides-present.js)
+   Nouveautés de la 1.54 : thèmes signature (fond + forme), nouvelles dispositions, cartes vidéo / quiz,
+   filigrane « Fait avec Alixo » en présentation et dans le PDF, menu Thème en deux sections.
+   Rien n'est déplacé de styles.css (section « Présentations — éditeur ») : cette feuille la complète.
+   Une diapositive mesure toujours 1280 × 720 px logiques, quel que soit l'endroit où elle s'affiche.
+   ============================================================ */
+
+/* ---------- thèmes signature : fond et forme (.sl-slide.th-<id>, .sl-slide.sig-<k>::after) ---------- */
+/* isolation : la forme signature (::after, z-index -1) passe derrière les blocs mais devant le fond de la diapositive */
+.sl-slide { isolation: isolate; }
+/* le motif de fond du thème (--sl-bg, posé en ligne par slideHTML) ne s'applique qu'aux fonds Papier et Teinte douce :
+   « Teinte pleine » et « Sombre » gardent la priorité */
+.sl-slide:is(.th-aurore, .th-granit, .th-lagon, .th-kraft, .th-bauhaus, .th-prisme, .th-olive, .th-cobalt, .th-pointille, .th-rubis, .th-etoile, .th-menthe):is(.bg-paper, .bg-soft) { background-color: var(--sl-paper); background-image: var(--sl-bg); background-size: var(--sl-bgsize, auto); }
+.sl-slide:is(.th-aurore, .th-granit, .th-lagon, .th-kraft, .th-bauhaus, .th-prisme, .th-olive, .th-cobalt, .th-pointille, .th-rubis, .th-etoile, .th-menthe).bg-soft { background-color: color-mix(in srgb, var(--acc) 10%, var(--sl-paper)); }
+/* le trait d'accent en pied (styles.css, .sl-slide::before) cède la place aux thèmes qui ont leur propre bande ou cadre */
+.sl-slide:is(.th-granit, .th-kraft, .th-bauhaus, .th-olive, .th-rubis, .th-menthe, .th-aurore, .th-lagon, .th-etoile)::before { display: none; }
+.sl-slide.bg-tint::before, .sl-slide.bg-dark::before { display: block; }
+
+.sl-slide[class*=" sig-"]::after { content: ""; position: absolute; z-index: -1; pointer-events: none; background: var(--sl-sig); }
+.sl-slide.bg-tint::after, .sl-slide.bg-dark::after { display: none; }
+.sl-slide.sig-circle::after { right: -150px; top: -190px; width: 540px; height: 540px; border-radius: 50%; opacity: .55; }
+.sl-slide.sig-band::after { left: 0; top: 0; bottom: 0; width: 28px; }
+.sl-slide.sig-wave::after { left: -8%; right: -8%; bottom: -150px; height: 260px; border-radius: 50% 50% 0 0 / 100% 100% 0 0; opacity: .45; }
+.sl-slide.sig-frame::after { inset: 26px; border: 2px solid var(--sl-sig); background: transparent; border-radius: 4px; opacity: .55; }
+.sl-slide.sig-frame2::after { inset: 22px; border: 2px solid var(--sl-sig); outline: 2px solid var(--sl-sig); outline-offset: 7px; background: transparent; opacity: .7; }
+.sl-slide.sig-corner::after { right: -230px; top: -230px; width: 460px; height: 460px; transform: rotate(45deg); }
+.sl-slide.sig-diag::after { left: 58%; top: -40%; width: 26%; height: 190%; transform: rotate(24deg); opacity: .35; }
+.sl-slide.sig-bigcircle::after { left: -280px; bottom: -360px; width: 860px; height: 860px; border-radius: 50%; opacity: .55; }
+.sl-slide.sig-top::after { left: 0; right: 0; top: 0; height: 26px; }
+.sl-slide.sig-dots::after { inset: 0; background: radial-gradient(var(--sl-sig) 1.2px, transparent 1.8px) 0 0 / 96px 96px, radial-gradient(var(--sl-sig) .8px, transparent 1.4px) 48px 60px / 150px 150px; opacity: .55; }
+/* Bauhaus : le second accent (rouge) se pose sur la bande noire, par le trait d'accent recyclé */
+.sl-slide.th-bauhaus:is(.bg-paper, .bg-soft)::before { display: block; left: 18px; right: auto; bottom: 64px; width: 110px; height: 110px; border-radius: 50%; background: var(--acc); z-index: -1; }
+
+/* ============================================================
+   ---- animations et transitions ---- (js/slides-fx.js, js/slides-present.js) — lot B
+   Animations des blocs (data-fx / --adur), pastille d'ordre, transitions entre diapositives,
+   pop-overs « Animation » / « Transition », puis le mode présentation refondu.
+   ============================================================ */
+
+/* ---- animations d'un bloc (mode présentation) : data-fx choisit les images-clés, --adur la durée ---- */
+[data-fx="fade"] { --akf: sl-fade; } [data-fx="up"] { --akf: sl-up; } [data-fx="down"] { --akf: sl-down; }
+[data-fx="left"] { --akf: sl-left; } [data-fx="right"] { --akf: sl-right; } [data-fx="zoom"] { --akf: sl-zoom; }
+[data-fx="pop"] { --akf: sl-pop; } [data-fx="flip"] { --akf: sl-flip; } [data-fx="wipe"] { --akf: sl-wipe; } [data-fx="type"] { --akf: sl-type; }
+.sl-el.anim-wait { visibility: hidden; }
+.sl-el.anim-in { animation: var(--akf, sl-fade) var(--adur, .6s) cubic-bezier(.2, .7, .2, 1) both; }
+.sl-el[data-fx="type"].anim-in { animation-timing-function: steps(28, end); }
+@keyframes sl-fade { from { opacity: 0; } }
+@keyframes sl-up { from { opacity: 0; transform: translateY(48px); } }
+@keyframes sl-down { from { opacity: 0; transform: translateY(-48px); } }
+@keyframes sl-left { from { opacity: 0; transform: translateX(-72px); } }
+@keyframes sl-right { from { opacity: 0; transform: translateX(72px); } }
+@keyframes sl-zoom { from { opacity: 0; transform: scale(.6); } }
+@keyframes sl-pop { 0% { opacity: 0; transform: scale(.4); } 60% { opacity: 1; transform: scale(1.08); } 80% { transform: scale(.97); } 100% { transform: none; } }
+@keyframes sl-flip { from { opacity: 0; transform: perspective(900px) rotateY(-90deg); } to { opacity: 1; transform: perspective(900px) rotateY(0); } }
+@keyframes sl-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* machine à écrire : volet par paliers, de gauche à droite (texte dévoilé lettre après lettre) */
+@keyframes sl-type { from { clip-path: inset(-2% 102% -2% -2%); } to { clip-path: inset(-2% -2% -2% -2%); } }
+
+/* pastille d'ordre d'apparition (scène d'édition seulement) */
+.sl-ordtag { display: none; }
+#sl-canvas .sl-ordtag { display: block; position: absolute; left: -9px; top: -9px; width: 22px; height: 22px; border-radius: 50%; background: var(--tint); color: #fff; font: 650 11px/22px var(--font-ui); font-style: normal; text-align: center; z-index: 6; pointer-events: none; box-shadow: 0 1px 3px rgba(0, 0, 0, .28); }
+
+/* ---- transitions entre diapositives : .sl-pstage.tr-<fx>.dir-next|prev > .sl-pin.out / .sl-pin.in ---- */
+.sl-pstage { --tdur: .6s; }
+.sl-pstage .sl-pin.out { z-index: 1; }
+.sl-pstage .sl-pin.in { z-index: 2; }
+.sl-pstage.tr-3d { perspective: 2400px; transform-style: preserve-3d; }
+.sl-pstage[class*="tr-"] .sl-pin.in, .sl-pstage[class*="tr-"] .sl-pin.out { animation-duration: var(--tdur); animation-timing-function: cubic-bezier(.2, .7, .2, 1); animation-fill-mode: both; will-change: translate, opacity; }
+/* les pins gardent leur `transform` (centrage + échelle, posé par le JS) : les transitions n'emploient que translate / scale / rotate / opacity / clip-path */
+.tr-fade .sl-pin.in { animation-name: sl-tr-fadein; } .tr-fade .sl-pin.out { animation-name: sl-tr-fadeout; }
+.tr-slide.dir-next .sl-pin.in { animation-name: sl-tr-fromright; } .tr-slide.dir-prev .sl-pin.in { animation-name: sl-tr-fromleft; }
+.tr-push.dir-next .sl-pin.in { animation-name: sl-tr-fromright; } .tr-push.dir-next .sl-pin.out { animation-name: sl-tr-toleft; }
+.tr-push.dir-prev .sl-pin.in { animation-name: sl-tr-fromleft; } .tr-push.dir-prev .sl-pin.out { animation-name: sl-tr-toright; }
+.tr-zoom .sl-pin.in { animation-name: sl-tr-zoomin; } .tr-zoom .sl-pin.out { animation-name: sl-tr-zoomout; }
+.tr-wipe.dir-next .sl-pin.in { animation-name: sl-tr-wiper; animation-timing-function: ease-in-out; } .tr-wipe.dir-prev .sl-pin.in { animation-name: sl-tr-wipel; animation-timing-function: ease-in-out; }
+.tr-cube.dir-next .sl-pin.in { animation-name: sl-tr-cubein; } .tr-cube.dir-next .sl-pin.out { animation-name: sl-tr-cubeout; }
+.tr-cube.dir-prev .sl-pin.in { animation-name: sl-tr-cubein-p; } .tr-cube.dir-prev .sl-pin.out { animation-name: sl-tr-cubeout-p; }
+.tr-cube .sl-pin, .tr-flip .sl-pin { backface-visibility: hidden; }
+.tr-flip .sl-pin.out { animation-name: sl-tr-flipout; animation-duration: calc(var(--tdur) / 2); animation-timing-function: ease-in; }
+.tr-flip .sl-pin.in { animation-name: sl-tr-flipin; animation-duration: calc(var(--tdur) / 2); animation-delay: calc(var(--tdur) / 2); animation-timing-function: ease-out; }
+.tr-flip.dir-prev .sl-pin.out { animation-name: sl-tr-flipout-p; } .tr-flip.dir-prev .sl-pin.in { animation-name: sl-tr-flipin-p; }
+@keyframes sl-tr-fadein { from { opacity: 0; } }
+@keyframes sl-tr-fadeout { to { opacity: 0; } }
+@keyframes sl-tr-fromright { from { translate: 100vw 0; } to { translate: 0 0; } }
+@keyframes sl-tr-fromleft { from { translate: -100vw 0; } to { translate: 0 0; } }
+@keyframes sl-tr-toleft { from { translate: 0 0; } to { translate: -100vw 0; } }
+@keyframes sl-tr-toright { from { translate: 0 0; } to { translate: 100vw 0; } }
+@keyframes sl-tr-zoomin { from { opacity: 0; scale: .82; } to { opacity: 1; scale: 1; } }
+@keyframes sl-tr-zoomout { from { opacity: 1; scale: 1; } to { opacity: 0; scale: 1.1; } }
+@keyframes sl-tr-wiper { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@keyframes sl-tr-wipel { from { clip-path: inset(0 0 0 100%); } to { clip-path: inset(0 0 0 0); } }
+@keyframes sl-tr-cubein { from { rotate: y 90deg; translate: 50vw 0; opacity: .25; } to { rotate: y 0deg; translate: 0 0; opacity: 1; } }
+@keyframes sl-tr-cubeout { from { rotate: y 0deg; translate: 0 0; opacity: 1; } to { rotate: y -90deg; translate: -50vw 0; opacity: .25; } }
+@keyframes sl-tr-cubein-p { from { rotate: y -90deg; translate: -50vw 0; opacity: .25; } to { rotate: y 0deg; translate: 0 0; opacity: 1; } }
+@keyframes sl-tr-cubeout-p { from { rotate: y 0deg; translate: 0 0; opacity: 1; } to { rotate: y 90deg; translate: 50vw 0; opacity: .25; } }
+@keyframes sl-tr-flipout { from { rotate: y 0deg; opacity: 1; } to { rotate: y -90deg; opacity: 0; } }
+@keyframes sl-tr-flipin { from { rotate: y 90deg; opacity: 0; } to { rotate: y 0deg; opacity: 1; } }
+@keyframes sl-tr-flipout-p { from { rotate: y 0deg; opacity: 1; } to { rotate: y 90deg; opacity: 0; } }
+@keyframes sl-tr-flipin-p { from { rotate: y -90deg; opacity: 0; } to { rotate: y 0deg; opacity: 1; } }
+
+/* aperçu d'une transition par-dessus la scène d'édition */
+.sl-stage .sl-fxpv { position: absolute; inset: 0; z-index: 20; background: var(--bg); cursor: default; }
+
+/* ---- vue présentateur, encre, spot, répétition (js/slides-present.js, lot E) ---- */
+/* calque d'encre : même repère que les pins (1280 × 720 logique, mis à l'échelle par fit()) ; transparent aux clics sans outil */
+.sl-pstage > .sl-ink { position: absolute; left: 50%; top: 50%; width: 1280px; height: 720px; transform-origin: center; transform: translate(-50%, -50%); z-index: 5; pointer-events: none; touch-action: none; }
+#sl-present.inking .sl-pstage > .sl-ink, #sl-presenter.inking .sl-pstage > .sl-ink { pointer-events: auto; }
+.tool-pen .sl-pstage > .sl-ink { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22' viewBox='0 0 22 22'%3E%3Ccircle cx='11' cy='11' r='4' fill='%23e63946' stroke='%23fff' stroke-width='1.5'/%3E%3C/svg%3E") 11 11, crosshair; }
+.tool-hl .sl-pstage > .sl-ink { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Ccircle cx='14' cy='14' r='11' fill='%23ffe100' fill-opacity='.55' stroke='%23b89a00' stroke-width='1.5'/%3E%3C/svg%3E") 14 14, cell; }
+.tool-eraser .sl-pstage > .sl-ink { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='26' height='26' viewBox='0 0 26 26'%3E%3Ccircle cx='13' cy='13' r='10' fill='%23fff' fill-opacity='.7' stroke='%23333' stroke-width='1.5' stroke-dasharray='3 2'/%3E%3C/svg%3E") 13 13, not-allowed; }
+#sl-present.inking .sl-pstage, #sl-presenter.inking .sl-pstage { cursor: default; }
+/* spot (S puis clic) : le bloc choisi est agrandi et centré au-dessus d'un voile sombre (.sl-spotveil, posé par setSpot dans .sl-slide :
+   la diapositive isole son empilement) ; z-index 60 !important passe devant le z-index inline des autres blocs */
+.sl-pstage .sl-pin .sl-el { transition: transform .35s cubic-bezier(.2, .7, .2, 1); }
+.sl-pin.spot .sl-slide > .sl-spotveil { position: absolute; inset: 0; z-index: 59; background: rgba(0, 0, 0, .62); pointer-events: none; animation: sl-fade .3s both; }
+.sl-pin .sl-el.spot-on { transform: var(--spot); z-index: 60 !important; animation: none !important; background: var(--sl-paper, #fff); border-radius: 8px; box-shadow: 0 18px 60px rgba(0, 0, 0, .45); }
+.spot-arm .sl-pstage, .spot-arm .sl-pstage .sl-el { cursor: zoom-in; }
+.sl-pin.spot { cursor: zoom-out; }
+/* bandeau « Répétition » : sur la scène en mode simple ; dans le bloc temps (.sl-prtime) en vue présentateur */
+.sl-preh { position: absolute; left: 16px; top: 14px; z-index: 45; display: flex; align-items: center; gap: 12px; padding: 8px 14px; border-radius: 10px; background: rgba(192, 57, 43, .92); color: #fff; font: 500 15px/1.2 var(--font-ui); font-variant-numeric: tabular-nums; box-shadow: 0 4px 16px rgba(0, 0, 0, .35); pointer-events: none; }
+.sl-preh b { font-weight: 700; text-transform: uppercase; letter-spacing: .06em; font-size: 12.5px; }
+.sl-preh .sl-prehv { font-size: 20px; font-weight: 700; }
+.sl-prtime .sl-preh { position: static; align-self: center; padding: 6px 12px; gap: 10px; box-shadow: none; }
+/* récapitulatif de répétition (openDialog) */
+.sl-rhdlg { width: min(640px, 94vw); }
+.sl-rhtable { width: 100%; border-collapse: collapse; font-size: 14px; }
+.sl-rhtable th, .sl-rhtable td { padding: 7px 10px; border-bottom: 1px solid var(--border); text-align: left; }
+.sl-rhtable th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--ink-3); font-weight: 650; }
+.sl-rhtable td:nth-child(n+2), .sl-rhtable th:nth-child(n+2) { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sl-rhtable td.over { color: #c0392b; font-weight: 650; }
+.sl-rhtable td.under { color: #2e8b57; font-weight: 650; }
+.sl-rhtable tfoot td { font-weight: 700; border-top: 2px solid var(--border); border-bottom: 0; }
+.sl-rhhint { margin: 12px 0 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+/* volet Notes de l'éditeur : « Durée visée » (s.target) */
+.sl-target { display: flex; align-items: center; gap: 8px; margin: -8px 12px 16px; font-size: 12.5px; color: var(--ink-2); }
+.sl-target input { width: 72px; font: inherit; font-variant-numeric: tabular-nums; text-align: center; padding: 5px 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink); outline: none; }
+.sl-target input:focus { border-color: var(--tint); }
+.sl-target small { color: var(--ink-3); }
+body.readonly .sl-side .sl-target { display: none; }
+/* écran public (fenêtre index.html?doc=…&present=1) : rien d'autre que la scène, curseur masqué */
+body.present-window { background: #000; overflow: hidden; }
+body.present-window > *:not(#sl-present):not(#toast) { display: none !important; }
+body.present-window #sl-present { display: flex; }
+#sl-present.audience, #sl-present.audience .sl-pstage, #sl-present.audience .sl-pin { cursor: none; }
+#sl-present.audience .sl-pend { cursor: default; }
+.sl-pwait { position: absolute; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 40px; background: #000; color: #fff; font: 500 clamp(18px, 2.6vw, 30px)/1.35 var(--font-ui); text-align: center; }
+#sl-present.audience .sl-pwait { cursor: default; }
+/* vue présentateur : « cur next » / « cur notes » / vignettes / barre — contraste élevé, horloge lisible à 2 m */
+#sl-presenter { position: fixed; inset: 0; z-index: 2600; display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); grid-template-rows: minmax(0, 1.1fr) minmax(0, 1fr) auto auto; grid-template-areas: "cur next" "cur notes" "grid grid" "bar bar"; gap: 12px 16px; padding: 14px 16px 10px; background: #14151a; color: #fff; user-select: none; -webkit-user-select: none; }
+#sl-presenter[hidden] { display: none; }
+#sl-presenter h5 { margin: 0; font-size: 12px; font-weight: 650; text-transform: uppercase; letter-spacing: .08em; color: rgba(255, 255, 255, .62); display: flex; justify-content: space-between; align-items: center; min-height: 22px; }
+.sl-prcur { grid-area: cur; position: relative; min-height: 0; min-width: 0; display: flex; flex-direction: column; background: #000; border-radius: 10px; overflow: hidden; box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+.sl-prcur .sl-pstage { flex: 1; cursor: default; }
+.sl-prcur .sl-pblack { border-radius: 10px; }
+.sl-prnext { grid-area: next; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sl-prnextpv { position: relative; flex: 1; min-height: 0; border-radius: 8px; overflow: hidden; background: #000; box-shadow: 0 0 0 1px rgba(255, 255, 255, .08); }
+.sl-prnextpv .sl-pin { pointer-events: none; }
+.sl-prnextpv .sl-pin.empty { display: none; }
+.sl-prnextlbl { margin: 0; font-size: 16px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sl-prnotes { grid-area: notes; min-height: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.sl-prnotesz { display: inline-flex; gap: 4px; }
+.sl-prnotesz button { color: #fff; font: 600 12px/1 var(--font-ui); padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, .12); }
+.sl-prnotesz button:hover { background: rgba(255, 255, 255, .24); }
+.sl-prnotestxt { flex: 1; min-height: 0; overflow: auto; padding: 12px 16px; border-radius: 8px; background: #22242b; font-size: var(--prfs, 20px); line-height: 1.45; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sl-prnotestxt.empty { color: rgba(255, 255, 255, .5); font-style: italic; }
+.sl-prgrid { grid-area: grid; display: flex; gap: 8px; overflow-x: auto; overflow-y: hidden; padding: 4px 2px 6px; scrollbar-width: thin; }
+.sl-prgrid .sl-pgthumb { flex: none; width: 128px; outline-offset: 2px; }
+.sl-prgrid .sl-pgthumb:hover { transform: none; }
+.sl-prbar { grid-area: bar; display: flex; align-items: center; gap: 10px 18px; flex-wrap: wrap; min-height: 44px; min-width: 0; }
+.sl-prtime { display: flex; align-items: baseline; gap: 16px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.sl-prclock { font-size: 36px; font-weight: 700; letter-spacing: .01em; }
+.sl-prtime .sl-ptimev { font-size: 30px; font-weight: 650; color: #ffd166; }
+.sl-prtarget { font-size: 20px; color: rgba(255, 255, 255, .85); }
+.sl-prtarget b { font-weight: 700; color: #fff; }
+.sl-prpace { font-size: 17px; font-weight: 650; padding: 5px 14px; border-radius: 999px; background: rgba(255, 255, 255, .14); }
+.sl-prpace.ahead { background: #1d6fb8; }
+.sl-prpace.ok { background: #257a4a; }
+.sl-prpace.late { background: #c0392b; }
+.sl-prbtns { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 2px; padding: 4px 6px; border-radius: 12px; background: rgba(255, 255, 255, .07); }
+.sl-prbtns button { height: 36px; min-width: 36px; padding: 0 9px; border-radius: 8px; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 6px; font-size: 13.5px; line-height: 1; white-space: nowrap; }
+.sl-prbtns button svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.sl-prbtns button svg [fill="currentColor"] { fill: currentColor; }
+.sl-prbtns button:hover { background: rgba(255, 255, 255, .16); }
+.sl-prbtns button.on { background: rgba(255, 255, 255, .28); }
+.sl-prbtns button.sl-pnavbtn { font-size: 24px; padding: 0 10px 2px; }
+.sl-prbtns .sl-psep { width: 1px; height: 22px; background: rgba(255, 255, 255, .22); margin: 0 4px; flex: none; }
+.sl-prbtns .sl-pcount { font-size: 14px; font-variant-numeric: tabular-nums; padding: 0 4px; min-width: 56px; text-align: center; }
+.sl-prbtns .sl-praud.on { background: #2e8b57; }
+.sl-prbtns .sl-prend { background: rgba(192, 57, 43, .85); }
+.sl-prbtns .sl-prend:hover { background: #c0392b; }
+#sl-presenter .sl-phelp { right: 16px; bottom: 70px; }
+@media (max-width: 1200px) { .sl-prbtns button .lbl { display: none; } .sl-prbtns .sl-praud .lbl { display: inline; } }
+/* ≤ 900 px : une colonne ; l'aperçu « Suite » et les vignettes disparaissent, le libellé « Diapositive 2 · … » reste au-dessus des notes */
+@media (max-width: 900px) { #sl-presenter { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) auto minmax(0, .6fr) auto; grid-template-areas: "cur" "next" "notes" "bar"; } .sl-prnext { gap: 0; } .sl-prnext h5, .sl-prnextpv, .sl-prgrid { display: none; } .sl-prclock { font-size: 26px; } .sl-prtime { flex-wrap: wrap; white-space: normal; gap: 6px 12px; } .sl-prtime .sl-ptimev { font-size: 22px; } .sl-prtarget { font-size: 16px; } .sl-prtime .sl-preh { font-size: 13px; padding: 4px 10px; gap: 8px; } .sl-prtime .sl-preh .sl-prehv { font-size: 16px; } }
+/* tactile : la barre d'outils reste affichée tant qu'un tap au centre ne la masque pas (pas d'auto-masquage, voir showTools) */
+@media (pointer: coarse) { #sl-present.idle .sl-pstage { cursor: default; } }
+
+/* ---- pop-over « Animation » ---- */
+#popover:has(.sl-animgrid), #popover:has(.sl-transgrid) { width: 392px; }
+.sl-animgrid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.sl-transgrid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.sl-animtile, .sl-transtile { display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 9px 4px 7px; border-radius: 8px; border: 1.5px solid var(--border); background: var(--surface); font-size: 11px; line-height: 1.15; color: var(--ink-2); text-align: center; cursor: pointer; }
+.sl-animtile:hover, .sl-transtile:hover { border-color: var(--ink-3); }
+.sl-animtile.on, .sl-transtile.on { border-color: var(--tint); background: var(--tint-soft); color: var(--tint); }
+.sl-animtile:disabled { opacity: .4; cursor: not-allowed; }
+.sl-animtile:disabled:hover { border-color: var(--border); }
+.sl-animtile i { display: block; width: 28px; height: 18px; border-radius: 4px; background: var(--tint); }
+.sl-animtile i.anim-in { animation: var(--akf, sl-fade) .7s cubic-bezier(.2, .7, .2, 1) both; }
+.sl-animtile i[data-fx="type"].anim-in { animation-timing-function: steps(8, end); }
+.sl-fxrow { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--ink-2); }
+#popover .sl-fxrow input[type="range"] { flex: 1; min-width: 0; padding: 0; border: 0; background: none; accent-color: var(--tint); }
+.sl-fxrow b { min-width: 40px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; color: var(--ink); }
+.sl-fxrow select { flex: 1; height: 30px; font: inherit; font-size: 12.5px; color: var(--ink); background: var(--bg); border: 1px solid var(--border); border-radius: 6px; padding: 0 8px; outline: none; }
+.sl-fxrow select:focus { border-color: var(--tint); }
+.sl-fxseq { margin-top: 10px; display: flex; }
+.sl-fxbtns { margin-top: 12px; justify-content: space-between; flex-wrap: wrap; }
+.sl-fxbtns .cta.danger { color: var(--danger); }
+
+/* ---- pop-over « Transition » : mini-aperçu à deux rectangles, rejoué au survol ---- */
+.sl-tpv { position: relative; display: block; width: 40px; height: 24px; border-radius: 3px; overflow: hidden; border: 1px solid var(--border); background: var(--surface-2, var(--bg)); }
+.sl-tpv b { position: absolute; inset: 0; display: block; }
+.sl-tpv b:first-child { background: var(--ink-3); opacity: .55; }
+.sl-tpv b:last-child { background: var(--tint); }
+.sl-tpv.tp-none b:last-child { opacity: 0; }
+.sl-transtile:hover .sl-tpv b:last-child { animation-duration: .9s; animation-timing-function: cubic-bezier(.2, .7, .2, 1); animation-fill-mode: both; }
+.sl-transtile:hover .tp-fade b:last-child { animation-name: sl-tp-fade; }
+.sl-transtile:hover .tp-slide b:last-child, .sl-transtile:hover .tp-push b:last-child { animation-name: sl-tp-right; }
+.sl-transtile:hover .tp-push b:first-child { animation: sl-tp-pushout .9s cubic-bezier(.2, .7, .2, 1) both; }
+.sl-transtile:hover .tp-zoom b:last-child { animation-name: sl-tp-zoom; }
+.sl-transtile:hover .tp-wipe b:last-child { animation-name: sl-tp-wipe; }
+.sl-transtile:hover .tp-cube b:last-child, .sl-transtile:hover .tp-flip b:last-child { animation-name: sl-tp-flip; }
+.sl-transtile:hover .tp-flip b:first-child, .sl-transtile:hover .tp-cube b:first-child { animation: sl-tp-flipout .9s cubic-bezier(.2, .7, .2, 1) both; }
+@keyframes sl-tp-fade { from { opacity: 0; } }
+@keyframes sl-tp-right { from { translate: 100% 0; } to { translate: 0 0; } }
+@keyframes sl-tp-pushout { from { translate: 0 0; } to { translate: -100% 0; } }
+@keyframes sl-tp-zoom { from { opacity: 0; scale: .6; } to { opacity: 1; scale: 1; } }
+@keyframes sl-tp-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0); } }
+@keyframes sl-tp-flip { 0%, 50% { opacity: 0; rotate: y 90deg; } 100% { opacity: 1; rotate: y 0deg; } }
+@keyframes sl-tp-flipout { 0% { opacity: 1; rotate: y 0deg; } 50%, 100% { opacity: 0; rotate: y -90deg; } }
+.sl-tpv.tp-cube, .sl-tpv.tp-flip { perspective: 120px; }
+
+/* ---- barre : bouton « Présenter » à caret, boutons Animation / Transition ---- */
+.sl-bar .sl-present-btn .tcaret { font-size: 9px; margin-left: 5px; opacity: .75; }
+.sl-bar [data-sl="anim"] svg, .sl-bar [data-sl="trans"] svg { width: 15px; height: 15px; }
+
+/* ---- mode présentation refondu (js/slides-present.js) : scène à deux pins, barre d'outils, calques ---- */
+/* #sl-present, .sl-pstage, .sl-pin et .sl-pnotes viennent de styles.css ; la barre .sl-pnav (1.53) est remplacée par .sl-ptools */
+#sl-present { user-select: none; -webkit-user-select: none; }
+#sl-present.idle .sl-pstage { cursor: none; }
+#sl-present.laser, #sl-present.laser .sl-pstage { cursor: none; }
+.sl-pstage { touch-action: manipulation; }
+/* barre d'outils : visible au mouvement de la souris ou au survol, auto-masquée après 2,5 s */
+/* centrée par margin auto (un `left: 50%` limiterait sa largeur disponible à la moitié de l'écran et la ferait passer sur deux lignes) */
+.sl-ptools { position: absolute; left: 0; right: 0; bottom: 14px; margin: 0 auto; width: fit-content; z-index: 40; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 2px; max-width: calc(100vw - 24px); padding: 5px 8px; border-radius: 12px; background: rgba(18, 18, 22, .78); color: #fff; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); opacity: 0; pointer-events: none; transition: opacity .2s; }
+#sl-present.tools .sl-ptools, .sl-ptools:hover, .sl-ptools:focus-within { opacity: 1; pointer-events: auto; }
+.sl-ptools button { height: 32px; min-width: 32px; padding: 0 7px; border-radius: 8px; color: #fff; display: inline-flex; align-items: center; justify-content: center; gap: 5px; font-size: 12.5px; line-height: 1; white-space: nowrap; }
+.sl-ptools button svg { width: 17px; height: 17px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.sl-ptools button svg [fill="currentColor"] { fill: currentColor; }
+.sl-ptools button:hover { background: rgba(255, 255, 255, .16); }
+.sl-ptools button.on { background: rgba(255, 255, 255, .28); }
+.sl-ptools button:disabled { opacity: .35; cursor: not-allowed; }
+.sl-ptools button:disabled .lbl { display: none; }   /* outils « bientôt » : icône seule, pour tenir sur une ligne */
+.sl-ptools button:disabled:hover { background: none; }
+.sl-ptools button.sl-pnavbtn { font-size: 22px; padding: 0 9px 2px; }
+.sl-ptools .sl-psep { width: 1px; height: 20px; background: rgba(255, 255, 255, .22); margin: 0 4px; flex: none; }
+.sl-pcount { font-size: 13px; font-variant-numeric: tabular-nums; padding: 0 4px; min-width: 56px; text-align: center; }
+.sl-pcount .sl-pnum { color: #ffd166; font-weight: 700; }
+.sl-ptime { font-variant-numeric: tabular-nums; min-width: 70px; }
+@media (max-width: 1000px) { .sl-ptools button span.lbl { display: none; } }
+@media (max-width: 700px) { .sl-ptools { gap: 0; padding: 4px 6px; bottom: 10px; } }
+/* calques noir / blanc */
+.sl-pblack { position: absolute; inset: 0; z-index: 30; background: #000; cursor: pointer; }
+.sl-pblack.w { background: #fff; }
+/* pointeur laser (L) : point rouge de 14 px qui suit la souris */
+.sl-plaser { position: fixed; left: 0; top: 0; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; background: #ff2d2d; box-shadow: 0 0 0 2px rgba(255, 255, 255, .55), 0 0 12px 4px rgba(255, 45, 45, .6); pointer-events: none; z-index: 60; }
+/* notes (N) : au-dessus de la barre d'outils */
+#sl-present .sl-pnotes { bottom: 64px; z-index: 35; }
+#sl-present .sl-pnotes.empty { color: rgba(255, 255, 255, .6); font-style: italic; }
+/* grille des diapositives (G) */
+.sl-pgrid { position: absolute; inset: 0; z-index: 32; background: rgba(0, 0, 0, .93); overflow: auto; padding: 28px 32px 80px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 18px; align-content: start; cursor: default; }
+.sl-pgthumb { position: relative; aspect-ratio: 16 / 9; border-radius: 6px; overflow: hidden; background: #1c1c20; outline: 2px solid transparent; outline-offset: 3px; cursor: pointer; transition: outline-color .12s, transform .12s; }
+.sl-pgthumb:hover { transform: translateY(-2px); outline-color: rgba(255, 255, 255, .45); }
+.sl-pgthumb.cur { outline-color: #fff; }
+.sl-pgthumb .sl-slide { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; transform-origin: 0 0; transform: scale(var(--k, .17)); pointer-events: none; }
+.sl-pgthumb b { position: absolute; left: 6px; bottom: 6px; padding: 1px 7px; border-radius: 6px; background: rgba(0, 0, 0, .65); color: #fff; font-size: 12px; font-weight: 600; }
+/* écran de fin */
+.sl-pend { position: absolute; inset: 0; z-index: 15; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; background: #000; color: #fff; font: 600 34px/1.2 var(--font-ui); animation: sl-tr-fadein .5s both; cursor: pointer; }
+.sl-pend small { font-size: 15px; font-weight: 500; opacity: .7; }
+/* aide (?) */
+.sl-phelp { position: absolute; right: 16px; bottom: 64px; z-index: 36; width: 420px; max-width: calc(100vw - 32px); max-height: calc(100vh - 110px); overflow: auto; padding: 14px 16px 12px; border-radius: 12px; background: rgba(18, 18, 22, .94); color: #fff; font-size: 13px; line-height: 1.45; box-shadow: 0 6px 24px rgba(0, 0, 0, .35); cursor: default; }
+.sl-phelp h4 { font-size: 14px; font-weight: 650; margin: 0 0 8px; display: flex; justify-content: space-between; align-items: center; }
+.sl-phelp h4 button { color: #fff; width: 26px; height: 26px; border-radius: 6px; display: grid; place-items: center; }
+.sl-phelp h4 button:hover { background: rgba(255, 255, 255, .16); }
+.sl-phelp h4 button svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.sl-phelp table { width: 100%; border-collapse: collapse; }
+.sl-phelp td { padding: 3px 0; vertical-align: top; }
+.sl-phelp td:first-child { width: 48%; padding-right: 10px; }
+.sl-phelp td:first-child kbd { white-space: nowrap; }
+.sl-phelp kbd { display: inline-block; font: 600 11px/1 var(--font-ui); padding: 3px 6px; margin: 1px 2px 1px 0; border: 1px solid rgba(255, 255, 255, .35); border-bottom-width: 2px; border-radius: 4px; background: rgba(255, 255, 255, .1); color: #fff; }
+.sl-phelp .soon { opacity: .55; }
+.sl-phelp .soon em { font-style: normal; font-size: 11px; opacity: .8; }
+
+/* ---- moins d'animations (réglage système) ---- */
+@media (prefers-reduced-motion: reduce) {
+  .sl-el.anim-in, .sl-animtile i.anim-in, .sl-transtile:hover .sl-tpv b, .sl-pstage .sl-pin.in, .sl-pstage .sl-pin.out, .sl-pend { animation: none !important; }
+}
+
+/* ---------- menu Thème : deux sections, tuiles verrouillées (Alixo+) ---------- */
+/* 24 thèmes : la grille prend la hauteur disponible (380 px cachaient toute la section signature) */
+.sl-themes { max-height: min(600px, calc(100vh - 240px)); }
+.sl-thsec { grid-column: 1 / -1; display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); margin: 4px 0 -2px; padding: 0 2px; }
+.sl-thsec:first-child { margin-top: 0; }
+.sl-thsec .plus-badge { margin-left: 0; }
+.sl-thprev.has-bg { background-image: var(--tbg); background-size: var(--tbs, auto); }
+.sl-thprev.has-bg i { background: var(--ta); }
+.sl-thname { display: flex; align-items: center; flex-wrap: wrap; gap: 2px 0; }
+.sl-thname .plus-badge { margin-left: 5px; font-size: 9px; padding: 0 5px; vertical-align: 0; }
+.sl-themes button.locked { opacity: .82; }
+.sl-themes button.locked:hover { opacity: 1; }
+.sl-themes button.locked .sl-thprev { filter: saturate(.7); }
+
+/* ---------- aperçus des nouvelles dispositions (menu « Nouvelle diapositive ») ---------- */
+/* 16 dispositions : deux colonnes, sinon le menu dépasse l'écran */
+.sl-layouts { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 6px; }
+:is(#popover, .po-scope):has(.sl-layouts) { width: 440px; }
+.sl-laypv.lay-imgleft i:nth-child(1), .sl-laypv.lay-compare i:nth-child(1), .sl-laypv.lay-video i:nth-child(1), .sl-laypv.lay-quiz i:nth-child(1), .sl-laypv.lay-three i:nth-child(1) { left: 4px; right: 4px; top: 4px; height: 3px; background: var(--tint); opacity: 1; }
+.sl-laypv.lay-imgleft i:nth-child(2) { left: 4px; width: 16px; top: 10px; bottom: 4px; border-radius: 2px; opacity: .8; } .sl-laypv.lay-imgleft i:nth-child(3) { right: 4px; width: 16px; top: 11px; height: 2px; box-shadow: 0 4px 0 var(--ink-3), 0 8px 0 var(--ink-3); opacity: .55; }
+.sl-laypv.lay-imgfull { background: color-mix(in srgb, var(--ink-3) 35%, var(--surface)); } .sl-laypv.lay-imgfull i:nth-child(1) { left: 0; right: 0; bottom: 0; height: 8px; background: var(--tint); opacity: 1; border-radius: 0; } .sl-laypv.lay-imgfull i:nth-child(2) { left: 5px; width: 20px; bottom: 3px; height: 2px; background: #fff; opacity: 1; } .sl-laypv.lay-imgfull i:nth-child(3) { display: none; }
+.sl-laypv.lay-quote i:nth-child(1) { left: 6px; top: 7px; width: 2px; bottom: 7px; background: var(--tint); opacity: 1; } .sl-laypv.lay-quote i:nth-child(2) { left: 11px; right: 6px; top: 8px; height: 2px; } .sl-laypv.lay-quote i:nth-child(3) { left: 11px; width: 18px; top: 13px; height: 2px; }
+.sl-laypv.lay-compare i:nth-child(2) { left: 4px; width: 16px; top: 10px; bottom: 4px; border-radius: 2px; border-top: 3px solid var(--tint); background: color-mix(in srgb, var(--ink-3) 30%, transparent); } .sl-laypv.lay-compare i:nth-child(3) { right: 4px; width: 16px; top: 10px; bottom: 4px; border-radius: 2px; border-top: 3px solid var(--tint); background: color-mix(in srgb, var(--ink-3) 30%, transparent); }
+.sl-laypv.lay-video i:nth-child(2) { left: 8px; right: 8px; top: 10px; bottom: 4px; border-radius: 2px; opacity: .35; } .sl-laypv.lay-video i:nth-child(3) { left: 19px; top: 13px; width: 0; height: 0; background: transparent; border-left: 6px solid var(--tint); border-top: 4px solid transparent; border-bottom: 4px solid transparent; opacity: 1; }
+.sl-laypv.lay-quiz i:nth-child(2) { left: 8px; top: 11px; width: 12px; height: 3px; border-radius: 2px; opacity: .7; box-shadow: 0 5px 0 var(--ink-3); } .sl-laypv.lay-quiz i:nth-child(3) { left: 24px; top: 11px; width: 12px; height: 3px; border-radius: 2px; background: var(--tint); opacity: 1; box-shadow: 0 5px 0 var(--ink-3); }
+.sl-laypv.lay-three i:nth-child(2) { left: 4px; width: 10px; top: 10px; bottom: 4px; box-shadow: 13px 0 0 var(--ink-3); } .sl-laypv.lay-three i:nth-child(3) { right: 4px; width: 10px; top: 10px; bottom: 4px; }
+.sl-laypv.lay-end { background: var(--tint); } .sl-laypv.lay-end i { background: #fff; opacity: .9; } .sl-laypv.lay-end i:nth-child(1) { left: 14px; right: 14px; top: 8px; height: 4px; } .sl-laypv.lay-end i:nth-child(2) { left: 18px; right: 18px; top: 15px; height: 2px; opacity: .6; } .sl-laypv.lay-end i:nth-child(3) { display: none; }
+
+/* ---------- cartes provisoires vidéo / quiz (le lot C apporte la lecture et le lien) ---------- */
+.sl-el.t-video, .sl-el.t-quiz { padding: 0; }
+.sl-vcard, .sl-quizcard { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; border-radius: 12px; background: color-mix(in srgb, var(--sl-ink2) 12%, transparent); border: 2px dashed color-mix(in srgb, var(--sl-ink2) 40%, transparent); color: var(--sl-ink2); font-family: var(--font-body, var(--font-ui)); font-size: calc(24px * var(--fs)); font-weight: 650; text-align: center; padding: 12px; overflow: hidden; }
+.sl-vcard svg, .sl-quizcard svg { width: 56px; height: 56px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.sl-vcard svg [fill="currentColor"], .sl-quizcard svg [fill="currentColor"] { fill: currentColor; }
+.sl-vcard small, .sl-quizcard small { font-size: 16px; font-weight: 500; opacity: .8; }
+
+/* ---------- filigrane « Fait avec Alixo » (présentation, écran public, PDF) sans Alixo+ ---------- */
+/* même mention que les exports (WM_HTML, app.js) ; posée dans un coin libre par watermarkHTML (slides.js) ; jamais en édition ni vignette */
+.sl-wm { position: absolute; z-index: 50; pointer-events: none; user-select: none; opacity: .85; }
+.sl-wm.pos-bl { left: 18px; bottom: 16px; }
+.sl-wm.pos-br { right: 18px; bottom: 16px; }
+.sl-wm.pos-tl { left: 18px; top: 12px; }
+.sl-wm.pos-tr { right: 18px; top: 12px; }
+.sl-wm.pos-bc { left: 50%; bottom: 16px; transform: translateX(-50%); }
+.sl-wm .wm-foot { display: inline-flex; align-items: center; gap: 7px; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; font-size: 13px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--sl-ink2); white-space: nowrap; }
+.sl-wm .wm-foot svg { width: 14px; height: 14px; flex: none; }
+.sl-wm .wm-foot::before { content: ""; width: 22px; height: 2px; border-radius: 2px; background: linear-gradient(90deg, #3d6bb5, #7a5cc7); opacity: .7; }
+/* thèmes à cadre : la mention rentre à l'intérieur du cadre */
+.sl-slide:is(.sig-frame, .sig-frame2):is(.bg-paper, .bg-soft) .sl-wm:is(.pos-bl, .pos-tl) { left: 44px; }
+.sl-slide:is(.sig-frame, .sig-frame2):is(.bg-paper, .bg-soft) .sl-wm:is(.pos-br, .pos-tr) { right: 44px; }
+.sl-slide:is(.sig-frame, .sig-frame2):is(.bg-paper, .bg-soft) .sl-wm:is(.pos-bl, .pos-br, .pos-bc) { bottom: 40px; }
+.sl-slide:is(.sig-frame, .sig-frame2):is(.bg-paper, .bg-soft) .sl-wm:is(.pos-tl, .pos-tr) { top: 40px; }
+.sl-slide:is(.th-dark, .bg-tint, .bg-dark) .sl-wm .wm-foot { color: rgba(255, 255, 255, .8); }
+.sl-slide:is(.th-dark, .bg-tint, .bg-dark) .sl-wm .wm-foot::before { background: rgba(255, 255, 255, .6); }
+.sl-thprev.sig-corner b { left: 26px; }   /* Bauhaus : le « Aa » se décale de la bande noire */
+
+/* ---------- lot C : vidéo, quiz, menu Image, crédits (js/slides-media.js) ---------- */
+/* carte vidéo : affiche (fichier) ou pictogramme, libellé, badges ; aucune ressource distante en édition / vignette / PDF */
+.sl-vcard { position: relative; border-style: solid; gap: 6px; }
+.sl-vcard.sl-vempty { border-style: dashed; }
+.sl-vcard.vk-file, .sl-vcard.vk-yt, .sl-vcard.vk-vimeo, .sl-vcard.vk-dm { background: #111418; color: #f4f6f8; border-color: rgba(255, 255, 255, .14); }
+.sl-vcard .sl-vposter { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .82; }
+.sl-vcard .sl-vbody { position: relative; z-index: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; max-width: 92%; }
+.sl-vcard.has-poster .sl-vbody { padding: 14px 22px; border-radius: 14px; background: rgba(0, 0, 0, .5); }
+.sl-vcard .sl-vplay { display: grid; place-items: center; width: 72px; height: 72px; border-radius: 50%; background: var(--acc); color: #fff; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.sl-vcard .sl-vplay svg { width: 34px; height: 34px; margin-left: 4px; fill: currentColor; stroke: none; }
+.sl-vcard .sl-vlabel { font-size: calc(22px * var(--fs)); font-weight: 700; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-vcard .sl-vtitle { font-size: calc(16px * var(--fs)); font-weight: 500; opacity: .85; }
+.sl-vcard .sl-vbadges { display: inline-flex; gap: 6px; }
+.sl-vcard .sl-vbadges i { font-style: normal; font-size: 12px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: rgba(255, 255, 255, .18); }
+.sl-vcard .sl-vurl { display: block; margin-top: 6px; font-size: 13px; font-weight: 500; color: inherit; opacity: .85; text-decoration: none; word-break: break-all; }
+.sl-vcard.mounted .sl-vbody, .sl-vcard.mounted .sl-vposter { display: none; }
+.sl-vcard .sl-vplayer, .sl-vcard .sl-vframe { position: absolute; inset: 0; width: 100%; height: 100%; border: none; border-radius: inherit; background: #000; display: block; }
+.sl-vcard .sl-vmissing { position: relative; z-index: 1; font-size: 18px; font-weight: 600; opacity: .85; }
+/* façade « cliquer pour charger » (vidéo en ligne, présentation) */
+.sl-vfacade { position: absolute; inset: 0; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px 32px; text-align: center; background: linear-gradient(180deg, #1a1f27, #0e1116); color: #f4f6f8; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; cursor: default; }
+.sl-vfacade .sl-vfhead { display: inline-flex; align-items: center; gap: 10px; font-size: 20px; font-weight: 700; opacity: .9; }
+.sl-vfacade .sl-vfhead svg { width: 26px; height: 26px; }
+.sl-vfacade .sl-vload { display: inline-flex; align-items: center; gap: 10px; padding: 12px 24px; border-radius: 999px; border: none; background: var(--acc); color: #fff; font: inherit; font-size: 19px; font-weight: 700; cursor: pointer; box-shadow: 0 8px 24px rgba(0, 0, 0, .35); }
+.sl-vfacade .sl-vload:hover { filter: brightness(1.08); }
+.sl-vfacade .sl-vload:focus-visible { outline: 3px solid #fff; outline-offset: 2px; }
+.sl-vfacade .sl-vload svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+.sl-vfacade .sl-vfnote { margin: 0; max-width: 620px; font-size: 14px; line-height: 1.45; opacity: .85; }
+.sl-vfacade .sl-vfrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 22px; font-size: 14px; }
+.sl-vfacade .sl-vext { color: #9ec5ff; text-decoration: underline; text-underline-offset: 2px; cursor: pointer; }
+.sl-vfacade .sl-vremember { display: inline-flex; align-items: center; gap: 7px; opacity: .9; cursor: pointer; }
+.sl-vfacade .sl-vremember input { width: 16px; height: 16px; accent-color: var(--acc); margin: 0; }
+/* dialogue Vidéo */
+.dlg-card.sl-vdlg { width: min(640px, 94vw); }
+.sl-vdlg .dlg-eyebrow svg { width: 14px; height: 14px; }
+.sl-vtabs { display: flex; gap: 4px; padding: 3px; border-radius: 10px; background: var(--hover); margin-bottom: 14px; }
+.sl-vtabs button { flex: 1; padding: 8px 12px; border-radius: 8px; font: inherit; font-size: 13.5px; font-weight: 600; color: var(--ink-2); }
+.sl-vtabs button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+.sl-vpane .sl-vp { margin: 0 0 12px; font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+.sl-vpane .sl-vlab { display: block; font-size: 12.5px; font-weight: 600; color: var(--ink-2); margin-bottom: 6px; }
+.sl-vinput { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; }
+.sl-vinput:focus { outline: none; border-color: var(--tint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 22%, transparent); }
+.sl-vinput[aria-invalid="true"] { border-color: var(--danger, #c0392b); }
+.sl-vdlg .sl-verr { color: var(--danger, #c0392b); font-size: 12.5px; margin-top: 6px; }
+.sl-vdlg .sl-vwarn { margin-top: 10px; }
+.sl-vopts { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border); }
+.sl-vopt { display: inline-flex; align-items: center; gap: 7px; font-size: 13.5px; color: var(--ink); cursor: pointer; }
+.sl-vopt input { accent-color: var(--tint); margin: 0; }
+/* barre d'outils : cases Auto / Boucle / Muet */
+.sl-bar .sl-inl input[type="checkbox"] { accent-color: var(--tint); margin: 0; }
+/* carte quiz */
+.sl-quizcard { border-style: solid; gap: 4px; padding: 16px 20px; }
+.sl-quizcard.sl-qempty { border-style: dashed; }
+.sl-quizcard.st-ok { background: color-mix(in srgb, var(--acc) 12%, var(--sl-paper)); border-color: color-mix(in srgb, var(--acc) 45%, transparent); color: var(--sl-ink); }
+.sl-quizcard .sl-qico { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 16px; background: var(--acc); color: #fff; margin-bottom: 4px; }
+.sl-quizcard .sl-qico svg { width: 30px; height: 30px; }
+.sl-quizcard .sl-qtitle { font-size: calc(24px * var(--fs)); font-weight: 700; line-height: 1.2; max-width: 100%; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.sl-quizcard .sl-qmeta { font-size: calc(15px * var(--fs)); font-weight: 500; opacity: .8; }
+.sl-quizcard.st-missing, .sl-quizcard.st-locked { border-style: dashed; }
+.sl-quizcard .sl-quizgo { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 10px 22px; border-radius: 999px; border: none; background: var(--acc); color: #fff; font: inherit; font-size: 18px; font-weight: 700; cursor: pointer; box-shadow: 0 6px 18px rgba(0, 0, 0, .18); }
+.sl-quizcard .sl-quizgo:hover { filter: brightness(1.08); }
+.sl-quizcard .sl-quizgo:focus-visible { outline: 3px solid var(--sl-ink); outline-offset: 2px; }
+.sl-quizcard .sl-quizgo svg { width: 18px; height: 18px; fill: currentColor; stroke: none; }
+#sl-present .sl-el.t-quiz, #sl-present .sl-el.t-video { cursor: default; }
+/* pastille « Revenir à la présentation » (éditeur de quiz) */
+#sl-return { position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%); z-index: 2400; }
+#sl-return[hidden] { display: none; }
+#sl-return .sl-retbtn { display: inline-flex; align-items: center; gap: 9px; padding: 11px 20px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, .18); background: #1f2430; color: #fff; font: inherit; font-size: 14px; font-weight: 650; cursor: pointer; box-shadow: 0 10px 30px rgba(0, 0, 0, .3); }
+#sl-return .sl-retbtn:hover { background: #2a3140; }
+#sl-return .sl-retbtn svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+/* menu Image à trois entrées (styles .ip-menu d'imagepick.css) */
+.sl-imenu button svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+/* crédit sous une image de la banque : toujours affiché (édition, présentation, PDF), jamais cliquable */
+.sl-el.t-image { position: absolute; }
+.sl-credit { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; padding: 4px 10px; font-family: "Segoe UI", system-ui, -apple-system, Arial, sans-serif; font-size: 11px; line-height: 1.35; font-weight: 500; letter-spacing: .01em; color: #fff; background: rgba(0, 0, 0, .55); text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none; user-select: none; }
+.sl-credit .sl-credit-title { display: block; font-size: 10px; font-weight: 400; opacity: .9; font-style: italic; }
+.sl-credit .sl-credit-url { display: block; font-size: 9.5px; font-weight: 400; opacity: .85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-page .sl-credit { background: rgba(0, 0, 0, .62); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+/* ---- banque d'images (js/slides-bank.js) : fenêtre « Banque d'images libres » — champ, phrase d'information, grille, panneau latéral ---- */
+.dlg-card.ib-dlg { width: min(1040px, 96vw); height: min(720px, 92vh); }
+.ib-dlg .dlg-eyebrow { display: inline-flex; align-items: center; gap: 5px; }
+.ib-dlg .dlg-eyebrow svg { width: 14px; height: 14px; stroke-width: 2; }
+.ib-dlg .set-head { border-bottom: none; padding-bottom: 6px; }
+.ib-dlg .dlg-body { display: flex; flex-direction: column; gap: 10px; padding-top: 6px; min-height: 0; }
+
+/* --- recherche --- */
+.ib-search { display: flex; gap: 8px; align-items: stretch; }
+.ib-field {
+  flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; padding: 0 12px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--surface); color: var(--ink);
+}
+.ib-field:focus-within { border-color: var(--tint); box-shadow: 0 0 0 3px color-mix(in srgb, var(--tint) 22%, transparent); }
+.ib-sico { display: grid; place-items: center; color: var(--ink-3); }
+.ib-sico svg { width: 17px; height: 17px; }
+.ib-q { flex: 1; min-width: 0; border: none; background: transparent; color: var(--ink); font: inherit; font-size: 14px; padding: 10px 0; outline: none; }
+.ib-q::-webkit-search-cancel-button { cursor: pointer; }
+.ib-go { white-space: nowrap; }
+.ib-notice { margin: 0; font-size: 11.5px; line-height: 1.45; color: var(--ink-3); }
+
+/* --- résultats + panneau --- */
+.ib-main { flex: 1; display: flex; gap: 14px; min-height: 0; }
+.ib-results { flex: 1; min-width: 0; overflow: auto; padding: 2px 2px 8px; }
+.ib-state { font-size: 13px; color: var(--ink-2); padding: 4px 2px 8px; }
+.ib-state[hidden] { display: none; }
+.ib-state.ib-loading::before {
+  content: ""; display: inline-block; width: 12px; height: 12px; margin-right: 8px; vertical-align: -2px;
+  border-radius: 50%; border: 2px solid var(--border); border-top-color: var(--tint); animation: ib-spin .8s linear infinite;
+}
+@keyframes ib-spin { to { transform: rotate(360deg); } }
+.ib-state.ib-error, .ib-state.ib-offline { color: var(--danger, #c0392b); font-weight: 550; }
+.ib-state.ib-empty { padding: 36px 0; text-align: center; color: var(--ink-3); }
+.ib-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+.ib-item {
+  display: flex; flex-direction: column; text-align: left; padding: 0; min-width: 0;
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--surface); color: var(--ink);
+  cursor: pointer; transition: transform .14s ease, box-shadow .14s ease, border-color .14s ease;
+}
+.ib-item:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--tint) 55%, var(--border)); box-shadow: 0 8px 20px rgba(0, 0, 0, .14); }
+.ib-item:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.ib-item.sel { border-color: var(--tint); box-shadow: 0 0 0 2px color-mix(in srgb, var(--tint) 45%, transparent); }
+.ib-th { display: block; aspect-ratio: 4 / 3; background: var(--hover); }
+.ib-th img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.ib-cap { display: flex; flex-direction: column; gap: 2px; padding: 7px 9px 8px; min-width: 0; }
+.ib-cap b { font-size: 12.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ib-cap small { font-size: 11px; color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ib-more { display: flex; justify-content: center; padding: 14px 0 4px; }
+.ib-more button[hidden] { display: none; }
+
+.ib-side {
+  width: 290px; flex: none; overflow: auto; padding: 12px;
+  border: 1px solid var(--border); border-radius: 12px; background: var(--surface); color: var(--ink);
+}
+.ib-side[hidden] { display: none; }
+.ib-big { border-radius: 8px; overflow: hidden; background: var(--hover); aspect-ratio: 4 / 3; }
+.ib-big img { display: block; width: 100%; height: 100%; object-fit: contain; }
+.ib-stitle { margin: 10px 0 6px; font-size: 14.5px; font-weight: 650; line-height: 1.3; overflow-wrap: anywhere; }
+.ib-meta { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: 12.5px; }
+.ib-meta dt { color: var(--ink-3); }
+.ib-meta dd { margin: 0; color: var(--ink-2); overflow-wrap: anywhere; }
+.ib-meta a, .ib-src { color: var(--tint); text-decoration: underline; text-underline-offset: 2px; }
+.ib-src { display: inline-flex; align-items: center; gap: 5px; margin-top: 10px; font-size: 12.5px; }
+.ib-src svg { width: 14px; height: 14px; }
+.ib-sact { margin-top: 14px; }
+.ib-sact .cta { width: 100%; justify-content: center; }
+.ib-shint { margin: 8px 0 0; font-size: 11.5px; color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ib-item { transition: none; }
+  .ib-state.ib-loading::before { animation: none; }
+}
+@media (max-width: 700px) {
+  .ib-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  .ib-main { flex-direction: column; }
+  .ib-side { width: auto; }
+  .ib-dlg.has-side .ib-results { display: none; }   /* sur mobile : le panneau remplace la grille (Échap/clic ailleurs pour revenir) */
+}
+body.mobile .ib-dlg .ib-search { flex-direction: column; }
+
+/* ---------- passe corrective 1.54.0 (revues sécurité / UX) ---------- */
+/* barre d'outils : les libellés longs disparaissent sous 1240 px (icône + infobulle restent) ; ascenseur fin si elle déborde encore */
+.sl-bar { scrollbar-width: thin; }
+.sl-bar [data-sl="trans"] .lbl, .sl-bar [data-sl="anim"] .lbl, .sl-bar [data-sl="accent"] .lbl { white-space: nowrap; }
+@media (max-width: 1240px) { .sl-bar [data-sl="trans"] .lbl, .sl-bar [data-sl="anim"] .lbl, .sl-bar [data-sl="accent"] .lbl, .sl-bar .tb-fontname, .sl-bar .dl-btn .bd-lbl { display: none; } }
+/* cases Lecture auto / Boucle / Muet : un peu d'air entre elles */
+.sl-bar .sl-inl { padding: 0 4px; }
+.sl-bar label.sl-inl + label.sl-inl { margin-left: 8px; }
+/* menu Thème : badge « Alixo+ » sur le titre de la section seulement ; un petit cadenas sur chaque tuile verrouillée */
+.sl-thname .sl-thlock { display: inline-grid; place-items: center; width: 14px; height: 14px; margin-left: 5px; color: var(--ink-3); flex: none; }
+.sl-thname .sl-thlock svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+/* thème sombre sur fond Papier : la carte Statistique et les KPI gardent le contraste (fond teinté du papier, pas du blanc) */
+.sl-slide.th-dark.bg-paper .t-stat, .sl-slide.th-dark.bg-paper .sl-kpi { background: color-mix(in srgb, var(--elc, var(--acc)) 10%, var(--sl-paper)); border-color: color-mix(in srgb, var(--elc, var(--acc)) 40%, transparent); }
+/* filigrane : hors de la bande latérale (sig-band, Bauhaus) et sous la bande haute (sig-top) */
+.sl-slide:is(.sig-band, .th-bauhaus) .sl-wm:is(.pos-bl, .pos-tl) { left: 48px; }
+.sl-slide.sig-top .sl-wm:is(.pos-tl, .pos-tr) { top: 38px; }
+/* cartes vidéo / quiz : les pictogrammes et boutons reprennent la couleur du papier du thème (lisible sur un accent clair) ;
+   la façade « Lire la vidéo » est toujours sombre : bouton blanc, texte sombre */
+.sl-vcard .sl-vplay, .sl-quizcard .sl-qico, .sl-quizcard .sl-quizgo { color: var(--sl-paper); }
+.sl-vfacade .sl-vload { background: #fff; color: #14171c; }
+.sl-vfacade .sl-vload:focus-visible { outline-color: #9ec5ff; }
+/* en présentation (.sl-pin), la diapositive est mise à l'échelle (--k posé sur .sl-pstage par slides-present.js) : la façade vidéo,
+   le message « Vidéo non disponible » et le bouton « Lancer le quiz » compensent (--inv) pour rester lisibles sur petit écran, sans
+   jamais rétrécir sur grand écran (clamp ≥ 1) */
+.sl-pin .sl-vfacade { --inv: clamp(1, calc(1 / var(--k, 1)), 3.4); font-size: calc(14px * var(--inv)); gap: .7em; padding: 1em 1.4em; overflow: auto; justify-content: safe center; }
+.sl-pin .sl-vfacade .sl-vfhead { font-size: 1.43em; gap: .5em; }
+.sl-pin .sl-vfacade .sl-vfhead svg { width: 1.3em; height: 1.3em; }
+.sl-pin .sl-vfacade .sl-vload { font-size: 1.36em; padding: .63em 1.26em; gap: .53em; }
+.sl-pin .sl-vfacade .sl-vload svg { width: 1.16em; height: 1.16em; }
+.sl-pin .sl-vfacade .sl-vfnote { font-size: 1em; max-width: 44em; }
+.sl-pin .sl-vfacade .sl-vfrow { font-size: 1em; gap: .57em 1.57em; }
+.sl-pin .sl-vfacade .sl-vremember { gap: .5em; }
+.sl-pin .sl-vfacade .sl-vremember input { width: 1.15em; height: 1.15em; }
+.sl-pin .sl-vcard .sl-vmissing { --inv: clamp(1, calc(1 / var(--k, 1)), 3.4); font-size: calc(18px * var(--inv)); }
+.sl-pin .sl-quizcard .sl-quizgo { --inv: clamp(1, calc(1 / var(--k, 1)), 3.4); font-size: calc(18px * var(--inv)); padding: .55em 1.22em; gap: .44em; margin-top: .55em; }
+.sl-pin .sl-quizcard .sl-quizgo svg { width: 1em; height: 1em; }
+/* pastille « Revenir à la présentation » : à droite, pour ne pas couvrir le centre de l'éditeur de quiz ; la colonne d'édition réserve la place */
+#sl-return { left: auto; right: 22px; transform: none; }
+body.mode-quiz:has(#sl-return:not([hidden])) :is(.qz-edit, .qz-palette) { padding-bottom: 72px; }
+/* banque d'images : « ← Tous les résultats » (uniquement ≤ 700 px, où le panneau remplace la grille) */
+.ib-side .ib-back { display: none; margin: -2px 0 8px; padding: 6px 8px; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; color: var(--tint); background: transparent; border: none; cursor: pointer; }
+.ib-side .ib-back:hover { background: var(--hover); }
+.ib-side .ib-back:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.ib-state.ib-hint { color: var(--ink-3); }
+@media (max-width: 700px) { .ib-side .ib-back { display: inline-flex; align-items: center; } }

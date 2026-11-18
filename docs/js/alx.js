@@ -48,7 +48,7 @@ window.AlixoAlx = (() => {
     const fromBlocks = bl => (bl || []).forEach(b => { if (b && b.type === 'img') add(b.iid); });
     fromBlocks(d.blocks);
     (d.pages || []).forEach(p => fromBlocks(p.blocks));
-    (d.slides || []).forEach(s => (s.els || []).forEach(e => { if (e && e.t === 'image') add(e.iid); }));
+    (d.slides || []).forEach(s => (s.els || []).forEach(e => { if (e && e.t === 'image') add(e.iid); if (e && e.t === 'video') add(e.poster); }));   // 1.54 : l'affiche d'une vidéo voyage, pas la vidéo
     (d.items || []).forEach(it => { if (it && it.t === 'img') add(it.iid); if (it && it.b && it.b.type === 'img') add(it.b.iid); });
     (d.questions || []).forEach(q => { if (q) add(q.img); });
     return [...ids];
@@ -138,7 +138,7 @@ window.AlixoAlx = (() => {
     blocks(copy.blocks);
     (copy.pages || []).forEach(p => { p.id = p.id === 'main' ? 'main' : uid(); blocks(p.blocks); });
     if (copy.pages && !copy.pages.some(p => p.id === copy.page)) copy.page = copy.pages[0] && copy.pages[0].id;
-    (copy.slides || []).forEach(sl => { sl.id = uid(); (sl.els || []).forEach(el => { el.id = uid(); if (el.t === 'image') el.iid = remapImg(el.iid); }); });
+    (copy.slides || []).forEach(sl => { sl.id = uid(); (sl.els || []).forEach(el => { el.id = uid(); if (el.t === 'image') el.iid = remapImg(el.iid); if (el.t === 'video' && el.poster) el.poster = remapImg(el.poster); }); });
     if (Array.isArray(copy.items)) {
       const ids = new Map(copy.items.map(it => [it.id, uid()]));
       copy.items.forEach(it => {
@@ -238,6 +238,7 @@ window.AlixoAlx = (() => {
         const clean = sanitize === true || (sanitize !== false && SANITIZED_KINDS.includes(kind));
         let raw = JSON.parse(JSON.stringify(meta.doc));
         if (clean) raw = sanitizeDoc(raw, { keepProf: sanitize !== true });
+        if (kind === 'slide' && window.AlixoSlides && AlixoSlides.normalize) raw = AlixoSlides.normalize(raw) || raw;   // 1.54 : liste blanche des champs d'une présentation (anim, trans, video, quiz, credit, thème), quelle que soit l'origine
         const wanted = clean ? new Set(imageIds(raw)) : null;   // assaini : seules les images encore référencées, et sûres
         const imap = new Map();
         for (const [iid, data] of images) {
@@ -305,6 +306,7 @@ window.AlixoAlx = (() => {
         const clean = SANITIZED_KINDS.includes(kind);
         let raw = JSON.parse(JSON.stringify(meta.doc));
         if (clean) raw = sanitizeDoc(raw, { keepProf: true });
+        if (kind === 'slide' && window.AlixoSlides && AlixoSlides.normalize) raw = AlixoSlides.normalize(raw) || raw;   // 1.54 : même liste blanche qu'à l'import
         const wanted = clean ? new Set(imageIds(raw)) : null;
         const imap = new Map();
         for (const [iid, v] of images) {
