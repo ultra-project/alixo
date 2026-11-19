@@ -9,10 +9,10 @@ body:not(.mobile) .art-wrap { padding-top: 43px; }
 .art-top { display: flex; align-items: center; gap: 16px; padding: 0 2px 16px; }
 .art-top-l { flex: 1; min-width: 0; }
 .art-h { display: flex; align-items: center; gap: 10px; font-weight: 650; font-size: 26px; letter-spacing: -.015em; line-height: 1.15; margin: 0; color: var(--ink); }
-.art-h svg { width: 24px; height: 24px; fill: var(--cc-a, #7c5cff); }
+.art-h svg { width: 24px; height: 24px; fill: var(--cc-a, #4f66e0); }
 .art-sub { font-size: 13px; color: var(--ink-3); margin-top: 4px; }
 .art-create { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px 9px 13px; border: 0; border-radius: 999px; color: #fff; font: 650 13.5px var(--font-ui); cursor: pointer;
-  background: linear-gradient(135deg, var(--cc-a, #7c5cff), var(--cc-b, #4f66e0)); box-shadow: 0 4px 14px rgba(124, 92, 255, .3); }
+  background: linear-gradient(135deg, var(--cc-a, #4f66e0), var(--cc-b, #3d6bb5)); box-shadow: 0 4px 14px rgba(79, 102, 224, .3); }
 .art-create svg { width: 16px; height: 16px; fill: currentColor; }
 .art-create:hover { filter: brightness(1.08); }
 .art-create.big { padding: 12px 22px 12px 17px; font-size: 15px; margin-top: 6px; }
@@ -37,7 +37,7 @@ body:not(.mobile) .art-wrap { padding-top: 43px; }
 .art-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: var(--ak); flex: none; }
 .art-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
 .art-kind { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, var(--ak) 80%, var(--ink)); }
-.art-spark { margin-left: auto; color: var(--cc-a, #7c5cff); opacity: .8; display: grid; }
+.art-spark { margin-left: auto; color: var(--cc-a, #4f66e0); opacity: .8; display: grid; }
 .art-spark svg { width: 16px; height: 16px; fill: currentColor; }
 .art-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 8px; }
 .art-title { font-size: 15px; font-weight: 650; line-height: 1.3; color: var(--ink); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

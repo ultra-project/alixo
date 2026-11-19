@@ -243,7 +243,7 @@ window.AlixoCocoCreate = (() => {
   function bind() {
     const b = document.getElementById('btn-ai-new'); if (!b || b.dataset.ccBound) return;
     b.dataset.ccBound = '1';
-    b.innerHTML = `${SPARK}<span>IA</span>`;
+    b.textContent = 'IA';   // 1.55.1 : libellé seul, dans le style des autres boutons de la barre
     b.setAttribute('aria-haspopup', 'dialog');
     b.setAttribute('aria-label', 'Créer avec l’IA');   // 1.55 : le libellé visible « IA » seul ne dit pas l'action
     b.addEventListener('click', () => open());
