@@ -1,31 +1,36 @@
 {
- "generatedAt": "2026-11-19T15:24:53.609Z",
- "version": "1.55.1",
- "date": "2026-11-19T15:16:16Z",
- "notes": "Nouveautés 1.55.1 — Correctifs : Workspace et Artéfacts bien séparés, bouton « IA » dans la charte\n\n\n- **Workspace et Artéfacts ne s’affichent plus l’un sur l’autre.** En passant d’Artéfacts au Workspace, les deux vues restaient affichées ensemble (et les deux entrées de la barre de gauche restaient sélectionnées) : c’est corrigé, chaque onglet remplace l’autre.\n- **Le bouton « IA » reprend le style d’Alixo.** Plus d’étincelle ni de dégradé violet : un simple « IA » en bleu, dans la même famille que le bouton « Importer ». La barre « Créer avec Coco » et le bouton « Créer avec l’IA » d’Artéfacts passent eux aussi au bleu d’accent de l’application.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.55.1",
+ "generatedAt": "2026-11-19T15:37:56.827Z",
+ "version": "1.55.2",
+ "date": "2026-11-19T15:37:37Z",
+ "notes": "Nouveautés 1.55.2 — Correctif : une seule entrée sélectionnée dans la barre de gauche\n\n\n- **Plus de double sélection.** En passant de Tâches au Workspace ou aux Artéfacts, l’entrée Tâches restait en surbrillance à côté de la nouvelle : c’est corrigé, une seule entrée (Agenda, Partagés avec moi, Workspace, Artéfacts, Tâches) est sélectionnée à la fois, quel que soit l’ordre des clics.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.55.2",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.1/Alixo-Setup.exe",
-   "size": 89884072
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Setup.exe",
+   "size": 89881347
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.1/Alixo-Portable.exe",
-   "size": 89511032
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Portable.exe",
+   "size": 89508308
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.1/Alixo-Mac.dmg",
-   "size": 204962938
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Mac.dmg",
+   "size": 204950372
   },
   "macZip": {
-   "name": "Alixo-1.55.1-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.1/Alixo-1.55.1-mac.zip",
-   "size": 197490900
+   "name": "Alixo-1.55.2-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-1.55.2-mac.zip",
+   "size": 197490969
   }
  },
  "history": [
+  {
+   "version": "1.55.2",
+   "date": "2026-11-19T15:37:37Z",
+   "notes": "Nouveautés 1.55.2 — Correctif : une seule entrée sélectionnée dans la barre de gauche\n\n\n- **Plus de double sélection.** En passant de Tâches au Workspace ou aux Artéfacts, l’entrée Tâches restait en surbrillance à côté de la nouvelle : c’est corrigé, une seule entrée (Agenda, Partagés avec moi, Workspace, Artéfacts, Tâches) est sélectionnée à la fois, quel que soit l’ordre des clics.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.55.2"
+  },
   {
    "version": "1.55.1",
    "date": "2026-11-19T15:16:16Z",
@@ -220,11 +225,6 @@
    "version": "1.33.1",
    "date": "2026-10-14T13:50:35Z",
    "notes": "Nouveautés 1.33.1 — Alixo Business : le dirigeant retrouve toujours son entreprise\n\n\n- **Tableau de bord « Aucune entreprise » — correction** : un dirigeant pouvait tomber sur « Aucune entreprise » alors que\n  l'entreprise existait bien à son nom (panneau admin › Entreprises). Le tableau de bord ne cherchait l'entreprise que dans le\n  lien enregistré sur le compte, et l'application pouvait effacer ce lien après une simple erreur de lecture (réseau,\n  déconnexion). Désormais :\n  - le tableau de bord et Paramètres › Entreprise **retrouvent l'entreprise que vous dirigez** et réparent le lien tout seuls ;\n  - une erreur de lecture **n'efface plus** le lien (seule la suppression réelle de l'entreprise le retire) ;\n  - l'écran « Aucune entreprise » affiche l'**identifiant du compte connecté** : une même adresse e-mail peut correspondre à\n    deux comptes (Google et mot de passe) ; il doit être celui du dirigeant (panneau admin › Entreprises › Fiche ›\n    Identifiant), sinon « Changer » le dirigeant pour ce compte.\n- **Panneau admin** : quand plusieurs comptes portent l'adresse saisie (création d'entreprise, changement de dirigeant), le\n  compte le plus récemment connecté est retenu et un message le signale ; l'UID permet d'en choisir un autre.\n- **Côté technique** : `app/business/dashboard.js` (`findOrg`), `app/js/business.js` (`repairOwned`, `listenOrg` sans\n  effacement sur erreur), `admin/admin.js` (`findProfile`). Tests : `scripts/v1330-test.js` (38 contrôles).\n- Version 1.33.1.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.33.1"
-  },
-  {
-   "version": "1.33.0",
-   "date": "2026-10-14T11:50:58Z",
-   "notes": "Nouveautés 1.33.0 — fond d'écran des documents (Alixo+), bibliothèque des blocs, tableau de bord Alixo Business et messagerie d'équipe\n\n\n- **Fond d'écran des documents** (Alixo+) : une image à vous — ou l'un des six dégradés proposés (Aube, Lagon, Forêt, Nuit\n  étoilée, Sable, Aurore) — s'affiche **derrière vos documents** : autour de la page des séances (le volet du plan passe en\n  verre dépoli par-dessus), autour des diapositives d'une présentation, autour de la grille du tableur et sous les planches.\n  La page elle-même ne change pas ; la bibliothèque garde son fond habituel. Réglages dans **Paramètres › Apparence › Fond\n  d'écran des documents** : *Choisir une image…*, curseurs **Assombrir** et **Flou** pour garder le texte lisible. L'image\n  suit le compte (elle s'affiche sur vos autres appareils).\n- **Bibliothèque des blocs** : le bouton **Insérer un bloc** du volet de gauche ouvre désormais une grande fenêtre avec une\n  **recherche** et, pour chaque bloc, un **aperçu animé** (le titre qui s'écrit, le tableau qui se remplit, le graphique qui\n  pousse, la fiche qui se complète…). Flèches pour parcourir, Entrée pour insérer, Échap pour fermer. Le « / » tapé dans le\n  texte garde le menu rapide habituel.\n- **Alixo Business, refonte** : l'entreprise se gère sur un **tableau de bord en ligne** (<https://alixoapp.com/docs/business/>),\n  ouvert depuis **Paramètres › Entreprise › Ouvrir le tableau de bord** : vue d'ensemble (places, licences, présence),\n  **équipe** (rôles, licences Alixo+, retrait), **invitations** (code, lien), **partages** vers l'extérieur à valider,\n  **messagerie**, et **Personnaliser** pour le dirigeant : **nom, description, photo de profil, bannière et couleur** de\n  l'entreprise, vus par tous les membres. Dans l'application, Paramètres › Entreprise n'affiche plus que la fiche de\n  l'entreprise, le lien vers le tableau de bord, les dossiers partagés à toute l'entreprise et « Quitter ».\n  - **Messagerie de l'équipe** (option premium, entreprises **à partir de 50 employés**) : bouton **Messagerie** de la\n    bibliothèque — un fil pour toute l'équipe et une conversation privée avec chaque collègue, présence en direct, non lus,\n    notifications dans la cloche. L'activation se demande depuis le tableau de bord ; l'administrateur l'active dans le\n    panneau admin (fiche de l'entreprise › Messagerie).\n  - Adresse du tableau de bord réglable dans le panneau admin (Annonces et version › *Tableau de bord Alixo Business*) :\n    y mettre `https://business.alixoapp.com/` une fois ce sous-domaine pointé vers le tableau de bord.\n- **Agenda — correction** : la pastille de la barre du haut coupait la fin (« Prochain 14:00 TD Statistiques appliqués ·\n  dans 40 » sans « min ») ; désormais seul le titre se raccourcit (…), l'heure et « dans 40 min » restent toujours entiers,\n  et le survol montre le texte complet.\n- **Côté technique** : `app/js/wallpaper.js`, `app/js/blockpicker.js`, `app/js/bizchat.js`, `app/business/` (tableau de\n  bord : `index.html`, `dashboard.js`, `business.css`, publié avec l'application), `app/js/business.js` (vitrine, messagerie,\n  fiche dans les Paramètres), `firestore.rules` (`orgs/{id}/brand/profile`, `orgs/{id}/convs/{cid}` et `msgs`, option\n  `orgs/{id}.chat`) — **à redéployer : `npm run rules`** ; `admin/` (interrupteur Messagerie, adresse du tableau de bord).\n- **Tests** : `scripts/v1330-test.js` (Playwright, 36 contrôles : agenda, bibliothèque des blocs, fond d'écran, Paramètres ›\n  Entreprise, messagerie, tableau de bord côté dirigeant, employé, téléphone et sans entreprise ; remplace `v1320-test.js`).\n- Version 1.33.0.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.33.0"
   }
  ]
 }
