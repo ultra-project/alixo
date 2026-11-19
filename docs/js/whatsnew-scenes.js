@@ -11,7 +11,7 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.55.1 (ou nouveautes.html?v=1.55.1 en page seule).
+   Aperçu : index.html?nouveautes=1.55.2 (ou nouveautes.html?v=1.55.2 en page seule).
    ============================================================ */
 'use strict';
 
@@ -40,7 +40,8 @@ const SCENES_155 = {
     { kind: 'outro', kicker: 'Bonne séance', title: 'À vous de créer.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 };
-AlixoWhatsNew.register('1.55.1', SCENES_155);   // 1.55.1 : correctifs — même présentation que la 1.55.0
+AlixoWhatsNew.register('1.55.2', SCENES_155);   // 1.55.1 et 1.55.2 : correctifs — même présentation que la 1.55.0
+AlixoWhatsNew.register('1.55.1', SCENES_155);
 AlixoWhatsNew.register('1.55.0', SCENES_155);
 
 /* 1.54 : présentations — animations et transitions, vidéos et quiz, thèmes signature, banque d'images, mode présentation et vue présentateur */

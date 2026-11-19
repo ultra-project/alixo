@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.55.1';
+const ALIXO_VERSION = '1.55.2';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -1087,6 +1087,8 @@ function renderLibrary() {
   document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo' || libMode === 'workspace' || libMode === 'artefacts');
   renderAgendaNav();
   const lnS = $('#ln-shared'); if (lnS) lnS.classList.toggle('active', libMode === 'shared' && !currentDocId);
+  /* 1.55.2 : l'entrée Tâches se désélectionne AVANT les branches qui sortent tôt (Workspace, Artéfacts) : elle restait en surbrillance avec la nouvelle vue */
+  const lnT = $('#ln-todo'); if (lnT) lnT.classList.toggle('active', libMode === 'todo' && !currentDocId);
   /* 1.55 : Artéfacts (js/artefacts.js) — documents créés par Coco ; masqué et désactivé AVANT la branche Workspace, qui sort tôt (1.55.1 : les deux vues s’affichaient ensemble) */
   const lnA = $('#ln-artefacts'); if (lnA) lnA.classList.toggle('active', libMode === 'artefacts' && !currentDocId);
   const la = $('#lib-artefacts'); if (la) la.hidden = libMode !== 'artefacts';
@@ -1095,7 +1097,6 @@ function renderLibrary() {
   const lw = $('#lib-workspace'); if (lw) lw.hidden = libMode !== 'workspace';
   if (libMode === 'workspace') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-galaxy').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; const ltw = $('#lib-todo'); if (ltw) ltw.hidden = true; $('#lib-title').textContent = 'Workspace'; $('#lib-path').innerHTML = '<span>Cours déposés par les membres</span>'; if (window.AlixoWorkspace) AlixoWorkspace.render(); else if (lw) lw.innerHTML = '<div class="sh-empty">Connectez-vous pour accéder au Workspace.</div>'; return; }
   if (libMode === 'artefacts') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-galaxy').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; if (lw) lw.hidden = true; const lta = $('#lib-todo'); if (lta) lta.hidden = true; $('#lib-title').textContent = 'Artéfacts'; $('#lib-path').innerHTML = '<span>Créés par Coco</span>'; if (window.AlixoArtefacts) AlixoArtefacts.render(); return; }
-  const lnT = $('#ln-todo'); if (lnT) lnT.classList.toggle('active', libMode === 'todo' && !currentDocId);
   const lt = $('#lib-todo');
   $('#lib-galaxy').hidden = true;
   if (libMode === 'shfolder') { $('#doc-grid').hidden = false; $('#lib-tree').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; if (lt) lt.hidden = true; renderSharedFolder(); return; }

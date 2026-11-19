@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-19T15:16:39.008Z",
+ "generatedAt": "2026-11-19T15:24:53.609Z",
  "version": "1.55.1",
  "date": "2026-11-19T15:16:16Z",
  "notes": "Nouveautés 1.55.1 — Correctifs : Workspace et Artéfacts bien séparés, bouton « IA » dans la charte\n\n\n- **Workspace et Artéfacts ne s’affichent plus l’un sur l’autre.** En passant d’Artéfacts au Workspace, les deux vues restaient affichées ensemble (et les deux entrées de la barre de gauche restaient sélectionnées) : c’est corrigé, chaque onglet remplace l’autre.\n- **Le bouton « IA » reprend le style d’Alixo.** Plus d’étincelle ni de dégradé violet : un simple « IA » en bleu, dans la même famille que le bouton « Importer ». La barre « Créer avec Coco » et le bouton « Créer avec l’IA » d’Artéfacts passent eux aussi au bleu d’accent de l’application.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.55.1",
