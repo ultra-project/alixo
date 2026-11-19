@@ -100,6 +100,8 @@ body.has-tabs { --tabbar-h: 41px; }
 .ln-agenda.active { background: var(--surface-2); color: var(--ink); font-weight: 500; }
 .ln-agenda .ln-cal { width: 24px; height: 26px; border-radius: 5px; }
 .ln-shared svg, .ln-todo svg { width: 18px; height: 18px; color: var(--ink-2); }
+/* 1.55 : onglet Artéfacts (même gabarit que Workspace) */
+.ln-artefacts svg { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; color: var(--ink-2); }
 .ln-agenda .ln-next { font-size: 12px; font-weight: 500; }
 html[data-theme="dark"] .ln-agenda .ln-next.live { color: #5fd17a; }   /* en clair, var(--ok) de styles.css suffit */
 

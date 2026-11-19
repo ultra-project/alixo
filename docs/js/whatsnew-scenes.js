@@ -11,9 +11,35 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.54.0 (ou nouveautes.html?v=1.54.0 en page seule).
+   Aperçu : index.html?nouveautes=1.55.0 (ou nouveautes.html?v=1.55.0 en page seule).
    ============================================================ */
 'use strict';
+
+/* 1.55 : Coco crée vos documents, Artéfacts, bannières de dossiers, explorateur, Workspace repensé, fenêtres floutées, polices multiples */
+AlixoWhatsNew.register('1.55.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Coco crée,<br>vos cours s’habillent', text: 'Huit nouveautés pour créer plus vite et vous retrouver plus facilement.' },
+    { title: 'Coco <em>crée</em> vos documents', text: 'Le bouton « IA », à droite de « Nouveau », ouvre une barre au centre de l’écran.',
+      bullets: ['<b>Décrivez</b> ce que vous voulez, en une phrase', '<b>Choisissez</b> : séance, présentation, tableur, planche, quiz ou fiche', '<b>Ctrl+Z</b> annule ce que Coco a écrit'],
+      art: { image: 'nouveautes/1.55.0-ia.jpg', alt: 'La barre « Créer avec Coco » ouverte au centre de l’écran' }, accent: '#6d5bd0', accent2: '#3d6bb5', dur: 7500 },
+    { title: 'L’onglet <em>Artéfacts</em>', text: 'Tout ce que Coco a créé pour vous, rangé au même endroit.',
+      bullets: ['<b>Quiz et fiches</b> enregistrés automatiquement', '<b>Filtres</b> par type, recherche et tri', '<b>Provenance</b> : la séance ou la demande d’origine'],
+      art: 'cards', accent: '#8a4b9c', accent2: '#b3762a', dur: 7000 },
+    { title: 'Des <em>bannières</em> pour vos cours', text: 'Clic droit sur un dossier › Modifier : une fenêtre entièrement repensée.',
+      bullets: ['<b>Couleur</b> ou <b>motif</b> en haut de la carte', '<b>Image perso</b> avec Alixo+', '<b>Icônes</b> à rechercher, rangées par matière'],
+      art: { image: 'nouveautes/1.55.0-bannieres.jpg', alt: 'Cartes de cours avec bannières couleur, motif et image' }, accent: '#c04343', accent2: '#2e8b6a', dur: 7000 },
+    { title: 'Un vrai <em>explorateur</em>', text: 'Dossiers, sous-dossiers, fil d’Ariane : on ne se perd plus pour choisir une séance.',
+      bullets: ['<b>Partout</b> : agenda, dépôt au Workspace, déplacer', '<b>Recherche</b> dans tout l’arbre', '<b>Clavier</b> : flèches, Entrée, Retour arrière'],
+      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 7000 },
+    { title: 'Le Workspace, une <em>boutique</em>', text: 'Nouvelle icône caddie, nouvelle vitrine des cours partagés par les membres.',
+      bullets: ['<b>Recherche</b> et filtres par matière et niveau', '<b>Mes dépôts</b> dans un onglet à part', '<b>Déposer</b> une séance en trois étapes'],
+      art: 'cards', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
+    { title: 'Plus <em>confortable</em> au quotidien', text: 'Plein de petites choses qui changent tout.',
+      bullets: ['<b>Fenêtres</b> sur fond flouté : l’arrière ne bouge plus', '<b>Clic droit</b> : l’élément reste sélectionné', '<b>Polices</b> : plusieurs dans une même séance', '<b>Planche</b> : un clic dans le vide désélectionne'],
+      art: 'text', accent: '#b3762a', accent2: '#c04343', dur: 8000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'À vous de créer.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 /* 1.54 : présentations — animations et transitions, vidéos et quiz, thèmes signature, banque d'images, mode présentation et vue présentateur */
 AlixoWhatsNew.register('1.54.0', {
@@ -60,26 +86,3 @@ AlixoWhatsNew.register('1.53.0', {
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
-
-/* 1.52 : illustrations dessinées (pas encore de captures ni de vidéo) */
-const SCENES_152 = {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Coco <em>modifie</em> vos cours,<br>le téléphone <em>importe</em>', text: 'Six nouveautés, en moins d’une minute.', dur: 5500 },
-    { title: 'Coco <em>modifie</em> le document', text: 'Demandez, Coco le fait dans le cours.',
-      bullets: ['<b>Corrige les fautes</b>, met en encadré, ajoute une conclusion', '<b>Annuler les modifications</b> en un clic', '<b>Rien n’est supprimé</b> sans votre accord'],
-      art: 'spell', accent: '#2e8b6a', accent2: '#b3762a', dur: 9000 },
-    { title: 'Importer depuis le <em>téléphone</em>', text: 'Un QR code, et vos fichiers arrivent dans le dossier.',
-      bullets: ['<b>PDF, Word, photos, audio…</b> jusqu’à 20 Mo', '<b>Effacés du serveur</b> dès leur arrivée'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/><path d="M9.5 8.5h2v2h-2zM12.5 8.5h2v2h-2zM9.5 11.5h2v2h-2z"/></svg>' }, accent: '#3d6bb5', accent2: '#2e8b6a', dur: 8000 },
-    { title: 'Des <em>styles</em> enregistrés', text: 'Votre mise en forme préférée, sous un nom, en un clic.',
-      art: 'palette', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 6500 },
-    { title: 'Le <em>bouton</em> de lien', text: 'Tapez « / » puis « bouton » : vers un cours, un fichier ou une page web.',
-      art: 'cards', accent: '#b3762a', accent2: '#3d6bb5', dur: 6500 },
-    { title: 'Et <em>aussi</em>', text: 'Des outils du quotidien revus.',
-      bullets: ['<b>Minuteurs</b> : anneau de progression, En pause, Temps écoulé', '<b>Agenda</b> : toute la semaine, l’heure qu’il est', '<b>Correcteur</b> : les mots presque justes corrigés', '<b>Supprimer le fond</b> passe dans Alixo+'],
-      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 9500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-};
-AlixoWhatsNew.register('1.52.1', SCENES_152);   // 1.52.1 : correctif de Coco — même présentation que la 1.52.0
-AlixoWhatsNew.register('1.52.0', SCENES_152);

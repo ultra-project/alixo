@@ -1,0 +1,53 @@
+/* 1.55 : modals — fenêtres centrales et élément « tenu » pendant un menu contextuel */
+
+/* ---------- 1.55 : fond des fenêtres centrales : flouté + assombri ----------
+   Une seule teinte pour toutes les fenêtres (dialogues, Paramètres, profil, bilan de la semaine, nouveautés, visionneuse de
+   fichiers, insertion de bloc, accueil, mise à jour) et pour le voile des pop-overs centrés (#po-veil, js/app.js).
+   Les fenêtres de connexion et de suspension (#authov, #msgov, #suspov) gardent leur fond. */
+:root { --modal-veil: rgba(8, 10, 20, .45); --modal-blur: 6px; }
+html[data-theme="dark"] { --modal-veil: rgba(0, 0, 6, .52); }
+
+.dlgov, #setov, #pfov, #wkov, #wnov, #fileov, #obov, #updov, #po-veil {
+  background: var(--modal-veil) !important;
+  -webkit-backdrop-filter: blur(var(--modal-blur)) !important;
+  backdrop-filter: blur(var(--modal-blur)) !important;
+}
+/* fenêtre posée sur une autre (ex. import d'image sur la bibliothèque d'images) : l'arrière est déjà voilé, on ne
+   redouble pas l'assombrissement */
+.dlgov ~ .dlgov, #setov:not([hidden]) ~ .dlgov, #setov:not([hidden]) ~ #pfov { background: rgba(8, 10, 20, .18) !important; }
+html[data-theme="dark"] :is(.dlgov ~ .dlgov, #setov:not([hidden]) ~ .dlgov, #setov:not([hidden]) ~ #pfov) { background: rgba(0, 0, 6, .3) !important; }
+
+/* voile des pop-overs centrés (confirmation, fiche de dossier, déplacement, renommage, choix d'une cible) : juste sous
+   #popover (z-index calculé en JS) ; #ctxmenu et #toast restent au-dessus */
+#po-veil { position: fixed; inset: 0; animation: setfade .14s ease; }
+#po-veil[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { #po-veil { animation: none; } }
+
+/* ---------- 1.55 : élément « tenu » pendant le menu contextuel (js/ctxhold.js) ----------
+   Mêmes règles que le survol de chaque type d'élément (styles.css, refonte.css). */
+.lib-row.ctx-held { background: var(--hover); }
+.lib-row.ctx-held .row-acts { opacity: 1; }
+.tree-row.ctx-held:not(.active) { background: var(--hover); }
+.tn-card.ctx-held:not(.active) { background: var(--hover); border-color: var(--ink-3); }
+.doc-card.ctx-held { background: var(--surface); border-color: var(--ink-3); }
+.doc-card.ctx-held :is(.pin-btn, .del-btn) { opacity: 1; }
+.folder-card.ctx-held { background: var(--surface); border-color: var(--ink-3); }
+.folder-card.ctx-held .fc-act { opacity: 1; }
+.file-card.ctx-held { border-color: color-mix(in srgb, var(--mc) 55%, var(--border)); background: color-mix(in srgb, var(--mc) 4%, var(--surface)); }
+.file-card.ctx-held .del-btn { opacity: 1; }
+.rs-card.ctx-held { border-color: var(--ink-3); }
+.sh-card.ctx-held { background: var(--hover); border-color: var(--ink-3); }
+.sh-tree .ctx-held { background: var(--hover); color: var(--ink); }
+
+/* ---------- 1.55 : menu Police des séances : entrée « Police de tout le document… » (js/app.js › openFontMenu) ---------- */
+#popover .po-fontdoc { display: flex; align-items: center; gap: 10px; width: 100%; margin-top: 6px; padding: 9px 10px; border-top: 1px solid var(--border); border-radius: 0 0 6px 6px; font-size: 13px; font-weight: 600; color: var(--ink-2); text-align: left; }
+#popover .po-fontdoc:hover, #popover .po-fontdoc:focus-visible { background: var(--hover); color: var(--ink); outline: none; }
+#popover .po-fontdoc svg { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---------- 1.55 : toast par-dessus une fenêtre centrale ----------
+   Les fenêtres (.dlgov, dont l'explorateur #xpov) sont retirées du DOM à la fermeture : leur seule présence suffit.
+   Le toast passe au-dessus du voile, en haut au centre, pour ne couvrir ni le pied de la fenêtre ni ses boutons. */
+body:has(.dlgov) #toast {
+  z-index: 2700; top: 16px; bottom: auto; left: 50%; transform: translateX(-50%);
+  max-width: min(560px, calc(100vw - 32px));
+}

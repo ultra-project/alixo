@@ -17,6 +17,11 @@
 <link rel="stylesheet" href="slides.css">
 <link rel="stylesheet" href="libtools.css">
 <link rel="stylesheet" href="refonte.css">
+<link rel="stylesheet" href="modals.css">
+<link rel="stylesheet" href="explorer.css">
+<link rel="stylesheet" href="folderedit.css">
+<link rel="stylesheet" href="cococreate.css">
+<link rel="stylesheet" href="artefacts.css">
 <link id="app-favicon" rel="icon" type="image/png" href="logo.png">
 <link id="app-touchicon" rel="apple-touch-icon" href="logo.png">
 <meta name="theme-color" content="#4f66e0">
@@ -66,7 +71,8 @@
   <aside id="libnav" class="glass">
     <button id="ln-agenda" class="ln-agenda" title="Agenda : cours et événements du mois (Ctrl+Maj+A)"></button>
     <button id="ln-shared" class="ln-agenda ln-shared" title="Alixo Share : cours et dossiers partagés avec vous, invitations"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg><span>Partagés avec moi</span><span id="share-badge" class="ln-next" hidden></span></button>
-    <button id="ln-workspace" class="ln-agenda ln-workspace" title="Workspace : séances déposées par les membres d’Alixo, à ajouter à votre bibliothèque"><svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 14h8M12 10v8"/></svg><span>Workspace</span></button>
+    <button id="ln-workspace" class="ln-agenda ln-workspace" title="Workspace : séances déposées par les membres d’Alixo, à ajouter à votre bibliothèque"><svg viewBox="0 0 24 24"><path d="M2.5 4h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2L21 8H6"/><path d="M6.9 12h13"/><circle cx="9.5" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg><span>Workspace</span></button>
+    <button id="ln-artefacts" class="ln-agenda ln-artefacts" title="Artéfacts : quiz, fiches et documents créés par Coco"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 4.6L18.5 9l-4.6 1.9L12 15.5l-1.9-4.6L5.5 9l4.6-1.4Z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8Z"/></svg><span>Artéfacts</span></button>
     <button id="ln-todo" class="ln-agenda ln-todo" title="Tâches à faire : catégories, échéances (Ctrl+Maj+K)"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="6" height="6" rx="1.2"/><path d="m4.5 7 1.4 1.4L8.5 5.6M11 7h10M11 17h10"/><rect x="3" y="14" width="6" height="6" rx="1.2"/></svg><span>Tâches</span><span id="todo-badge" class="ln-next" hidden></span></button>
     <div class="ln-head">
       <span class="ln-title">Explorateur</span>
@@ -94,6 +100,8 @@
         <button id="btn-import-files" class="cta ghost" title="Importer des fichiers dans ce dossier : PDF, Word, PowerPoint, Excel, images, audio… (ou glissez-les ici)"><svg viewBox="0 0 24 24"><path d="M12 16V4"/><path d="m7.5 8.5 4.5-4.5 4.5 4.5"/><path d="M4 14v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/></svg>Importer</button>
         <!-- 1.47 : un seul bouton « Nouveau » (menu : séance, présentation, tableur, planche, quiz, dossier, import) -->
         <button id="btn-new-more" class="cta lib-new lib-more" title="Nouveau : séance, présentation, tableur, planche, quiz, dossier, import de fichiers" aria-haspopup="menu"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Nouveau<span class="cta-sep" aria-hidden="true"></span><svg class="chev" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></button>
+        <!-- 1.55 : créer un document avec Coco (js/cococreate.js) -->
+        <button id="btn-ai-new" class="cta ghost lib-ai" title="Créer un document avec Coco : décrivez-le, choisissez le type">IA</button>
         <!-- déclencheurs conservés (menu « Nouveau », bouton « + » de la version mobile, raccourcis clavier) -->
         <button id="btn-new-doc" hidden>＋ Séance</button>
         <button id="btn-new-slides" hidden>＋ Présentation</button>
@@ -119,6 +127,7 @@
     <div id="lib-agenda" hidden></div>
     <div id="lib-shared" hidden></div>
     <div id="lib-workspace" hidden></div>
+    <div id="lib-artefacts" hidden></div>
     <div id="lib-todo" hidden></div>
   </div>
 </section>
@@ -446,6 +455,7 @@
 <script src="js/imgtools.js"></script>
 <script src="js/sanitize.js"></script>
 <script src="js/app.js"></script>
+<script src="js/folderedit.js"></script>
 <script src="js/textstyles.js"></script>
 <script src="js/galaxy3d.js"></script>
 <script src="js/galaxy.js"></script>
@@ -490,5 +500,9 @@
 <script src="js/photodrop.js"></script>
 <script src="js/imagepick.js"></script>
 <script src="js/solo.js"></script>
+<script src="js/explorer.js"></script>
+<script src="js/ctxhold.js"></script>
+<script src="js/artefacts.js"></script>
+<script src="js/cococreate.js"></script>
 </body>
 </html>

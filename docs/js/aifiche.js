@@ -75,7 +75,7 @@ window.AlixoFiche = (() => {
         f.root = card.querySelector('.fiche'); f.card = card; f.close = close;
         card.addEventListener('click', e => onClick(e, f));
         card.addEventListener('keydown', e => onKey(e, f));
-        if (f.result && f.done) showFiche(f); else generate(f);
+        if (f.result && f.done) { showFiche(f); syncNewdocBtn(f); } else generate(f);
       },
       onClose() { if (f.gen) cancel(f); f.root = null; f.card = null; f.close = null; } });
   }
@@ -123,7 +123,7 @@ window.AlixoFiche = (() => {
     const s = f.session;
     if (f.gen) return;
     if (!window.AlixoAI) return;
-    const gen = { token: AlixoAI.newToken(), sections: [] }; f.gen = gen; f.done = false; f.error = '';
+    const gen = { token: AlixoAI.newToken(), sections: [] }; f.gen = gen; f.done = false; f.error = ''; f.savedId = null;   // 1.55 : une nouvelle fiche = un nouvel artéfact
     f.result = { title: s.title ? 'Fiche de révision — ' + s.title : 'Fiche de révision', resume: '', sections: [] };
     if (f.root) { f.root.hidden = true; f.root.innerHTML = ''; }
     showGen(f, false); setButtons(f, false);
@@ -141,6 +141,7 @@ window.AlixoFiche = (() => {
       if (!f.result.sections.length) throw new Error('Fiche vide — réessayez.');
       f.done = true;
       showFiche(f);
+      autoSave(f);   // 1.55 : rangée dans Artéfacts
       if (window.AlixoCoco) AlixoCoco.post({ role: 'note', text: `Fiche prête : « ${f.result.title} » (${f.result.sections.length} carte${f.result.sections.length > 1 ? 's' : ''})`, actions: [{ name: 'fiche-open' }].concat(isDoc(s.d) && !srcReadOnly(s.d) ? [{ name: 'fiche-insert' }] : []) }, s);
     } catch (err) {
       if (f.gen !== gen) return;
@@ -236,12 +237,37 @@ window.AlixoFiche = (() => {
       toast('Fiche de révision ajoutée à la fin de la séance (Ctrl+Z pour annuler)', { duration: 6000 });
       return;
     }
-    const d0 = findDoc(session.d.id) || session.d;
-    const nd = { id: uid(), folderId: (srcReadOnly(d0) || (typeof isSharedDoc === 'function' && isSharedDoc(d0.id))) ? null : (d0.folderId || null), titre: f.title, createdAt: Date.now(), updatedAt: Date.now(), pinned: false, prof: session.d.prof || '', blocks, aiFrom: { docId: session.d.id, title: session.title, at: Date.now() } };
-    state.docs.push(nd); save();
+    /* 1.55 : la fiche est déjà enregistrée automatiquement (Artéfacts) : on ouvre cette séance, sans doublon */
+    const saved = savedDoc(session.fiche);
+    if (saved) { closeWin(); openDoc(saved.id); return; }
+    const nd = buildFicheDoc(session, f, blocks);
+    state.docs.push(nd); save(); session.fiche.savedId = nd.id;
     closeWin();
     openDoc(nd.id);
     toast(`Séance « ${f.title} » créée`, { duration: 5000 });
+  }
+  /* 1.55 : une fiche générée devient AUTOMATIQUEMENT une séance (marquée aiFrom, rangée dans Artéfacts — js/artefacts.js),
+     dans le dossier de la séance source, dès la fin de la génération ; « Nouvelle séance » ouvre ensuite ce document */
+  function buildFicheDoc(session, f, blocks) {
+    const d0 = findDoc(session.d.id) || session.d;
+    return { id: uid(), folderId: (srcReadOnly(d0) || (typeof isSharedDoc === 'function' && isSharedDoc(d0.id))) ? null : (d0.folderId || null), titre: f.title, createdAt: Date.now(), updatedAt: Date.now(), pinned: false, prof: session.d.prof || '', blocks: blocks || sheetBlocks(f), aiFrom: { docId: session.d.id, title: session.title, at: Date.now(), kind: 'fiche' } };
+  }
+  const savedDoc = fs => (fs && fs.savedId ? state.docs.find(x => x.id === fs.savedId) || null : null);
+  function autoSave(fs) {
+    if (!fs || !fs.done || !fs.result || savedDoc(fs)) return;
+    try {
+      const nd = buildFicheDoc(fs.session, fs.result);
+      state.docs.push(nd); save(); fs.savedId = nd.id;
+      if (window.AlixoArtefacts && AlixoArtefacts.refresh) AlixoArtefacts.refresh();
+      syncNewdocBtn(fs);
+      toast(`Fiche enregistrée dans Artéfacts : « ${fs.result.title} » (généré par AlixoAI, à relire)`, { duration: 4000 });
+    } catch (e) { console.error(e); }
+  }
+  function syncNewdocBtn(fs) {
+    const b = fs && fs.card && fs.card.querySelector('[data-fi="newdoc"]'); if (!b) return;
+    const on = !!savedDoc(fs);
+    b.lastChild.textContent = on ? 'Ouvrir la séance-fiche' : 'Nouvelle séance';
+    b.title = on ? 'Cette fiche est enregistrée comme séance (Artéfacts) : l’ouvrir' : 'Créer une séance « Fiche de révision » dans le même dossier';
   }
 
   /* ---------------- copie et impression ---------------- */

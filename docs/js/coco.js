@@ -23,6 +23,9 @@
      5 paragraphes ») avec « Annuler les modifications » (coco-undo, instantanés avant / après) et « Voir le détail »
      (coco-details). Un lot qui supprime attend « Supprimer » / « Garder » (coco-apply / coco-cancel). Planche et quiz sont désormais
      acceptés (F8 depuis ces vues).
+   - 1.55 : Coco CRÉE des documents : create(d, opts) (appelé par js/cococreate.js) montre la progression pendant que le
+     document neuf s'écrit ; dans le chat, « crée-moi une présentation sur… » (AlixoCocoTools.matchCreate) lance le même flux ;
+     un document vide n'est plus bloqué : Coco propose de l'écrire (intention « modifier » directe).
    Chargé APRÈS app.js, quizcore.js, aiquiz.js, aifiche.js et cocotools.js : utilise leurs globales (doc, findDoc, state, save,
    openRightPanel, closeRightPanels, requirePlus, openSettings, openAiModelDialog, toast, esc, uid, AlixoAI…).
    ============================================================ */
@@ -117,9 +120,16 @@ window.AlixoCoco = (() => {
     const before = s.nWords; readDoc(s);
     const m0 = s.messages[0]; if (m0 && m0.sys && before !== s.nWords) m0.text = welcome(s);
   }
+  const cap = t => String(t || '').charAt(0).toUpperCase() + String(t || '').slice(1);
   function welcome(s) {
     const n = s.nWords.toLocaleString('fr-FR');
     const can = window.AlixoCocoTools && AlixoCocoTools.facadeOf(s.d);
+    /* 1.55 : document (presque) vide — Coco propose de l’écrire (espaces insécables dans les guillemets) */
+    if (s.nWords < 30 && can) {
+      const q = t => `« ${t} »`;
+      const ex = s.d.kind === 'slides' ? 'ajoute cinq diapositives sur la Révolution française' : s.d.kind === 'sheet' ? 'fais un budget mensuel d’étudiant' : s.d.kind === 'board' ? 'ajoute des notes sur les dates clés de la Ve République' : s.d.kind === 'quiz' ? 'ajoute dix questions sur la photosynthèse' : 'écris un cours sur la prescription extinctive';
+      return `Salut ! Moi c’est Coco. ${cap(kindMine(s.d))} ${q(s.title)} est encore presque vide : je peux l’écrire pour toi. Dis-moi par exemple ${q(ex)}.\nJe peux aussi créer un autre document : ${q('crée-moi une présentation sur…')}`;
+    }
     /* 1.52 : espaces insécables dans les guillemets (jamais « seul en fin de ligne) ; « modifier ta présentation »… */
     const g = t => `«\u00a0${t}\u00a0»`;
     return `Salut ! Moi c’est Coco. J’ai lu ${s.cut ? 'le début de ' : ''}${kindMine(s.d)} ${g(s.title)} (${n} mot${s.nWords > 1 ? 's' : ''}).\nPose-moi une question dessus, ou choisis une **fiche de révision** ou un **quiz** juste au-dessus.${can ? `\nJe peux aussi modifier ${kindMine(s.d)} : ${g('corrige les fautes')}, ${s.d.kind === 'slides' ? g('ajoute une diapositive de conclusion') : s.d.kind === 'sheet' ? g('calcule le total en B10') : s.d.kind === 'board' ? g('ajoute une note sur la prescription') : s.d.kind === 'quiz' ? g('ajoute une question sur le délai') : `${g('mets les définitions en encadré')}, ${g('ajoute une conclusion')}`}… Tu pourras toujours annuler d’un clic.` : ''}`;
@@ -180,16 +190,18 @@ window.AlixoCoco = (() => {
     s.aiKey = aiKey();
     renderHead(s);
     const b = bodyEl();
-    const step = s.aiKey !== 'ok' ? 'noai' : s.nWords < 30 ? 'empty' : 'chat';
+    /* 1.55 : un document vide passe au fil dès qu'une conversation existe (création en cours, demande de remplissage) */
+    const step = s.aiKey !== 'ok' ? 'noai' : s.nWords < 30 && !s.gen && !s.messages.some(m => !m.sys) ? 'empty' : 'chat';
     b.dataset.step = step;
-    renderCards(s, step);
+    renderCards(s, s.nWords < 30 ? 'empty' : step);   // fiche et quiz : seulement sur un document qui a du contenu
     if (step === 'noai') b.innerHTML = noAiHTML();
     else if (step === 'empty') b.innerHTML = emptyHTML(s);
     else b.innerHTML = `<div class="coco-thread" aria-live="polite">${s.messages.map(messageHTML).join('')}</div>`;
     const inp = inputEl(), send = sendEl();
-    const can = step === 'chat';
+    const editable = !!(window.AlixoCocoTools && AlixoCocoTools.facadeOf(s.d));
+    const can = step === 'chat' || (step === 'empty' && editable);   // 1.55 : un document vide peut être rempli par Coco
     inp.disabled = !can; send.disabled = !can;
-    inp.placeholder = can ? (window.AlixoCocoTools && AlixoCocoTools.facadeOf(s.d) ? 'Pose une question ou demande une modification…' : 'Pose une question sur le cours…') : step === 'empty' ? 'Écris d’abord quelques lignes dans le document' : 'Indisponible pour le moment';
+    inp.placeholder = step === 'chat' ? (editable ? (s.nWords < 30 ? 'Demande-moi d’écrire ce document…' : 'Pose une question ou demande une modification…') : 'Pose une question sur le cours…') : step === 'empty' ? (editable ? 'Demande-moi d’écrire ce document…' : 'Écris d’abord quelques lignes dans le document') : 'Indisponible pour le moment';
     p.classList.toggle('busy', !!s.gen);
     syncSend(s); syncMascot();
     scrollBottom(true);
@@ -205,7 +217,10 @@ window.AlixoCoco = (() => {
     if (st === 'nomodel' || st === 'downloading') return `<div class="coco-empty"><img src="img/coco.png" alt="" width="720" height="449"><b>${st === 'downloading' ? 'AlixoAI est en cours de téléchargement.' : 'AlixoAI n’est pas encore installée sur cet ordinateur.'}</b><p>${st === 'downloading' ? 'Coco sera disponible dès la fin du téléchargement (Paramètres › IA pour suivre la progression).' : 'Un seul téléchargement suffit : ensuite, tout se passe sur l’ordinateur, sans rien envoyer à un service d’IA et sans limite d’utilisation.'}</p><div class="coco-eacts"><button type="button" class="cta small" data-aq="install">${ICON}<span>${st === 'downloading' ? 'Voir le téléchargement' : 'Installer AlixoAI' + size}</span></button>${settings}</div></div>`;
     return `<div class="coco-empty"><img src="img/coco.png" alt="" width="720" height="449"><b>AlixoAI n’est pas disponible pour le moment.</b><p>${esc((window.AlixoAI && !AlixoAI.enabled()) ? 'Elle a été désactivée dans les Paramètres › IA (Activer).' : (window.AlixoAI ? AlixoAI.available().reason : ''))}</p>${settings}</div>`;
   }
-  const emptyHTML = s => `<div class="coco-empty"><img src="img/coco.png" alt="" width="720" height="449"><b>Le document est presque vide.</b><p>Écris d’abord quelques paragraphes (une trentaine de mots) : je ne m’appuie que sur ce que contient ${kindWord(s.d)}, pour répondre comme pour le quiz et la fiche.</p></div>`;
+  const emptyHTML = s => (window.AlixoCocoTools && AlixoCocoTools.facadeOf(s.d)
+    /* 1.55 : Coco peut écrire le document à partir d'une simple demande */
+    ? `<div class="coco-empty"><img src="img/coco.png" alt="" width="720" height="449"><b>${esc(cap(kindWord(s.d)))} est presque vide.</b><p>Décris-moi ce que tu veux, juste en dessous : je l’écris pour toi (et tu pourras tout annuler d’un clic). Pour poser des questions, faire un quiz ou une fiche, il faut d’abord un peu de contenu.</p></div>`
+    : `<div class="coco-empty"><img src="img/coco.png" alt="" width="720" height="449"><b>Le document est presque vide.</b><p>Écris d’abord quelques paragraphes (une trentaine de mots) : je ne m’appuie que sur ce que contient ${kindWord(s.d)}, pour répondre comme pour le quiz et la fiche.</p></div>`);
 
   function messageHTML(m) {
     const acts = (m.actions || []).map((a, k) => { const def = actions.get(a.name); if (!def) return ''; return `<button type="button" class="coco-act${def.cls ? ' ' + def.cls : ''}" data-coco-action="${esc(a.name)}" data-i="${k}">${def.icon || ''}<span>${esc(a.label || def.label)}</span></button>`; }).join('');
@@ -254,16 +269,32 @@ window.AlixoCoco = (() => {
     text = S(text); if (!text) return;
     if (s.aiKey !== 'ok') { if (s === cur) render(); return; }
     refreshText(s);
+    const wasEmpty = bodyEl() && bodyEl().dataset.step === 'empty' && s === cur;
     const um = { id: uid(), role: 'user', text };
     const cm = { id: uid(), role: 'coco', text: '', streaming: true };
     const history = historyOf(s).slice(-8);
-    s.messages.push(um, cm); appendMessage(s, um); appendMessage(s, cm);
+    s.messages.push(um, cm);
+    /* 1.55 : intention « créer » (« crée-moi une présentation sur… ») — un NOUVEAU document, rempli par Coco (js/cococreate.js) */
+    const cr = window.AlixoCocoCreate && window.AlixoCocoTools ? AlixoCocoTools.matchCreate(text) : null;
+    if (cr) {
+      cm.streaming = false;
+      cm.text = `D’accord : je crée ${CREATE_WORDS[cr.as] || 'un document'}${cr.subject ? ` sur ${'« ' + cr.subject + ' »'}` : cr.fromCurrent ? ` à partir de ${kindWord(s.d)}` : ''}. Je l’ouvre et je l’écris sous tes yeux.`;
+      if (wasEmpty) render(); else { appendMessage(s, um); appendMessage(s, cm); }
+      try {
+        const res = await AlixoCocoCreate.start({ as: cr.as, prompt: cr.subject || text, sourceId: cr.fromCurrent ? s.d.id : '', from: 'chat' });
+        if (res && res.error) { cm.text = res.error; rerenderMessage(s, cm); }
+      } catch (e) { console.error(e); cm.text = (e && e.message) || 'Je n’ai pas pu créer ce document.'; rerenderMessage(s, cm); }
+      return;
+    }
+    if (wasEmpty) render(); else { appendMessage(s, um); appendMessage(s, cm); }
     const gen = { token: AlixoAI.newToken(), msgId: cm.id }; s.gen = gen;
     setBusy(s, true);
     try {
       /* 1.52 : la phrase ressemble à une demande d'action → Coco décide d'abord s'il répond ou s'il modifie le document */
       let intent = null;
-      if (window.AlixoCocoTools && AlixoCocoTools.maybeAction(text) && AlixoCocoTools.facadeOf(s.d)) {
+      /* 1.55 : document vide et modifiable : une demande d'action sert à l'écrire (pas de routage : il n'y a rien à réécrire) */
+      if (window.AlixoCocoTools && s.nWords < 30 && AlixoCocoTools.facadeOf(s.d) && AlixoCocoTools.maybeAction(text)) intent = 'modifier';
+      else if (window.AlixoCocoTools && AlixoCocoTools.maybeAction(text) && AlixoCocoTools.facadeOf(s.d)) {
         const rt = await AlixoCocoTools.route(s, text, { token: gen.token });
         if (s.gen === gen && rt.action !== 'repondre') intent = rt.action;
       }
@@ -293,13 +324,55 @@ window.AlixoCoco = (() => {
      les instantanés avant / après (m.edit) et les actions. Stop (bouton, Échap) : le lot en cours n'est pas appliqué,
      ce qui a déjà été fait reste annulable. */
   const MAX_EDITS = 5;   // paires d'instantanés gardées par session
-  const progressText = p => { const verb = p.phase === 'corrige' ? 'Je corrige' : p.phase === 'embellit' ? 'Je mets en forme' : 'Je modifie'; return `${verb}…${p.lots > 1 ? ` (partie ${p.lot} sur ${p.lots}${p.changes ? `, ${p.changes} modification${p.changes > 1 ? 's' : ''}` : ''})` : ''}`; };
+  /* 1.55 : création — « J’écris la présentation… (4 diapositives) » */
+  const CREATE_WORDS = { doc: 'une séance', fiche: 'une fiche de révision', slides: 'une présentation', sheet: 'un tableur', board: 'une planche', quiz: 'un quiz' };
+  const CREATE_PROGRESS = { doc: ['la séance', 'inserted', 'bloc écrit', 'blocs écrits'], slides: ['la présentation', 'slides', 'diapositive', 'diapositives'], sheet: ['le tableur', 'cells', 'case remplie', 'cases remplies'], board: ['la planche', 'notes', 'note', 'notes'], quiz: ['le quiz', 'questions', 'question', 'questions'] };
+  function createProgressText(p) {
+    const [w, key, one, many] = CREATE_PROGRESS[p.kind] || CREATE_PROGRESS.doc; const c = p.counts || {};
+    const k = (c[key] || 0) + (p.kind === 'board' ? (c.inserted || 0) : 0) + (p.kind === 'slides' && c.replaced ? 1 : 0);   // couverture comprise
+    return k ? `J’écris ${w}… (${k.toLocaleString('fr-FR')} ${k > 1 ? many : one})` : `Je réfléchis au plan de ${w}…`;
+  }
+  const progressText = p => { if (p.phase === 'cree') return createProgressText(p); const verb = p.phase === 'corrige' ? 'Je corrige' : p.phase === 'embellit' ? 'Je mets en forme' : 'Je modifie'; return `${verb}…${p.lots > 1 ? ` (partie ${p.lot} sur ${p.lots}${p.changes ? `, ${p.changes} modification${p.changes > 1 ? 's' : ''}` : ''})` : ''}`; };
   async function act(s, gen, cm, intent, text) {
     cm.text = intent === 'corriger' ? 'Je relis le document…' : intent === 'embellir' ? 'Je regarde la mise en forme…' : 'Je prépare les modifications…';
     patchMessage(s, cm);
     const ui = { token: gen.token, cancelled: () => s.gen !== gen, onProgress: p => { if (s.gen !== gen) return; cm.text = progressText(p); patchMessage(s, cm); } };
     const r = await AlixoCocoTools.run(s, intent, text, ui);
     deliver(s, cm, r);
+  }
+  /* ---------------- 1.55 : Coco écrit un document neuf (js/cococreate.js → AlixoCoco.create) ----------------
+     Le document vient d'être créé et ouvert ; le panneau s'ouvre sur sa session, la demande apparaît dans le fil et le
+     message de Coco sert de barre de progression pendant que le contenu s'écrit dans le document (Stop / Échap arrête,
+     ce qui est écrit reste et s'annule d'un clic). opts = { as, prompt, label, source?: { title, text } }. */
+  async function create(d, opts) {
+    if (!d || !window.AlixoCocoTools) return false;
+    open(d);
+    if (!isOpen() || !cur || cur.d.id !== d.id) return false;   // Alixo+ refusé, ou panneau fermé
+    const s = cur;
+    if (s.aiKey !== 'ok') return false;   // l'écran d'état (modèle à installer…) est affiché
+    if (s.gen) stop(s);
+    const m0 = s.messages[0]; if (m0 && m0.sys) m0.text = `C’est parti : j’écris ${CREATE_WORDS[opts.as] || 'ce document'} à partir de ta demande. Tu peux m’arrêter à tout moment (Stop ou Échap) ; ce qui est écrit pourra être annulé d’un clic.`;
+    const um = { id: uid(), role: 'user', text: S(opts.label || opts.prompt) };
+    const cm = { id: uid(), role: 'coco', text: '', streaming: true };
+    s.messages.push(um, cm);
+    const gen = { token: AlixoAI.newToken(), msgId: cm.id }; s.gen = gen;
+    render(); setBusy(s, true);
+    const ui = { token: gen.token, cancelled: () => s.gen !== gen, onProgress: p => { if (s.gen !== gen) return; cm.text = progressText(p); patchMessage(s, cm); } };
+    try {
+      const r = await AlixoCocoTools.create(s, { as: opts.as, prompt: opts.prompt, subject: opts.subject, source: opts.source || null }, ui);
+      deliver(s, cm, r);
+      if (r.error) cm.text += `\nAlixoAI s’est arrêtée en route (${r.error}) : je garde ce qui est déjà écrit.`;
+      else if (r.truncated) cm.text += '\nJe me suis arrêté à la longueur maximale : demande-moi la suite si tu veux (« continue »).';
+      if (!r.changes && !r.stopped) cm.actions = [{ name: 'coco-create-retry', payload: opts }];
+    } catch (e) {
+      if (e && e.status === 499) { cm.stopped = true; cm.text = 'Interrompu : je n’ai rien écrit.'; }
+      else if (e && e.soft) { cm.text = e.message; cm.actions = []; }
+      else { cm.error = (e && e.message) || 'AlixoAI n’a pas répondu'; cm.actions = [{ name: 'coco-create-retry', payload: opts }]; if (/install|désactiv|Paramètres/i.test(cm.error)) cm.actions.push({ name: 'settings' }); }
+    }
+    if (s.gen === gen) s.gen = null;
+    cm.streaming = false;
+    if (cur === s) { refreshText(s); render(); } else setBusy(s, false);
+    return true;
   }
   /* résumé + actions d'un résultat (ou d'un lot en attente de confirmation) */
   function deliver(s, cm, r) {
@@ -323,6 +396,7 @@ window.AlixoCoco = (() => {
      dans un document partagé, les autres membres voient aussi ces modifications */
   function aiNotice(r) {
     const c = (r && r.counts) || {};
+    if (r && r.intent === 'creer' && r.changes) return `\nCréé par AlixoAI : relisez le contenu, l’IA peut se tromper.${typeof isSharedDoc === 'function' && isSharedDoc(r.docId) ? '\nCe document est visible par les membres du partage.' : ''}`;   // 1.55
     if (!r || r.intent !== 'modifier' || !(c.replaced || c.inserted || c.slides || c.notes || c.questions || c.cells || c.titled)) return '';
     let t = '\nModifié par AlixoAI : relisez les changements, l’IA peut se tromper.';
     if (typeof isSharedDoc === 'function' && isSharedDoc(r.docId)) t += '\nCes modifications sont visibles par les membres du partage.';
@@ -419,6 +493,14 @@ window.AlixoCoco = (() => {
     if (!m || !m.edit || !window.AlixoCocoTools) return;
     AlixoCocoTools.undo(s, m).then(ok => { if (!ok) return; m.actions = (m.actions || []).filter(a => a.name !== 'coco-undo'); m.undone = true; rerenderMessage(s, m); post({ text: 'Modifications annulées.' }, s); }).catch(err => { console.error(err); toast('L’annulation n’a pas abouti'); });
   } });
+  /* 1.55 : la création n'a rien donné — on recommence dans le même document (pas de doublon) */
+  registerAction('coco-create-retry', { label: 'Réessayer', icon: I.replay, run(s, payload, m) {
+    if (m) { s.messages = s.messages.filter(x => x !== m); }
+    const d = typeof doc === 'function' ? doc() : null;
+    if (!d || d.id !== s.d.id) { toast('Ouvrez d’abord ce document'); return; }
+    const prev = s.messages[s.messages.length - 1]; if (prev && prev.role === 'user') s.messages.pop();
+    create(d, payload);
+  } });
   registerAction('coco-details', { label: 'Voir le détail', icon: I.list, run(s, payload, m) {
     const r = m && m.result; if (!r || !r.details || !r.details.length) { post({ text: 'Aucun détail à montrer.' }, s); return; }
     const lines = r.details.slice(0, 10).map(detailLine);
@@ -442,5 +524,5 @@ window.AlixoCoco = (() => {
 
   if (document.getElementById('cocopanel')) bind();
 
-  return { open, close, toggle, isOpen, sync, buttonHTML, send, post, unpost, registerAction, md, get current() { return cur; }, get sessions() { return sessions; } };
+  return { open, close, toggle, isOpen, sync, buttonHTML, send, post, create, unpost, registerAction, md, get current() { return cur; }, get sessions() { return sessions; } };
 })();

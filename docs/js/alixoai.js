@@ -30,6 +30,8 @@
      cancel(token)               annule les requêtes portant ce jeton
      passages(text, n, size)     découpe un texte en n passages répartis (exposé pour les tests)
      run('route' | 'edit', …)    1.52 : Coco décide de répondre ou d'agir, puis modifie le document par commandes (js/cocotools.js)
+     run('create', …)            1.55 : Coco crée un document (séance, présentation, tableur, planche, quiz, fiche) par
+                                  commandes du même registre fermé (js/cocotools.js, js/cococreate.js) ; onToken(texte cumulé)
      parse.*                     analyseurs des formats de réponse (exposés pour les tests)
    Événement document « alixo-ai » (detail = { state, busy, waiting, task }) à chaque changement visible.
    ============================================================ */
@@ -46,11 +48,12 @@ window.AlixoAI = (() => {
      chat = jetons d'une réponse de Coco ; chatDoc = caractères du cours confiés à Coco (1.49).
      Processeur : environ 6 à 10 jetons par seconde (modèle 4B) — lots et extraits plus courts. */
   const BUDGETS = {
-    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 2200, chat: 360, chatDoc: 12000, agent: 3200, agentOut: 700, route: 24 },
-    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1300, chat: 240, chatDoc: 5000, agent: 1600, agentOut: 450, route: 24 }
+    gpu: { chunk: 900, batch: 5, first: 2, sheet: 14000, live: 2000, full: 5000, style: 15, sheetTokens: 2200, chat: 360, chatDoc: 12000, agent: 3200, agentOut: 700, route: 24, create: 1500, createDoc: 9000 },
+    cpu: { chunk: 700, batch: 3, first: 1, sheet: 6000, live: 1500, full: 2500, style: 8, sheetTokens: 1300, chat: 240, chatDoc: 5000, agent: 1600, agentOut: 450, route: 24, create: 900, createDoc: 4000 }
   };
   /* 1.52 : agent = caractères du document confiés à Coco par lot quand il modifie le document (js/cocotools.js) ;
-     agentOut = jetons d'une réponse en commandes ; route = jetons de la décision « répondre ou agir » */
+     agentOut = jetons d'une réponse en commandes ; route = jetons de la décision « répondre ou agir » ;
+     1.55 : create = jetons d'une création de document (commandes) ; createDoc = caractères du cours source confiés à Coco */
   function tier() { const l = L(); return l && l.status().tier === 'gpu' ? 'gpu' : 'cpu'; }
   const budget = () => BUDGETS[tier()];
   /* conversation d'un quiz plafonnée à la taille du contexte du moteur (≈ 2,2 caractères par jeton, marge comprise) */
@@ -385,6 +388,25 @@ Règles : garde les termes du cours ; **gras** autorisé pour un mot important, 
 ${example || ''}`.trim();
   }
 
+  /* 1.55 : Coco crée un document à partir d'une demande (et, au besoin, d'un cours source) — mêmes commandes que l'édition,
+     limitées à celles qui AJOUTENT (registre fermé, js/cocotools.js : describeCreate) ; `as` = doc | fiche | slides | sheet | board | quiz */
+  const CREATE_WHAT = {
+    doc: ['une séance (notes de cours structurées)', 'Une séance complète : titres de parties (h1, h2), paragraphes clairs, listes, encadrés (définitions, à retenir, exemples). 12 à 25 commandes.'],
+    fiche: ['une fiche de révision', 'Une fiche de révision courte et visuelle, l’essentiel seulement : encadrés « À retenir » et « Définition », listes de points clés, pièges à éviter. 10 à 20 commandes.'],
+    slides: ['une présentation (diaporama)', 'Une couverture, puis 5 à 9 diapositives à puces (3 à 5 lignes courtes chacune), une diapositive de section si le sujet a des parties, une conclusion.'],
+    sheet: ['un tableur', 'Un tableau utile : en-têtes en ligne 1, 4 à 12 lignes de données, des formules quand c’est pertinent (=SOMME(B2:B8), =MOYENNE(…)).'],
+    board: ['une planche (tableau blanc de notes)', 'Une carte mentale en notes courtes : 6 à 12 notes d’une ou deux lignes (notion : explication), un texte d’introduction si utile.'],
+    quiz: ['un quiz de révision', '8 à 12 questions, surtout des QCM à quatre propositions avec une seule bonne réponse, quelques vrai / faux. Distracteurs plausibles.']
+  };
+  function createSystem(as, commands, example, withSource) {
+    const [what, how] = CREATE_WHAT[as] || CREATE_WHAT.doc;
+    return `Tu es Coco, l’assistant d’Alixo. Tu crées ${what} pour un étudiant, à partir de sa demande${withSource ? ' et du cours fourni : appuie-toi sur le cours, n’invente rien qui le contredise' : ''}.
+${commands}
+${how}
+Règles : français soigné, contenu exact et utile pour réviser ; commence par TITRE ; une commande par ligne, dans l’ordre du document ; **gras** autorisé pour un mot important, aucune autre mise en forme ; pas de commentaire.
+${example || ''}`.trim();
+  }
+
   /* ---------------- exécution ---------------- */
   let seq = 0;
   async function engineChat(o) {
@@ -408,6 +430,7 @@ ${example || ''}`.trim();
     if (task === 'chat') return runChat(payload, opts, token, b);
     if (task === 'route') return runRoute(payload, opts, token, b);
     if (task === 'edit') return runEdit(payload, opts, token, b);
+    if (task === 'create') return runCreate(payload, opts, token, b);
     throw new Error('AlixoAI : tâche inconnue « ' + task + ' »');
   }
   /* délai de garde : processeur nettement plus lent que la carte graphique (et premier chargement du modèle compris) */
@@ -545,6 +568,19 @@ ${example || ''}`.trim();
     const r = await engineChat({ task: 'edit', system: editSystem(p.kind, p.commands || '', p.example || ''), user, maxTokens, temperature: 0, timeoutMs: slow(120000), token, quiet: true, onToken: t => { if (opts.onToken) { try { opts.onToken(clean(t)); } catch { /* interface */ } } } });
     if (!r.ok) throw fail(r);
     return { lines: parse.edit(r.raw), raw: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model };
+  }
+  /* 1.55 — création : { as, prompt, commands, example, source?: { title, text } } → { lines[] (commandes brutes), raw } ;
+     onToken(texte cumulé) pendant la réponse : js/cocotools.js applique les commandes au fur et à mesure */
+  async function runCreate(p, opts, token, b) {
+    const prompt = String(p.prompt || '').replace(/\s+/g, ' ').trim().slice(0, 600);
+    const src = p.source && String(p.source.text || '').trim() ? p.source : null;
+    const srcText = src ? shortenTo(src.text, Math.min(b.createDoc || 4000, Math.floor(ctxChars() * 0.45))) : '';
+    const user = `Demande : « ${prompt || 'un document de révision'} »${src ? `\n\nCours « ${String(src.title || 'Sans titre').slice(0, 120)} » :\n${srcText}` : ''}`;
+    /* le processus du moteur (engine/llm-host.js) n'accepte que des tâches connues : la création voyage sous l'étiquette « edit »
+       (même nature : des commandes du registre fermé) — l'étiquette ne sert qu'à cette liste blanche */
+    const r = await engineChat({ task: 'create', system: createSystem(p.as, p.commands || '', p.example || '', !!src), user, maxTokens: b.create || 900, temperature: 0.4, timeoutMs: slow(300000), token, quiet: true, onToken: t => { if (opts.onToken) { try { opts.onToken(clean(t)); } catch { /* interface */ } } } });
+    if (!r.ok) throw fail(r);
+    return { lines: parse.edit(r.raw), raw: clean(r.raw).trim(), tokIn: r.tokIn, tokOut: r.tokOut, model: r.model, finish: r.finish };
   }
   function cancel(token) { const l = L(); if (l && l.cancel) l.cancel(token); }
   const newToken = () => 'ai' + (++seq);

@@ -1299,7 +1299,8 @@ window.AlixoBoard = (() => {
         const r = rectOf(it);
         drag = { kind: 'resize', id: it.id, sx: e.clientX, sy: e.clientY, w: it.w, h: r.h, auto: !(it.h > 0), moved: false };
       } else if (pan) {
-        drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y };
+        /* 1.55 : on retient si le clic part du vide (clic gauche, sans Maj) : sans déplacement, il désélectionnera tout */
+        drag = { kind: 'pan', sx: e.clientX, sy: e.clientY, vx: view.x, vy: view.y, bg: e.button === 0 && !itemEl && !arrowEl && !e.shiftKey };
         st.classList.add('panning');
       } else if (itemEl) {
         const id = itemEl.dataset.id;
@@ -1331,7 +1332,7 @@ window.AlixoBoard = (() => {
     st.addEventListener('pointermove', e => {
       if (!drag) return;
       const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
-      if (drag.kind === 'pan') { view.x = drag.vx + dx; view.y = drag.vy + dy; applyView(); renderSelbar(); return; }
+      if (drag.kind === 'pan') { if (!drag.moved && Math.hypot(dx, dy) >= 3) drag.moved = true; view.x = drag.vx + dx; view.y = drag.vy + dy; applyView(); renderSelbar(); return; }
       if (drag.kind === 'move') {
         if (!drag.moved) { if (Math.hypot(dx, dy) < 3) return; drag.moved = true; pushHist(); renderSelbar(); }
         for (const [id, s] of drag.start) {
@@ -1376,6 +1377,8 @@ window.AlixoBoard = (() => {
       const dg = drag; drag = null;
       st.classList.remove('panning');
       if (dg.kind === 'pan') saveViewSoon();
+      /* 1.55 : clic dans le vide sans déplacement (< 3 px), quel que soit l'outil = désélection */
+      if (dg.kind === 'pan' && dg.bg && !dg.moved && e && e.type === 'pointerup' && Math.hypot(e.clientX - dg.sx, e.clientY - dg.sy) < 3 && sel.size) { sel = new Set(); renderSelClasses(); }
       if ((dg.kind === 'move' || dg.kind === 'resize') && dg.moved) { commit(); if (dg.kind === 'resize') renderItems(); }
       if (dg.kind === 'rubber') $('#bd-rubber').hidden = true;
       renderSelbar(); renderBar();

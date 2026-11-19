@@ -1,0 +1,124 @@
+/* ============================================================
+   1.55 : Explorateur de fichiers réutilisable (js/explorer.js) — fenêtre centrale (openDialog, .xp-dlg)
+   Volet gauche : arbre des dossiers ; zone droite : liste en colonnes (Nom, Type, Modifié / Contenu).
+   Variables de styles.css uniquement (refonte.css n'est pas chargé par mobile.html).
+   ============================================================ */
+.dlg-card.xp-dlg { width: min(940px, 94vw); height: min(640px, 90vh); max-height: none; }
+.xp-dlg .set-head { padding: 18px 22px 12px; }
+.xp-dlg .set-htitle { font-size: 19px; }
+.xp-dlg .dlg-body { padding: 0; overflow: hidden; display: flex; }
+.xp-dlg .dlg-foot { padding: 10px 18px 12px; gap: 8px; flex-wrap: nowrap; }
+.xp-dlg .dlg-foot .cta { padding: 8px 14px; font-size: 13.5px; white-space: nowrap; }
+.xp-dlg .dlg-foot .cta[disabled] { opacity: .45; cursor: default; filter: none; }
+
+.xp { flex: 1; min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+.xp svg { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* ---- barre : retour, parent, fil d'Ariane, recherche ---- */
+.xp-bar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.xp-nav { display: inline-flex; gap: 2px; flex: none; }
+.xp-nbtn { width: 30px; height: 30px; border-radius: 7px; display: grid; place-items: center; color: var(--ink-2); }
+.xp-nbtn svg { width: 17px; height: 17px; }
+.xp-nbtn:hover:not([disabled]) { background: var(--hover); color: var(--ink); }
+.xp-nbtn[disabled] { opacity: .35; cursor: default; }
+.xp-nbtn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.xp-crumbs { flex: 1; min-width: 0; display: flex; align-items: center; gap: 2px; overflow: hidden; white-space: nowrap; font-size: 13px; padding: 0 2px; }
+.xp-crumb { display: inline-flex; align-items: center; gap: 6px; padding: 4px 7px; border-radius: 6px; color: var(--ink-2); min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto; }
+button.xp-crumb:hover { background: var(--hover); color: var(--ink); }
+.xp-crumb.last { color: var(--ink); font-weight: 600; flex: 0 0 auto; max-width: 60%; }
+.xp-crumb svg, .xp-tlab .xp-ico { width: 15px; height: 15px; flex: none; }
+.xp-sep { color: var(--ink-3); flex: none; padding: 0 1px; }
+.xp-crumb-q { color: var(--ink-2); font-weight: 600; overflow: hidden; text-overflow: ellipsis; padding: 4px 7px; }
+.xp-search { flex: 0 1 260px; min-width: 150px; display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--ink-3); transition: border-color .12s, box-shadow .12s; }
+.xp-search:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.xp-search svg { width: 15px; height: 15px; flex: none; }
+#xpov .xp-search input.xp-q, #xpov .xp-search input.xp-q:focus, .xp-search input.xp-q { flex: 1; min-width: 0; max-width: none; border: none; background: transparent; outline: none; box-shadow: none; padding: 0; margin: 0; font: inherit; font-size: 13px; color: var(--ink); }
+
+/* ---- corps : arbre + liste ---- */
+.xp-main { flex: 1; min-height: 0; display: flex; }
+.xp-tree { width: 236px; flex: none; overflow-y: auto; padding: 8px 6px 12px; background: var(--bg); border-right: 1px solid var(--border); }
+.xp-trow { display: flex; align-items: center; gap: 0; padding-left: calc(var(--d, 0) * 12px); border-radius: 7px; }
+.xp-trow:hover { background: var(--hover); }
+.xp-trow.on { background: var(--accent-soft); }
+.xp-trow.on .xp-tname { color: var(--accent-ink); font-weight: 600; }
+.xp-trow.off { opacity: .45; }
+.xp-caret { width: 20px; height: 26px; flex: none; display: grid; place-items: center; color: var(--ink-3); border-radius: 5px; }
+.xp-caret svg { width: 12px; height: 12px; stroke-width: 2.2; transition: transform .12s; }
+.xp-caret.open svg { transform: rotate(90deg); }
+.xp-caret:hover { color: var(--ink); }
+.xp-tlab { flex: 1; min-width: 0; display: flex; align-items: center; gap: 7px; height: 28px; padding: 0 8px 0 2px; font-size: 13px; color: var(--ink); text-align: left; border-radius: 6px; }
+.xp-tlab[disabled] { cursor: not-allowed; }
+.xp-tlab:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.xp-tname { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-fi { display: inline-grid; place-items: center; flex: none; color: var(--mc, var(--tint)); }
+.xp-fi .ficon, .xp-fi .ficon-ico { width: 17px; height: 17px; color: var(--mc, var(--tint)); }
+.xp-fi .ficon path { fill: color-mix(in srgb, var(--mc, var(--tint)) 18%, transparent); stroke: var(--mc, var(--tint)); }
+
+.xp-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--surface); }
+.xp-cols, .xp-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 128px; align-items: center; gap: 12px; padding: 0 14px; }
+.xp-cols { height: 30px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1px solid var(--border); }
+.xp-items { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 6px; outline: none; }
+.xp-items:focus-visible { box-shadow: inset 0 0 0 2px var(--accent-soft); }
+.xp-row { min-height: 38px; padding: 4px 8px; border-radius: 7px; cursor: default; user-select: none; font-size: 13px; }
+.xp-row:hover { background: var(--hover); }
+.xp-row.sel { background: var(--accent-soft); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 40%, transparent); }
+.xp-items:focus .xp-row.sel { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+.xp-row.off { opacity: .42; cursor: not-allowed; }
+.xp-row.dim .xp-ntxt b { color: var(--ink-3); font-weight: 500; }
+.xp-name { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.xp-name .xp-fi .ficon, .xp-name .xp-fi .ficon-ico { width: 20px; height: 20px; }
+.xp-ntxt { min-width: 0; display: flex; flex-direction: column; }
+.xp-ntxt b { font-weight: 500; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-ntxt small { font-size: 11.5px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-di { display: inline-grid; place-items: center; width: 20px; height: 20px; flex: none; color: var(--ink-3); }
+.xp-di .dicon { width: 18px; height: 18px; }
+.xp-di.t-cours { color: var(--stor-cours); }
+.xp-di.t-slides { color: var(--stor-slides); }
+.xp-di.t-sheet { color: var(--stor-sheet); }
+.xp-di.t-board { color: var(--stor-board); }
+.xp-di.t-quiz { color: var(--stor-quiz); }
+.xp-type, .xp-info { font-size: 12px; color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.xp-cur { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--accent-ink); background: var(--accent-soft); border-radius: 999px; padding: 2px 7px; }
+.xp-empty { height: 100%; min-height: 160px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--ink-3); font-size: 13px; text-align: center; padding: 20px; }
+.xp-empty svg { width: 44px; height: 44px; stroke-width: 1.5; opacity: .7; }
+.xp-status { display: flex; align-items: center; gap: 12px; padding: 6px 14px; border-top: 1px solid var(--border); font-size: 11.5px; color: var(--ink-3); }
+.xp-keys { margin-left: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---- pied : sélection ---- */
+.xp-sel { min-width: 0; flex: 1 1 auto; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); overflow: hidden; white-space: nowrap; }
+.xp-sel b { font-weight: 600; color: var(--ink); overflow: hidden; text-overflow: ellipsis; }
+.xp-sel-lab { flex: none; font-size: 10.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.xp-sel-path { overflow: hidden; text-overflow: ellipsis; }
+.xp-sel-hint { color: var(--ink-3); overflow: hidden; text-overflow: ellipsis; }
+.xp-dlg .dlg-foot .dlg-spacer { flex: 0 0 0; }
+
+/* ---- sélecteur de dossier (agenda) : bouton qui ouvre l'explorateur ---- */
+.fpick.xp-field { display: flex; align-items: stretch; gap: 6px; }
+.fpick.xp-field .fpick-btn { flex: 1; min-width: 0; }
+.fpick.xp-field .fpick-btn svg { width: 15px; height: 15px; flex: none; color: var(--ink-3); }
+.fpick.xp-field .fpick-btn:hover:not([disabled]) { border-color: var(--ink-3); }
+.fpick.xp-field .fpick-lab.none { color: var(--ink-3); }
+.fpick-clear { width: 32px; flex: none; display: grid; place-items: center; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--ink-3); }
+.fpick-clear svg { width: 14px; height: 14px; }
+.fpick-clear:hover:not([disabled]) { color: var(--danger); border-color: var(--ink-3); }
+.fpick-clear[hidden], .fpick-btn[disabled] + .fpick-clear { display: none; }
+
+/* 1.55 : bouton « Dossiers » (petits écrans) — l'arbre s'ouvre par-dessus la liste */
+.xp-treebtn { display: none; }
+.xp-treebtn span { font-size: 12.5px; font-weight: 600; }
+@media (max-width: 700px) {
+  .dlg-card.xp-dlg { width: 100vw; height: auto; max-height: 100%; min-height: min(520px, 100%); }
+  .xp-main { position: relative; min-height: 260px; }
+  .xp-tree { display: none; }
+  .xp.tree-open .xp-tree { display: block; position: absolute; inset: 0 auto 0 0; width: min(300px, 86%); z-index: 2; box-shadow: 6px 0 24px rgba(0, 0, 0, .18); }
+  .xp-treebtn { display: inline-flex; width: auto; gap: 5px; padding: 0 9px; border: 1px solid var(--border); }
+  .xp.tree-open .xp-treebtn { background: var(--accent-soft); color: var(--accent-ink); border-color: transparent; }
+  .xp-empty { min-height: 120px; height: auto; }
+  .xp-bar { flex-wrap: wrap; gap: 8px; padding: 8px 10px; }
+  .xp-search { flex: 1 1 100%; order: 3; }
+  .xp-cols, .xp-row { grid-template-columns: minmax(0, 1fr) 92px; }
+  .xp-cols span:nth-child(2), .xp-row .xp-type { display: none; }
+  .xp-keys { display: none; }
+  .xp-dlg .dlg-foot { flex-wrap: wrap; }
+  .xp-sel { flex-basis: 100%; }
+}

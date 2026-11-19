@@ -43,6 +43,14 @@ window.AlixoSync = (() => {
     try { await imgsRef.doc(id).set({ ts: Date.now(), data }); }
     catch (err) { console.error('Sync (image) :', err); }
   }
+  /* 1.55 : suppression d'une image du compte (ancienne bannière de dossier) ; avant le démarrage, mise en file */
+  const pendingDels = [];
+  async function deleteImage(id) {
+    if (!id) return;
+    if (!started) { pendingDels.push(id); return; }
+    try { await imgsRef.doc(id).delete(); }
+    catch (err) { console.error('Sync (image) :', err); }
+  }
   /* 1.54 : seule une data URL image/* en base64 est acceptée (défense contre une donnée corrompue ou hostile dans le nuage) */
   const isImageDataUrl = v => typeof v === 'string' && v.length < 40 * 1024 * 1024 && /^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(v);
   async function fetchImage(id) {
@@ -171,6 +179,7 @@ window.AlixoSync = (() => {
       started = true;
       push();          // pousse ce que le nuage n'a pas
       while (pendingImgs.length) { const [id, data] = pendingImgs.shift(); pushImage(id, data); }
+      while (pendingDels.length) deleteImage(pendingDels.shift());
       listen();
       if (app.maybeOnboard) app.maybeOnboard();   // questionnaire de bienvenue si profil absent
     } catch (err) {
@@ -178,6 +187,7 @@ window.AlixoSync = (() => {
       statusTxt = 'hors ligne';
       started = true;
       while (pendingImgs.length) { const [id, data] = pendingImgs.shift(); pushImage(id, data); }
+      while (pendingDels.length) deleteImage(pendingDels.shift());
       listen();
       if (app.maybeOnboard) app.maybeOnboard();
     }
@@ -188,6 +198,7 @@ window.AlixoSync = (() => {
     onLocalSave: schedulePush,
     status: () => statusTxt,
     pushImage,
-    fetchImage
+    fetchImage,
+    deleteImage
   };
 })();

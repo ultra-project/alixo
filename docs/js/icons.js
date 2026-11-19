@@ -145,6 +145,35 @@
     'Divers': ['star', 'heart', 'flame', 'check-circle', 'pin', 'target', 'trophy', 'rocket', 'zap', 'sparkles', 'puzzle', 'map', 'clock', 'calendar', 'home', 'gift', 'coffee', 'apple', 'paw', 'flower', 'sun', 'moon', 'bell', 'user', 'activity', 'settings']
   };
 
+  /* 1.55 : mots-clés français de la recherche d'icônes (fenêtre « Modifier le dossier », js/folderedit.js) */
+  const KEYWORDS = {
+    'book': 'livre manuel cours lecture', 'book-open': 'livre ouvert lecture cours', 'pencil': 'crayon écrire notes', 'pen-line': 'stylo écriture rédaction',
+    'graduation-cap': 'diplôme université licence master études', 'school': 'école lycée établissement', 'ruler': 'règle géométrie mesure',
+    'calculator': 'calculatrice calcul maths comptabilité', 'folder': 'dossier classeur', 'folder-open': 'dossier ouvert', 'archive': 'archives boîte rangement',
+    'clipboard': 'presse-papiers liste fiche', 'paperclip': 'trombone pièce jointe', 'bookmark': 'marque-page signet', 'file-text': 'document fichier texte',
+    'layers': 'couches calques niveaux', 'chart-bar': 'graphique histogramme statistiques', 'chart-line': 'courbe graphique statistiques analyse',
+    'receipt': 'reçu facture ticket', 'tag': 'étiquette prix',
+    'scale': 'balance justice droit tribunal', 'landmark': 'institution monument état banque constitution', 'scroll': 'parchemin texte loi histoire',
+    'lock': 'cadenas sécurité privé', 'gavel': 'marteau juge tribunal procès', 'vote': 'vote élection urne politique', 'shield': 'bouclier protection défense',
+    'shield-check': 'sécurité conformité protection', 'users': 'personnes groupe famille société', 'feather': 'plume écriture littérature', 'flag': 'drapeau pays nation',
+    'key': 'clé accès', 'coins': 'pièces argent monnaie', 'banknote': 'billet argent monnaie', 'euro': 'euro monnaie finance',
+    'trending-up': 'hausse croissance tendance', 'chart-down': 'baisse récession crise', 'factory': 'usine industrie production macroéconomie',
+    'cart': 'panier commerce consommation achat', 'credit-card': 'carte bancaire paiement', 'package': 'colis paquet logistique', 'truck': 'camion transport logistique',
+    'globe': 'monde international géographie mondialisation', 'building': 'immeuble entreprise ville', 'briefcase': 'mallette travail emploi gestion stage',
+    'percent': 'pourcentage taux intérêt', 'wheat': 'blé agriculture', 'microscope': 'microscope biologie laboratoire', 'flask': 'fiole chimie laboratoire',
+    'dna': 'adn génétique biologie', 'telescope': 'télescope astronomie', 'magnet': 'aimant physique', 'atom': 'atome physique chimie', 'battery': 'batterie énergie électricité',
+    'lightbulb': 'ampoule idée', 'brain': 'cerveau psychologie neurosciences', 'thermometer': 'thermomètre température médecine', 'leaf': 'feuille nature écologie',
+    'bug': 'insecte virus informatique', 'snowflake': 'flocon neige climat', 'planet': 'planète espace astronomie', 'mountain': 'montagne géographie géologie',
+    'compass': 'boussole orientation géographie', 'sigma': 'somme maths statistiques', 'pi': 'pi maths géométrie', 'infinity': 'infini maths analyse', 'function': 'fonction maths analyse',
+    'languages': 'langues traduction anglais espagnol', 'message-circle': 'message discussion', 'quote': 'citation guillemets', 'newspaper': 'journal presse actualité',
+    'megaphone': 'mégaphone communication annonce', 'film': 'film cinéma vidéo', 'mic': 'micro radio oral podcast', 'camera': 'appareil photo image', 'smartphone': 'téléphone mobile',
+    'music': 'musique son', 'palette': 'palette art peinture dessin', 'star': 'étoile favori', 'heart': 'cœur santé amour', 'flame': 'flamme feu', 'check-circle': 'validé fait',
+    'pin': 'épingle', 'target': 'cible objectif', 'trophy': 'trophée concours réussite', 'rocket': 'fusée projet lancement', 'zap': 'éclair énergie', 'sparkles': 'étincelles nouveau',
+    'puzzle': 'puzzle jeu logique', 'map': 'carte géographie', 'clock': 'horloge heure temps', 'calendar': 'calendrier agenda date', 'home': 'maison accueil',
+    'gift': 'cadeau', 'coffee': 'café pause', 'apple': 'pomme nutrition', 'paw': 'patte animal vétérinaire', 'flower': 'fleur nature', 'sun': 'soleil été', 'moon': 'lune nuit',
+    'bell': 'cloche rappel', 'user': 'personne profil', 'activity': 'activité sport santé', 'settings': 'réglages paramètres engrenage technique'
+  };
+
   /* anciens émojis de dossiers → icônes équivalentes */
   const EMOJI_MAP = {
     '⚖️': 'scale', '📚': 'book', '📖': 'book-open', '📝': 'pencil', '🎓': 'graduation-cap', '✏️': 'pencil', '📐': 'ruler', '📏': 'ruler',
@@ -166,5 +195,5 @@
     return `<svg class="ico ${cls}" viewBox="0 0 24 24" aria-hidden="true">${body}</svg>`;
   }
 
-  window.AlixoIcons = { ICONS, CATEGORIES, EMOJI_MAP, svg };
+  window.AlixoIcons = { ICONS, CATEGORIES, EMOJI_MAP, KEYWORDS, svg };   // 1.55 : + KEYWORDS
 })();

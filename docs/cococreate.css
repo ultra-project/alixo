@@ -1,0 +1,76 @@
+/* ============================================================
+   1.55 : Coco crée des documents (js/cococreate.js) — bouton « IA » de la bibliothèque et barre de commande centrale
+   Accent violet-bleu (--cc-a / --cc-b), distinct du bleu plein de « Nouveau ».
+   ============================================================ */
+:root { --cc-a: #7c5cff; --cc-b: #4f66e0; --cc-ink: #5b3fd6; --cc-soft: rgba(124, 92, 255, .12); }
+html[data-theme="dark"] { --cc-ink: #b9a8ff; --cc-soft: rgba(124, 92, 255, .2); }
+.cc-sr { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- bouton « IA » (à droite de « Nouveau ») ---------- */
+.lib-actions .cta.lib-ai, #btn-ai-new.lib-ai {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0 14px 0 11px; border-radius: 999px; font-weight: 650;
+  color: var(--cc-ink); border: 1px solid color-mix(in srgb, var(--cc-a) 40%, transparent);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--cc-a) 16%, transparent), color-mix(in srgb, var(--cc-b) 10%, transparent));
+  transition: background .15s, box-shadow .15s, transform .15s;
+}
+#btn-ai-new.lib-ai svg { width: 16px; height: 16px; fill: currentColor; stroke: none; }
+#btn-ai-new.lib-ai:hover { filter: none; background: linear-gradient(135deg, color-mix(in srgb, var(--cc-a) 26%, transparent), color-mix(in srgb, var(--cc-b) 18%, transparent)); box-shadow: 0 2px 10px color-mix(in srgb, var(--cc-a) 25%, transparent); }
+#btn-ai-new.lib-ai:active { transform: scale(.97); }
+#btn-ai-new.lib-ai:focus-visible { outline: 2px solid var(--cc-a); outline-offset: 2px; }
+
+/* ---------- barre de commande ---------- */
+.cc-ov {
+  position: fixed; inset: 0; z-index: 2600; display: flex; justify-content: center; align-items: flex-start; padding: 14vh 16px 16px;
+  /* 1.55 : même voile que les fenêtres centrales (modals.css : --modal-veil, --modal-blur) */
+  background: var(--modal-veil, rgba(8, 10, 20, .45)); backdrop-filter: blur(var(--modal-blur, 6px)); -webkit-backdrop-filter: blur(var(--modal-blur, 6px));
+  opacity: 0; transition: opacity .16s ease;
+}
+.cc-ov.in { opacity: 1; }
+.cc-pal {
+  width: min(700px, 100%); max-height: calc(100vh - 14vh - 24px); overflow: auto; border-radius: 20px; background: var(--surface); color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--cc-a) 28%, var(--border));
+  box-shadow: 0 24px 70px rgba(20, 16, 60, .28), 0 0 0 6px color-mix(in srgb, var(--cc-a) 8%, transparent);
+  transform: translateY(-8px) scale(.985); transition: transform .18s cubic-bezier(.2, .8, .3, 1);
+}
+.cc-ov.in .cc-pal { transform: none; }
+.cc-pal.shake { animation: cc-shake .32s; }
+@keyframes cc-shake { 25% { transform: translateX(-6px); } 50% { transform: translateX(5px); } 75% { transform: translateX(-3px); } }
+.cc-form { display: flex; flex-direction: column; }
+.cc-inrow { display: flex; align-items: flex-start; gap: 12px; padding: 18px 18px 14px 20px; border-bottom: 1px solid var(--border); }
+.cc-spark { flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, var(--cc-a), var(--cc-b)); box-shadow: 0 4px 14px color-mix(in srgb, var(--cc-a) 40%, transparent); }
+.cc-spark svg { width: 20px; height: 20px; fill: currentColor; }
+.cc-input { flex: 1; min-width: 0; resize: none; border: 0; outline: 0; background: transparent; color: var(--ink); font: inherit; font-size: 20px; line-height: 1.4; padding: 5px 0; max-height: 160px; }
+.cc-input::placeholder { color: var(--ink-3); }
+.cc-esc { flex: none; margin-top: 7px; font: 600 11px var(--font-ui); color: var(--ink-3); border: 1px solid var(--border); border-radius: 6px; padding: 3px 7px; cursor: pointer; background: var(--surface-2); }
+.cc-esc:hover { color: var(--ink); }
+.cc-esc:focus-visible { outline: 2px solid var(--cc-a); outline-offset: 2px; }
+.cc-types { display: flex; flex-wrap: wrap; gap: 6px; padding: 14px 18px 4px 20px; }
+.cc-type { display: inline-flex; align-items: center; gap: 6px; padding: 6px 11px 6px 9px; border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); font: 550 13px var(--font-ui); cursor: pointer; transition: background .12s, border-color .12s, color .12s; }
+.cc-type svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.cc-type:hover { background: var(--hover); color: var(--ink); }
+.cc-type.on { color: var(--cc-ink); border-color: color-mix(in srgb, var(--cc-a) 55%, transparent); background: var(--cc-soft); }
+.cc-type:focus-visible, .cc-sug:focus-visible, .cc-go:focus-visible, .cc-srcsel:focus-visible, .cc-nbtn:focus-visible { outline: 2px solid var(--cc-a); outline-offset: 2px; }
+.cc-src { display: flex; align-items: center; gap: 10px; padding: 10px 20px 2px; font-size: 13px; color: var(--ink-3); }
+.cc-srcsel { min-width: 0; max-width: 360px; flex: 1; font: inherit; font-size: 13px; color: var(--ink); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; }
+.cc-sugs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 12px 18px 14px 20px; }
+.cc-sugh { font-size: 11px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--ink-3); margin-right: 4px; }
+.cc-sug { border: 0; background: var(--surface-2); color: var(--ink-2); border-radius: 8px; padding: 6px 10px; font: 13px var(--font-ui); cursor: pointer; text-align: left; }
+.cc-sug:hover { background: var(--cc-soft); color: var(--cc-ink); }
+.cc-note { margin: 0 18px 14px; padding: 14px 16px; border-radius: 14px; background: color-mix(in srgb, var(--cc-a) 7%, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--cc-a) 22%, var(--border)); font-size: 13.5px; line-height: 1.5; }
+.cc-note b { display: block; color: var(--ink); margin-bottom: 3px; }
+.cc-note p { color: var(--ink-2); margin: 0 0 10px; }
+.cc-nbtn { display: inline-flex; align-items: center; margin: 0 8px 0 0; padding: 7px 13px; border-radius: 9px; font: 600 13px var(--font-ui); border: 1px solid var(--border); background: var(--surface); color: var(--ink); cursor: pointer; text-decoration: none; }
+.cc-nbtn.primary { color: #fff; border-color: transparent; background: linear-gradient(135deg, var(--cc-a), var(--cc-b)); }
+.cc-foot { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 20px; border-top: 1px solid var(--border); background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+.cc-hint { flex: 1; font-size: 12px; color: var(--ink-3); }
+.cc-hint kbd { font: 600 11px var(--font-ui); border: 1px solid var(--border); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; background: var(--surface); color: var(--ink-2); }
+.cc-plus { font-size: 11px; font-weight: 700; color: var(--cc-ink); background: var(--cc-soft); padding: 3px 8px; border-radius: 999px; }
+.cc-go { display: inline-flex; align-items: center; gap: 7px; padding: 9px 18px 9px 14px; border: 0; border-radius: 11px; color: #fff; font: 650 14px var(--font-ui); cursor: pointer; background: linear-gradient(135deg, var(--cc-a), var(--cc-b)); box-shadow: 0 4px 14px color-mix(in srgb, var(--cc-a) 35%, transparent); transition: filter .12s, opacity .12s; }
+.cc-go svg { width: 16px; height: 16px; fill: currentColor; }
+.cc-go:hover { filter: brightness(1.08); }
+.cc-go:disabled { opacity: .45; cursor: default; box-shadow: none; filter: none; }
+.cc-go.wait svg { animation: cc-spin 1s linear infinite; }
+@keyframes cc-spin { to { transform: rotate(360deg); } }
+.cc-legal { margin: 0; padding: 0 20px 12px; font-size: 11px; color: var(--ink-3); background: color-mix(in srgb, var(--surface-2) 55%, var(--surface)); }
+@media (max-width: 600px) { .cc-ov { padding-top: 8vh; } .cc-input { font-size: 17px; } .cc-hint { display: none; } }
+@media (prefers-reduced-motion: reduce) { .cc-ov, .cc-pal { transition: none; } .cc-pal.shake, .cc-go.wait svg { animation: none; } }

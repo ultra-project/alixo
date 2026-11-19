@@ -1,0 +1,152 @@
+/* ============================================================
+   1.55 : bannières des cartes de cours et fenêtre « Modifier le dossier » (js/folderedit.js)
+   Chargé après refonte.css. Couleurs par variables (--surface, --ink…) : clair et sombre.
+   ============================================================ */
+
+/* ---------------- bannière d'une carte ---------------- */
+.fc-banner {
+  --fb-base: color-mix(in srgb, var(--bc, #55575e) 20%, var(--surface));
+  --fb-ink: var(--bc, #55575e);
+  display: block; background-color: var(--bc, #55575e);
+}
+html[data-theme="dark"] .fc-banner { --fb-base: color-mix(in srgb, var(--bc, #55575e) 26%, var(--surface)); --fb-ink: color-mix(in srgb, var(--bc, #55575e) 70%, #ffffff); }
+.fc-banner.fb-dots { background-color: var(--fb-base); background-image: radial-gradient(circle, var(--fb-ink) 1.3px, transparent 1.9px); background-size: 13px 13px; background-position: 4px 4px; }
+.fc-banner.fb-stripes { background-color: var(--fb-base); background-image: repeating-linear-gradient(90deg, var(--fb-ink) 0 2px, transparent 2px 10px); }
+.fc-banner.fb-grid { background-color: var(--fb-base); background-image: linear-gradient(var(--fb-ink) 1px, transparent 1px), linear-gradient(90deg, var(--fb-ink) 1px, transparent 1px); background-size: 14px 14px; background-position: -1px -1px; }
+.fc-banner.fb-diag { background-color: var(--fb-base); background-image: repeating-linear-gradient(135deg, var(--fb-ink) 0 2px, transparent 2px 11px); }
+/* image : fond neutre pendant le chargement ; sans Alixo+ (ou image introuvable) : motif neutre hachuré */
+.fc-banner.fb-img { background-color: var(--surface-2); background-size: cover; background-position: center; background-repeat: no-repeat; }
+.fc-banner.fb-neutral, .fc-banner.fb-img.fb-missing {
+  background-color: var(--surface-2); background-size: auto;
+  background-image: repeating-linear-gradient(135deg, color-mix(in srgb, var(--ink-3) 16%, transparent) 0 8px, transparent 8px 16px);
+}
+
+/* la carte : la bannière prend toute la largeur, collée aux bords */
+.folder-card.has-banner { overflow: hidden; }
+.folder-card > .fc-banner { flex: 0 0 calc(100% + 36px); height: 72px; margin: -18px -18px 4px; border-bottom: 1px solid var(--border); }
+.folder-card.has-banner .fc-body h3 { padding-right: 0; }   /* les boutons renommer / supprimer passent sur la bannière */
+.folder-card.has-banner .fc-act {
+  background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--ink-2);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .18);
+}
+.folder-card.has-banner .fc-act:hover { background: var(--surface); color: var(--ink); }
+.folder-card.has-banner:focus-visible .fc-act { opacity: 1; }
+
+/* ---------------- fenêtre ---------------- */
+.dlg-card.fe-dlg { width: min(580px, 94vw); max-height: min(860px, 94vh); }
+.fe-dlg .set-head { padding: 20px 24px 6px; border-bottom: none; align-items: center; }
+.fe-dlg .set-htitle { font-size: 18px; font-weight: 650; }
+.fe-dlg .dlg-body { padding: 6px 24px 18px; }
+.fe-dlg .dlg-foot { padding: 14px 24px 18px; }
+.fe-dlg .dlg-foot .cta { min-width: 96px; height: 40px; padding: 0 18px; border-radius: 10px; font-size: 14px; }
+.fe-dlg .dlg-foot .fe-ok { background: var(--accent); color: #fff; }
+
+.fe-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--ink-3); margin: 18px 0 8px; }
+.fe-label:first-child { margin-top: 6px; }
+.fe-hint { font-size: 12.5px; color: var(--ink-3); margin: 2px 0 0; line-height: 1.45; }
+
+/* aperçu : la vraie carte, sans interaction */
+.fe-preview { pointer-events: none; }
+.fe-preview .folder-card.fe-card { min-height: 0; width: 100%; cursor: default; border-color: var(--border); background: var(--surface); }
+html[data-theme="dark"] .fe-preview .folder-card.fe-card { background: color-mix(in srgb, var(--surface) 60%, var(--bg)); }
+.fe-preview .folder-card > .fc-banner { height: 56px; }
+.fe-preview .fc-body { justify-content: center; align-self: center; }
+.fe-preview .fc-body h3 { padding-right: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fe-preview .fe-ph { color: var(--ink-3); font-weight: 500; }
+
+/* nom + professeur (préfixe #folderedit : passe devant la règle générique « :is(#popover, .po-scope) input ») */
+.fe-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 18px; }
+.fe-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.fe-field label { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+#folderedit .fe-field input { flex: none; width: 100%; max-width: none; height: 42px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-size: 14px; }
+#folderedit .fe-field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+#folderedit .fe-field input[aria-invalid="true"] { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 22%, transparent); }
+.fe-field small { font-size: 11.5px; color: var(--ink-3); }
+.fe-err { font-size: 12px; color: var(--danger); }
+@media (max-width: 520px) { .fe-row2 { grid-template-columns: 1fr; } }
+
+/* onglets segmentés de la bannière */
+.fe-seg { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 4px; border-radius: 11px; background: var(--surface-2); }
+.fe-seg button { height: 36px; border-radius: 8px; font-size: 13.5px; font-weight: 550; color: var(--ink-2); transition: background .12s, color .12s; }
+.fe-seg button:hover { color: var(--ink); }
+.fe-seg button.on { background: var(--surface); color: var(--ink); font-weight: 650; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+html[data-theme="dark"] .fe-seg button.on { background: color-mix(in srgb, var(--ink) 12%, var(--surface-2)); box-shadow: none; }
+.fe-seg button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fe-bpanel { margin-top: 12px; min-height: 34px; }
+
+/* pastilles de couleur */
+.fe-swatches { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.fe-sw {
+  position: relative; width: 30px; height: 30px; border-radius: 50%; flex: none; cursor: pointer;
+  background: var(--sw); border: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+  transition: transform .1s;
+}
+.fe-sw:hover { transform: scale(1.08); }
+.fe-sw.sel { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--ink); }
+.fe-sw:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.fe-sw-custom { display: grid; place-items: center; background: transparent; border: 1.5px dashed var(--ink-3); color: var(--ink-2); }
+.fe-sw-custom svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.fe-sw-custom.picked { background: var(--sw); border-style: solid; border-color: color-mix(in srgb, var(--ink) 12%, transparent); color: #fff; }
+.fe-sw-custom.picked svg { filter: drop-shadow(0 0 1px rgba(0, 0, 0, .6)); }
+.fe-sw-custom input[type="color"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; border: none; padding: 0; }
+.fe-sw-custom:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 1.55 : aperçu de l'onglet Image sans image choisie */
+.fe-preview .folder-card > .fc-banner.fe-noimg { display: grid; place-items: center; background: transparent; border: 1.5px dashed var(--ink-3); border-radius: 8px 8px 0 0; color: var(--ink-3); font-size: 12px; font-weight: 600; }
+
+/* motifs */
+.fe-patterns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.fe-pat { display: flex; flex-direction: column; gap: 6px; padding: 6px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); text-align: center; }
+.fe-pat .fc-banner { height: 34px; border-radius: 6px; }
+.fe-pat b { font-size: 12px; font-weight: 550; color: var(--ink-2); }
+.fe-pat:hover { border-color: var(--ink-3); }
+.fe-pat.sel { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+.fe-pat.sel b { color: var(--ink); }
+
+/* image (Alixo+) */
+.fe-img { display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 12px; border: 1.5px dashed var(--border); background: var(--bg); }
+.fe-img.has { border-style: solid; }
+.fe-img.over { border-color: var(--accent); background: var(--accent-soft); }
+.fe-img-ico { width: 44px; height: 44px; flex: none; border-radius: 10px; display: grid; place-items: center; background: var(--surface-2); color: var(--ink-2); }
+.fe-img-ico svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.fe-img-thumb { width: 96px; height: 44px; flex: none; border-radius: 8px; background: var(--surface-2) center / cover no-repeat; }
+.fe-img-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fe-img-txt b { font-size: 13.5px; font-weight: 600; color: var(--ink); }
+.fe-img-txt span { font-size: 12px; color: var(--ink-3); line-height: 1.4; }
+.fe-img-btns { display: flex; gap: 6px; flex: none; }
+.fe-img-btns .cta { padding: 7px 12px; font-size: 13px; border-radius: 8px; }
+
+/* invitation Alixo+ (onglet Image sans abonnement) */
+.fe-plus {
+  display: flex; align-items: center; gap: 14px; padding: 14px; border-radius: 12px;
+  border: 1px solid color-mix(in srgb, #d9a441 40%, var(--border));
+  background: color-mix(in srgb, #d9a441 9%, var(--surface));
+}
+.fe-plus-ico { width: 40px; height: 40px; flex: none; border-radius: 10px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #b3762a, #d9a441); }
+.fe-plus-ico .ico { width: 20px; height: 20px; }
+.fe-plus-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.fe-plus-txt b { font-size: 13.5px; font-weight: 650; color: var(--ink); }
+.fe-plus-txt span { font-size: 12px; color: var(--ink-2); line-height: 1.45; }
+.fe-plus .fe-plus-go { flex: none; padding: 8px 14px; font-size: 13px; border-radius: 9px; white-space: nowrap; }
+@media (max-width: 520px) { .fe-plus, .fe-img { flex-wrap: wrap; } }
+
+/* icônes : recherche, catégories, grille */
+.fe-search { position: relative; }
+.fe-search > .ico { position: absolute; left: 13px; top: 50%; width: 16px; height: 16px; transform: translateY(-50%); color: var(--ink-3); pointer-events: none; }
+#folderedit .fe-search input { flex: none; width: 100%; max-width: none; height: 42px; padding: 0 12px 0 38px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg); color: var(--ink); font-size: 14px; }
+#folderedit .fe-search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.fe-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; }
+.fe-chips button { height: 28px; padding: 0 11px; border-radius: 8px; font-size: 12.5px; font-weight: 550; color: var(--ink-2); background: var(--surface-2); }
+.fe-chips button:hover { color: var(--ink); }
+.fe-chips button.on { background: var(--accent-soft); color: var(--accent-ink); font-weight: 650; }
+.fe-icons {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(50px, 1fr)); gap: 6px;
+  max-height: 168px; overflow-y: auto; padding: 8px; border-radius: 12px; border: 1px solid var(--border);
+}
+.fe-ic { height: 46px; border-radius: 10px; display: grid; place-items: center; color: var(--ink-2); border: 1px solid transparent; }
+.fe-ic .ico { width: 20px; height: 20px; }
+.fe-ic:hover { background: var(--hover); color: var(--ink); }
+.fe-ic.sel { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-ink); }
+.fe-ic:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.fe-ic-def .fc-mono { font-size: 12.5px; font-weight: 700; letter-spacing: .01em; }
+.fe-none { grid-column: 1 / -1; text-align: center; padding: 18px 0; }

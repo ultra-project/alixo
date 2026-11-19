@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.54.0';
+const ALIXO_VERSION = '1.55.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -929,6 +929,8 @@ function ensureFieldVisible(el) {
   else if (r.bottom > bottomLimit) w.scrollTo({ top: w.scrollTop + (r.bottom - bottomLimit) + 24, behavior: 'instant' });
 }
 
+/* 1.55 : petit badge discret « Généré par AlixoAI » après le titre d'un document créé par Coco (aiFrom) */
+const aiCrumbHTML = d => (d && d.aiFrom && typeof d.aiFrom === 'object' ? '<span class="crumb-ai" title="Document généré par AlixoAI (Coco) : à relire">Généré par AlixoAI</span>' : '');
 function renderCrumbs() {
   const c = $('#breadcrumb');
   if (!currentDocId) { c.innerHTML = `<span>Mes cours</span>`; return; }
@@ -951,7 +953,7 @@ function renderCrumbs() {
     (path.length >= 2
       ? `<span class="sep">›</span><button class="crumb-more" data-nav="${esc(path[path.length - 2].id)}" title="${parents}" aria-label="Dossiers parents : ${parents}">…</button>` + chip(path[path.length - 1])
       : path.map(chip).join('')) +
-    `<span class="sep">›</span><input id="tb-title" placeholder="Sans titre" value="${esc(d.titre || '')}" spellcheck="false" autocomplete="off" title="${isSlidesDoc(d) ? 'Renommer la présentation' : isSheetDoc(d) ? 'Renommer le tableur' : isBoardDoc(d) ? 'Renommer la planche' : isQuizDoc(d) ? 'Renommer le quiz' : 'Renommer la séance'}">`;
+    `<span class="sep">›</span><input id="tb-title" placeholder="Sans titre" value="${esc(d.titre || '')}" spellcheck="false" autocomplete="off" title="${isSlidesDoc(d) ? 'Renommer la présentation' : isSheetDoc(d) ? 'Renommer le tableur' : isBoardDoc(d) ? 'Renommer la planche' : isQuizDoc(d) ? 'Renommer le quiz' : 'Renommer la séance'}">` + aiCrumbHTML(d);
 }
 
 /* navigation par le fil d'Ariane (depuis l'éditeur) */
@@ -1082,13 +1084,17 @@ function renderLibrary() {
   document.documentElement.style.setProperty('--tint', cur ? folderTint(cur.id) : defaultTint());
 
   // agenda (vue mois) ou partages à la place de la grille
-  document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo' || libMode === 'workspace');
+  document.body.classList.toggle('lib-agenda', libMode === 'agenda' || libMode === 'shared' || libMode === 'todo' || libMode === 'workspace' || libMode === 'artefacts');
   renderAgendaNav();
   const lnS = $('#ln-shared'); if (lnS) lnS.classList.toggle('active', libMode === 'shared' && !currentDocId);
   /* 1.53 : Workspace (js/workspace.js) — dépôts publics de séances ; le conteneur #lib-workspace n'est visible que dans ce mode */
   const lnW = $('#ln-workspace'); if (lnW) lnW.classList.toggle('active', libMode === 'workspace' && !currentDocId);
   const lw = $('#lib-workspace'); if (lw) lw.hidden = libMode !== 'workspace';
   if (libMode === 'workspace') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-galaxy').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; const ltw = $('#lib-todo'); if (ltw) ltw.hidden = true; $('#lib-title').textContent = 'Workspace'; $('#lib-path').innerHTML = '<span>Cours déposés par les membres</span>'; if (window.AlixoWorkspace) AlixoWorkspace.render(); else if (lw) lw.innerHTML = '<div class="sh-empty">Connectez-vous pour accéder au Workspace.</div>'; return; }
+  /* 1.55 : Artéfacts (js/artefacts.js) — documents créés par Coco */
+  const lnA = $('#ln-artefacts'); if (lnA) lnA.classList.toggle('active', libMode === 'artefacts' && !currentDocId);
+  const la = $('#lib-artefacts'); if (la) la.hidden = libMode !== 'artefacts';
+  if (libMode === 'artefacts') { $('#doc-grid').hidden = true; $('#lib-tree').hidden = true; $('#lib-galaxy').hidden = true; $('#lib-agenda').hidden = true; $('#lib-shared').hidden = true; if (lw) lw.hidden = true; const lta = $('#lib-todo'); if (lta) lta.hidden = true; $('#lib-title').textContent = 'Artéfacts'; $('#lib-path').innerHTML = '<span>Créés par Coco</span>'; if (window.AlixoArtefacts) AlixoArtefacts.render(); return; }
   const lnT = $('#ln-todo'); if (lnT) lnT.classList.toggle('active', libMode === 'todo' && !currentDocId);
   const lt = $('#lib-todo');
   $('#lib-galaxy').hidden = true;
@@ -1411,8 +1417,9 @@ function folderCardHTML(it) {
       </button>`;
   }
   const f = it.raw;
-  return `<button class="folder-card" data-fid="${esc(f.id)}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
-        ${folderTileHTML(f)}
+  const ban = window.AlixoFolderEdit ? AlixoFolderEdit.bannerHTML(f) : '';   // 1.55 : bannière (couleur, motif ou image) en haut de la carte
+  return `<button class="folder-card${ban ? ' has-banner' : ''}" data-fid="${esc(f.id)}" draggable="true" style="--mc:${esc(safeTint(f.couleur))}">
+        ${ban}${folderTileHTML(f)}
         <div class="fc-body"><h3>${esc(f.nom)}</h3><div class="fc-prof">${profBadgeHTML(f) || ''}</div><div class="meta">${folderPillsHTML(f)}</div></div>
         <span class="fc-act ren" data-ren="${esc(f.id)}" title="Renommer">${REN_SVG}</span>
         <span class="fc-act del" data-fdel="${esc(f.id)}" title="Supprimer">${TRASH_SVG}</span>
@@ -1485,7 +1492,7 @@ function libHTML(fid, listAll) {
   }
   if (!cards.length && !rows.length) {
     html += `<div class="empty-state"><div class="big">${AlixoIcons.svg('folder-open')}</div>
-      <p>Ce dossier est vide.<br>Cliquez ici ou sur « Nouveau » pour commencer, ou glissez-y vos fichiers (PDF, Word, diaporamas, images…) : ils s’ouvrent directement dans Alixo.</p>${pending ? `<p style="margin-top:12px">${pending}</p>` : ''}</div>`;
+      <p>Ce dossier est vide.<br>Faites un clic droit ici ou utilisez « Nouveau » pour commencer, ou glissez-y vos fichiers (PDF, Word, diaporamas, images…) : ils s’ouvrent directement dans Alixo.</p>${pending ? `<p style="margin-top:12px">${pending}</p>` : ''}</div>`;
   }
   return html;
 }
@@ -1829,7 +1836,7 @@ $('#doc-grid').addEventListener('click', e => {
   if (card) { openDoc(card.dataset.id); return; }
   /* 1.18 : un clic gauche dans le vide ne fait plus rien (le menu « créer ici » surgissait dès qu'on
      cliquait à côté d'une carte) ; il reste accessible au clic droit et par les boutons du haut */
-  if (e.target.closest('.empty-state:not(.lib-noresult)')) openNewMenu({ x: e.clientX, y: e.clientY }, currentFolderId);
+  /* 1.55 : plus rien au clic gauche, même sur l'état « dossier vide » : le menu de création n'est qu'au clic droit */
 });
 /* clic droit dans la bibliothèque : document, dossier, ou le fond (= le dossier courant, racine comprise) — 1.47 : un seul écouteur */
 const LIB_BG_SEL = '.lib-sect, .lib-sect-head, .lib-cards, .lib-list, .lib-resume, .empty-state, .grid-sect';
@@ -1907,7 +1914,12 @@ function deleteFolder(f) {
     folders.forEach(x => tombstone('folders', x.id));
     docs.forEach(d => tombstone('docs', d.id));
     const goneFiles = window.AlixoFiles ? AlixoFiles.detachFolders(ids) : { count: 0, restore() {}, finalize() {} };
-    const filesTm = setTimeout(() => goneFiles.finalize(), 9000);
+    /* 1.55 : images de bannière des dossiers supprimés — effacées (appareil et compte) une fois l'annulation passée */
+    const banIids = folders.map(x => x.banner && x.banner.t === 'image' ? x.banner.iid : '').filter(i => typeof i === 'string' && /^ban_[A-Za-z0-9_-]{1,60}$/.test(i));
+    const filesTm = setTimeout(() => {
+      goneFiles.finalize();
+      for (const iid of banIids) if (!state.folders.some(y => y.banner && y.banner.iid === iid)) AlixoImages.remove(iid);
+    }, 9000);
     openTabs = openTabs.filter(id => !docs.some(d => d.id === id));
     if (ids.includes(currentFolderId)) currentFolderId = f.parentId || null;
     save(); renderTabs(); renderLibrary();
@@ -1991,11 +2003,11 @@ const CM_ICO = {
   move: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M9 13h6M13 10l3 3-3 3"/></svg>',
   dup: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
   plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
-  zip: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
+  zip: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',   // 1.55 : téléchargement — aussi « Exporter (.alx) » (distinct de « Partager… »)
   trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
   share: '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></svg>',
-  /* 1.53 : même dessin que le bouton latéral « Workspace » (dossier avec un +) */
-  ws: '<svg viewBox="0 0 24 24"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/><path d="M8 14h8M12 10v8"/></svg>'
+  /* 1.53 : même dessin que le bouton latéral « Workspace » — 1.55 : un caddie (la « boutique » de cours) */
+  ws: '<svg viewBox="0 0 24 24"><path d="M2.5 4h2.6l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h8.3a1.6 1.6 0 0 0 1.6-1.2L21 8H6"/><path d="M6.9 12h13"/><circle cx="9.5" cy="20" r="1.4"/><circle cx="17.5" cy="20" r="1.4"/></svg>'
 };
 
 function placeCtxMenu(menu, x, y) {
@@ -2017,7 +2029,7 @@ function openDocCtxMenu(x, y, did, srcEl) {
     <button data-cm="dpin">${CM_ICO.pin}${d.pinned ? 'Désépingler' : 'Épingler'}</button>
     <button data-cm="dmove">${CM_ICO.move}Déplacer vers…</button>
     <button data-cm="ddup">${CM_ICO.dup}Dupliquer</button>
-    <button data-cm="dalx" title="Fichier .alx : se rouvre dans Alixo (sur un autre ordinateur, par e-mail, en double-cliquant sur la version PC)">${CM_ICO.share}Exporter (.alx)</button>
+    <button data-cm="dalx" title="Fichier .alx : se rouvre dans Alixo (sur un autre ordinateur, par e-mail, en double-cliquant sur la version PC)">${CM_ICO.zip}Exporter (.alx)</button>
     <button data-cm="dshare">${CM_ICO.share}Partager…</button>
     <button data-cm="dws" title="Workspace : rendre cette séance disponible à tous les membres d’Alixo (retirable à tout moment)">${CM_ICO.ws}Déposer dans le Workspace…</button>
     <button data-cm="ddelete" class="danger">${CM_ICO.trash}Supprimer</button>`;
@@ -2111,12 +2123,23 @@ function duplicateDoc(did) {
   toast(isSlidesDoc(copy) ? 'Présentation dupliquée' : isSheetDoc(copy) ? 'Tableur dupliqué' : isBoardDoc(copy) ? 'Planche dupliquée' : isQuizDoc(copy) ? 'Quiz dupliqué' : 'Séance dupliquée');
 }
 
-/* choix d'un dossier de destination (séance ou dossier) */
+/* choix d'un dossier de destination (séance ou dossier)
+   1.55 : explorateur de fichiers (js/explorer.js) ; l'ancienne liste en pop-over reste en secours s'il n'est pas chargé */
 function openMovePopover(kind, id) {
   const item = kind === 'folder' ? folder(id) : state.docs.find(d => d.id === id);
   if (!item) return;
   const excluded = kind === 'folder' ? new Set(descendantIds(id)) : new Set();
   const curParent = kind === 'folder' ? (item.parentId || null) : (item.folderId || null);
+  if (window.AlixoExplorer) {
+    const nm = kind === 'folder' ? (item.nom || 'Sans nom') : (item.titre || 'Sans titre');
+    AlixoExplorer.pick({
+      mode: 'folder', title: `Déplacer « ${nm} » vers…`, sub: 'Ouvrez le dossier de destination puis « Déplacer ici », ou sélectionnez un dossier puis « Déplacer dans… ».',
+      start: curParent && folder(curParent) ? curParent : '', current: curParent || '', exclude: [...excluded], allowRoot: true,
+      okLabel: 'Déplacer ici', okIntoLabel: 'Déplacer dans',   // 1.55 : un seul bouton principal, libellé selon le contexte
+      onPick: fid => { if (kind === 'folder') moveFolderTo(id, fid || null); else moveDocToFolder(id, fid || null); }
+    });
+    return;
+  }
   const rows = [];
   const walk = (pid, depth) => {
     for (const f of childFolders(pid)) {
@@ -2354,94 +2377,11 @@ function createQuizIn(fid) {
   setTimeout(() => { const t = $('#tb-title'); if (t) t.focus(); }, 60);
 }
 
-/* création / renommage de dossier — 1.47 : formulaire compact (nom + professeur sur une ligne, 16 couleurs + couleur libre
-   sur une ligne, icônes par onglets de catégories dans un cadre à hauteur fixe) */
-/* noms français des 16 couleurs de la palette (lecteurs d'écran), dans l'ordre de FOLDER_COLORS */
-const FOLDER_COLOR_NAMES = ['Bordeaux', 'Rouge', 'Orange', 'Ocre', 'Moutarde', 'Brun', 'Taupe', 'Vert sapin', 'Vert', 'Sarcelle', 'Bleu Alixo', 'Bleu', 'Bleu nuit', 'Ardoise', 'Framboise', 'Gris'];
+/* création / modification de dossier — 1.55 : fenêtre « Modifier le dossier » (aperçu en direct, bannière, couleur et icône)
+   dans js/folderedit.js ; nom, professeur, couleur de l'icône et icône y sont gardés comme dans l'ancien pop-over (1.47) */
 function openFolderPopover(existing, parentId = currentFolderId) {
-  const parentColor = existing ? existing.couleur : (folder(parentId)?.couleur || FOLDER_COLORS[10]);
-  const curIcon = existing ? (existing.icone || '') : '';
-  const curProf = existing ? (existing.prof || '') : folderProf(parentId);
-  const customStart = HEX_COLOR.test(parentColor) && !FOLDER_COLORS.includes(parentColor);   // couleur hors palette : portée par la pastille libre
-  const cats = Object.entries(FOLDER_ICONS);
-  const iconsHTML = (cat, icone) => {
-    const list = cat ? (FOLDER_ICONS[cat] || []) : Object.keys(AlixoIcons.ICONS);
-    return `<button type="button" data-i="" class="none ${icone ? '' : 'sel'}" title="Icône par défaut" aria-label="Icône par défaut" aria-pressed="${icone ? 'false' : 'true'}">${FOLDER_ICON}</button>` +
-      list.map(i => `<button type="button" data-i="${esc(i)}" class="${i === icone ? 'sel' : ''}" title="${esc(i)}" aria-label="Icône ${esc(i)}" aria-pressed="${i === icone ? 'true' : 'false'}">${AlixoIcons.svg(i)}</button>`).join('');
-  };
-  showPopover(`<div class="po-folder"><h4>${existing ? 'Modifier le dossier' : 'Nouveau dossier'}</h4>
-    <div class="po-row">
-      <input id="po-f-name" class="po-f-name" placeholder="Nom (ex. Droit administratif)" aria-label="Nom du dossier" aria-describedby="po-f-err" value="${existing ? esc(existing.nom) : ''}">
-      <input id="po-f-prof" class="po-f-prof" list="profs-list" placeholder="Professeur" autocomplete="off" title="Repris automatiquement sur les séances du dossier (modifiable sur chaque séance)" value="${esc(curProf)}">
-    </div>
-    <div class="po-err" id="po-f-err" hidden>Donnez un nom au dossier.</div>
-    <div class="po-label" id="po-f-clabel">Couleur</div>
-    <div class="po-colors po-colors-row" id="po-colors" role="group" aria-labelledby="po-f-clabel">
-      ${FOLDER_COLORS.map((c, i) => `<button type="button" data-c="${c}" class="${c === parentColor ? 'sel' : ''}" style="background:${c}" title="${FOLDER_COLOR_NAMES[i]}" aria-label="Couleur ${FOLDER_COLOR_NAMES[i]}" aria-pressed="${c === parentColor ? 'true' : 'false'}"></button>`).join('')}
-      <label class="po-color-custom ${customStart ? 'sel picked' : ''}" title="Couleur libre" ${customStart ? `style="background:${esc(parentColor)}"` : ''}><input type="color" id="po-f-ccustom" value="${customStart ? esc(parentColor) : '#4f66e0'}" aria-label="Couleur libre"></label>
-    </div>
-    <div class="po-label">Icône</div>
-    <div class="po-icon-tabs" id="po-icon-tabs" role="tablist" aria-label="Catégories d’icônes"><button type="button" role="tab" data-cat="" class="on" aria-selected="true">Tous</button>${cats.map(([c]) => `<button type="button" role="tab" data-cat="${esc(c)}" title="${esc(c)}" aria-selected="false">${esc(c.replace(/ & .*$/, ''))}</button>`).join('')}</div>
-    <div class="po-icons" id="po-icons" role="group" aria-label="Icône du dossier">${iconsHTML('', curIcon)}</div>
-    <div class="po-row po-foot"><span class="po-hint">Le professeur est repris sur les séances du dossier.</span><button class="pobtn" id="po-f-ok">${existing ? 'Enregistrer' : 'Créer'}</button></div></div>`,
-    centerRect(460), pop => {
-      let color = parentColor, icone = curIcon;
-      const custom = pop.querySelector('.po-color-custom'), cinput = pop.querySelector('#po-f-ccustom');
-      const nameEl = pop.querySelector('#po-f-name'), errEl = pop.querySelector('#po-f-err');
-      const setErr = on => { errEl.hidden = !on; if (on) nameEl.setAttribute('aria-invalid', 'true'); else nameEl.removeAttribute('aria-invalid'); };
-      nameEl.addEventListener('input', () => { if (nameEl.value.trim()) setErr(false); });
-      pop.querySelector('#po-colors').addEventListener('click', e => {
-        const b = e.target.closest('[data-c]'); if (!b) return;
-        color = b.dataset.c;
-        pop.querySelectorAll('#po-colors button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-pressed', String(on)); });
-        custom.classList.remove('sel');
-      });
-      cinput.addEventListener('input', () => {
-        const v = String(cinput.value || '').trim();
-        if (!HEX_COLOR.test(v)) return;
-        color = v;
-        custom.style.background = v; custom.classList.add('sel', 'picked');
-        pop.querySelectorAll('#po-colors button').forEach(x => { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
-      });
-      pop.querySelector('#po-icon-tabs').addEventListener('click', e => {
-        const b = e.target.closest('[data-cat]'); if (!b) return;
-        pop.querySelectorAll('#po-icon-tabs button').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-selected', String(on)); });
-        const box = pop.querySelector('#po-icons'); box.innerHTML = iconsHTML(b.dataset.cat, icone); box.scrollTop = 0;
-      });
-      pop.querySelector('#po-icons').addEventListener('click', e => {
-        const b = e.target.closest('[data-i]'); if (!b) return;
-        icone = b.dataset.i;
-        pop.querySelectorAll('#po-icons button').forEach(x => { const on = x === b; x.classList.toggle('sel', on); x.setAttribute('aria-pressed', String(on)); });
-      });
-      const ok = () => {
-        const nom = nameEl.value.trim();
-        if (!nom) { setErr(true); nameEl.focus(); return; }
-        if (!HEX_COLOR.test(color)) color = FOLDER_COLORS.includes(parentColor) ? parentColor : FOLDER_COLORS[10];   // couleur toujours validée (#rrggbb)
-        if (icone && !AlixoIcons.ICONS[icone]) icone = '';
-        const prof = pop.querySelector('#po-f-prof').value.trim();
-        rememberProf(prof);
-        if (existing) {
-          const oldProf = existing.prof || '';
-          existing.nom = nom; existing.couleur = color; existing.icone = icone; existing.prof = prof;
-          if (prof !== oldProf) {
-            // les séances du dossier (et sous-dossiers) sans professeur, ou avec l'ancien, suivent le nouveau nom
-            const ids = new Set(descendantIds(existing.id));
-            const inherited = oldProf || folderProf(existing.parentId);
-            state.docs.forEach(d => { if (ids.has(d.folderId) && (!d.prof || d.prof === inherited)) d.prof = prof || folderProf(d.folderId); });
-          }
-        } else {
-          const f = { id: uid(), nom, couleur: color, icone, parentId: parentId || null, prof };
-          state.folders.push(f);
-          if (parentId) for (const p of folderPath(parentId)) expandedFolders.add(p.id);
-        }
-        save(); hidePopover(); refreshLibrary();
-        if (currentDocId) { renderCrumbs(); document.documentElement.style.setProperty('--tint', folderTint(doc().folderId)); }
-      };
-      pop.querySelector('#po-f-ok').addEventListener('click', ok);
-      pop.querySelector('#po-f-name').addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
-      pop.querySelector('#po-f-prof').addEventListener('keydown', e => { if (e.key === 'Enter') ok(); });
-      setTimeout(() => pop.querySelector('#po-f-name')?.focus(), 40);
-    });
+  if (window.AlixoFolderEdit) { AlixoFolderEdit.open(existing || null, parentId); return; }
+  toast('Module de dossiers indisponible');
 }
 $('#btn-new-folder').addEventListener('click', () => openFolderPopover(null));
 $('#btn-new-folder-side').addEventListener('click', () => openFolderPopover(null));
@@ -2991,6 +2931,7 @@ const PLUS_ICO = {
   detourage: '<svg viewBox="0 0 24 24"><path d="m4 20 11-11M15 4v3M13.5 5.5h3M19 9v2M18 10h2M9 3v2M8 4h2"/></svg>',   // 1.52
   slidesthemes: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M6 15h7M6 11.5h4"/></svg>',   // 1.54
   filigrane: '<svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6Z"/><path d="M15 3v4h4"/><path d="M9 17h6" opacity=".5"/><path d="m4 20 16-16" stroke-dasharray="2 2"/></svg>',   // 1.54
+  banniere: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="8.5" cy="6.5" r=".8"/><path d="m7 16 3-3 2 2 3-3 2 2"/></svg>',   // 1.55
   star: '<svg viewBox="0 0 24 24"><path d="m12 3 2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9Z"/></svg>'
 };
 const PLUS_FEATURES = [
@@ -3003,7 +2944,8 @@ const PLUS_FEATURES = [
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'detourage', name: 'Supprimer le fond d’une image', free: '—', plus: 'Inclus', text: 'Retirez le fond d’une photo ou d’un schéma (clic droit sur l’image › Retouches › Supprimer le fond). Le calcul se fait sur votre appareil, sans service externe.' },   // 1.52
   { k: 'widgets', name: 'Widgets de bureau', free: '—', plus: 'Inclus', text: 'Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.' },
-  { k: 'filigrane', name: 'Documents et présentations sans mention « Fait avec Alixo »', free: 'Mention discrète sur les exports et en mode présentation', plus: 'Aucune mention', text: 'Sans Alixo+, une petite mention « Fait avec Alixo · alixoapp.com » figure au bas des documents exportés (PDF, Word, page web) et dans un coin de l’écran pendant une présentation. Alixo+ l’enlève.' }   // 1.54
+  { k: 'filigrane', name: 'Documents et présentations sans mention « Fait avec Alixo »', free: 'Mention discrète sur les exports et en mode présentation', plus: 'Aucune mention', text: 'Sans Alixo+, une petite mention « Fait avec Alixo · alixoapp.com » figure au bas des documents exportés (PDF, Word, page web) et dans un coin de l’écran pendant une présentation. Alixo+ l’enlève.' },   // 1.54
+  { k: 'banniere', name: 'Bannières en image des cours', free: 'Couleurs et motifs', plus: 'Vos images', text: 'Une photo ou une illustration à vous en haut de la carte d’un cours (Modifier le dossier › Bannière › Image), sur tous vos appareils. Les bannières de couleur et à motif restent gratuites.' }   // 1.55
 ];
 let planInfo = (() => { try { return JSON.parse(localStorage.getItem(PLUS_LS)) || {}; } catch { return {}; } })();
 let plusOffer = { price: '', url: '', note: '' };
@@ -3548,30 +3490,79 @@ function openPlusDialog(feature) {
    (partage, événement, Alixo+) — openDialog({ id, title, sub, eyebrow, body, nav, foot, cls, onMount, onClose })
    ============================================================ */
 const DLG_X = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>';
+/* 1.55 : accessibilité commune — role="dialog" + aria-modal, nom accessible pris du titre affiché (aria-labelledby :
+   `o.title` est du HTML déjà échappé par l'appelant, il n'est plus ré-échappé dans un aria-label), focus initial sur le
+   premier champ ou bouton utile si le module ne l'a pas posé, Tab / Maj+Tab gardés dans la fenêtre du dessus (écouteur
+   commun plus bas), focus rendu à l'élément d'origine à la fermeture. */
+let dlgSeq = 0;
+const DLG_FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+const dlgFocusables = root => [...root.querySelectorAll(DLG_FOCUSABLE)].filter(x => x.tabIndex >= 0 && !x.closest('[hidden], [inert]') && x.getClientRects().length);
 function openDialog(o) {
   closeDialog(o.id);
+  const opener = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
   hidePopover(); closeCtxMenu();
   const ov = document.createElement('div');
   ov.className = 'dlgov'; ov.id = o.id || 'dlg';
-  ov.innerHTML = `<div class="set-card dlg-card ${o.cls || ''}" role="dialog" aria-label="${esc(o.title || '')}">
+  const hid = 'dlg-h' + (++dlgSeq);
+  ov.innerHTML = `<div class="set-card dlg-card ${o.cls || ''}" role="dialog" aria-modal="true" aria-labelledby="${hid}">
       ${o.nav ? `<aside class="set-nav dlg-nav">${o.nav}</aside>` : ''}
       <div class="set-main">
-        <header class="set-head"><div class="dlg-htxt">${o.eyebrow ? `<div class="dlg-eyebrow">${o.eyebrow}</div>` : ''}<h2 class="set-htitle">${o.title || ''}</h2>${o.sub ? `<p class="set-hsub">${o.sub}</p>` : ''}</div><button class="set-x" type="button" title="Fermer (Échap)">${DLG_X}</button></header>
+        <header class="set-head"><div class="dlg-htxt">${o.eyebrow ? `<div class="dlg-eyebrow">${o.eyebrow}</div>` : ''}<h2 class="set-htitle" id="${hid}">${o.title || ''}</h2>${o.sub ? `<p class="set-hsub">${o.sub}</p>` : ''}</div><button class="set-x" type="button" title="Fermer (Échap)" aria-label="Fermer">${DLG_X}</button></header>
         <div class="set-body po-scope dlg-body">${o.body || ''}</div>
         ${o.foot ? `<footer class="dlg-foot">${o.foot}</footer>` : ''}
       </div></div>`;
   document.body.appendChild(ov);
   document.body.classList.add('has-dlg');
   ov._onClose = o.onClose || null;
+  ov._opener = opener;
   ov.addEventListener('click', e => { if (e.target === ov || e.target.closest('.set-x') || e.target.closest('[data-dlg-close]')) closeDialog(ov.id); });
-  if (o.onMount) o.onMount(ov.querySelector('.dlg-card'), () => closeDialog(ov.id));
+  const card = ov.querySelector('.dlg-card');
+  if (o.onMount) o.onMount(card, () => closeDialog(ov.id));
+  /* focus initial : celui du module (souvent posé après 30-40 ms) l'emporte ; sinon premier champ, puis premier bouton
+     du corps ou du pied (la croix en dernier recours) */
+  setTimeout(() => {
+    if (!ov.isConnected || ov.contains(document.activeElement)) return;
+    const f = dlgFocusables(card);
+    const t = f.find(x => x.matches('input, select, textarea') && x.closest('.dlg-body')) || f.find(x => x.closest('.dlg-body, .dlg-foot') && !x.matches('a')) || f[0];
+    if (t) { try { t.focus({ preventScroll: true }); } catch { /* */ } }
+  }, 80);
   return ov;
 }
 function closeDialog(id) {
   const list = id ? [$('#' + id)].filter(Boolean) : $$('.dlgov');
-  for (const ov of list) { ov.remove(); if (ov._onClose) { const f = ov._onClose; ov._onClose = null; f(); } }
+  for (const ov of list) {
+    const hadFocus = ov.contains(document.activeElement);
+    ov.remove(); if (ov._onClose) { const f = ov._onClose; ov._onClose = null; f(); }
+    /* 1.55 : focus rendu à l'élément qui a ouvert la fenêtre (si le module ne l'a pas déjà déplacé ailleurs) */
+    const op = ov._opener; ov._opener = null;
+    if (op && op.isConnected && (hadFocus || !document.activeElement || document.activeElement === document.body)) { try { op.focus({ preventScroll: true }); } catch { /* */ } }
+  }
   if (!$('.dlgov')) document.body.classList.remove('has-dlg');
 }
+/* 1.55 : Tab / Maj+Tab restent dans la fenêtre centrale du dessus (sauf pop-over ouvert par-dessus, ou barre « Créer avec
+   l'IA » de cococreate.js, qui gèrent leur propre focus) */
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Tab' || e.defaultPrevented) return;
+  const list = $$('.dlgov'); if (!list.length) return;
+  const card = list[list.length - 1].querySelector('.dlg-card'); if (!card) return;
+  const pop = $('#popover'); if (pop && !pop.hidden && pop.contains(document.activeElement)) return;
+  if (document.querySelector('.cc-ov')) return;
+  const f = dlgFocusables(card); if (!f.length) { e.preventDefault(); return; }
+  const first = f[0], last = f[f.length - 1], a = document.activeElement;
+  if (!card.contains(a)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+  else if (e.shiftKey && a === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && a === last) { e.preventDefault(); first.focus(); }
+});
+/* 1.55 : fenêtres centrales — un clic sur le fond ne ferme la fenêtre que s'il a aussi COMMENCÉ sur le fond : sélectionner
+   du texte dans la fenêtre et relâcher la souris dehors ne ferme plus rien. Garde commune à toutes les fenêtres (Paramètres,
+   dialogues, profil, bilan, nouveautés, visionneuse…), posée en capture : les modules n'ont pas à être modifiés. */
+const MODAL_BACKDROPS = '.dlgov, #setov, #pfov, #wkov, #wnov, #fileov, #obov, #updov';
+let modalDownTarget = null;
+document.addEventListener('pointerdown', e => { modalDownTarget = e.target; }, true);
+document.addEventListener('click', e => {
+  const t = e.target;
+  if (t instanceof Element && t.matches(MODAL_BACKDROPS) && modalDownTarget !== t) { e.stopImmediatePropagation(); e.preventDefault(); }
+}, true);
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
   const list = $$('.dlgov'); if (!list.length) return;
@@ -3642,21 +3633,56 @@ const fontByKey = k => DOC_FONTS.find(x => x.k === (k || '')) || null;
 const docFontKey = d => (d && typeof d.font === 'string' && fontByKey(d.font) ? d.font : null);
 const docFontCss = d => { const k = docFontKey(d); const f = k !== null ? fontByKey(k) : null; return f ? f.css : ''; };
 /* menu de choix d'une police (barre d'outils des séances, présentations, tableurs, planches) */
-function openFontMenu(anchor, { current = null, title = 'Police du document', hint = '', onPick } = {}) {
-  const rows = [{ k: null, name: 'Police des Paramètres', sub: `Paramètres › Écriture (${(fontByKey(state.settings.docFont) || DOC_FONTS[0]).name})`, css: (fontByKey(state.settings.docFont) || DOC_FONTS[0]).css }].concat(DOC_FONTS);
-  showPopover(`<h4>${esc(title)}</h4><div class="po-list po-fonts">${rows.map(f => `<button type="button" data-fk="${f.k === null ? '__default' : esc(f.k)}" class="${(current === null && f.k === null) || (current !== null && f.k === current) ? 'on' : ''}"><span class="pf-prev" style="font-family:${esc(f.css || 'var(--font-serif-base)')}">Aa</span><span class="pf-txt"><b>${esc(f.name)}</b><small>${esc(f.sub)}</small></span></button>`).join('')}</div>${hint ? `<div class="po-hint">${hint}</div>` : ''}`,
-    anchor ? anchor.getBoundingClientRect() : centerRect(), pop => pop.querySelector('.po-fonts').addEventListener('click', e => {
-      const b = e.target.closest('[data-fk]'); if (!b) return;
-      hidePopover();
-      onPick(b.dataset.fk === '__default' ? null : b.dataset.fk);
-    }));
+/* 1.55 : defaultRow — libellé de la première ligne (« Police du document » quand on règle une portion de texte) ;
+   onDoc — ajoute en bas l'entrée « Police de tout le document… » (menu Police d'une séance) */
+function openFontMenu(anchor, { current = null, title = 'Police du document', hint = '', onPick, defaultRow = null, onDoc = null } = {}) {
+  const setF = fontByKey(state.settings.docFont) || DOC_FONTS[0];
+  const first = defaultRow ? { k: null, name: defaultRow.name, sub: defaultRow.sub || '', css: defaultRow.css || '' } : { k: null, name: 'Police des Paramètres', sub: `Paramètres › Écriture (${setF.name})`, css: setF.css };
+  const rows = [first].concat(DOC_FONTS);
+  showPopover(`<h4>${esc(title)}</h4><div class="po-list po-fonts">${rows.map(f => `<button type="button" data-fk="${f.k === null ? '__default' : esc(f.k)}" class="${(current === null && f.k === null) || (current !== null && f.k === current) ? 'on' : ''}"><span class="pf-prev" style="font-family:${esc(f.css || 'var(--font-serif-base)')}">Aa</span><span class="pf-txt"><b>${esc(f.name)}</b><small>${esc(f.sub)}</small></span></button>`).join('')}</div>${onDoc ? `<button type="button" class="po-fontdoc" data-fdoc><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7V5h16v2M9 19h6M12 5v14"/></svg><span>Police de tout le document…</span></button>` : ''}${hint ? `<div class="po-hint">${hint}</div>` : ''}`,
+    anchor ? anchor.getBoundingClientRect() : centerRect(), pop => {
+      pop.querySelector('.po-fonts').addEventListener('click', e => {
+        const b = e.target.closest('[data-fk]'); if (!b) return;
+        hidePopover();
+        onPick(b.dataset.fk === '__default' ? null : b.dataset.fk);
+      });
+      const db = pop.querySelector('[data-fdoc]');
+      if (db) db.addEventListener('click', () => { hidePopover(); onDoc(); });
+    });
+}
+/* 1.55 : police réellement affichée (font-family calculée) → entrée de DOC_FONTS ; null si la pile n'est pas connue */
+const famKey = v => String(v || '').toLowerCase().replace(/["'\s]/g, '');
+function fontFromFamily(fam) {
+  const k = famKey(fam); if (!k) return null;
+  const first = k.split(',')[0];
+  const f = DOC_FONTS.find(x => x.css && famKey(x.css) === k) || DOC_FONTS.find(x => x.css && famKey(x.css).split(',')[0] === first);
+  if (f) return f;
+  const base = famKey(getComputedStyle(document.documentElement).getPropertyValue('--font-serif-base'));
+  if (base && (k === base || first === base.split(',')[0])) return DOC_FONTS[0];
+  return null;
+}
+/* 1.55 : police sous le curseur (ou de la sélection) dans la séance : { f, name } ; name vide si la sélection mêle
+   plusieurs polices ; undefined hors du texte de la séance */
+function fontAtSelection() {
+  const s = getSelection(); if (!s || !s.rangeCount) return undefined;
+  const r = s.getRangeAt(0);
+  const elOf = n => (n && n.nodeType === 1 ? n : n && n.parentElement);
+  const a = elOf(r.startContainer), z = elOf(r.endContainer);
+  if (!a || !blocksEl.contains(a)) return undefined;
+  const fa = getComputedStyle(a).fontFamily;
+  if (!r.collapsed && z && z !== a && blocksEl.contains(z) && famKey(getComputedStyle(z).fontFamily) !== famKey(fa)) return { f: null, name: '' };
+  const f = fontFromFamily(fa);
+  return { f, name: f ? f.name : (fa.split(',')[0] || '').trim().replace(/^["']|["']$/g, '') };
 }
 /* libellé du bouton « Police » de la barre d'outils des séances */
-function syncFontButton() {
+function syncFontButton(at) {
   const b = $('#toolbar [data-menu="font"] .tb-fontname'); if (!b) return;
+  /* 1.55 : dans le texte, la police sous le curseur (plusieurs polices possibles dans une séance) ; sinon celle du document */
+  if (at) { b.textContent = at.name || '—'; b.style.fontFamily = at.f ? (at.f.css || 'var(--font-serif-base)') : ''; b.parentElement.title = at.name ? `Police : ${at.name}` : 'Plusieurs polices dans la sélection'; return; }
   const d = doc(); const k = docFontKey(d);
   const f = k !== null ? fontByKey(k) : (fontByKey(state.settings.docFont) || DOC_FONTS[0]);
   b.textContent = f.name; b.style.fontFamily = f.css || '';
+  b.parentElement.title = 'Police d’écriture : du texte sélectionné, du mot sous le curseur ou de tout le document';
 }
 const DOC_SIZES = [['s', 'Petit', .92], ['m', 'Normal', 1], ['l', 'Grand', 1.1], ['xl', 'Très grand', 1.22]];
 function applyDocFont() {
@@ -3667,7 +3693,7 @@ function applyDocFont() {
   const fh = dk !== null ? null : fontByKey(state.settings.docFontHead);
   if (f.css) r.setProperty('--doc-font', f.css); else r.removeProperty('--doc-font');
   if (fh && fh.css) r.setProperty('--doc-font-head', fh.css); else r.removeProperty('--doc-font-head');
-  syncFontButton();
+  syncFontButton(); updateToolbarState();   // 1.55 : dans le texte, le libellé revient aussitôt à la police sous le curseur
   const sz = DOC_SIZES.find(x => x[0] === (state.settings.docSize || 'm')) || DOC_SIZES[1];
   if (sz[2] !== 1) r.setProperty('--doc-scale', String(sz[2])); else r.removeProperty('--doc-scale');
   // 1.34.1 : zoom façon Word — toute la feuille s'agrandit (largeur, marges, texte), la page défile si besoin ;
@@ -4431,7 +4457,17 @@ const AlixoImages = (() => {
     }
     return null;
   }
-  return { put, putLocal, get, cache, has: id => cache.has(id) };
+  /* 1.55 : suppression d'une image devenue inutile (ancienne bannière de dossier) — appareil ET copie du compte */
+  async function remove(id) {
+    if (!id) return;
+    cache.delete(id);
+    try {
+      const db = await open();
+      await new Promise((res, rej) => { const t = db.transaction('img', 'readwrite'); t.objectStore('img').delete(id); t.oncomplete = res; t.onerror = () => rej(t.error); });
+    } catch (e) { console.error('Image non supprimée de l’appareil :', e); }
+    if (window.AlixoSync && window.AlixoSync.deleteImage) window.AlixoSync.deleteImage(id);
+  }
+  return { put, putLocal, get, remove, cache, has: id => cache.has(id) };
 })();
 /* charge en mémoire les images d'une séance (avant rendu ou export) */
 function preloadImages(d) {
@@ -7365,35 +7401,79 @@ function updateToolbarState() {
     const al = currentAlign();
     tb.querySelectorAll('[data-align]').forEach(btn => btn.classList.toggle('on', btn.dataset.align === al));
     if (document.activeElement !== fsInput) { const pt = inText ? currentFontSize() : null; fsInput.value = pt ? String(pt).replace('.', ',') : ''; }
+    syncFontButton(inText ? fontAtSelection() : undefined);   // 1.55 : police sous le curseur
   }, 30);
 }
 
+/* 1.55 : mot sous un curseur (lettres, chiffres, apostrophes, traits d'union de part et d'autre) dans un même nœud texte ;
+   null si le curseur est en bord de mot, sur une espace, ou hors d'un nœud texte */
+function wordRangeAt(r) {
+  const n = r.startContainer; if (!n || n.nodeType !== 3) return null;
+  const t = n.data, o = r.startOffset;
+  const isW = ch => !!ch && /[\p{L}\p{N}’'\-]/u.test(ch);
+  if (!isW(t[o - 1]) || !isW(t[o])) return null;
+  let a = o, z = o;
+  while (a > 0 && isW(t[a - 1])) a--;
+  while (z < t.length && isW(t[z])) z++;
+  const w = document.createRange(); w.setStart(n, a); w.setEnd(n, z);
+  return w;
+}
 function openFmtMenu(btn) {
   const kind = btn.dataset.menu;
   const r = btn.getBoundingClientRect();
   if (kind === 'tstyle') { if (window.AlixoTextStyles) AlixoTextStyles.openMenu(btn); return; }   // 1.52 : styles enregistrés (js/textstyles.js)
   if (kind === 'font') {
-    /* 1.35 : comme dans Word — du texte sélectionné : la police s'applique à la sélection ; sinon à tout le document */
+    /* 1.55 : comme dans Word — du texte sélectionné : la police s'applique à la sélection ; curseur dans un mot : à ce
+       mot ; curseur ailleurs dans le texte : au texte tapé ensuite. Une séance peut donc mêler plusieurs polices. La
+       police de tout le document reste accessible : dernière entrée du menu, ou menu ouvert hors du texte. */
     const sel = getSelection();
     const f = activeField();
-    const inText = !!f && f.tagName !== 'INPUT' && sel && sel.rangeCount && !sel.isCollapsed && blocksEl.contains(sel.anchorNode);
+    const inText = !readOnly && !!f && f.tagName !== 'INPUT' && sel && sel.rangeCount && blocksEl.contains(sel.anchorNode);
     const d = doc(); if (!d) return;
+    const docMenu = () => {
+      if (readOnly) return;
+      openFontMenu(btn, { current: docFontKey(d), title: 'Police de tout le document', hint: 'Vaut pour toute la séance (texte et titres), à l’écran et dans le PDF. Les passages auxquels vous avez donné une autre police la gardent.', onPick: k => {
+        if (k === null) delete d.font; else d.font = k;
+        d.updatedAt = Date.now(); save(); applyDocFont(); updateToolbarState();
+        toast(k === null ? 'Police des Paramètres rétablie' : `Police « ${fontByKey(k).name} » pour ce document`);
+      } });
+    };
     if (inText) {
       const saved = sel.getRangeAt(0).cloneRange();
-      openFontMenu(btn, { current: null, title: 'Police de la sélection', hint: 'La police s’applique au texte sélectionné. Sans sélection, le bouton change la police de tout le document.', onPick: k => {
-        const s2 = getSelection(); s2.removeAllRanges(); s2.addRange(saved);
-        const fo = k === null ? null : fontByKey(k);
-        if (!fo) { applyFmt('removeFormat'); return; }
-        applyFmt('fontName', fo.css || 'var(--font-serif-base)', true);
-      } });
+      const collapsed = saved.collapsed;
+      const word = collapsed ? wordRangeAt(saved) : null;
+      const dk = docFontKey(d); const df = (dk !== null ? fontByKey(dk) : fontByKey(state.settings.docFont)) || DOC_FONTS[0];
+      const at = fontAtSelection(); const curF = at && at.f && at.f !== df ? at.f : null;
+      openFontMenu(btn, {
+        current: at && !at.name ? '__none' : curF ? curF.k : null,
+        title: !collapsed ? 'Police de la sélection' : word ? 'Police du mot' : 'Police du texte à taper',
+        hint: !collapsed ? 'S’applique au texte sélectionné.' : word ? 'S’applique au mot sous le curseur.' : 'S’applique au texte que vous allez taper.',
+        defaultRow: { name: 'Police du document', sub: `Comme le reste de la séance (${df.name})`, css: df.css },
+        onDoc: docMenu,
+        onPick: k => {
+          const fo = k === null ? null : fontByKey(k);
+          const css = fo ? (fo.css || 'var(--font-serif-base)') : 'inherit';   // « Police du document » : la portion reprend celle de la séance
+          const s2 = getSelection(); s2.removeAllRanges();
+          if (word) {
+            /* le mot sous le curseur : on le sélectionne, on applique, puis on remet le curseur à sa place dans le mot */
+            const delta = saved.startOffset - word.startOffset;
+            s2.addRange(word);
+            applyFmt('fontName', css, true);
+            const s3 = getSelection(); if (s3.rangeCount) {
+              const r3 = s3.getRangeAt(0); const n = r3.startContainer;
+              if (n.nodeType === 3 && r3.startOffset + delta <= n.length) { const c = document.createRange(); c.setStart(n, r3.startOffset + delta); c.collapse(true); s3.removeAllRanges(); s3.addRange(c); }
+              else s3.collapseToEnd();
+            }
+            updateToolbarState();
+            return;
+          }
+          s2.addRange(saved);
+          applyFmt('fontName', css, true);
+        }
+      });
       return;
     }
-    if (readOnly) return;
-    openFontMenu(btn, { current: docFontKey(d), title: 'Police du document', hint: 'Vaut pour toute la séance (texte et titres), à l’écran et dans le PDF. Sélectionnez du texte avant d’ouvrir ce menu pour ne changer que lui.', onPick: k => {
-      if (k === null) delete d.font; else d.font = k;
-      d.updatedAt = Date.now(); save(); applyDocFont();
-      toast(k === null ? 'Police des Paramètres rétablie' : `Police « ${fontByKey(k).name} » pour ce document`);
-    } });
+    docMenu();
     return;
   }
   if (kind === 'color') {
@@ -8328,7 +8408,19 @@ function scrollSlashIntoView() {
    Pop-over générique
    ============================================================ */
 /* ancre « au centre » pour un pop-over de largeur w (320 px par défaut ; 460 px pour le formulaire de dossier) */
-function centerRect(w = 320) { return { left: innerWidth / 2 - w / 2, top: innerHeight / 3, bottom: innerHeight / 3 }; }
+/* 1.55 : modal: true — un pop-over centré est une petite fenêtre : showPopover pose un voile flouté derrière lui */
+function centerRect(w = 320) { return { left: innerWidth / 2 - w / 2, top: innerHeight / 3, bottom: innerHeight / 3, modal: true }; }
+/* 1.55 : voile des pop-overs centrés (confirmation, dossier, déplacement, renommage, choix d'une cible) : floute et
+   assombrit l'arrière-plan, capte les clics (le clic sur le voile ferme le pop-over, par l'écouteur pointerdown du
+   document, comme avant). Il se place juste sous le pop-over, quel que soit son z-index (seul ou sur un dialogue). */
+function setPopoverVeil(pop, on) {
+  let v = $('#po-veil');
+  if (!on) { if (v) v.hidden = true; return; }
+  if (!v) { v = document.createElement('div'); v.id = 'po-veil'; v.setAttribute('aria-hidden', 'true'); document.body.appendChild(v); }
+  const z = parseInt(getComputedStyle(pop).zIndex, 10);
+  v.style.zIndex = String((Number.isFinite(z) ? z : 96) - 1);
+  v.hidden = false;
+}
 
 function showPopover(html, rect, onMount) {
   let pop = $('#popover');
@@ -8340,6 +8432,7 @@ function showPopover(html, rect, onMount) {
   const fresh = pop.cloneNode(false); pop.replaceWith(fresh); pop = fresh;
   pop.innerHTML = html;
   pop.hidden = false;
+  setPopoverVeil(pop, !!(rect && rect.modal));   // 1.55
   placePopover(pop, rect);
   if (onMount) onMount(pop);
 }
@@ -8362,6 +8455,7 @@ function placePopover(pop, rect) {
 function hidePopover() {
   const pop = $('#popover');
   pop.hidden = true; pop.innerHTML = '';
+  setPopoverVeil(pop, false);   // 1.55
   if (pop._onHide) { const f = pop._onHide; pop._onHide = null; f(); }
 }
 
@@ -9151,63 +9245,40 @@ function eventFolderId(ev) {
   if (ev.docId) { const d = state.docs.find(x => x.id === ev.docId); if (d && d.folderId && folder(d.folderId)) return d.folderId; }
   return '';
 }
-function folderChoices() {
-  return state.folders.map(f => ({ id: f.id, path: folderPath(f.id).map(x => x.nom).join(' › '), couleur: f.couleur }))
-    .sort((a, b) => a.path.localeCompare(b.path, 'fr'));
-}
-/* sélecteur de dossier maison (liste déroulante dans le pop-over, avec recherche). Remplace le <select> natif,
-   dont la liste ne s'ouvrait pas toujours dans la fenêtre de l'application. L'élément porte `.value`
-   et émet « change », comme un <select>. */
+/* sélecteur de dossier de l'agenda. L'élément porte `.value` et émet « change », comme un <select>.
+   1.55 : le contrôle est un bouton qui affiche le chemin (« A › B ») et ouvre l'explorateur de fichiers (js/explorer.js) ;
+   la petite croix remet « aucun ». Classes .fpick / .fpick-btn conservées (l'éditeur d'événement les désactive ou les teste). */
+const FPICK_ICO = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>';
+const FPICK_X = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M17 7 7 17"/></svg>';
+const fpickPath = fid => folderPath(fid).map(x => x.nom || 'Sans nom').join(' › ');
 function folderPickerHTML(id, value) {
-  const list = folderChoices();
-  const cur = list.find(f => f.id === value);
-  return `<div class="fpick" id="${id}" data-value="${esc(cur ? cur.id : '')}">
-    <button type="button" class="fpick-btn" aria-haspopup="listbox" aria-expanded="false"><span class="fpick-dot" style="background:${esc(cur && cur.couleur ? cur.couleur : 'transparent')}"></span><span class="fpick-lab">${esc(cur ? cur.path : '— aucun —')}</span><span class="fpick-caret">▾</span></button>
-    <div class="fpick-list" hidden>
-      ${list.length > 7 ? '<input class="fpick-q" placeholder="Rechercher un dossier…" autocomplete="off" spellcheck="false">' : ''}
-      <div class="fpick-items" role="listbox"><button type="button" data-v="" class="${cur ? '' : 'sel'}"><span class="fpick-dot"></span>— aucun —</button>${list.map(f => `<button type="button" data-v="${f.id}" class="${cur && f.id === cur.id ? 'sel' : ''}" title="${esc(f.path)}"><span class="fpick-dot" style="background:${esc(f.couleur || 'transparent')}"></span>${esc(f.path)}</button>`).join('')}
-      ${list.length ? '' : '<div class="po-hint" style="margin:4px 6px">Aucun dossier pour l’instant : créez-en un dans la bibliothèque.</div>'}</div>
-    </div></div>`;
+  const cur = value && folder(value) ? folder(value) : null;
+  return `<div class="fpick xp-field" id="${id}" data-value="${esc(cur ? cur.id : '')}">
+    <button type="button" class="fpick-btn" aria-haspopup="dialog" title="Choisir le dossier dans l’explorateur"><span class="fpick-dot" style="background:${esc(cur ? safeTint(cur.couleur) : 'transparent')}"></span><span class="fpick-lab ${cur ? '' : 'none'}">${esc(cur ? fpickPath(cur.id) : '— aucun —')}</span>${FPICK_ICO}</button>
+    <button type="button" class="fpick-clear" title="Aucun dossier" aria-label="Retirer le dossier lié" ${cur ? '' : 'hidden'}>${FPICK_X}</button>
+  </div>`;
 }
 function mountFolderPicker(el) {
   if (!el) return;
   el.value = el.dataset.value || '';
-  const btn = el.querySelector('.fpick-btn'), box = el.querySelector('.fpick-list'), q = el.querySelector('.fpick-q');
-  const items = () => [...el.querySelectorAll('.fpick-items button')].filter(b => !b.hidden);
-  const filter = () => { const n = norm(q ? q.value : ''); el.querySelectorAll('.fpick-items button').forEach(b => { b.hidden = !!n && !!b.dataset.v && !norm(b.textContent).includes(n); }); };
-  const setOpen = open => {
-    box.hidden = !open; btn.setAttribute('aria-expanded', String(open)); el.classList.toggle('open', open);
-    if (!open) return;
-    if (q) { q.value = ''; filter(); setTimeout(() => q.focus(), 0); }
-    const sel = el.querySelector('.fpick-items .sel'); if (sel) sel.scrollIntoView({ block: 'nearest' });
-    // le pop-over grandit : il reste dans la fenêtre
-    const pop = el.closest('#popover');
-    if (pop) { const r = pop.getBoundingClientRect(); if (r.bottom > innerHeight - 12) pop.style.top = Math.max(12, innerHeight - 12 - r.height) + 'px'; }
+  const btn = el.querySelector('.fpick-btn'), clr = el.querySelector('.fpick-clear');
+  const set = v => {
+    const f = v && folder(v) ? folder(v) : null;
+    const nv = f ? f.id : '';
+    const changed = nv !== el.value;
+    el.value = nv; el.dataset.value = nv;
+    const lab = el.querySelector('.fpick-lab');
+    lab.textContent = f ? fpickPath(f.id) : '— aucun —'; lab.classList.toggle('none', !f);
+    btn.querySelector('.fpick-dot').style.background = f ? safeTint(f.couleur) : 'transparent';
+    clr.hidden = !f;
+    if (changed) el.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  const pick = b => {
-    el.value = b.dataset.v || ''; el.dataset.value = el.value;
-    el.querySelectorAll('.fpick-items button').forEach(x => x.classList.toggle('sel', x === b));
-    const f = folder(el.value);
-    el.querySelector('.fpick-lab').textContent = f ? folderPath(f.id).map(x => x.nom).join(' › ') : '— aucun —';
-    el.querySelector('.fpick-btn .fpick-dot').style.background = f && f.couleur ? f.couleur : 'transparent';
-    setOpen(false); btn.focus();
-    el.dispatchEvent(new Event('change', { bubbles: true }));
-  };
-  btn.addEventListener('click', () => setOpen(box.hidden));
-  el.querySelector('.fpick-items').addEventListener('click', e => { const b = e.target.closest('button[data-v]'); if (b) pick(b); });
-  if (q) q.addEventListener('input', filter);
-  el.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && !box.hidden) { e.preventDefault(); e.stopPropagation(); setOpen(false); btn.focus(); return; }
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp' && e.key !== 'Enter') return;
-    if (box.hidden) { if (e.key !== 'Enter') { e.preventDefault(); setOpen(true); } return; }
-    const list = items(); if (!list.length) return;
-    let i = list.indexOf(document.activeElement);
-    if (e.key === 'Enter') { if (e.target === q) { e.preventDefault(); e.stopPropagation(); pick(list.find(b => b.dataset.v) || list[0]); } return; }
-    e.preventDefault();
-    i = e.key === 'ArrowDown' ? Math.min(list.length - 1, i + 1) : Math.max(0, i - 1);
-    list[i].focus();
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    if (!window.AlixoExplorer) { toast('Explorateur indisponible'); return; }
+    AlixoExplorer.pick({ mode: 'folder', title: 'Choisir le cours lié', sub: 'Le titre et la couleur de l’événement reprennent ceux du dossier choisi.', start: el.value && folder(el.value) ? (folder(el.value).parentId || '') : '', selected: el.value || undefined, allowRoot: false, onPick: fid => set(fid) });
   });
-  el.addEventListener('focusout', () => setTimeout(() => { if (!el.contains(document.activeElement)) setOpen(false); }, 0));
+  clr.addEventListener('click', () => { if (clr.disabled) return; set(''); btn.focus(); });
 }
 /* une occurrence (vue semaine et volet du jour) */
 /* 1.52 : événement venu du nuage (autre appareil, partage) — rien n'est interpolé tel quel : identifiant court et sûr
@@ -9347,6 +9418,9 @@ function openWorkspaceHome() { libMode = 'workspace'; if (currentDocId) showLibr
 const lnTodo = $('#ln-todo'); if (lnTodo) lnTodo.addEventListener('click', openTodoHome);
 $('#ln-shared').addEventListener('click', openSharedHome);
 const lnWs = $('#ln-workspace'); if (lnWs) lnWs.addEventListener('click', openWorkspaceHome);
+/* 1.55 : Artéfacts (js/artefacts.js) */
+function openArtefactsHome() { libMode = 'artefacts'; if (currentDocId) showLibrary(); else renderLibrary(); }
+const lnArt = $('#ln-artefacts'); if (lnArt) lnArt.addEventListener('click', openArtefactsHome);
 /* partager une séance, un dossier ou un événement (propriétaire) */
 function openShare(kind, id) {
   if (!window.AlixoShare || !AlixoShare.enabled) { toast('Alixo Share nécessite un compte : Paramètres › Compte › Se connecter'); return; }
@@ -13190,7 +13264,9 @@ window.AlixoApp = {
   exportPDF: () => { if (!currentDocId) return false; exportPDF(); return true; },
   version: ALIXO_VERSION,
   showWhatsNew,
-  openTodoHome, openSharedHome, openWorkspaceHome, openDoc, openSettings,
+  openTodoHome, openSharedHome, openWorkspaceHome, openArtefactsHome, openDoc, openSettings,
+  /* 1.55 : arbre des dossiers pour l'explorateur, les bannières, Coco créateur (js/explorer.js, js/folderedit.js, js/cococreate.js) */
+  getState: () => state, folder, folderPath, currentFolderId: () => currentFolderId, centerRect, esc, uid,
   /* Alixo+ (1.16) et fenêtres centrales : utilisés par js/cloudconfig.js, js/share.js, js/files.js, js/todo.js */
   isPlus, setPlan, setPlusOffer, setBillingOffer, setBilling, openPlusDialog, requirePlus, storageAllows, openDialog, closeDialog,
   storageUsage, ageGroup,   /* 1.26 : tailles et tranche d'âge envoyées par js/cloudconfig.js au panneau admin */
@@ -13336,7 +13412,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Les présentations font peau neuve : animations et transitions, vidéos et quiz liés, douze thèmes signature, banque d’images libres avec crédit, et un vrai mode présentation avec vue présentateur sur second écran.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Coco crée vos documents (bouton « IA »), un onglet Artéfacts pour les retrouver, des bannières pour vos cours, un vrai explorateur de fichiers et un Workspace repensé.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

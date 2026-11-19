@@ -17,6 +17,10 @@
    table, inconnu = ignoré et compté ; suppressions soumises à confirmation (le lot attend « Appliquer ») ; instantanés
    avant / après pour « Annuler les modifications » ; arrêt propre si le document a changé entre deux lots ; refus en
    lecture seule. Chargé APRÈS app.js, slides.js, sheets.js, board.js, quiz.js et AVANT coco.js.
+   1.55 : Coco CRÉE aussi des documents (js/cococreate.js) : create() remplit un document neuf avec les commandes marquées
+   `create` (AJOUTE, COUVERTURE, LIGNE, AJOUTE_DIAPO, AJOUTE_NOTE, AJOUTE_QCM…), appliquées pendant la génération ;
+   matchCreate() reconnaît l'intention « créer » dans le chat (« crée-moi une présentation sur… »). La tâche du moteur
+   est AlixoAI.run('create').
    ============================================================ */
 'use strict';
 
@@ -275,6 +279,15 @@ AJOUTE_QCM | Quel est le délai de prescription de droit commun ? | Deux ans | C
       const other = c.styled - (c.callouts || 0) - (c.titles || 0); if (other > 0) parts.push(n(other, 'autre mise en forme', 'autres mises en forme'));
       return parts.join(', ') + '.';
     }
+    /* 1.55 : création d'un document */
+    if (r.intent === 'creer') {
+      if (!r.changes) return r.stopped ? 'Interrompu : je n’ai rien écrit.' : 'Je n’ai rien pu écrire : la réponse de l’IA était illisible. Reformule ta demande et réessaie.';
+      const what = r.kind === 'slides' ? n((c.slides || 0) + (c.replaced ? 1 : 0), 'diapositive', 'diapositives') : r.kind === 'sheet' ? n(c.cells || 0, 'case remplie', 'cases remplies')
+        : r.kind === 'board' ? n((c.notes || 0) + (c.inserted || 0), 'note', 'notes') : r.kind === 'quiz' ? n(c.questions || 0, 'question', 'questions') : n(c.inserted || 0, 'bloc écrit', 'blocs écrits');
+      let out = `${r.stopped ? 'Interrompu : ' : 'C’est prêt : '}${what}.`;
+      if (r.rejected) out += ` (${n(r.rejected, 'consigne ignorée', 'consignes ignorées')})`;
+      return out;
+    }
     if (c.replaced) parts.push(n(c.replaced, 'passage réécrit', 'passages réécrits'));
     if (c.typed) parts.push(n(c.typed, 'mise en forme', 'mises en forme'));
     if (c.inserted) parts.push(n(c.inserted, 'ajout', 'ajouts'));
@@ -406,6 +419,199 @@ AJOUTE_QCM | Quel est le délai de prescription de droit commun ? | Deux ans | C
     run(a, ctx) { if (!setTitle(ctx.edit, plain(a[0]))) return false; ctx.tx.counts.titled++; ctx.tx.details.push({ id: 'titre', label: 'Titre', avant: '', apres: plain(a[0]) }); return true; } });
 
   /* ============================================================
+     1.55 : commandes de CRÉATION (Coco crée un document : js/cococreate.js). Toujours le registre fermé : texte du
+     modèle → safe() (séance, présentation) ou plain() / cellText() (planche, quiz, tableur), jamais de HTML brut.
+     `create: true` = proposée au modèle lors d'une création (describeCreate) ; les autres commandes y sont refusées.
+     ============================================================ */
+  const CREATE_CMDS = { doc: ['TITRE', 'AJOUTE'], slides: ['TITRE', 'COUVERTURE', 'AJOUTE_DIAPO'], sheet: ['TITRE', 'LIGNE', 'CASE'], board: ['TITRE', 'AJOUTE_NOTE', 'AJOUTE_TEXTE'], quiz: ['TITRE', 'AJOUTE_QCM', 'AJOUTE_VF'] };
+  /* bloc vide de départ (séance neuve : un paragraphe vide ; quiz neuf : une question vide) — retiré dans la même transaction
+     que le premier ajout, pour que le document créé ne commence pas par un trou */
+  function dropBlank(ctx) {
+    if (ctx.tx.blankDone) return; ctx.tx.blankDone = true;
+    const its = ctx.edit.items() || [];
+    if (ctx.edit.kind === 'doc') { const b = its.length === 2 ? its[0] : null; if (b && !b.ro && !S(b.text)) ctx.edit.remove(b.id); }
+    if (ctx.edit.kind === 'quiz') for (const id of ctx.tx.blankQs || []) { if (its.length > 1) ctx.edit.remove(id); }
+  }
+  register('doc', { name: 'AJOUTE', args: 2, join: true, phase: 1, describe: 'AJOUTE | type | texte  (ajoute à la fin du document)',
+    validate: (a, ctx) => typeOk(ctx, a[0]) || (!S(a[1]) ? 'texte vide' : null),
+    run(a, ctx) {
+      if (!ctx.edit.insertAfter('fin', a[0], safe(a[1]))) return false;
+      if (ctx.tx.creating) dropBlank(ctx);
+      ctx.tx.counts.inserted++; ctx.tx.details.push({ id: 'fin', label: 'Ajouté (' + typeLabel(a[0]) + ')', avant: '', apres: plain(a[1]) }); return true;
+    } });
+  /* couverture : titre et sous-titre de la PREMIÈRE diapositive (titre + premier texte de la disposition « titre ») */
+  register('slides', { name: 'COUVERTURE', args: 1, describe: 'COUVERTURE | titre | sous-titre',
+    validate: a => (!S(a[0]) ? 'titre vide' : null),
+    run(a, ctx) {
+      const first = (ctx.edit.items() || [])[0]; if (!first) return false;
+      const t = first.els.find(e => e.t === 'title'), sub = first.els.find(e => e.t === 'text' || e.t === 'subtitle');
+      let ok = false;
+      if (t) ok = ctx.edit.setElText(first.id, t.id, safe(a[0]), [safe(a[0])]) || ok;
+      if (sub && S(a[1])) ok = ctx.edit.setElText(first.id, sub.id, safe(a.slice(1).join(' · ')), [safe(a.slice(1).join(' · '))]) || ok;
+      if (ok) { ctx.tx.counts.replaced++; ctx.tx.details.push({ id: 'couverture', label: 'Couverture', avant: '', apres: plain(a[0]) }); }
+      return ok;
+    } });
+  /* une ligne entière du tableur : « LIGNE 3 | Produit | 12 | =B3*2 » → A3, B3, C3 (26 colonnes au plus) */
+  const colName = i => { let s = ''; i++; while (i > 0) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+  register('sheet', { name: 'LIGNE', args: 2, describe: 'LIGNE numéro | valeur | valeur | …  (une valeur par colonne, à partir de A)',
+    validate: (a, ctx) => { const n = +a[0]; if (!Number.isInteger(n) || n < 1 || n > 999) return 'numéro de ligne invalide'; if (a.length - 1 > 26) return 'trop de colonnes'; if (a.slice(1).some(v => v.length > 500)) return 'contenu trop long'; return refOk(ctx, 'A' + n); },
+    run(a, ctx) {
+      let k = 0;
+      a.slice(1).forEach((v, i) => { const r = colName(i) + (+a[0]); if (S(v) && ctx.edit.isRef(r) && ctx.edit.setCell(r, cellText(v))) k++; });
+      if (!k) return false;
+      ctx.tx.counts.cells += k; ctx.tx.details.push({ id: 'L' + a[0], label: 'Ligne ' + a[0], avant: '', apres: a.slice(1).map(cellText).join(' · ') }); return true;
+    } });
+  register('sheet', { name: 'TITRE', args: 1, join: true, describe: 'TITRE | titre du tableur', validate: a => (!S(a[0]) ? 'titre vide' : null),
+    run(a, ctx) { if (!setTitle(ctx.edit, plain(a[0]))) return false; ctx.tx.counts.titled++; ctx.tx.details.push({ id: 'titre', label: 'Titre', avant: '', apres: plain(a[0]) }); return true; } });
+  register('board', { name: 'TITRE', args: 1, join: true, describe: 'TITRE | titre de la planche', validate: a => (!S(a[0]) ? 'titre vide' : null),
+    run(a, ctx) { if (!setTitle(ctx.edit, plain(a[0]))) return false; ctx.tx.counts.titled++; ctx.tx.details.push({ id: 'titre', label: 'Titre', avant: '', apres: plain(a[0]) }); return true; } });
+  /* le quiz neuf contient une question vide : le premier ajout la remplace (même transaction) */
+  for (const name of ['AJOUTE_QCM', 'AJOUTE_VF']) {
+    const def = registry.quiz.get(name); const run0 = def.run;
+    def.run = (a, ctx) => { const ok = run0(a, ctx); if (ok && ctx.tx.creating) dropBlank(ctx); return ok; };
+  }
+  for (const [k, names] of Object.entries(CREATE_CMDS)) for (const nm of names) { const def = registry[k].get(nm); if (def) def.create = true; }
+  function describeCreate(kind, edit) {
+    const defs = CREATE_CMDS[kind].map(nm => registry[kind].get(nm)).filter(Boolean);
+    const lines = ['Réponds UNIQUEMENT par des commandes, une par ligne :'].concat(defs.map(d => d.describe));
+    if (kind === 'doc' && edit && edit.types) lines.unshift('Types : ' + edit.types().filter(t => t !== 'h4').join(', '));
+    if (kind === 'slides') lines.unshift('Dispositions : puces, contenu, section');
+    return lines.join('\n');
+  }
+  const CREATE_EXAMPLES = {
+    doc: `Exemple de demande : « un cours sur la prescription extinctive »
+Exemple de réponse :
+TITRE | La prescription extinctive
+AJOUTE | h1 | I. Le délai de droit commun
+AJOUTE | callout:definition | La **prescription extinctive** est l’extinction d’un droit par l’écoulement d’un délai.
+AJOUTE | p | Depuis la loi du 17 juin 2008, le délai de droit commun est de **cinq ans** (art. 2224 C. civ.).
+AJOUTE | li | Point de départ : le jour où le titulaire a connu les faits.
+AJOUTE | li | Délai butoir : vingt ans à compter de la naissance du droit.`,
+    fiche: `Exemple de demande : « fiche sur la prescription extinctive »
+Exemple de réponse :
+TITRE | Fiche — La prescription extinctive
+AJOUTE | callout:retenir | Délai de **droit commun : 5 ans** depuis la loi du 17 juin 2008.
+AJOUTE | callout:definition | **Délai butoir** : limite maximale de vingt ans au-delà de laquelle l’action est fermée.
+AJOUTE | h2 | Pièges à éviter
+AJOUTE | li | Confondre **interruption** (nouveau délai) et **suspension** (pause).`,
+    slides: `Exemple de demande : « une présentation sur la prescription »
+Exemple de réponse :
+TITRE | La prescription extinctive
+COUVERTURE | La prescription extinctive | Droit des obligations
+AJOUTE_DIAPO | puces | Définition | Extinction d’un droit par l’écoulement du temps / Sanctionne l’inaction du créancier
+AJOUTE_DIAPO | puces | Le délai de droit commun | **Cinq ans** depuis 2008 / Point de départ : connaissance des faits / Délai butoir : vingt ans
+AJOUTE_DIAPO | puces | Conclusion | Un équilibre entre sécurité juridique et droits du créancier`,
+    sheet: `Exemple de demande : « un budget étudiant mensuel »
+Exemple de réponse :
+TITRE | Budget étudiant mensuel
+LIGNE 1 | Poste | Montant (€)
+LIGNE 2 | Loyer | 450
+LIGNE 3 | Courses | 200
+LIGNE 4 | Transports | 30
+LIGNE 5 | Total | =SOMME(B2:B4)`,
+    board: `Exemple de demande : « une carte mentale sur la prescription »
+Exemple de réponse :
+TITRE | La prescription extinctive
+AJOUTE_TEXTE | La prescription extinctive en un coup d’œil
+AJOUTE_NOTE | **Définition** : extinction d’un droit par l’écoulement d’un délai
+AJOUTE_NOTE | **Droit commun** : cinq ans (art. 2224 C. civ.)
+AJOUTE_NOTE | **Délai butoir** : vingt ans`,
+    quiz: `Exemple de demande : « un quiz sur la prescription »
+Exemple de réponse :
+TITRE | Quiz — La prescription extinctive
+AJOUTE_QCM | Quel est le délai de prescription de droit commun ? | Deux ans | Cinq ans | Dix ans | Trente ans | B
+AJOUTE_VF | La suspension efface le délai déjà couru. | faux`
+  };
+
+  /* ---------------- 1.55 : intention « créer » (chat de Coco) ----------------
+     « crée-moi une présentation sur la Révolution française » → { as: 'slides', prompt, fromCurrent } ; déterministe (pas
+     d'appel au modèle) : un verbe de création ET un type de document. « fais un quiz sur ce cours » → fromCurrent. */
+  const CREATE_VERB = /\b(cr[ée]{1,2}[sz]?|cr[ée]er|g[ée]n[èée]re[sz]?|g[ée]n[ée]rer|fabrique[sz]?|pr[ée]pare[sz]?|fais|fait|faire|r[ée]dige[sz]?|r[ée]diger|[ée]cris|[ée]crire|con[cç]ois|monte[sz]?)(?:-moi|-nous)?\b/i;
+  const CREATE_KINDS = [
+    ['fiche', /\bfiches?(?:\s+de\s+r[ée]vision)?\b/i], ['quiz', /\b(quiz+|qcm|questionnaires?)\b/i],
+    ['slides', /\b(pr[ée]sentations?|diaporamas?|diapos?|slides?|exposés?)\b/i], ['sheet', /\b(tableurs?|feuilles?\s+de\s+calcul|classeurs?)\b/i],
+    ['board', /\b(planches?|cartes?\s+mentales?|tableaux?\s+blancs?|mind\s*maps?)\b/i], ['doc', /\b(s[ée]ances?|cours|documents?|plans?\s+de\s+cours)\b/i]
+  ];
+  function matchCreate(text) {
+    const t = S(text); if (!t || t.length > 600) return null;
+    const v = CREATE_VERB.exec(t); if (!v) return null;
+    const after = t.slice(v.index + v[0].length);
+    /* le type doit suivre le verbe de près (« crée une présentation », « fais-moi un quiz ») : « fais la conclusion du cours » n'en est pas un */
+    for (const [as, re] of CREATE_KINDS) {
+      const m = re.exec(after); if (!m || m.index > 24) continue;
+      if (!/^\s*(-?\s*(moi|nous)\s*)?(un|une|des|le|la|les|mon|ma|nouveaux?|nouvelles?|petite?s?|courte?s?|\d+)?\s*(nouveaux?|nouvelles?|petite?s?|courte?s?|vraie?s?)?\s*$/i.test(after.slice(0, m.index))) continue;
+      const rest = after.slice(m.index + m[0].length).replace(/^[\s,:—–-]+/, '');
+      const fromCurrent = /^(sur|à partir|a partir|depuis|de|du)\s+(ce|cette|mon|ma|le|la)\s+(cours|séance|seance|document|chapitre|présentation|presentation)\b/i.test(rest) || !S(rest.replace(/[.!?]+$/, ''));
+      return { as, prompt: t, subject: fromCurrent ? '' : rest.replace(/^(sur|à propos de|a propos de|concernant|au sujet de)\s+/i, '').replace(/[.!?]+$/, '').trim(), fromCurrent };
+    }
+    return null;
+  }
+
+  /* ---------------- 1.55 : création du contenu d'un document neuf ----------------
+     opts = { as (doc | fiche | slides | sheet | board | quiz), prompt, source?: { title, text } } ; ui = { token, cancelled(),
+     onProgress({ phase: 'cree', counts, changes }) }. Le document (vide) vient d'être créé et ouvert par js/cococreate.js.
+     Les commandes arrivent pendant la génération et sont appliquées au fil de l'eau (une transaction par paquet, via la
+     façade edit → Ctrl+Z) ; « Annuler les modifications » rend le document vide d'origine (instantané avant). */
+  async function create(session, opts, ui) {
+    ui = ui || {};
+    const edit = facadeOf(session.d);
+    if (!edit) throw softErr('Je ne sais pas encore créer ce type de document.');
+    const d = current();
+    if (!d || d.id !== session.d.id) throw softErr('Ouvre d’abord ce document pour que je puisse le remplir.');
+    if (!edit.canEdit()) throw softErr('Ce document est en lecture seule : je ne peux pas le remplir.');
+    const kind = edit.kind; const as = opts.as === 'fiche' && kind === 'doc' ? 'fiche' : kind;
+    const tx = begin(session, edit); tx.intent = 'creer'; tx.creating = true; tx.lotsTotal = 1; tx.lots = 1;
+    /* questions vides du quiz neuf (items() les montre « Question sans texte ») : relevées sur le document lui-même */
+    tx.blankQs = kind === 'quiz' ? (d.questions || []).filter(q => !S(q.text) && !(q.opts || []).some(o => S(o && o.text))).map(q => q.id) : [];
+    const ids = new Map();
+    const ctx = { tx, edit, ids, real: () => undefined };
+    const MIN = kind === 'board' ? 3 : 1;   // planche : trois notes par rangée (chaque paquet repart sous la planche)
+    let applied = 0, broken = false;
+    const apply = (lines, final) => {
+      if (broken) return;
+      const ready = final ? lines.length : Math.max(0, lines.length - 1);   // la dernière ligne s'écrit encore
+      if (ready - applied < (final ? 1 : MIN)) return;
+      if (!alive(tx)) { tx.changedByUser = true; broken = true; if (ui.token && window.AlixoAI) AlixoAI.cancel(ui.token); return; }
+      const batch = lines.slice(applied, ready); applied = ready;
+      const { valid, rejected } = parseCommands(batch, kind, ctx);
+      const ok = valid.filter(c => c.def.create);
+      tx.rejected.push(...rejected, ...valid.filter(c => !c.def.create).map(c => ({ line: c.line, why: 'commande non autorisée à la création' })));
+      if (ok.length) execute(tx, ok, ids);
+      progress(ui, { phase: 'cree', changes: tx.changes, counts: tx.counts, kind });
+    };
+    progress(ui, { phase: 'cree', changes: 0, counts: tx.counts, kind });
+    let r;
+    try {
+      r = await AlixoAI.run('create', { as, prompt: opts.prompt, source: opts.source || null, commands: describeCreate(kind, edit), example: CREATE_EXAMPLES[as] || CREATE_EXAMPLES[kind] },
+        { token: ui.token, onToken: t => { if (!cancelled(ui)) apply(window.AlixoAI ? AlixoAI.parse.edit(t) : [], false); } });
+    } catch (err) {
+      if (err && err.status === 499) { tx.stopped = !tx.changedByUser; return finish(tx); }
+      if (!tx.changes) throw err;
+      tx.stopped = true; tx.error = (err && err.message) || '';   // une partie est déjà écrite : on la garde (annulable)
+      return Object.assign(finish(tx), { error: tx.error });
+    }
+    if (cancelled(ui)) { tx.stopped = true; return finish(tx); }
+    apply(r.lines, true);
+    if (!broken && tx.changes) finalize(tx, opts);
+    if (tx.changes && r.finish === 'length') tx.truncated = true;
+    return Object.assign(finish(tx), { truncated: !!tx.truncated });
+  }
+  /* finitions : titre du document (sinon tiré de la demande), couverture de la présentation remplie */
+  function finalize(tx, opts) {
+    const d = current(); if (!d || d.id !== tx.docId || !tx.edit.canEdit()) return;
+    const edit = tx.edit;
+    const title = S(d.titre) || cut(S(opts.subject) || S(opts.prompt).replace(/^(cr[ée]e|g[ée]n[èe]re|fais|pr[ée]pare)\S*\s+/i, ''), 80);
+    let n = 0; edit.begin();
+    if (!S(d.titre) && title) { if (setTitle(edit, title.charAt(0).toUpperCase() + title.slice(1))) n++; }
+    if (edit.kind === 'slides' && !tx.counts.replaced) {
+      const first = (edit.items() || [])[0]; const t = first && first.els.find(e => e.t === 'title');
+      if (t && S(d.titre)) { if (edit.setElText(first.id, t.id, safe(d.titre), [safe(d.titre)])) n++; }
+    }
+    if (n) edit.commit();
+    const dd = current(); tx.lastSeen = dd ? (dd.updatedAt || 0) : tx.lastSeen;
+  }
+
+  /* ============================================================
      Intentions
      ============================================================ */
   /* éléments corrigeables (texte brut) avec leur identifiant pour applyFixes : séance → blocs ; présentation → sid.eid ; autres → id */
@@ -487,5 +693,5 @@ AJOUTE_QCM | Quel est le délai de prescription de droit commun ? | Deux ans | C
       }
     } });
 
-  return { register, registerIntent, maybeAction, route, run, applyPlan, undo, summary, pendingText, outline, parseCommands, execute, facadeOf, kindOf, KIND_WORDS, describe, safe, get intents() { return [...intents.keys()]; }, get registry() { return registry; } };
+  return { register, registerIntent, maybeAction, route, run, applyPlan, create, matchCreate, describeCreate, CREATE_EXAMPLES, undo, summary, pendingText, outline, parseCommands, execute, facadeOf, kindOf, KIND_WORDS, describe, safe, get intents() { return [...intents.keys()]; }, get registry() { return registry; } };
 })();

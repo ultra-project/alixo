@@ -290,6 +290,8 @@ window.AlixoAIQuiz = (() => {
       clearInterval(gen.stepTm); s.gen = null;
       s.result.title = res.title || s.result.title; s.result.tokIn = res.tokIn; s.result.tokOut = res.tokOut; s.result.model = res.model;
       if (res.partial) toast(`${s.result.questions.length} questions sur ${opts.n} : ${res.partial}`, { duration: 8000 });
+      else autoSave(s);   // 1.55 : enregistré dans Artéfacts (un toast à la fois : l'avertissement « partiel » passe avant)
+      if (res.partial) setTimeout(() => autoSave(s), 0);
       if (s.step === 'gen') startPlay(s);
       else if (s.step === 'play' && s.play) { if (s.play.waiting) { s.play.waiting = false; if (s.play.i >= s.result.questions.length) { s.step = 'result'; render(s); } else renderQuestion(s); } else refreshCount(s); }
     } catch (err) {
@@ -297,6 +299,7 @@ window.AlixoAIQuiz = (() => {
       clearInterval(gen.stepTm); s.gen = null;
       if (s.step === 'play' && s.result && s.result.questions.length) {   // des questions ont déjà été jouées : on termine avec celles-là
         toast(`AlixoAI s’est arrêtée après ${s.result.questions.length} question${s.result.questions.length > 1 ? 's' : ''} : ${err && err.message || err}`, { duration: 8000 });
+        autoSave(s);   // 1.55 : les questions déjà générées sont gardées (Artéfacts)
         if (s.play && s.play.waiting) { s.play.waiting = false; s.step = 'result'; render(s); }
         return;
       }
@@ -413,19 +416,41 @@ window.AlixoAIQuiz = (() => {
       <div class="aq-actions wrap">
         <button type="button" class="aq-btn primary" data-aq="replay">${I.replay}<span>Rejouer (ordre mélangé)</span></button>
         <button type="button" class="aq-btn ghost" data-aq="back">${ICON}<span>Nouveau quiz</span></button>
-        ${window.AlixoQuiz && !srcReadOnly(s.d) ? `<button type="button" class="aq-btn ghost" data-aq="savequiz" title="Créer un document Quiz avec ces questions (pour le rejouer, le modifier, le présenter en direct)">${I.save}<span>Enregistrer comme document Quiz</span></button>` : ''}
+        ${savedDoc(s) ? `<button type="button" class="aq-btn ghost" data-aq="savequiz" title="Ce quiz est enregistré dans Artéfacts : l’ouvrir pour le rejouer, le modifier, le présenter en direct">${I.save}<span>Ouvrir le document Quiz</span></button>`
+    : window.AlixoQuiz && !srcReadOnly(s.d) ? `<button type="button" class="aq-btn ghost" data-aq="savequiz" title="Créer un document Quiz avec ces questions (pour le rejouer, le modifier, le présenter en direct)">${I.save}<span>Enregistrer comme document Quiz</span></button>` : ''}
         <button type="button" class="aq-btn ghost" data-aq="print" title="Imprimer ou enregistrer en PDF : questions puis corrigé">${I.print}<span>Imprimer / PDF</span></button>
         <button type="button" class="aq-btn ghost" data-aq="close">Fermer</button>
       </div></div>`;
   }
   /* un document Quiz (type existant) construit avec les questions générées — facultatif, indépendant du Quiz IA */
+  /* 1.55 : le quiz généré est ENREGISTRÉ AUTOMATIQUEMENT comme document Quiz (Artéfacts, js/artefacts.js) dès la fin de la
+     génération, dans le dossier de la séance source ; « Enregistrer comme document Quiz » ouvre alors ce document (pas de
+     doublon). r.savedId garde le lien résultat → document. */
+  function buildQuizDoc(s) {
+    const r = s && s.result; if (!r || !window.AlixoQuiz || !r.questions.length) return null;
+    const qd = AlixoQuiz.newDoc((srcReadOnly(s.d) || (typeof isSharedDoc === 'function' && isSharedDoc(s.d.id))) ? null : (s.d.folderId || null), s.d.prof || '');
+    qd.titre = r.title; qd.questions = r.questions.map(q => { const c = JSON.parse(JSON.stringify(q)); c.time = q.t === 'text' ? 30 : 20; c.points = 1000; return c; });
+    qd.aiFrom = { docId: s.d.id, title: s.title, at: Date.now(), kind: 'quiz' };
+    return qd;
+  }
+  function autoSave(s) {
+    const r = s && s.result; if (!r || r.savedId) return;
+    try {
+      const qd = buildQuizDoc(s); if (!qd) return;
+      state.docs.push(qd); save(); r.savedId = qd.id;
+      if (window.AlixoArtefacts && AlixoArtefacts.refresh) AlixoArtefacts.refresh();
+      toast(`Quiz enregistré dans Artéfacts : « ${r.title} » (généré par AlixoAI, à relire)`, { duration: 4000 });
+      if (s.step === 'result') render(s);   // le bouton devient « Ouvrir le document Quiz »
+    } catch (e) { console.error(e); }
+  }
+  const savedDoc = s => (s && s.result && s.result.savedId ? state.docs.find(x => x.id === s.result.savedId) || null : null);
   function saveAsQuizDoc(s) {
     const r = s && s.result; if (!r || !window.AlixoQuiz) return;
+    const done = savedDoc(s);
+    if (done) { if (s.close) s.close(); openDoc(done.id); return; }   // 1.55 : déjà enregistré automatiquement
     try {
-      const qd = AlixoQuiz.newDoc((srcReadOnly(s.d) || (typeof isSharedDoc === 'function' && isSharedDoc(s.d.id))) ? null : (s.d.folderId || null), s.d.prof || '');
-      qd.titre = r.title; qd.questions = r.questions.map(q => { const c = JSON.parse(JSON.stringify(q)); c.time = q.t === 'text' ? 30 : 20; c.points = 1000; return c; });
-      qd.aiFrom = { docId: s.d.id, title: s.title, at: Date.now() };
-      state.docs.push(qd); save();
+      const qd = buildQuizDoc(s); if (!qd) return;
+      state.docs.push(qd); save(); r.savedId = qd.id;
       toast(`Document Quiz « ${r.title} » créé dans la bibliothèque`, { duration: 6000 });
       if (s.close) s.close();
       openDoc(qd.id);

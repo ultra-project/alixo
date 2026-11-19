@@ -84,7 +84,12 @@ window.AlixoSanitize = (() => {
     const k = fontKey(v); if (!k) return '';
     if (k === 'var(--font-serif-base)') return 'var(--font-serif-base)';
     const f = cfg.fonts.find(x => x.key === k);
-    return f ? f.css : '';
+    if (f) return f.css;
+    /* 1.55 : texte collé depuis Word, une page web… : « Georgia » seule, ou une autre pile qui commence par une police
+       connue → la pile d'Alixo correspondante (la portion garde sa police) */
+    const first = k.split(',')[0];
+    const g = first && cfg.fonts.find(x => x.key.split(',')[0] === first);
+    return g ? g.css : '';
   }
   /* taille → points, de 5 à 96 (arrondie au demi-point, comme applyFontSize) */
   function fontSize(v) {

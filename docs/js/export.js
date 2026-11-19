@@ -166,6 +166,9 @@
         if (n.style.backgroundColor && n.style.backgroundColor !== 'transparent') { const bg = parseColor(n.style.backgroundColor); if (bg) s.bg = bg; }
         if (tag === 'font' && n.getAttribute('size')) s.px = FONT_SIZE_PX[n.getAttribute('size')] || 16;
         if (n.style.fontSize) { const v = parseFloat(n.style.fontSize); if (v) s.px = /pt$/.test(n.style.fontSize) ? v / 0.75 : v; }
+        /* 1.55 : police propre à une portion de texte (menu Police) : première police de la pile, reprise dans l'export Word */
+        { const ff = n.style.fontFamily || (tag === 'font' ? n.getAttribute('face') || '' : '');
+          if (ff) { const first = ff.split(',')[0].trim().replace(/^["']|["']$/g, ''); if (/^(inherit|initial|unset)$/i.test(first) || /^var\(/i.test(first)) delete s.font; else if (first && first.length <= 60) s.font = first; } }
         if (n.classList.contains('nb-title')) s.b = true;
         if (tag === 'blockquote') s.i = true;
         walk(n, s);
@@ -738,6 +741,7 @@
     const sz = r.px ? Math.round(r.px * 0.75 * 2) : ex.sz;
     const color = r.color ? hex(r.color) : ex.color;
     const props = [
+      r.font ? `<w:rFonts w:ascii="${xml(r.font)}" w:hAnsi="${xml(r.font)}" w:cs="${xml(r.font)}"/>` : '',   // 1.55 : police de la portion
       b ? '<w:b/>' : '', i ? '<w:i/>' : '', ex.caps ? '<w:caps/>' : '',
       r.u ? '<w:u w:val="single"/>' : '', r.s ? '<w:strike/>' : '',
       color ? `<w:color w:val="${color}"/>` : '',
