@@ -1,27 +1,27 @@
 {
- "generatedAt": "2026-11-20T09:38:01.315Z",
- "version": "1.55.2",
- "date": "2026-11-19T15:37:37Z",
+ "generatedAt": "2026-11-20T09:47:33.418Z",
+ "version": "1.56.0",
+ "date": "2026-11-20T09:47:10Z",
  "assets": {
   "setup": {
    "name": "Alixo-Setup.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Setup.exe",
-   "size": 89881347
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.56.0/Alixo-Setup.exe",
+   "size": 91538666
   },
   "portable": {
    "name": "Alixo-Portable.exe",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Portable.exe",
-   "size": 89508308
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.56.0/Alixo-Portable.exe",
+   "size": 91164426
   },
   "mac": {
    "name": "Alixo-Mac.dmg",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-Mac.dmg",
-   "size": 204950372
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.56.0/Alixo-Mac.dmg",
+   "size": 207187311
   },
   "macZip": {
-   "name": "Alixo-1.55.2-mac.zip",
-   "url": "https://github.com/ultra-project/alixo/releases/download/v1.55.2/Alixo-1.55.2-mac.zip",
-   "size": 197490969
+   "name": "Alixo-1.56.0-mac.zip",
+   "url": "https://github.com/ultra-project/alixo/releases/download/v1.56.0/Alixo-1.56.0-mac.zip",
+   "size": 199641905
   }
  }
 }
