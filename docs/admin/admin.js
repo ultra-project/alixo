@@ -21,7 +21,7 @@
    - plans/{uid}             → Alixo+ (1.16) : { plus, until (0 = sans fin), since, by, note }  (posé ici, lu par l'utilisateur ;
                                 depuis 1.19 aussi écrit par l'utilisateur lui-même avec une clé d'activation)
    - codes/{code}            → clés d'activation Alixo+ (1.19) : { kind: 'plus', months, label, createdAt, by, usedBy, usedAt, usedEmail, applied }
-   - config/public           → + plusPrice, plusUrl, plusNote : l'offre Alixo+ affichée dans l'application (1.16) ; billingApi : serveur de paiement Stripe (1.30)
+   - config/public           → + plusPrice, plusUrl, plusNote : l'offre Alixo+ affichée dans l'application (1.16) ; billingApi : serveur de paiement Stripe (1.30) ; mcpApi : serveur MCP (1.56.0)
    Règles : SETUP-COMPTES.md § 6.
    ============================================================ */
 'use strict';
@@ -941,6 +941,7 @@
     if (document.activeElement !== $('#plus-url')) $('#plus-url').value = pub.plusUrl || '';
     if (document.activeElement !== $('#plus-note')) $('#plus-note').value = pub.plusNote || '';
     if (document.activeElement !== $('#plus-api')) $('#plus-api').value = pub.billingApi || '';
+    if (document.activeElement !== $('#mcp-api')) $('#mcp-api').value = pub.mcpApi || '';   // 1.56.0 : serveur MCP
     if (document.activeElement !== $('#biz-url')) $('#biz-url').value = pub.businessUrl || '';
     const A = (pub.announcements || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     const aud = a => ({ all: 'tous', droit: 'Droit', economie: 'Économie', sante: 'Santé', commerce: 'Commerce', staps: 'STAPS' })[a.audience || 'all'] || a.audience;
@@ -962,7 +963,11 @@
     if (api) { try { const r = await fetch(api + '/'); const j = await r.json(); if (!j.ok) throw new Error(); if (!j.prices.monthly || !j.prices.yearly) toast('Serveur joignable, mais un tarif manque (STRIPE_PRICE_MONTHLY / STRIPE_PRICE_YEARLY dans wrangler.toml)'); } catch { toast('Serveur de paiement injoignable à cette adresse : vérifiez le déploiement (billing/README.md)'); return; } }
     const biz = $('#biz-url').value.trim();
     if (biz && !/^https:\/\//.test(biz)) { toast('L’adresse du tableau de bord Business doit commencer par https://'); return; }
-    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim(), billingApi: api, businessUrl: biz ? biz.replace(/\/?$/, '/') : '' }); toast('Offre Alixo+ enregistrée');
+    /* 1.56.0 : serveur MCP (Worker mcp/) — https, sans chemin ; vérifié par /health s'il répond */
+    const mcpApi = $('#mcp-api').value.trim().replace(/\/+$/, '').replace(/\/mcp$/, '');
+    if (mcpApi && !/^https:\/\/[^/\s]+$/.test(mcpApi)) { toast('L’adresse du serveur MCP doit être de la forme https://alixo-mcp.xxx.workers.dev'); return; }
+    if (mcpApi) { try { const r = await fetch(mcpApi + '/health'); const j = await r.json(); if (!j.ok || j.service !== 'alixo-mcp') throw new Error(); } catch { toast('Serveur MCP injoignable ou inattendu : adresse enregistrée quand même, vérifiez-la'); } }
+    await savePub({ plusPrice: $('#plus-price').value.trim(), plusUrl: url, plusNote: $('#plus-note').value.trim(), billingApi: api, mcpApi, businessUrl: biz ? biz.replace(/\/?$/, '/') : '' }); toast('Offre Alixo+ enregistrée');
   });
   $('#ann-add').addEventListener('click', () => {
     modal(`<h3>Nouvelle annonce</h3><label class="field">Titre<input id="an-title" maxlength="140" placeholder="Ex. Maintenance dimanche matin"></label><label class="field">Texte<textarea id="an-text" maxlength="600" placeholder="Détails (facultatif)"></textarea></label><label class="field">Lien (facultatif)<input id="an-url" placeholder="https://…"></label>

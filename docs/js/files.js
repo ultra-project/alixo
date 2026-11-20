@@ -76,6 +76,9 @@ window.AlixoFiles = (() => {
   const getLocal = id => idb('readonly', s => s.get(id)).catch(() => null);
   const delLocal = id => idb('readwrite', s => s.delete(id)).catch(() => {});
   const hasLocal = async id => { try { return (await idb('readonly', s => s.count(id))) > 0; } catch { return false; } };
+  /* 1.56.0 : données annexes d'un fichier, sur l'appareil seulement (brouillon d'un PDF modifié : « pdfdraft:<id> ») —
+     même base, clés préfixées « aux: », jamais envoyées au nuage */
+  const aux = { get: k => getLocal('aux:' + k), set: (k, v) => putLocal('aux:' + k, v), del: k => delLocal('aux:' + k) };
 
   /* contenu d'un fichier : l'appareil d'abord, sinon le nuage (puis mis en cache) */
   async function getData(id, onProgress) {
@@ -235,7 +238,7 @@ window.AlixoFiles = (() => {
     if (viewing && ids.has(viewing.id)) closeViewer();
     save(); refreshLibrary(); Cloud.schedule();
     let undone = false;
-    const finalize = () => { if (!undone) gone.forEach(f => delLocal(f.id)); };
+    const finalize = () => { if (!undone) gone.forEach(f => { delLocal(f.id); aux.del('pdfdraft:' + f.id); }); };   // 1.56.0 : + brouillon PDF
     const tm = setTimeout(finalize, 9000);
     toast(label || (gone.length === 1 ? `« ${gone[0].name} » supprimé` : `${gone.length} fichiers supprimés`), {
       action: 'Annuler', onAction: () => {
@@ -260,7 +263,7 @@ window.AlixoFiles = (() => {
     return {
       count: gone.length,
       restore() { for (const f of gone) if (!byId(f.id)) { f.cloud = false; f.updatedAt = Date.now(); files().push(f); untomb('files', f.id); } Cloud.schedule(); },
-      finalize() { gone.forEach(f => { if (!byId(f.id)) delLocal(f.id); }); }
+      finalize() { gone.forEach(f => { if (!byId(f.id)) { delLocal(f.id); aux.del('pdfdraft:' + f.id); } }); }   // 1.56.0 : + brouillon PDF
     };
   }
   async function saveCopy(x) {
@@ -326,6 +329,8 @@ window.AlixoFiles = (() => {
     const f = h.f, key = h.shared ? sharedKey(f) : f.id;
     // 1.35 : un document Word / OpenDocument de la bibliothèque s'ouvre directement comme une séance (onglet, plan, barre d'outils)
     if (!h.shared && window.AlixoDocEdit && AlixoDocEdit.canOpen(f.name)) { await openInEditor(h); return; }
+    // 1.56.0 : un PDF (de la bibliothèque ou partagé) s'ouvre dans la visionneuse d'Alixo, en onglet (js/pdfview.js)
+    if (window.AlixoPdf && AlixoPdf.canOpen(f.name)) { await openInPdf(h); return; }
     const ov = ensureOverlay();
     if (viewing) closeViewer();
     viewing = { id: key, h, cleanup: null };
@@ -364,13 +369,33 @@ window.AlixoFiles = (() => {
     if (!buf) { toast(`Le contenu de « ${f.name} » n’est pas sur cet appareil${f.cloud ? ' : vérifiez la connexion internet' : ''}`); return; }
     await AlixoDocEdit.open({ name: f.name, buf, fileId: f.id, folderId: f.folderId || null, shared: false });
   }
+  /* 1.56.0 : ouvre un PDF dans la visionneuse en onglet ; un fichier partagé s'ouvre en lecture (« Enregistrer une copie ») */
+  async function openInPdf(h) {
+    const f = h.f;
+    if (!h.shared && AlixoPdf.openTabs && AlixoPdf.openTabs().includes('pdf:' + f.id)) { AlixoPdf.open({ name: f.name, buf: new ArrayBuffer(1), fileId: f.id, folderId: f.folderId || null }); return; }
+    // 1.56.0 : pas de toast « Ouverture de… » : l'onglet du PDF affiche lui-même son attente
+    const buf = await h.data(() => {});
+    if (!buf) { toast(h.shared ? 'Ce fichier partagé n’a pas pu être téléchargé (connexion internet ?)' : `Le contenu de « ${f.name} » n’est pas sur cet appareil${f.cloud ? ' : vérifiez la connexion internet' : ''}`, { duration: 6000 }); return; }
+    await AlixoPdf.open({ name: f.name, buf, fileId: h.shared ? null : f.id, folderId: h.shared ? null : (f.folderId || null), shared: !!h.shared });
+  }
   /* affiche un fichier dans un conteneur ; renvoie une fonction de nettoyage (URL temporaires) */
   async function render(body, name, buf) {
     const ext = extOf(name);
     let url = null;
     const blobUrl = type => { url = URL.createObjectURL(new Blob([buf], type ? { type } : undefined)); return url; };
     try {
-      if (ext === 'pdf') body.innerHTML = `<iframe src="${blobUrl('application/pdf')}#toolbar=1&navpanes=0&view=FitH" title="${esc(name)}"></iframe>`;
+      if (ext === 'pdf') {
+        // 1.56.0 : visionneuse d'Alixo (pdf.js : pages, texte sélectionnable, Ctrl + molette). Plus de bascule automatique
+        // vers le lecteur du navigateur dans un cadre : en cas d'échec, un message et « Ouvrir avec… » / « Enregistrer une copie »
+        let dispose = null, why = '';
+        if (window.AlixoPdf && AlixoPdf.preview) {
+          body.innerHTML = `<div class="vw-empty">Ouverture du PDF…</div>`;
+          try { dispose = await AlixoPdf.preview(body, { name, buf: buf.slice(0) }); } catch (e) { console.error(e); dispose = null; why = (e && e.userMsg) || ''; }
+        }
+        if (dispose) return () => { dispose(); if (url) URL.revokeObjectURL(url); };
+        const desk = !!(window.alixoDesktop && window.alixoDesktop.openData);
+        body.innerHTML = `<div class="vw-empty">${esc(why || 'Ce PDF n’a pas pu être affiché dans Alixo.')}<br>${desk ? 'Utilisez « Ouvrir avec… » pour l’ouvrir avec une autre application.' : 'Utilisez « Enregistrer une copie », puis ouvrez-la avec votre lecteur PDF.'}</div>`;
+      }
       else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg', 'bmp', 'avif'].includes(ext)) body.innerHTML = `<div class="fv-imgwrap"><img class="vw-img" src="${blobUrl(MIME[ext])}" alt="${esc(name)}"></div>`;
       else if ((ext === 'docx' || ext === 'odt') && window.AlixoDocEdit) {
         // 1.34.1 : le document tel qu'il a été écrit (pages, polices, images), en lecture
@@ -701,5 +726,5 @@ window.AlixoFiles = (() => {
   // la bibliothèque a pu être dessinée avant le chargement de ce module
   setTimeout(() => { try { refreshLibrary(); } catch { /* pas encore prête */ } }, 0);
 
-  return { open, openShared, openSharedMenu, pick, pickPhone, openImportChoice, riskyExt, knownExt, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
+  return { aux, open, openShared, openSharedMenu, pick, pickPhone, openImportChoice, riskyExt, knownExt, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
 })();

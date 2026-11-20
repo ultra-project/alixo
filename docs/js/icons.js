@@ -88,6 +88,7 @@
     'mic': '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
     'camera': '<path d="M4 8h3l2-3h6l2 3h3v12H4Z"/><circle cx="12" cy="13" r="3.5"/>',
     'smartphone': '<rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M10.5 18.5h3"/>',
+    'scan': '<path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M4 12h16"/>',   /* 1.56.0 : document scanné (menu « / », mini-barre) */
     'music': '<path d="M9 18V6l11-2v12"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
     'palette': '<path d="M12 3a9 9 0 0 0 0 18c1.5 0 2-1 2-2s-1-1.5-1-2.5 1-1.5 2-1.5h2a4 4 0 0 0 4-4c0-4.4-4-8-9-8Z"/><circle cx="7.5" cy="11" r="1"/><circle cx="10" cy="7.5" r="1"/><circle cx="14.5" cy="7.5" r="1"/>',
     /* divers */
@@ -166,7 +167,7 @@
     'bug': 'insecte virus informatique', 'snowflake': 'flocon neige climat', 'planet': 'planète espace astronomie', 'mountain': 'montagne géographie géologie',
     'compass': 'boussole orientation géographie', 'sigma': 'somme maths statistiques', 'pi': 'pi maths géométrie', 'infinity': 'infini maths analyse', 'function': 'fonction maths analyse',
     'languages': 'langues traduction anglais espagnol', 'message-circle': 'message discussion', 'quote': 'citation guillemets', 'newspaper': 'journal presse actualité',
-    'megaphone': 'mégaphone communication annonce', 'film': 'film cinéma vidéo', 'mic': 'micro radio oral podcast', 'camera': 'appareil photo image', 'smartphone': 'téléphone mobile',
+    'megaphone': 'mégaphone communication annonce', 'film': 'film cinéma vidéo', 'mic': 'micro radio oral podcast', 'camera': 'appareil photo image', 'smartphone': 'téléphone mobile', 'scan': 'scanner numériser document',
     'music': 'musique son', 'palette': 'palette art peinture dessin', 'star': 'étoile favori', 'heart': 'cœur santé amour', 'flame': 'flamme feu', 'check-circle': 'validé fait',
     'pin': 'épingle', 'target': 'cible objectif', 'trophy': 'trophée concours réussite', 'rocket': 'fusée projet lancement', 'zap': 'éclair énergie', 'sparkles': 'étincelles nouveau',
     'puzzle': 'puzzle jeu logique', 'map': 'carte géographie', 'clock': 'horloge heure temps', 'calendar': 'calendrier agenda date', 'home': 'maison accueil',

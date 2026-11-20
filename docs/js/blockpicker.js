@@ -17,6 +17,7 @@ window.AlixoBlockPicker = (() => {
     for (const it of SLASH_ITEMS) if (it.plan) { it.name = `${planName(it.plan)} (niveau ${planSample(it.plan)})`; it.ico = planSample(it.plan); }
     const list = SLASH_ITEMS.filter(it => {
       if (it.nest) return false;
+      if (it.desk && document.body.classList.contains('mobile')) return false;   // 1.56.0 : entrée réservée à l'ordinateur (comme le menu « / »)
       if (it.plan && it.plan > planDepth()) return false;
       if (it.spec === 'sym' && !q) return false;
       return it.sect ? slashSpecOk(it, q) : (slashSpecOk(it, q) && (!q || norm(it.name + ' ' + (it.sub || '') + ' ' + (it.kw || '')).includes(q)));
@@ -55,6 +56,7 @@ window.AlixoBlockPicker = (() => {
     if (id === 'graphmenu' || id === 'g-plot') return `<svg class="bp-graph" viewBox="0 0 200 120"><path class="ax" d="M20 10v95h170"/><path class="c1" d="M30 20 C 80 40, 120 80, 180 98"/><path class="c2" d="M30 98 C 80 80, 120 40, 180 20"/><circle cx="105" cy="59" r="4"/></svg>` + L(50, 1.6);
     if (id === 'table' || id === 'triade' || id === 'ddx') { const cols = id === 'triade' ? 3 : 3, rows = id === 'triade' ? 2 : 4; let h = ''; for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) h += `<i class="${r === 0 ? 'th' : ''}" style="--d:${.15 + (r * cols + c) * .09}s"><b></b></i>`; return ctxTop() + `<div class="bp-table" style="--cols:${cols}">${h}</div>`; }
     if (id === 'image') return ctxTop() + `<div class="bp-img"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-8 8"/></svg></div><small class="bp-cap">Figure 1 — légende</small>`;
+    if (id === 'scan') return `<div class="bp-scan"><div class="bp-scan-page">${L(70, .2)}${L(86, .35)}${L(78, .5)}${L(58, .65)}${L(82, .8)}${L(64, .95)}<i class="bp-scan-hl"></i><svg class="bp-scan-ink" viewBox="0 0 100 60"><ellipse cx="68" cy="20" rx="22" ry="9"/></svg></div></div>`;   // 1.56.0 : document scanné — feuille, lignes, surligneur et trait de stylo
     if (id === 'draw') return `<svg class="bp-draw" viewBox="0 0 200 120"><rect x="18" y="20" width="60" height="38" rx="6"/><circle cx="150" cy="40" r="22"/><path d="M80 40h44" class="ar"/><path d="m118 34 8 6-8 6" class="ar"/><path d="M30 95 C 60 70, 90 110, 120 88 S 170 80, 185 100" class="free"/></svg>`;
     if (id === 'link') return ctxTop() + `<div class="bp-link"><span>${AlixoIcons.svg('link')} legifrance.gouv.fr</span></div>` + L(70, 1);
     if (id === 'timer') return `<div class="bp-timer"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="42" class="tr"/><circle cx="50" cy="50" r="42" class="pr"/></svg><b>05:00</b></div>`;

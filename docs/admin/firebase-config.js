@@ -27,6 +27,11 @@ window.ALIXO_APPLE_CONFIG = null;
    Offre Alixo+ › Serveur de paiement), sinon l'ancien lien de paiement manuel. */
 window.ALIXO_BILLING = { api: "" };
 
+/* Serveur MCP d'Alixo (1.56.0) : adresse du Worker alixo-mcp (dossier mcp/ — voir mcp/README.md), sans « /mcp ».
+   Vide : l'application utilise config/public.mcpApi (panneau admin › Annonces › Offre Alixo+ › Serveur MCP) ; si les
+   deux sont vides, Paramètres › Intégrations indique « Service pas encore activé par l'administrateur ». */
+window.ALIXO_MCP = { api: "" };
+
 /* E-mails d'invitation d'Alixo Share (facultatif — voir SETUP-COMPTES.md § 3 ter).
    Sans réglage : Alixo ouvre un brouillon prêt à envoyer (Gmail ou messagerie de l'ordinateur).
    Envoi automatique : { webhook: "https://script.google.com/macros/s/…/exec", key: "…" } (Google Apps Script)

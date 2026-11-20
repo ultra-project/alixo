@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-19T15:37:56.827Z",
+ "generatedAt": "2026-11-20T09:38:01.315Z",
  "version": "1.55.2",
  "date": "2026-11-19T15:37:37Z",
  "notes": "Nouveautés 1.55.2 — Correctif : une seule entrée sélectionnée dans la barre de gauche\n\n\n- **Plus de double sélection.** En passant de Tâches au Workspace ou aux Artéfacts, l’entrée Tâches restait en surbrillance à côté de la nouvelle : c’est corrigé, une seule entrée (Agenda, Partagés avec moi, Workspace, Artéfacts, Tâches) est sélectionnée à la fois, quel que soit l’ordre des clics.\n\n\n▶ **Les nouveautés en vidéo** (présentation animée, jouée dans l’application après la mise à jour) : https://alixoapp.com/docs/nouveautes.html?v=1.55.2",

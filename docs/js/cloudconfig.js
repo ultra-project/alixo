@@ -11,6 +11,7 @@
                             le serveur de paiement Stripe (1.30, by: 'stripe') ;
                             config/public.plusPrice / plusUrl / plusNote : l'offre affichée dans l'application ;
                             config/public.billingApi : adresse du serveur de paiement (billing/)
+                            config/public.mcpApi : adresse du serveur MCP (mcp/, 1.56.0 — Paramètres › Intégrations)
                             (config/public.aiApi, adresse de l'ancien serveur d'AlixoAI en ligne de la 1.43 : ignoré
                             depuis la 1.44, AlixoAI tourne sur l'ordinateur)
    - billing/{uid}        → état de l'abonnement Stripe (1.30), écrit par le serveur, lu par le titulaire
@@ -53,6 +54,7 @@ window.AlixoCloud = (() => {
     if (window.AlixoApp && AlixoApp.setPlusOffer) AlixoApp.setPlusOffer({ price: d.plusPrice || '', url: d.plusUrl || '', note: d.plusNote || '' });
     pubConf = { businessUrl: typeof d.businessUrl === 'string' && /^https:\/\//.test(d.businessUrl) ? d.businessUrl : '' };   // 1.33 : adresse du tableau de bord Alixo Business
     setBillingApi(d.billingApi || DEFAULT_BILLING_API);   // 1.30 : adresse du serveur de paiement (Stripe), réglable depuis le panneau admin
+    if (d.mcpApi) setMcpApi(d.mcpApi); else setMcpApi(DEFAULT_MCP_API, true);   // 1.56.0 : adresse du serveur MCP (Paramètres › Intégrations), réglable depuis le panneau admin
     if (d.latestVersion && window.AlixoApp && cmpVer(d.latestVersion, AlixoApp.version) > 0 && !(window.alixoDesktop && alixoDesktop.onUpdate)) {
       notify({ id: 'latest_' + d.latestVersion, kind: 'update', title: `Alixo ${d.latestVersion} est disponible`, text: d.latestNote || 'Téléchargez la nouvelle version depuis la page d’Alixo.', action: { type: 'url', url: d.downloadUrl || 'https://alixoapp.com/versions/' } });
     }
@@ -188,6 +190,46 @@ window.AlixoCloud = (() => {
   };
   setBillingApi(DEFAULT_BILLING_API);
 
+  /* ---------------- serveur MCP (1.56.0) ----------------
+     Le Worker alixo-mcp (dossier mcp/) permet à une IA tierce (Claude, Cursor…) de lire et créer des documents avec un
+     jeton personnel. L'application gère ces jetons par son API /api/tokens, avec le jeton Firebase du compte ; son
+     adresse vient de config/public.mcpApi (panneau admin) ou de firebase-config.js (ALIXO_MCP.api). Vide : service
+     pas encore activé (Paramètres › Intégrations l'indique). */
+  const DEFAULT_MCP_API = String(window.ALIXO_MCP && window.ALIXO_MCP.api || '').replace(/\/+$/, '');
+  let mcpApi = '';
+  /* liste fermée : le Worker workers.dev ou la route personnalisée ; localhost seulement pour ALIXO_MCP.api (local = true),
+     jamais depuis config/public (un compte admin compromis ne peut pas détourner le jeton Firebase vers un autre hôte) */
+  const MCP_HOST_RE = /^https:\/\/(alixo-mcp\.[a-z0-9-]+\.workers\.dev|mcp\.alixoapp\.com)$/;
+  function setMcpApi(url, local = false) {
+    const u = String(url || '').trim().replace(/\/+$/, '').replace(/\/mcp$/, '');
+    if (u && !MCP_HOST_RE.test(u) && !(local && /^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(u))) return;
+    if (u === mcpApi) return;
+    mcpApi = u;
+    if (window.AlixoMcp && AlixoMcp.refresh) AlixoMcp.refresh();
+  }
+  async function mapi(method, path, body) {
+    if (!mcpApi) throw new Error('Service pas encore activé par l’administrateur.');
+    const headers = { authorization: 'Bearer ' + await idToken() };
+    if (body) headers['content-type'] = 'application/json';
+    let res;
+    try { res = await fetch(mcpApi + path, { method, headers, body: body ? JSON.stringify(body) : undefined, cache: 'no-store' }); }
+    catch { throw new Error('serveur MCP injoignable (hors ligne ?)'); }
+    let j; try { j = await res.json(); } catch { j = {}; }
+    if (!res.ok) { const err = new Error(j.error || ('erreur ' + res.status)); err.status = res.status; if (typeof j.code === 'string') err.code = j.code; throw err; }   // code 'reauth' : POST /api/tokens exige une connexion de moins de 5 min
+    return j;
+  }
+  const mcp = {
+    ready: () => !!mcpApi,
+    api: () => mcpApi,
+    url: () => (mcpApi ? mcpApi + '/mcp' : ''),
+    tokens: {
+      list: async () => (await mapi('GET', '/api/tokens')).tokens || [],
+      create: async name => mapi('POST', '/api/tokens', { name: String(name || '').slice(0, 40) }),
+      revoke: async id => { if (!/^[0-9a-f]{64}$/.test(String(id || ''))) throw new Error('Jeton illisible.'); return mapi('DELETE', '/api/tokens/' + id); }
+    }
+  };
+  setMcpApi(DEFAULT_MCP_API, true);
+
   db.collection('billing').doc(uid).onSnapshot(snap => {
     if (window.AlixoApp && AlixoApp.setBilling) AlixoApp.setBilling(snap.exists ? snap.data() : null);
   }, err => { if (!permErr(err)) console.error('Cloud (abonnement) :', err); });
@@ -300,5 +342,5 @@ window.AlixoCloud = (() => {
   /* Paramètres › Compte › E-mails : recevoir (ou non) les invitations à un partage par e-mail (lu par le serveur d'envoi) */
   const shareMailPref = () => !noShareMail;
   const setShareMailPref = async on => { await profRef.set({ noShareMail: !on }, { merge: true }); noShareMail = !on; };
-  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, publicConfig: () => pubConf, shareMailPref, setShareMailPref };
+  return { enabled: true, adminKey, beat, showMessage: showMessagePopup, redeemCode, recordPlusConsent, billing, mcp, publicConfig: () => pubConf, shareMailPref, setShareMailPref };
 })();

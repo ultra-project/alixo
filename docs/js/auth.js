@@ -420,6 +420,7 @@ window.AlixoAuth = (() => {
     });
   }
 
+  let signingOut = false;   // 1.56.0 : voir isSigningOut
   function boot() {
     // Écran de connexion au démarrage : service configuré, personne de connecté,
     // et l'utilisateur n'a pas choisi « continuer sans compte ».
@@ -441,8 +442,14 @@ window.AlixoAuth = (() => {
     /* 1.29 : compte ancien dont l'adresse n'est pas confirmée (rappel dans l'application) + envoi du lien */
     needsVerification: () => shouldVerify(auth && auth.currentUser),
     sendVerification: async () => { const u = auth && auth.currentUser; if (!u) throw new Error('Aucun compte connecté.'); await sendVerification(u); return u.email || ''; },
+    /* 1.56.0 : déconnexion en cours — js/share.js ne réécrit plus sa file hors ligne (beforeunload) */
+    isSigningOut: () => signingOut,
     signOut: async () => {
+      signingOut = true;
       try { if (auth) await auth.signOut(); } catch { /* hors ligne : on déconnecte quand même localement */ }
+      /* 1.56.0 : modifications de séances partagées gardées hors ligne (alixo.share.pending.v1.<uid>) — jamais laissées sur
+         l'appareil après la déconnexion (un autre compte pourrait l'utiliser ensuite) */
+      try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.startsWith('alixo.share.pending.v1.')) localStorage.removeItem(k); } } catch { /* stockage indisponible */ }
       localStorage.removeItem(SESSION_KEY);
       localStorage.removeItem(LOCAL_MODE_KEY); // ré-affiche l'écran de connexion
       location.reload();

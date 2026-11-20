@@ -166,6 +166,7 @@ svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round
 .crumbs .crumb-root, .crumbs .sep { flex: none; }
 /* 1.55 : document généré par AlixoAI (aiFrom) */
 .crumbs .crumb-ai { flex: none; margin-left: 6px; font-size: 11px; font-weight: 600; color: var(--ink-3); border: 1px solid var(--border); border-radius: 999px; padding: 1px 8px; white-space: nowrap; }
+.crumbs .crumb-mcp { max-width: 280px; overflow: hidden; text-overflow: ellipsis; }   /* 1.56.0 : nom du client IA (60 car. au plus) */
 @media (max-width: 700px) { .crumbs .crumb-ai { display: none; } }
 .crumbs .chip { flex: 0 1 auto; min-width: 90px; max-width: 220px; }
 .crumbs .crumb-more { flex: none; padding: 3px 6px; border-radius: 6px; color: var(--ink-3); font-size: 13.5px; cursor: pointer; }
@@ -2117,6 +2118,53 @@ html[data-theme="dark"] .dp-sw { border-color: color-mix(in srgb, var(--ink) 50%
 #draw-body .dp-wide:disabled:hover, #draw-body .dp-obj:disabled:hover { background: var(--bg); }
 #draw-body .dp-wide.danger:disabled:hover { color: var(--danger); }
 #drawpanel .rp-close { width: 28px; height: 28px; }
+/* ---------- 1.56.0 : bloc « Document scanné » (js/scan.js) — une page entière, annotable au dessin seulement ----------
+   Hôte de dessin (classes block draw scan) : l'image remplit la largeur de la feuille, le calque SVG transparent la recouvre.
+   Ni marge, ni bordure : une page portrait (673 × 1,414 ≈ 952 px) tient dans la hauteur utile d'une page (969 px). */
+.block.scan { margin: 0; break-inside: avoid; page-break-inside: avoid; }
+.block.scan .scan-wrap { position: relative; border: 0; border-radius: 0; box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent); background: #fff; overflow: hidden; }
+.block.scan.objsel { outline: none; }
+.block.scan.objsel .scan-wrap { border: 0; box-shadow: 0 0 0 2px var(--tint); }   /* comme une image sélectionnée : un seul cadre, collé à la page */
+.block.scan .scan-img { display: block; width: 100%; height: 100%; object-fit: contain; user-select: none; -webkit-user-drag: none; pointer-events: none; }
+.block.scan .draw-wrap svg.draw-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.block.scan.empty .draw-wrap::after { content: none; }
+.block.scan .draw-hrz { display: none; }
+.block.scan .scan-wrap.loading { background: repeating-linear-gradient(-45deg, #f3f4f6 0 12px, #eceef1 12px 24px); }
+.block.scan .scan-wrap.missing { background: #f6f7f9; }
+/* 1.56.0 : message dans le DOM (lisible et traduisible), plus en ::before */
+.block.scan .scan-missing { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; font-family: var(--font-ui); font-size: 13.5px; line-height: 1.5; color: #5f646a; }
+body.fl-pen .block.scan .draw-svg { cursor: crosshair; }
+/* mini-barre du document scanné : mêmes dimensions que la barre de l'image */
+#scanbar {
+  position: fixed; z-index: 94; display: flex; align-items: center; gap: 2px; padding: 4px;
+  max-width: calc(100vw - 16px); flex-wrap: wrap; justify-content: center;   /* 1.56.0 : jamais plus large que l'écran */
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); box-shadow: 0 8px 24px rgba(0, 0, 0, .16);
+}
+#scanbar[hidden] { display: none; }
+#scanbar button { width: 32px; height: 30px; border-radius: 6px; display: grid; place-items: center; color: var(--ink-2); }
+#scanbar button:hover { background: var(--hover); color: var(--ink); }
+#scanbar button.on { background: var(--tint-soft); color: var(--tint); }
+#scanbar button.danger:hover { color: var(--danger); }
+#scanbar button svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+#scanbar button svg .sb-hl { stroke: #e6c229; stroke-width: 4; }   /* 1.56.0 : surligneur bien distinct du stylo */
+#scanbar button:focus-visible { outline: 2px solid var(--tint); outline-offset: 1px; }
+#scanbar .tb-sep { width: 1px; height: 18px; background: var(--border); margin: 0 4px; }
+#scanbar .sb-sw { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, .25); background: #202124; }
+body.mobile #scanbar button { width: 38px; height: 40px; }
+body.mobile #scanbar [data-sb="line"] { display: none; }   /* 1.56.0 : une rangée sur téléphone (le trait reste dans « Plus d’outils ») */
+@media (pointer: coarse) { #scanbar button { width: 40px; height: 40px; } }
+/* panneau Dessin ouvert sur un document scanné : pas de texte (ni zone de texte, ni texte dans une forme) */
+#draw-body .dp-scanhelp { display: none; }
+#draw-body.scan-host .dp-scanhelp { display: block; }
+#draw-body.scan-host .dp-k-text, #draw-body.scan-host [data-dobj="bubble"],   /* 1.56.0 : ni raccourci texte ni bulle */
+#draw-body.scan-host .dp-gen, #draw-body.scan-host [data-dobj="text"], #draw-body.scan-host #dp-h-text, #draw-body.scan-host #dp-h-text + .dp-row, #draw-body.scan-host [data-dlabel] { display: none; }
+@media print {
+  .block.scan { break-before: page; page-break-before: always; break-after: page; page-break-after: always; }
+  #blocks > .block.scan:first-child { break-before: auto; page-break-before: auto; }
+  #blocks > .block.scan:last-child { break-after: auto; page-break-after: auto; }
+  .block.scan .scan-wrap { box-shadow: none; }
+  #scanbar { display: none !important; }
+}
 @media print {
   .block.draw { page-break-inside: avoid; }
   .block.draw .draw-hrz, .dh, .dhz, .dsel, .draw-textedit, #drawpanel, #fl-ghost { display: none !important; }
@@ -3324,6 +3372,20 @@ body.mode-editor .access-chips:not([hidden]), body.mode-slides .access-chips:not
 #blocks .block { position: relative; }
 #blocks .block.peer-flash { animation: peerflash 1.8s ease; }
 @keyframes peerflash { 0% { background: color-mix(in srgb, var(--tint) 22%, transparent); } 100% { background: transparent; } }
+/* 1.56.0 : co-édition — passage modifié des deux côtés en même temps (les deux versions gardées, à relire) */
+#blocks .block.peer-conflict { box-shadow: -3px 0 0 0 #d08a2a; background: color-mix(in srgb, #f0b44c 16%, transparent); border-radius: 4px; transition: background .6s ease; }
+/* curseurs des autres membres (calque fixe, hors de la zone d'écriture) */
+#peer-carets { position: fixed; inset: 0; pointer-events: none; z-index: 40; }
+#peer-carets .peer-caret { position: fixed; width: 2px; margin-left: -1px; background: var(--pc); border-radius: 1px; }
+#peer-carets .pc-name { position: absolute; left: -1px; bottom: 100%; margin-bottom: 1px; padding: 1px 6px; border-radius: 4px 4px 4px 0; background: var(--pc); color: #fff; font: 700 10px/1.4 var(--font-ui); letter-spacing: .03em; white-space: nowrap; }
+/* état d'envoi d'une séance partagée, en clair à côté de l'icône d'enregistrement */
+.ss-label { align-items: center; margin: 0 6px 0 -2px; font: 600 11.5px var(--font-ui); color: var(--ink-2, #666); white-space: nowrap; max-width: 260px; overflow: hidden; text-overflow: ellipsis; }
+.ss-label.ss-offline, #save-status[data-st="offline"] { color: #b86a12; }
+.ss-label.ss-error { color: #d64545; }
+#save-status[data-st="sending"] { --ss: #f08a24; }
+#save-status[data-st="sending"] .ss-track { stroke: color-mix(in srgb, currentColor 25%, transparent); }
+#save-status[data-st="sending"] svg { animation: ss-spin .8s linear infinite; }
+@media (max-width: 900px) { .ss-label { display: none !important; } }
 .peer-live { color: var(--ok); font-weight: 600; }
 /* bibliothèque : partagés avec moi */
 .grid-sect-shared { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
@@ -4611,6 +4673,14 @@ body.wall-on .bd-stage { background-color: transparent; }
 .bp-img { margin-top: 8px; height: 110px; border-radius: 6px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, color-mix(in srgb, var(--tc) 30%, transparent), color-mix(in srgb, #b3762a 30%, transparent)); animation: bpimg .8s both .2s; }
 .bp-img svg { width: 40px; height: 40px; color: var(--paper); }
 @keyframes bpimg { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+/* 1.56.0 : aperçu « Scanner un document » — feuille grise qui se dépose, lignes de texte, surligneur jaune, trait de stylo rouge */
+.bp-scan { display: flex; justify-content: center; padding-top: 6px; }
+.bp-scan-page { position: relative; width: 116px; height: 150px; padding: 16px 14px; box-sizing: border-box; display: flex; flex-direction: column; gap: 9px; background: #f4f4f1; border-radius: 3px; box-shadow: 0 2px 8px rgba(0, 0, 0, .14), 0 0 0 1px rgba(0, 0, 0, .06); animation: bpimg .7s both; }
+.bp-scan-page .bp-l { background: rgba(32, 33, 36, .32); height: 5px; }
+.bp-scan-hl { position: absolute; left: 12px; top: 30px; height: 10px; width: 0; border-radius: 2px; background: rgba(255, 224, 102, .6); animation: bpscanhl .6s ease-out 1.2s forwards; }
+@keyframes bpscanhl { to { width: 66px; } }
+.bp-scan-ink { position: absolute; left: 0; top: 64px; width: 100%; height: auto; }
+.bp-scan-ink ellipse { fill: none; stroke: #c04343; stroke-width: 2; stroke-dasharray: 200; stroke-dashoffset: 200; animation: bpdraw 1s ease-out 1.6s forwards; }
 .bp-link span { display: inline-flex; align-items: center; gap: 6px; margin: 8px 0; padding: 6px 12px; border-radius: 999px; background: var(--tint-soft); color: var(--tc); font: 600 12px var(--font-ui); animation: bpin .4s both .4s; }
 .bp-link svg { width: 14px; height: 14px; }
 .bp-timer { position: relative; width: 140px; height: 140px; margin: 20px auto; display: flex; align-items: center; justify-content: center; }
@@ -4968,6 +5038,9 @@ body.solo:not(.mode-editor):not(.mode-slides):not(.mode-sheet):not(.mode-board):
 #pd-panel .pd-qr svg, #pd-panel .pd-qr svg * { stroke: none !important; }
 #pd-panel .pd-status b { color: #2f9e5b; }
 #pd-panel .pd-err { color: #d64545; }
+/* 1.56.0 : rappel du droit de copie (mode scan) et avertissement non bloquant */
+#pd-panel .pd-steps .pd-legal { list-style: none; margin: 6px 0 0 -18px; padding: 6px 8px; border-radius: 6px; background: var(--bg); font-size: 11.5px; color: var(--ink-2); }
+#pd-panel .pd-warnline { margin-top: 6px; }
 #pd-panel .pd-wait { width: 14px; height: 14px; border-radius: 50%; border: 2px solid color-mix(in srgb, #f08a24 30%, transparent); border-top-color: #f08a24; animation: ss-spin .8s linear infinite; flex: none; display: inline-block; }
 #pd-panel .pd-qr .pd-wait { width: 26px; height: 26px; }
 #pd-panel .pd-foot { display: flex; justify-content: flex-end; gap: 6px; padding: 10px 16px 14px; }
@@ -5572,3 +5645,85 @@ html:not([data-theme="dark"]) #ctxmenu .cm-tile { color: color-mix(in srgb, var(
 .bp-lbtn { position: relative; display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; background: var(--tc); color: #fff; font: 650 11.5px var(--font-ui); animation: bpin .4s both .25s; }
 .bp-lbtn svg { width: 13px; height: 13px; stroke: currentColor; }
 .bp-lbtn .bp-dref-ptr { right: 14px; }
+
+/* ---------- 1.56.0 : Paramètres › Intégrations (serveur MCP, js/mcp.js) ---------- */
+.mcp-root svg { fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.mcp-intro { display: flex; align-items: flex-start; gap: 14px; padding: 2px 0 6px; }
+.mcp-intro-ico { flex: none; width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); }
+.mcp-intro-ico svg { width: 22px; height: 22px; }
+.mcp-intro > div { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.mcp-intro b { font-size: 15px; color: var(--ink); }
+.mcp-intro span { font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+.mcp-off { display: flex; flex-direction: column; gap: 3px; margin-top: 12px; padding: 12px 14px; border: 1px dashed var(--border); border-radius: 10px; background: var(--surface-2); }
+.mcp-off b { font-size: 13.5px; color: var(--ink); }
+.mcp-off span { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
+.mcp-urlrow { display: flex; gap: 8px; align-items: center; }
+#setov .mcp-urlrow input { flex: 1; min-width: 0; font: 13px var(--font-mono); color: var(--ink); background: var(--surface-2); }
+.mcp-copy { display: inline-flex; align-items: center; gap: 6px; }
+.mcp-copy svg { width: 14px; height: 14px; }
+.mcp-root code { font-family: var(--font-mono); font-size: .92em; }
+.mcp-count { margin-left: 6px; font-size: 11.5px; font-weight: 500; color: var(--ink-3); }
+.mcp-empty { font-size: 13px; color: var(--ink-3); padding: 10px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.mcp-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; margin: 4px 0 2px; }
+.mcp-tbl th { text-align: left; font-weight: 600; font-size: 11.5px; color: var(--ink-3); padding: 6px 8px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.mcp-tbl td { padding: 9px 8px; border-bottom: 1px solid var(--border); color: var(--ink-2); vertical-align: top; }
+.mcp-tbl tr:last-child td { border-bottom: none; }
+.mcp-tbl td b { display: block; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+.mcp-tbl td small { display: block; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.mcp-tbl th:first-child, .mcp-tbl td:first-child { padding-left: 0; }
+.mcp-tbl .mcp-act { text-align: right; padding-right: 0; width: 1%; white-space: nowrap; }
+.mcp-prefix { display: inline-block; margin-top: 2px; font-size: 11px !important; color: var(--ink-3); }
+.mcp-revoke:hover:not(:disabled) { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.mcp-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mcp-new, .mcp-form { margin-top: 10px; align-items: center; gap: 10px !important; flex-wrap: wrap; }
+/* 1.56.0 : formulaire en colonne (nom visible, ligne de saisie, case de consentement) */
+.mcp-form { display: flex; flex-direction: column; align-items: stretch; gap: 8px !important; }
+.mcp-lbl { font-size: 12.5px; font-weight: 600; color: var(--ink-2); }
+.mcp-formrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+#setov .mcp-form input[type="text"] { flex: 1; min-width: 220px; max-width: 360px; }
+.mcp-consent { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; color: var(--ink); line-height: 1.45; cursor: pointer; }
+.mcp-consent input { margin: 2px 0 0; flex: none; }
+.mcp-copyfirst { margin: 0 !important; }
+/* 1.56.0 : bouton désactivé bien visible (« Créer un jeton » moins de 15 ans, « J’ai copié mon jeton », « Créer » sans consentement) */
+.mcp-root .cta:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.mcp-secret-foot { align-items: center; gap: 10px; flex-wrap: wrap; }
+.mcp-what { margin-top: 2px !important; }
+.mcp-dev { margin-top: 8px; font-size: 12.5px; }
+.mcp-dev summary { cursor: pointer; color: var(--ink-3); width: max-content; }
+.mcp-dev summary:hover { color: var(--ink-2); }
+.mcp-notice { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px; padding: 10px 12px; border-radius: 8px; font-size: 13px; line-height: 1.45; color: var(--ink); border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--border)); background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.mcp-notice.err { border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); background: color-mix(in srgb, var(--danger) 6%, var(--surface)); }
+.mcp-notice > span { flex: 1; min-width: 200px; }
+.mcp-dlg .mcp-pw { display: block; width: 100%; box-sizing: border-box; margin-top: 6px; }
+.mcp-secret { margin: 6px 0 12px; padding: 14px 16px; border: 1.5px solid color-mix(in srgb, var(--warn) 70%, var(--border)); border-radius: 10px; background: color-mix(in srgb, var(--warn) 8%, var(--surface)); }
+.mcp-secret-head { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); }
+.mcp-secret-head svg { width: 18px; height: 18px; color: var(--warn); flex: none; }
+.mcp-secret-warn { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; margin-top: 8px; }
+.mcp-secret-foot { margin-top: 10px; }
+.mcp-code { position: relative; margin-top: 8px; }
+.mcp-code pre { margin: 0; padding: 10px 12px; padding-right: 96px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface-2); color: var(--ink); font: 12px/1.5 var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; user-select: all; }
+.mcp-code .mcp-copy { position: absolute; top: 6px; right: 6px; background: var(--surface); }
+.mcp-code-one pre { font-size: 13px; padding: 12px 104px 12px 12px; }
+.mcp-code-one .mcp-copy.cta:not(.ghost) { background: var(--accent); }
+.mcp-guides { display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+.mcp-guide { border-top: 1px solid var(--border); background: var(--surface); }
+.mcp-guide:first-child { border-top: none; }
+.mcp-guide summary { cursor: pointer; padding: 10px 14px; font-size: 13px; color: var(--ink); display: flex; align-items: center; gap: 8px; list-style: none; }
+.mcp-guide summary::-webkit-details-marker { display: none; }
+.mcp-guide summary::before { content: ''; width: 6px; height: 6px; border-right: 1.6px solid var(--ink-3); border-bottom: 1.6px solid var(--ink-3); transform: rotate(-45deg); transition: transform .15s; margin-right: 4px; }
+.mcp-guide[open] summary::before { transform: rotate(45deg); }
+.mcp-guide summary:hover { background: var(--hover); }
+.mcp-guide summary .set-tag { margin-left: 0; }
+.mcp-guide > .po-hint, .mcp-guide > .mcp-code { margin-left: 14px; margin-right: 14px; }
+.mcp-guide > :last-child { margin-bottom: 12px; }
+#setov .set-body .mcp-guide .mcp-where { margin-top: 0; }
+.mcp-privacy { margin: 0; padding-left: 18px; font-size: 12.5px; color: var(--ink-2); line-height: 1.55; }
+.mcp-privacy li + li { margin-top: 4px; }
+@media (max-width: 640px) {
+  .mcp-tbl th:nth-child(4), .mcp-tbl td:nth-child(4) { display: none; }
+  .mcp-code pre { padding-right: 12px; padding-top: 42px; }
+}
+.dlg-card.mcp-dlg { width: min(480px, calc(100vw - 32px)); }
+.mcp-dlgtxt { font-size: 14px; line-height: 1.55; color: var(--ink-2); margin: 0 0 6px; }
+.cta.mcp-danger { background: var(--danger); }
+.mcp-nobr { white-space: nowrap; }   /* 1.56.0 : « --header » jamais coupé après son tiret */

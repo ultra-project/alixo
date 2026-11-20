@@ -19,11 +19,15 @@
                                   listes connues d'app.js : une clé absente de sa liste est refusée
      AlixoSanitize.parseBlocks(json)  JSON du presse-papiers → blocs sûrs, sous un budget global par collage
                                   (AlixoSanitize.tooBig() : le dernier appel a-t-il été abandonné pour dépassement ?)
+     AlixoSanitize.doc(d, { keepIds, keepMeta, same })   1.56.0 : séance entière reçue (co-édition, synchronisation) —
+                                  identifiants conformes CONSERVÉS (la fusion à trois versions en a besoin), les autres
+                                  blocs / onglets rejetés ; HTML ramené à sa forme « relue depuis l'écran » (point fixe)
+     AlixoSanitize.blockKeep(b)   1.56.0 : un bloc, identifiant conservé (null s'il est refusé)
    ============================================================ */
 'use strict';
 
 window.AlixoSanitize = (() => {
-  const cfg = { fonts: [], callouts: null, fiches: null, scores: null, calcs: null, charts: null, graphs: null, numStyles: null, linkKinds: null, icons: null, normShape: null };
+  const cfg = { fonts: [], callouts: null, fiches: null, scores: null, calcs: null, charts: null, graphs: null, numStyles: null, linkKinds: null, icons: null, normShape: null, tidy: null };
   /* fonts : piles CSS admises (DOC_FONTS) ; callouts / fiches / scores / calcs / charts / graphs / numStyles : clés connues
      (scores cliniques, calculateurs, types de graphiques, styles de numérotation) ; normShape : validateur des objets de dessin */
   function configure(o) {
@@ -33,6 +37,7 @@ window.AlixoSanitize = (() => {
     if (Array.isArray(o.fiches)) cfg.fiches = o.fiches.map(String);
     for (const k of ['scores', 'calcs', 'charts', 'graphs', 'numStyles', 'linkKinds', 'icons']) if (Array.isArray(o[k])) cfg[k] = o[k].map(String);   // 1.52 : + linkKinds, icons (bouton de lien)
     if (typeof o.normShape === 'function') cfg.normShape = o.normShape;
+    if (typeof o.tidy === 'function') cfg.tidy = o.tidy;   // 1.56.0 : nettoyage appliqué par l'éditeur à la relecture d'un champ (cleanHTML d'app.js)
   }
 
   /* ---------------- outils ---------------- */
@@ -420,6 +425,19 @@ window.AlixoSanitize = (() => {
         const h = num(b.h, 40, 4000); if (h) o.h = h;
         break;
       }
+      case 'scan': {
+        /* 1.56.0 : document scanné (js/scan.js) — image obligatoire, dimensions natives bornées, orientation recalculée ;
+           annotations = objets de dessin sans zone de texte ni texte dans la forme (le dessin seul est permis) */
+        if (!(typeof b.iid === 'string' && ID_RE.test(b.iid))) return null;
+        if (!(+b.nw >= 1 && +b.nh >= 1)) return null;   // dimension nulle, négative ou illisible : bloc refusé (pas d'image « 1 px »)
+        const nw = num(b.nw, 1, 100000), nh = num(b.nh, 1, 100000); if (!nw || !nh) return null;
+        o.iid = b.iid; o.nw = nw; o.nh = nh; o.orient = nw >= nh ? 'landscape' : 'portrait'; o.shapes = [];
+        if (Array.isArray(b.shapes) && cfg.normShape) for (const s of b.shapes.slice(0, 2000)) {
+          spend(1, 0); let c = null; try { c = cfg.normShape(s); } catch { c = null; }
+          if (c && c.t !== 'text') { delete c.label; o.shapes.push(c); }
+        }
+        break;
+      }
       case 'chart': {
         o.ck = known(cfg.charts, b.ck) || 'bar';   // type de graphique inconnu : barres
         o.title = plain(b.title, 200);
@@ -544,5 +562,151 @@ window.AlixoSanitize = (() => {
   /* le dernier parseBlocks a-t-il été abandonné parce que le contenu dépassait le budget ? */
   const tooBig = () => lastTooBig;
 
-  return { configure, inline, atoms, rich, blocks, parseBlocks, tooBig, text, hex, align, color, fontSize, fontFamily, esc, spanOpen, spanProps, propsSpan, isAlixoClip };   // 1.52 : fontSize, fontFamily (styles enregistrés, js/textstyles.js)
+  /* ---------------- 1.56.0 : séance entière, identifiants conservés ----------------
+     Séance reçue d'un autre membre (shares/{sid}/docs), d'un autre appareil ou du serveur MCP (users/{uid}/docs) : jamais
+     digne de confiance. Contrairement à blocks(), les identifiants conformes (ID_RE, jamais un nom hérité d'Object.prototype)
+     sont CONSERVÉS — la fusion à trois versions (js/coedit.js) apparie blocs et onglets par identifiant ; un bloc ou un
+     onglet à l'identifiant non conforme ou en double est rejeté (le régénérer donnerait un identifiant différent chez chaque
+     membre). Chaque champ HTML est ramené à la forme que l'éditeur relit depuis l'écran (sérialisation du navigateur, puis
+     cfg.tidy = cleanHTML d'app.js) et le bloc est réassaini jusqu'à son point fixe : une version assainie, affichée puis
+     relue, reste identique à elle-même — sinon deux membres se renverraient sans fin la même séance. */
+  const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const MAX_DOC_BLOCKS = 5000, MAX_PAGES = 50;
+  const BAD_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+  const okId = v => typeof v === 'string' && ID_RE.test(v) && !inherited(v);
+  /* titre, nom d'onglet, nom du professeur : texte simple (balises retirées), borné */
+  const tplain = (v, max) => plain(typeof v === 'string' ? v : '', 100000).replace(/<[^>]*>/g, '').replace(/\u007F/g, '').slice(0, max).trim();
+  let tpl = null;
+  /* forme sérialisée par le navigateur (entités, guillemets des attributs…) d'un HTML DÉJÀ assaini — gabarit inerte ; sans DOM (Node), inchangé */
+  function domForm(h) {
+    if (typeof h !== 'string' || !h || !/[<& ]/.test(h)) return h;
+    if (typeof document === 'undefined' || !document.createElement) return h;
+    try { if (!tpl) tpl = document.createElement('template'); tpl.innerHTML = h; const s = tpl.innerHTML; tpl.innerHTML = ''; return s; } catch { return h; }
+  }
+  /* champ relu par l'éditeur avec cleanHTML (texte, citation, légende, champs de fiche, cartes, frise, arbre) */
+  const canonField = h => {
+    let s = domForm(typeof h === 'string' ? h : '');
+    if (cfg.tidy) { try { s = String(cfg.tidy(s)); } catch { /* tel quel */ } }
+    return s;
+  };
+  function canonTree(n, depth) {
+    if (!isObj(n) || depth > 13) return;
+    n.t = canonField(n.t);
+    if (Array.isArray(n.k)) n.k.forEach(c => canonTree(c, depth + 1));
+  }
+  function canonBlock(o) {
+    for (const k of ['text', 'cap']) if (typeof o[k] === 'string') o[k] = canonField(o[k]);
+    if (typeof o.cite === 'string') { o.cite = canonField(o.cite); if (!o.cite) delete o.cite; }
+    if (isObj(o.fields)) for (const k of Object.keys(o.fields)) o.fields[k] = canonField(o.fields[k]);
+    if (Array.isArray(o.cards)) o.cards.forEach(c => { c.t = canonField(c.t); c.x = canonField(c.x); });
+    if (o.type === 'timeline') {
+      if (typeof o.title === 'string') { o.title = canonField(o.title); if (!o.title) delete o.title; }
+      if (Array.isArray(o.events)) o.events.forEach(e => { e.d = canonField(e.d); e.t = canonField(e.t); e.x = canonField(e.x); });
+    }
+    if (o.type === 'tree') canonTree(o.root, 0);
+    if (Array.isArray(o.rows)) o.rows = o.rows.map(r => r.map(c => (typeof c === 'string' ? domForm(c) : c)));   // cases : relues sans cleanHTML
+    return o;
+  }
+  /* un passage : liste blanche du type (block), identifiant d'origine, jour du cours, date de modification, objets de dessin posés sur le bloc */
+  function keepOnce(b) {
+    if (!isObj(b) || !okId(b.id)) return null;
+    const o = block(b); if (!o) return null;
+    o.id = b.id;
+    if (typeof b.day === 'string' && DAY_RE.test(b.day)) o.day = b.day;
+    if (typeof b.mod === 'string' && DAY_RE.test(b.mod)) o.mod = b.mod;
+    if (Array.isArray(b.fl) && cfg.normShape) {
+      const fl = [];
+      b.fl.slice(0, 2000).forEach((s, i) => { let c = null; try { c = cfg.normShape(s, 'f' + i + '-' + b.id.slice(0, 50)); } catch { c = null; } if (c) fl.push(c); });
+      if (fl.length) o.fl = fl;
+    }
+    return canonBlock(o);
+  }
+  /* bloc → bloc sûr au même identifiant, ou null (refusé). Point fixe : réassaini tant qu'un passage le modifie (4 au plus) */
+  function blockKeep(b) {
+    let cur = null;
+    try { cur = keepOnce(b); } catch (e) { if (e === OVER) throw e; return null; }
+    if (!cur) return null;
+    let j = JSON.stringify(cur);
+    for (let i = 0; i < 4; i++) {
+      let next = null;
+      try { next = keepOnce(cur); } catch (e) { if (e === OVER) throw e; return null; }
+      if (!next) return null;
+      const nj = JSON.stringify(next);
+      if (nj === j) return next;
+      cur = next; j = nj;
+    }
+    return cur;
+  }
+  /* séance → séance sûre (jamais d'exception) ; présentations, tableurs, planches et quiz ne passent pas par ici.
+     opts.keepIds (défaut : true) : identifiants conservés si conformes, sinon bloc / onglet rejeté ; false : régénérés.
+     opts.same : Set de JSON de blocs DÉJÀ assainis (version de base) — un bloc reçu identique est repris sans nouvel examen.
+     opts.keepMeta : séance du compte lui-même (autre appareil, serveur MCP) — les autres champs de premier niveau (épingle,
+     panneau de lecture, origine IA…) sont gardés tels quels ; sans lui (partage), seuls les champs ci-dessous existent. */
+  const DOC_HANDLED = new Set(['id', 'folderId', 'titre', 'createdAt', 'updatedAt', 'pinned', 'prof', 'font', 'planMode', 'plan', 'blocks', 'pages', 'page']);
+  function doc(d, opts) {
+    opts = opts || {};
+    const src = isObj(d) ? d : {};
+    const keepIds = opts.keepIds !== false;
+    const same = opts.same instanceof Set && opts.same.size ? opts.same : null;
+    const one = b => {
+      if (!keepIds) { let c = null; try { c = block(b); } catch { c = null; } if (c) { if (isObj(b) && typeof b.day === 'string' && DAY_RE.test(b.day)) c.day = b.day; canonBlock(c); } return c; }
+      if (same) { let j = null; try { j = JSON.stringify(b); } catch { j = null; } if (j && same.has(j)) return JSON.parse(j); }
+      return blockKeep(b);
+    };
+    const list = arr => {
+      if (!Array.isArray(arr)) return [];
+      const out = [], seen = new Set();
+      for (const b of arr.slice(0, MAX_DOC_BLOCKS)) {
+        if (keepIds && (!isObj(b) || !okId(b.id) || seen.has(b.id))) continue;   // identifiant non conforme ou en double : rejeté
+        let c = null;
+        try { c = one(b); } catch { c = null; }
+        if (c) { seen.add(c.id); out.push(c); }
+      }
+      return out;
+    };
+    const out = {};
+    if (keepIds && okId(src.id)) out.id = src.id;
+    out.folderId = okId(src.folderId) ? src.folderId : null;
+    out.titre = tplain(src.titre, 200);
+    for (const k of ['createdAt', 'updatedAt']) { const n = src[k]; if (typeof n === 'number' && Number.isFinite(n) && n >= 0) out[k] = n; }
+    if (typeof src.pinned === 'boolean') out.pinned = src.pinned;
+    const prof = tplain(src.prof, 120); if (prof) out.prof = prof;
+    if (typeof src.font === 'string' && KEY_RE.test(src.font) && !inherited(src.font)) {
+      let fok = true;
+      try { if (typeof fontByKey === 'function') fok = !!fontByKey(src.font); } catch { fok = false; }   // polices d'app.js (DOC_FONTS)
+      if (fok) out.font = src.font;
+    }
+    if (typeof src.planMode === 'string' && ['auto', 'adaptive', 'none'].includes(src.planMode)) out.planMode = src.planMode;
+    if (isObj(src.plan) && Array.isArray(src.plan.levels)) {
+      try { if (typeof normLevels === 'function') { const lv = normLevels(src.plan.levels); if (Array.isArray(lv) && lv.length) out.plan = { levels: JSON.parse(JSON.stringify(lv.slice(0, 6))) }; } } catch { /* plan ignoré */ }
+    }
+    out.blocks = list(src.blocks);
+    if (Array.isArray(src.pages) && src.pages.length) {
+      const pages = [], ids = new Set(), from = [];
+      for (const p of src.pages.slice(0, MAX_PAGES)) {
+        if (!isObj(p)) continue;
+        const id = keepIds ? (okId(p.id) ? p.id : '') : (p.id === 'main' ? 'main' : uid());
+        if (!id || ids.has(id)) continue;   // onglet à l'identifiant non conforme ou en double : rejeté
+        ids.add(id); from.push(p);
+        pages.push({ id, titre: tplain(p.titre, 80), blocks: Array.isArray(p.blocks) ? list(p.blocks) : null });
+      }
+      if (pages.length) {
+        /* onglet affiché : celui de la séance s'il existe encore, sinon celui dont les blocs sont dans d.blocks (comme docPages) */
+        let i = from.findIndex(p => p.id === src.page);
+        if (i < 0) i = pages.findIndex(p => p.blocks === null);
+        if (i < 0) i = 0;
+        pages[i].blocks = null;
+        out.pages = pages; out.page = pages[i].id;
+      }
+    }
+    if (opts.keepMeta) {
+      for (const k of Object.keys(src)) {
+        if (DOC_HANDLED.has(k) || BAD_KEYS.has(k) || k in out) continue;
+        try { const v = src[k]; if (v !== undefined) out[k] = JSON.parse(JSON.stringify(v)); } catch { /* valeur illisible : retirée */ }
+      }
+    }
+    return out;
+  }
+
+  return { configure, inline, atoms, rich, blocks, parseBlocks, tooBig, text, hex, align, color, fontSize, fontFamily, esc, spanOpen, spanProps, propsSpan, isAlixoClip, doc, blockKeep };   // 1.52 : fontSize, fontFamily (styles enregistrés, js/textstyles.js) ; 1.56.0 : doc, blockKeep (co-édition)
 })();

@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.55.2';
+const ALIXO_VERSION = '1.56.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -89,6 +89,7 @@ function save() {
   setSaveStatus('saving');
   if (state && state.settings) noteSettingsChange();
   saveTm = setTimeout(() => {
+    saveTm = null;   // 1.56.0 : plus d'enregistrement en attente (l'indicateur de co-édition peut se mettre à jour)
     localStorage.setItem(LS_KEY, JSON.stringify(state));
     if (window.AlixoSync) window.AlixoSync.onLocalSave();
     if (window.AlixoAlx && window.AlixoAlx.onLocalSave) window.AlixoAlx.onLocalSave();   // 1.38 : documents .alx du disque
@@ -106,15 +107,35 @@ const SAVE_ICONS = {
   local: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" class="ss-cloud"/><path d="m8.4 12.3 2.4 2.4 4.8-5" class="ss-check"/></svg>',
   error: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5" class="ss-cloud"/><path d="M12 7.5v5.5M12 16.2v.3" class="ss-check"/></svg>'
 };
-function paintSaveStatus(st, label) {
+function paintSaveStatus(st, label, text) {
   const el = $('#save-status'); if (!el) return;
-  const kind = st === 'saving' ? 'saving' : st === 'error' ? 'error' : (st === 'local' ? 'local' : 'saved');
+  const kind = st === 'saving' || st === 'sending' ? 'saving' : st === 'error' ? 'error' : (st === 'local' || st === 'offline' ? 'local' : 'saved');
   if (el.dataset.st !== st || !el.firstChild) el.innerHTML = SAVE_ICONS[kind];
   el.dataset.st = st;
   el.title = label; el.setAttribute('aria-label', label);
+  /* 1.56.0 : séance partagée — l'état d'envoi aux autres membres est aussi écrit en clair à côté de l'icône */
+  let lab = el.nextElementSibling && el.nextElementSibling.classList.contains('ss-label') ? el.nextElementSibling : null;
+  if (!text) { if (lab) lab.hidden = true; return; }
+  if (!lab) { lab = document.createElement('span'); lab.className = 'ss-label only-editor'; lab.setAttribute('role', 'status'); lab.setAttribute('aria-live', 'polite'); el.after(lab); }
+  lab.hidden = false;
+  lab.className = 'ss-label only-editor ss-' + st;
+  if (lab.textContent !== text) lab.textContent = text;
+}
+/* 1.56.0 : libellé de l'état de co-édition d'une séance partagée (AlixoShare.syncStatus) → { st, label, text } ou null */
+function shareSyncLabel() {
+  if (!currentDocId || !window.AlixoShare || !AlixoShare.enabled || !AlixoShare.syncStatus) return null;
+  const s = AlixoShare.syncStatus(currentDocId); if (!s) return null;
+  const n = s.peers || 0;
+  const here = n ? `${n} personne${n > 1 ? 's' : ''} ici` : 'partagé';
+  if (s.state === 'sending') return { st: 'sending', label: 'Envoi de vos modifications aux autres membres…', text: 'Envoi aux autres membres…' };
+  if (s.state === 'offline' || s.state === 'pending') return { st: 'offline', label: 'Hors ligne : vos modifications sont gardées sur cet appareil et seront envoyées au retour de la connexion', text: 'Hors ligne — modifications en attente' };
+  if (s.state === 'error') return { st: 'error', label: `Envoi refusé${s.err ? ' — ' + s.err : ''}`, text: `Envoi refusé${s.err ? ' — ' + s.err : ''}` };
+  if (s.state === 'readonly') return { st: 'saved', label: 'Séance partagée en lecture seule', text: 'Lecture seule' };
+  return { st: 'saved', label: `Enregistré et envoyé aux membres · ${here}`, text: `Enregistré · ${here}` };
 }
 function setSaveStatus(st) {
-  if (st === 'saving') { paintSaveStatus('saving', 'Enregistrement en cours…'); return; }
+  if (st === 'saving') { const sh = shareSyncLabel(); paintSaveStatus('saving', 'Enregistrement en cours…', sh ? 'Enregistrement…' : ''); return; }
+  { const sh = shareSyncLabel(); if (sh) { paintSaveStatus(sh.st, sh.label, sh.text); return; } }
   const t = new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
   const sync = window.AlixoSync && window.AlixoSync.enabled;
   /* 1.45 : une fenêtre de document ne synchronise pas elle-même ; avec un compte, c'est la fenêtre d'accueil qui s'en charge */
@@ -562,7 +583,7 @@ function renderPageTabs() {
   bar.hidden = !show;
   document.body.classList.toggle('has-pages', show);
   if (!show) return;
-  bar.innerHTML = `<span class="pg-label" title="Onglets de cette séance">Onglets</span>` + pages.map(p => `<button type="button" class="pg-tab ${p.id === d.page ? 'active' : ''}" data-page="${p.id}" title="${esc(p.titre)} — double-clic : renommer · clic droit : options">${esc(p.titre || 'Sans titre')}</button>`).join('') +
+  bar.innerHTML = `<span class="pg-label" title="Onglets de cette séance">Onglets</span>` + pages.map(p => `<button type="button" class="pg-tab ${p.id === d.page ? 'active' : ''}" data-page="${esc(p.id)}" title="${esc(p.titre)} — double-clic : renommer · clic droit : options">${esc(p.titre || 'Sans titre')}</button>`).join('') +
     (readOnly ? '' : `<button type="button" class="pg-add" data-pgadd title="Nouvel onglet dans cette séance">＋</button>`);
 }
 $('#page-tabs').addEventListener('click', e => {
@@ -930,7 +951,9 @@ function ensureFieldVisible(el) {
 }
 
 /* 1.55 : petit badge discret « Généré par AlixoAI » après le titre d'un document créé par Coco (aiFrom) */
-const aiCrumbHTML = d => (d && d.aiFrom && typeof d.aiFrom === 'object' ? '<span class="crumb-ai" title="Document généré par AlixoAI (Coco) : à relire">Généré par AlixoAI</span>' : '');
+const aiCrumbHTML = d => (d && d.aiFrom && typeof d.aiFrom === 'object' ? '<span class="crumb-ai" title="Document généré par AlixoAI (Coco) : à relire">Généré par AlixoAI</span>'
+  /* 1.56.0 : séance créée ou complétée par une IA externe (serveur MCP, doc.mcpFrom) — mention seulement, pas dans les Artéfacts */
+  : d && d.mcpFrom && typeof d.mcpFrom === 'object' ? (c => `<span class="crumb-ai crumb-mcp" title="${esc(`Séance créée ou complétée par une IA externe (${c}) : à relire`)}">${esc(`Créée par une IA externe (${c})`)}</span>`)(String(d.mcpFrom.client || 'IA externe').slice(0, 60)) : '');
 function renderCrumbs() {
   const c = $('#breadcrumb');
   if (!currentDocId) { c.innerHTML = `<span>Mes cours</span>`; return; }
@@ -1653,65 +1676,214 @@ function renderAccess() {
   box.title = a.isOwner ? `${a.members.length} membre${a.members.length > 1 ? 's' : ''}${a.invites.length ? ` · ${a.invites.length} invitation${a.invites.length > 1 ? 's' : ''} en attente` : ''} — cliquer pour gérer les accès` : `Partagé par ${a.owner.name} — cliquer pour les détails`;
   box.innerHTML = shown.map(p => av(p.n, p.u, p.cls)).join('') + (people.length > 5 ? `<span class="acc-more">+${people.length - 5}</span>` : '') + (a.isOwner ? `<span class="acc-lbl">${a.members.length ? a.members.length + (a.members.length > 1 ? ' membres' : ' membre') : 'Partagé'}${a.invites.length ? ` · ${a.invites.length} en attente` : ''}</span>` : `<span class="acc-lbl">${peers.length ? `${peers.length} ici` : 'Partagé'}</span>`);
 }
-/* marqueurs des blocs que d'autres membres modifient en ce moment */
+/* marqueurs des blocs que d'autres membres modifient en ce moment
+   1.56.0 : seulement les membres sur le même onglet de la séance ; + trait de curseur de chaque membre (calque fixe hors de
+   #blocks : rien n'est ajouté dans la zone d'écriture, qui est relue telle quelle par syncAllFromDom) */
 function renderPeers() {
   if (!blocksEl) return;
   blocksEl.querySelectorAll('.block[data-peer]').forEach(el => { el.removeAttribute('data-peer'); el.style.removeProperty('--peer'); });
-  if (!window.AlixoShare || !AlixoShare.enabled || !currentDocId || isSpecialDoc(doc())) return;
-  for (const p of AlixoShare.peersFor(currentDocId)) {
+  peerCaretList = [];
+  if (!window.AlixoShare || !AlixoShare.enabled || !currentDocId || isSpecialDoc(doc())) { placePeerCarets(); return; }
+  const d = doc();
+  for (const p of AlixoShare.peersFor(currentDocId, d && d.page)) {
     if (!p.blockId) continue;
-    const el = blocksEl.querySelector(`.block[data-id="${p.blockId}"]`); if (!el) continue;
+    const el = blocksEl.querySelector(`.block[data-id="${CSS.escape(String(p.blockId))}"]`); if (!el) continue;
     el.dataset.peer = (el.dataset.peer ? el.dataset.peer + ', ' : '') + p.name;
     el.style.setProperty('--peer', p.color || AlixoShare.colorFor(p.uid));
+    if (typeof p.caret === 'number' && p.caret >= 0) peerCaretList.push({ blockId: p.blockId, caret: p.caret, name: p.name || '', color: p.color || AlixoShare.colorFor(p.uid) });
   }
+  placePeerCarets();
 }
-/* fusion d'une version reçue dans la séance ouverte : on garde le bloc en cours de frappe, on prend le reste (1.15) */
-function mergeRemoteDoc(remote, byName) {
+/* 1.56.0 : curseurs des autres membres — position recalculée au défilement (rAF) et après chaque mise à jour */
+let peerCaretList = [];
+let peerCaretRaf = 0;
+function placePeerCarets() {
+  let layer = document.getElementById('peer-carets');
+  if (!peerCaretList.length || !currentDocId) { if (layer) layer.innerHTML = ''; return; }
+  if (!layer) { layer = document.createElement('div'); layer.id = 'peer-carets'; layer.setAttribute('aria-hidden', 'true'); document.body.appendChild(layer); }
+  const wrap = $('#docwrap'); const box = wrap ? wrap.getBoundingClientRect() : null;
+  let html = '';
+  for (const p of peerCaretList) {
+    const el = blocksEl.querySelector(`.block[data-id="${CSS.escape(String(p.blockId))}"]`); if (!el || el.classList.contains('day-hidden')) continue;
+    const field = el.querySelector('.btxt') || el.querySelector(FIELD_SEL); if (!field) continue;
+    let rect = null;
+    try {
+      const pt = pointAtOffset(field, p.caret);
+      const r = document.createRange(); r.setStart(pt.node, pt.off); r.collapse(true);
+      rect = r.getClientRects()[0] || null;
+      if (!rect || (!rect.height && !rect.top)) { const fr = field.getBoundingClientRect(); rect = { left: fr.left + 2, top: fr.top, height: Math.min(fr.height, 22) || 18 }; }
+    } catch { continue; }
+    if (box && (rect.top + rect.height < box.top || rect.top > box.bottom)) continue;
+    html += `<span class="peer-caret" style="--pc:${esc(p.color)};left:${Math.round(rect.left)}px;top:${Math.round(rect.top)}px;height:${Math.round(rect.height || 18)}px"><span class="pc-name">${esc(p.name)}</span></span>`;
+  }
+  layer.innerHTML = html;
+}
+function schedulePeerCarets() { if (peerCaretRaf || !peerCaretList.length) return; peerCaretRaf = requestAnimationFrame(() => { peerCaretRaf = 0; placePeerCarets(); }); }
+{ const w = $('#docwrap'); if (w) w.addEventListener('scroll', schedulePeerCarets, { passive: true }); window.addEventListener('resize', schedulePeerCarets); }
+
+/* 1.56.0 : co-édition — application d'une version fusionnée (AlixoCoedit.merge3Doc, js/share.js) à la séance AFFICHÉE.
+   Remplace l'ancien mergeRemoteDoc qui recopiait la version distante entière (onglet compris) et redessinait toute la
+   séance. Ici : l'onglet courant n'est jamais changé (merged.page == d.page), seuls les blocs modifiés sont redessinés,
+   le curseur reste en place, l'historique d'annulation est rebasé sur la version reçue (Ctrl+Z n'annule que ses propres
+   frappes) ; ni touch() ni nouvelle entrée d'historique — save() seulement. */
+const REMOTE_WHOLE = { slides: () => window.AlixoSlides, sheet: () => window.AlixoSheets, board: () => window.AlixoBoard, quiz: () => window.AlixoQuiz };
+/* remplace le contenu de l'objet séance (même objet : il reste celui de state.docs ou de AlixoShare) */
+function replaceDocContent(d, merged) {
+  for (const k of Object.keys(d)) if (!(k in merged)) delete d[k];
+  Object.assign(d, merged);
+}
+/* HTML d'un champ de texte rééquilibré (balises fermées) : analysé dans un <template>, contenu inerte */
+function balancedHTML(h) {
+  const t = document.createElement('template');
+  t.innerHTML = String(h || '');
+  return cleanHTML(t.innerHTML);
+}
+function applyMergedDoc(merged, report, info) {
   const d = doc();
-  if (!d || d.id !== remote.id) return remote;
-  if (isSlidesDoc(remote) || isSlidesDoc(d)) {
-    Object.assign(d, remote);
-    if (window.AlixoSlides) AlixoSlides.remoteChanged();
-    return d;
+  if (!d || !merged || d.id !== merged.id) return false;
+  report = report || {};
+  info = info || {};
+  if (report.whole || isSpecialDoc(d) || isSpecialDoc(merged)) {
+    const titleChanged = (d.titre || '') !== (merged.titre || '');
+    replaceDocContent(d, merged);
+    const mod = REMOTE_WHOLE[d.kind] && REMOTE_WHOLE[d.kind]();
+    if (mod && mod.remoteChanged) mod.remoteChanged();
+    if (titleChanged && !(document.activeElement && document.activeElement.id === 'tb-title')) { renderCrumbs(); renderTabs(); }
+    save();
+    return true;
   }
-  if (isSheetDoc(remote) || isSheetDoc(d)) {
-    Object.assign(d, remote);
-    if (window.AlixoSheets) AlixoSheets.remoteChanged();
-    return d;
-  }
-  if (isBoardDoc(remote) || isBoardDoc(d)) {
-    Object.assign(d, remote);
-    if (window.AlixoBoard) AlixoBoard.remoteChanged();
-    return d;
-  }
-  if (isQuizDoc(remote) || isQuizDoc(d)) {
-    Object.assign(d, remote);
-    if (window.AlixoQuiz) AlixoQuiz.remoteChanged();
-    return d;
-  }
-  if (!readOnly) syncAllFromDom();
+  /* AVANT toute modification : signatures et blocs affichés, position du curseur */
+  const prevBlocks = new Map(d.blocks.map(b => [b.id, b]));
+  const prevById = new Map(d.blocks.map(b => [b.id, blockSig(b)]));
+  const caret = caretSnapshot();
   const typing = Date.now() - hist.typingTs < 4000;
-  const keepId = typing ? lastBlockId : null;
-  const localKeep = keepId ? d.blocks.find(b => b.id === keepId) : null;
-  const before = new Map(d.blocks.map(b => [b.id, JSON.stringify(b)]));
-  // pages : on prend celles du distant, mais les blocs affichés sont ceux de l'onglet courant
-  const remoteBlocks = Array.isArray(remote.blocks) ? remote.blocks : [];
-  const merged = remoteBlocks.map(b => (localKeep && b.id === keepId ? localKeep : b));
-  if (localKeep && !merged.some(b => b.id === keepId)) {
-    const i = d.blocks.findIndex(b => b.id === keepId);
-    const prevId = i > 0 ? d.blocks[i - 1].id : null;
-    const j = prevId ? merged.findIndex(b => b.id === prevId) : -1;
-    merged.splice(j + 1, 0, localKeep);
+  if (!Array.isArray(merged.blocks)) merged.blocks = [];
+  /* 1.56.0 (sécurité) : chaque bloc fusionné, ajouté ou en conflit est réassaini avant d'atteindre l'écran — une fusion mot à
+     mot peut couper une balise, ou coller le texte d'un membre au milieu d'un attribut de l'autre (AlixoSanitize.blockKeep :
+     liste blanche, identifiant conservé, forme relue depuis l'écran). Sans le module : rééquilibrage seul, comme avant. */
+  const AS = window.AlixoSanitize && AlixoSanitize.blockKeep ? AlixoSanitize : null;
+  for (const id of new Set([...(report.conflicts || []), ...(report.changedIds || []), ...(report.addedIds || [])])) {
+    const i = merged.blocks.findIndex(b => b && b.id === id);
+    const b = i >= 0 ? merged.blocks[i] : null;
+    if (!b) continue;
+    let c = null;
+    if (AS) { try { c = AS.blockKeep(b); } catch (err) { c = null; } }
+    if (c) { merged.blocks[i] = c; continue; }
+    if (!TEXT_TYPES.includes(b.type)) { if (AS) merged.blocks.splice(i, 1); continue; }   // bloc refusé par l'assainisseur : retiré
+    if (typeof b.text === 'string') b.text = AS ? AS.rich(balancedHTML(b.text)) : balancedHTML(b.text);
+    if (typeof b.cite === 'string') b.cite = AS ? AS.atoms(balancedHTML(b.cite)) : balancedHTML(b.cite);
   }
-  const changed = merged.filter(b => before.get(b.id) !== JSON.stringify(b)).map(b => b.id);
-  const titleChanged = remote.titre !== d.titre;
-  Object.assign(d, remote, { blocks: merged, updatedAt: Math.max(d.updatedAt || 0, remote.updatedAt || 0) });
-  if (titleChanged) renderCrumbs();
-  renderBlocks(undefined);
-  hist.baseline = snapshotDoc();
-  changed.forEach(id => { const el = blocksEl.querySelector(`.block[data-id="${id}"]`); if (el) { el.classList.add('peer-flash'); setTimeout(() => el.classList.remove('peer-flash'), 1800); } });
+  const mergedById = new Map(merged.blocks.map(b => [b.id, b]));
+  const remoteDelta = new Map();
+  for (const id of [...(report.changedIds || []), ...(report.addedIds || [])]) remoteDelta.set(id, mergedById.get(id) || null);
+  for (const id of report.removedIds || []) remoteDelta.set(id, null);
+  replaceDocContent(d, merged);
+  if (!Array.isArray(d.blocks) || !d.blocks.length) d.blocks = [{ id: uid(), type: 'p', text: '' }];
+  if (report.titleChanged && !(document.activeElement && document.activeElement.id === 'tb-title')) { renderCrumbs(); renderTabs(); }
+  if (report.pageGone) {
+    /* l'onglet affiché a été supprimé par un autre membre : on passe au premier onglet restant */
+    toast(`L’onglet que vous consultiez a été supprimé par ${info.byName || 'un autre membre'}`, { duration: 4000 });
+    historyReset(); aiSug = null; tsel = null; objSel = null; corrMarks = [];
+    renderPageTabs();
+    renderEditor();
+    save();
+    return true;
+  }
+  if (report.pagesChanged) renderPageTabs();
+  patchBlocksDom(prevById, caret, report);
+  rebaseHistory(remoteDelta, prevBlocks, report.titleChanged ? d.titre : undefined);
+  const flash = [...(report.changedIds || []), ...(report.addedIds || [])];
+  flash.forEach(id => { const el = blocksEl.querySelector(`.block[data-id="${CSS.escape(String(id))}"]`); if (el) { el.classList.add('peer-flash'); setTimeout(() => el.classList.remove('peer-flash'), 1800); } });
+  (report.conflicts || []).forEach(id => { const el = blocksEl.querySelector(`.block[data-id="${CSS.escape(String(id))}"]`); if (el) { el.classList.add('peer-conflict'); setTimeout(() => el.classList.remove('peer-conflict'), 3000); } });
   renderPeers();
-  if (changed.length && byName && !typing) toast(`${byName} vient de modifier ${changed.length > 1 ? changed.length + ' blocs' : 'un bloc'}`, { duration: 2500 });
+  if ((report.conflicts || []).length) toast(`Vous et ${info.byName || 'un autre membre'} avez modifié le même passage : les deux versions sont gardées, à relire`, { duration: 5000 });
+  else if (flash.length && info.byName && !typing) toast(`${info.byName} vient de modifier ${flash.length > 1 ? flash.length + ' blocs' : 'un bloc'}`, { duration: 2500 });
+  save();
+  return true;
+}
+/* 1.56.0 : historique d'annulation rebasé sur une version reçue — dans chaque photo (base, annuler, rétablir), les blocs
+   modifiés à distance prennent la version reçue (les frappes locales de la photo sont refusionnées dans un texte), les
+   blocs supprimés à distance disparaissent, les ajoutés sont insérés après leur prédécesseur. Ctrl+Z n'annule ainsi que
+   ses propres modifications, jamais celles des autres membres. */
+function rebaseHistory(remoteDelta, prevBlocks, newTitle) {
+  const d = doc(); if (!d) return;
+  const order = d.blocks.map(b => b.id);
+  const C = window.AlixoCoedit;
+  const AS = window.AlixoSanitize && AlixoSanitize.blockKeep ? AlixoSanitize : null;
+  /* 1.56.0 (sécurité, coût) : budget global de cellules de différence pour tout l'historique d'une réception (2e7) ; au-delà,
+     ou pour un texte de plus de 100 Ko, le bloc reçu remplace celui de la photo sans refusion. Résultats mémorisés par texte
+     de photo (le même texte revient dans de nombreuses photos). Le texte refusionné est réassaini (blockKeep). */
+  let budget = 2e7;
+  const memo = new Map();   // `${id}\u0000${old.text}` → texte refusionné (ou null : remplacé tel quel)
+  const TEXT_MAX = 100000;
+  const remerge = (id, before, old, copy) => {
+    const key = id + '\u0000' + old.text;
+    if (memo.has(key)) return memo.get(key);
+    let out = null;
+    const bt = before.text || '', nt = copy.text || '';
+    if (bt.length <= TEXT_MAX && old.text.length <= TEXT_MAX && nt.length <= TEXT_MAX) {
+      const nb = C.tokenize(bt).length, cost = nb * (C.tokenize(old.text).length + C.tokenize(nt).length);
+      if (cost <= budget) {
+        budget -= cost;
+        const m = C.merge3Text(bt, old.text, nt, { preferLocal: true });
+        if (m) {
+          const t = Object.assign({}, copy, { text: balancedHTML(m.text) });
+          let c = null;
+          if (AS) { try { c = AS.blockKeep(t); } catch (err) { c = null; } }
+          out = c ? c.text : (AS ? AS.rich(t.text) : t.text);
+        }
+      }
+    }
+    memo.set(key, out);
+    return out;
+  };
+  const rebaseOne = s => {
+    if (!s || !Array.isArray(s.blocks)) return;
+    if (newTitle !== undefined) s.titre = newTitle;
+    for (const [id, nb] of remoteDelta) {
+      const i = s.blocks.findIndex(b => b && b.id === id);
+      if (!nb) { if (i >= 0) s.blocks.splice(i, 1); continue; }
+      const copy = JSON.parse(JSON.stringify(nb));
+      if (i >= 0) {
+        const old = s.blocks[i], before = prevBlocks.get(id);
+        /* texte de la photo ≠ texte d'avant la fusion : on y applique seulement l'apport distant */
+        if (C && before && old && TEXT_TYPES.includes(copy.type) && old.type === copy.type && before.type === copy.type && typeof old.text === 'string' && old.text !== before.text) {
+          const t = remerge(id, before, old, copy);
+          if (t !== null) copy.text = t;
+        }
+        s.blocks[i] = copy;
+      } else {
+        const k = order.indexOf(id);
+        let at = 0;
+        for (let j = k - 1; j >= 0; j--) { const p = s.blocks.findIndex(b => b && b.id === order[j]); if (p >= 0) { at = p + 1; break; } }
+        s.blocks.splice(at, 0, copy);
+      }
+    }
+    if (!s.blocks.length) s.blocks.push({ id: uid(), type: 'p', text: '' });
+  };
+  hist.undo.forEach(rebaseOne);
+  hist.redo.forEach(rebaseOne);
+  hist.baseline = snapshotDoc();
+}
+/* séance reçue d'un autre appareil du même compte (js/sync.js, par applyRemoteDocs) : la version distante gagne, sauf le
+   bloc en cours de frappe (comportement d'avant 1.56.0), appliquée bloc par bloc par applyMergedDoc */
+function mergeRemoteDoc(remote) {
+  const d = doc();
+  if (!d || !remote || d.id !== remote.id) return remote;
+  if (!readOnly && !isSpecialDoc(d)) syncAllFromDom();
+  const C = window.AlixoCoedit;
+  if (!C) { replaceDocContent(d, remote); renderBlocks(undefined); hist.baseline = snapshotDoc(); return d; }
+  const local = JSON.parse(JSON.stringify(d));
+  const typingId = Date.now() - hist.typingTs < 4000 ? lastBlockId : null;
+  /* base = version locale, sauf le bloc en cours de frappe pris du distant : partout ailleurs le distant gagne */
+  const base = JSON.parse(JSON.stringify(d));
+  if (typingId && Array.isArray(base.blocks)) {
+    const rb = (remote.blocks || []).find(b => b && b.id === typingId);
+    base.blocks = rb ? base.blocks.map(b => (b.id === typingId ? JSON.parse(JSON.stringify(rb)) : b)) : base.blocks.filter(b => b.id !== typingId);
+  }
+  const caret = caretSnapshot();
+  const { doc: merged, report } = C.merge3Doc(base, local, remote, { typingId, caretId: caret && caret.id, caret: caret && typeof caret.off === 'number' ? caret.off : null, caretKey: caret && caret.key });
+  applyMergedDoc(merged, report, {});
   return d;
 }
 
@@ -2330,7 +2502,8 @@ function openNewMenu(anchor, fid) {
     ${NEW_ITEMS.map(([cm, key, label, small]) => `<button data-cm="cnew${cm}" role="menuitem">${newTile(key)}<span class="cm-lbl">${label}<small>${small}</small></span></button>`).join('')}
     <div class="cm-sep"></div>
     <button data-cm="cimport" role="menuitem">${cmTile('import', IMPORT_ICON)}<span class="cm-lbl">Importer depuis l’ordinateur…<small>PDF, Word, PowerPoint, Excel, images, audio</small></span></button>
-    ${document.body.classList.contains('mobile') ? '' : `<button data-cm="cimportphone" role="menuitem">${cmTile('import', AlixoIcons.svg('smartphone'))}<span class="cm-lbl">Importer depuis un téléphone ou une tablette…<small>QR code à scanner</small></span></button>`}`;   /* 1.52 */
+    ${document.body.classList.contains('mobile') ? '' : `<button data-cm="cimportphone" role="menuitem">${cmTile('import', AlixoIcons.svg('smartphone'))}<span class="cm-lbl">Importer depuis un téléphone ou une tablette…<small>QR code à scanner</small></span></button>
+    <button data-cm="cscan" role="menuitem">${cmTile('import', AlixoIcons.svg('scan'))}<span class="cm-lbl">Scanner une feuille avec le téléphone…<small>Une page entière, à annoter au stylo</small></span></button>`}`;   /* 1.52 ; 1.56.0 : + scanner une feuille (nouvelle séance) */
   menu.className = 'cm-create';
   menu.setAttribute('role', 'menu');
   menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.cfid = fid || '';
@@ -2463,6 +2636,8 @@ $('#ctxmenu').addEventListener('click', e => {
   if (cm === 'cnewfolder') { openFolderPopover(null, cfid); return; }
   if (cm === 'cimport') { if (window.AlixoFiles) AlixoFiles.pick(cfid); return; }
   if (cm === 'cimportphone') { if (window.AlixoFiles) AlixoFiles.pickPhone(cfid); return; }   // 1.52
+  /* 1.56.0 : scanner une feuille — nouvelle séance dans le dossier, puis QR code du scan (la page remplace le paragraphe vide) */
+  if (cm === 'cscan') { if (!window.AlixoScan) { toast('Fonction indisponible'); return; } createDocIn(cfid); setTimeout(() => AlixoScan.capture(currentBlockId()), 80); return; }
   if (cm === 'cagenda') { openEventPopover(null, { folderId: cfid }); return; }
   if (cm.startsWith('i') && menu.dataset.img) {
     const id = menu.dataset.img; const ib = getBlock(id); if (!ib || ib.type !== 'img') return;
@@ -2940,7 +3115,7 @@ const PLUS_FEATURES = [
   { k: 'themes', name: 'Tous les thèmes de couleurs', free: 'Clair, sombre, automatique', plus: 'Tous les thèmes', text: 'Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande…' },
   { k: 'slidesthemes', name: 'Thèmes signature des présentations', free: '12 thèmes', plus: '24 thèmes', text: 'Douze thèmes supplémentaires avec motif de fond et forme signature (Aurore, Granit, Lagon, Kraft, Bauhaus, Prisme, Olive, Cobalt, Pointillé, Rubis, Nuit étoilée, Menthe).' },   // 1.54
   { k: 'ia', name: 'Intelligence artificielle', free: 'Correction pendant la frappe', plus: 'AlixoAI incluse', text: 'Pour tous : fautes de frappe et de grammaire corrigées pendant la frappe, sur l’appareil. Avec Alixo+ : AlixoAI, sur votre ordinateur et sans limite, relit tout le cours (F7), propose la mise en forme et des reformulations.' },
-  { k: 'quizia', name: 'Alixo AI : Coco, quiz et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation, un tableur, une planche ou un quiz : Coco, la mascotte, répond à vos questions sur le cours et peut modifier le document à votre demande (corriger, mettre en forme, compléter), avec annulation ; quiz (QCM, vrai / faux, réponses courtes) corrigés sur place ; fiches de révision colorées (à retenir, grandes idées, définitions, dates, pièges), générés par l’IA à partir de vos notes.' },
+  { k: 'quizia', name: 'Alixo AI : Coco, quiz et fiches de révision', free: '—', plus: 'Inclus', text: 'Depuis une séance, une présentation, un tableur, une planche, un quiz ou un PDF : Coco, la mascotte, répond à vos questions sur le cours et peut modifier le document à votre demande (corriger, mettre en forme, compléter), avec annulation ; quiz (QCM, vrai / faux, réponses courtes) corrigés sur place ; fiches de révision colorées (à retenir, grandes idées, définitions, dates, pièges), générés par l’IA à partir de vos notes.' },
   { k: 'taches', name: 'Tâches à faire', free: '—', plus: 'Incluses', text: 'Tâches, catégories, échéances, priorités et rappel du matin, synchronisés avec le compte.' },
   { k: 'fond', name: 'Fond d’écran des documents', free: '—', plus: 'Inclus', text: 'Une image à vous (ou un dégradé) derrière vos séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.' },
   { k: 'detourage', name: 'Supprimer le fond d’une image', free: '—', plus: 'Inclus', text: 'Retirez le fond d’une photo ou d’un schéma (clic droit sur l’image › Retouches › Supprimer le fond). Le calcul se fait sur votre appareil, sans service externe.' },   // 1.52
@@ -3581,6 +3756,7 @@ const SET_ICO = {
   ecriture: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13 7l4 4"/></svg>',
   ia: '<svg viewBox="0 0 24 24"><path d="M4 17c3-1 6-9 8-9s3 8 8 7"/><path d="m3 20 2-2M19 4l1 3 3 1-3 1-1 3-1-3-3-1 3-1Z"/></svg>',
   export: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
+  integrations: '<svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3"/><path d="M6 7h12v4a6 6 0 0 1-12 0Z"/><path d="M12 17v4"/></svg>',   // 1.56.0 : prise (serveur MCP)
   apropos: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
   plus: PLUS_ICO.star,
   widgets: PLUS_ICO.widgets,
@@ -3710,6 +3886,7 @@ const SET_CATS = [
   { k: 'apparence', name: 'Apparence', sub: 'Thème, affichage de la bibliothèque, fenêtres, fond d’écran des documents' },
   { k: 'ecriture', name: 'Écriture', sub: 'Police, plan du cours et remplacements automatiques' },
   { k: 'ia', name: 'Intelligence artificielle', sub: 'Correction pendant la frappe, AlixoAI' },
+  { k: 'integrations', name: 'Intégrations', sub: 'Connecter Claude, Cursor et d’autres IA à votre bibliothèque (MCP)' },   // 1.56.0 : js/mcp.js
   { k: 'widgets', name: 'Widgets', sub: 'Widgets posés sur le bureau de l’ordinateur (Alixo+)' },
   { k: 'business', name: 'Entreprise', sub: 'Alixo Business : votre entreprise, tableau de bord en ligne, messagerie' },
   { k: 'apropos', name: 'À propos', sub: 'Version, nouveautés, raccourcis clavier' }
@@ -3837,6 +4014,7 @@ function openDocPlanDialog() {
 function settingsSectionHTML(k) {
   if (k === 'widgets') return window.AlixoWidgets ? AlixoWidgets.settingsHTML() : '<div class="set-sect"><div class="po-hint">Module des widgets indisponible.</div></div>';
   if (k === 'business') return window.AlixoBusiness && AlixoBusiness.enabled ? AlixoBusiness.settingsHTML() : `<div class="set-sect">${window.AlixoBusiness ? AlixoBusiness.offerHTML() : ''}<div class="po-hint">Alixo Business demande un compte Alixo connecté (Paramètres › Compte).</div></div>`;
+  if (k === 'integrations') return window.AlixoMcp ? AlixoMcp.settingsHTML() : '<div class="set-sect"><div class="po-hint">Module des intégrations indisponible.</div></div>';   // 1.56.0 : serveur MCP (js/mcp.js)
   const fmt = state.settings.exportFormat || 'pdf';
   const theme = state.settings.theme || 'auto';
   const view = state.settings.libView || 'grid';
@@ -3931,6 +4109,7 @@ function settingsSectionHTML(k) {
 function bindSettingsSection(k, root) {
   if (k === 'widgets') { if (window.AlixoWidgets) AlixoWidgets.bindSettings(root); return; }
   if (k === 'business') { if (window.AlixoBusiness) AlixoBusiness.bindSettings(root); return; }
+  if (k === 'integrations') { if (window.AlixoMcp) AlixoMcp.bindSettings(root); return; }   // 1.56.0
   if (k === 'plus' && window.AlixoBusiness) { const bb = root.querySelector('#biz-buy'); if (bb) bb.addEventListener('click', async e => { const url = await startCheckout('business', e.currentTarget); if (url) openExternalUrl(url); }); }
   if (k === 'compte') {
     const stor = root.querySelector('#po-storage');
@@ -4371,8 +4550,8 @@ const TEXT_TYPES = ['p', 'h', 'li', 'quote', 'callout'];
 /* 1.38 : alignement d'un champ de bloc (fiche d'arrêt, fiche, cartes) — b.fal = { <data-f> : 'center' | 'right' | 'justify' } */
 const falStyle = (b, k) => (b && b.fal && ['left', 'center', 'right', 'justify'].includes(b.fal[k]) ? ` style="text-align:${b.fal[k]}"` : '');   // 1.51 : valeur validée, jamais interpolée telle quelle
 const MULTILINE_TYPES = ['callout', 'quote'];          // Entrée = saut de ligne dans le bloc
-const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc', 'docref', 'timeline', 'linkbtn'];   // 1.43 : + 'docref' (bloc « Document ») ; 1.51 : + 'timeline' (frise chronologique, js/timeline.js) ; 1.52 : + 'linkbtn' (bouton de lien)
-const BLOCK_PROPS = ['gen', 'text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans', 'ref', 'kind', 'events', 'dir', 'fx', 'o', 'color', 'icon', 'size', 'url'];   // 1.51 : + frise (events, dir) et retouches d'image (fx, o — js/imgtools.js) ; 1.52 : + bouton de lien (color, icon, size, url), gen (bloc écrit par Coco)
+const OBJECT_TYPES = ['formula', 'graph', 'table', 'img', 'draw', 'scan', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'tree', 'toc', 'docref', 'timeline', 'linkbtn'];   // 1.43 : + 'docref' (bloc « Document ») ; 1.51 : + 'timeline' (frise chronologique, js/timeline.js) ; 1.52 : + 'linkbtn' (bouton de lien) ; 1.56.0 : + 'scan' (document scanné, js/scan.js)
+const BLOCK_PROPS = ['gen', 'text', 'level', 'st', 'ct', 'src', 'gtype', 'params', 'fields', 'lt', 'ind', 'done', 'iid', 'nw', 'nh', 'w', 'align', 'crop', 'cap', 'alt', 'rows', 'head', 'widths', 'bg', 'al', 'ta', 'shapes', 'h', 'cite', 'fk', 'ck', 'title', 'labels', 'series', 'opts', 'sk', 'vals', 'mode', 'secs', 'label', 'cards', 'root', 'spans', 'ref', 'kind', 'events', 'dir', 'fx', 'o', 'color', 'icon', 'size', 'url', 'orient'];   // 1.51 : + frise (events, dir) et retouches d'image (fx, o — js/imgtools.js) ; 1.52 : + bouton de lien (color, icon, size, url), gen (bloc écrit par Coco) ; 1.56.0 : + orient (document scanné)
 /* « atomes » non éditables dans le texte : références d'articles, items LiSA, résultats de calcul, liens, rangs */
 const ATOM_SEL = '.refart, .calc-res, .lnk, .rtag';
 const ATOM_RE = /<img|refart|calc-res|class="lnk"|rtag/;
@@ -4472,11 +4651,12 @@ const AlixoImages = (() => {
 })();
 /* charge en mémoire les images d'une séance (avant rendu ou export) */
 function preloadImages(d) {
-  const ids = (d && d.blocks || []).filter(b => b.type === 'img' && b.iid && !AlixoImages.has(b.iid)).map(b => b.iid);
+  const ids = (d && d.blocks || []).filter(b => (b.type === 'img' || b.type === 'scan') && b.iid && !AlixoImages.has(b.iid)).map(b => b.iid);   // 1.56.0 : + documents scannés
   return Promise.all(ids.map(id => AlixoImages.get(id)));
 }
 /* complète les <img> dont la donnée est arrivée après le rendu */
 function patchImages() {
+  if (window.AlixoScan) AlixoScan.patchImages();   // 1.56.0 : documents scannés (js/scan.js)
   $$('#blocks .block.img .imgbox.loading').forEach(box => {
     const fig = box.closest('.block'); const b = getBlock(fig.dataset.id); if (!b) return;
     const src = AlixoImages.cache.get(b.iid);
@@ -4509,23 +4689,25 @@ const MV_HANDLE = `<span class="mv-handle" contenteditable="false" title="Glisse
 function blockHTML(b, numMap) {
   switch (b.type) {
     case 'h':
-      return `<div class="block h l${b.level || 1}${alClass(b)}" data-id="${b.id}" data-num="${numMap[b.id] || ''}"><div class="btxt" data-ph="Titre…">${b.text || '<br>'}</div></div>`;
+      return `<div class="block h l${b.level || 1}${alClass(b)}" data-id="${esc(b.id)}" data-num="${esc(numMap[b.id] || '')}"><div class="btxt" data-ph="Titre…">${b.text || '<br>'}</div></div>`;
     case 'li': {
       const lt = b.lt === 'ol' || b.lt === 'cl' ? b.lt : 'ul';
       const ind = Math.min(3, Math.max(0, +b.ind || 0));
-      return `<div class="block li ${lt}${ind ? ' ind' + ind : ''}${b.done ? ' done' : ''}${alClass(b)}" data-id="${b.id}"${lt === 'ol' ? ` data-num="${numMap[b.id] || ''}"` : ''}>${lt === 'cl' ? '<span class="cbox" contenteditable="false" title="Cocher / décocher"></span>' : ''}<div class="btxt" data-ph="Élément de liste…">${b.text || '<br>'}</div></div>`;
+      return `<div class="block li ${lt}${ind ? ' ind' + ind : ''}${b.done ? ' done' : ''}${alClass(b)}" data-id="${esc(b.id)}"${lt === 'ol' ? ` data-num="${esc(numMap[b.id] || '')}"` : ''}>${lt === 'cl' ? '<span class="cbox" contenteditable="false" title="Cocher / décocher"></span>' : ''}<div class="btxt" data-ph="Élément de liste…">${b.text || '<br>'}</div></div>`;
     }
     case 'quote':
       /* citation + ligne « auteur / source » (champ à part, jamais vide à l'export) */
-      return `<div class="block quote${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite${b.cite ? '' : ' is-blank'}" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
+      return `<div class="block quote${alClass(b)}" data-id="${esc(b.id)}"><div class="btxt" data-ph="Citation…">${b.text || '<br>'}</div><div class="qcite${b.cite ? '' : ' is-blank'}" data-f="cite" data-ph="— Auteur, œuvre, année (ou DOI / PMID par le clic droit)">${b.cite || '<br>'}</div>${readOnly ? '' : '<button type="button" class="q-src" contenteditable="false" data-qsrc title="Auteur, œuvre, année — ou retrouver la source par DOI / PMID">Auteur / source…</button>'}</div>`;
     case 'callout': {
       const c = ownOf(CALLOUTS, b.ct) || CALLOUTS.retenir;
       const ct = ownOf(CALLOUTS, b.ct) ? b.ct : 'retenir';
       const style = c.color ? ` style="--cc-light:${calloutColor(ct)}; --cc-dark:${calloutColor(ct, true)}"` : '';   // 1.53 : encadrés Santé — couleur réglable (Paramètres › Apparence)
-      return `<div class="block callout${alClass(b)}" data-id="${b.id}" data-ct="${esc(b.ct)}"${style}><span class="cico" contenteditable="false">${AlixoIcons.svg(c.ico)}</span><div class="ctitle" contenteditable="false">${c.name}${c.sub ? `<span class="csub">${c.sub}</span>` : ''}</div><div class="btxt" data-ph="${b.ct === 'bilan' || b.ct === 'objectifs' ? 'Points clés… (« - » en début de ligne pour une puce)' : 'Contenu de l’encadré…'}">${b.text || '<br>'}</div></div>`;
+      return `<div class="block callout${alClass(b)}" data-id="${esc(b.id)}" data-ct="${esc(b.ct)}"${style}><span class="cico" contenteditable="false">${AlixoIcons.svg(c.ico)}</span><div class="ctitle" contenteditable="false">${c.name}${c.sub ? `<span class="csub">${c.sub}</span>` : ''}</div><div class="btxt" data-ph="${b.ct === 'bilan' || b.ct === 'objectifs' ? 'Points clés… (« - » en début de ligne pour une puce)' : 'Contenu de l’encadré…'}">${b.text || '<br>'}</div></div>`;
     }
     case 'draw':
-      return window.AlixoDraw ? AlixoDraw.blockHTML(b, MV_HANDLE) : `<div class="block draw" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="draw-wrap">Dessin</div></div>`;
+      return window.AlixoDraw ? AlixoDraw.blockHTML(b, MV_HANDLE) : `<div class="block draw" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="draw-wrap">Dessin</div></div>`;
+    case 'scan':   // 1.56.0 : document scanné (js/scan.js) — sans le module, le bloc est « illisible » : jamais relu, jamais vidé
+      return window.AlixoScan ? AlixoScan.blockHTML(b, MV_HANDLE) : `<div class="block scan unreadable" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="scan-wrap">Document scanné</div></div>`;
     case 'juris':
     case 'fiche': {
       const f = b.fields || {}, def = ficheDef(b);
@@ -4533,14 +4715,14 @@ function blockHTML(b, numMap) {
       const year = old && f.annee ? parseInt(stripTags(f.annee), 10) : 0;
       const badge = year && new Date().getFullYear() - year >= 5 ? `<span class="jbadge" contenteditable="false" title="Recommandation de plus de 5 ans : vérifier qu’elle est toujours en vigueur">ancienne</span>` : '';
       const timer = def.timer ? `<button class="jtimer" contenteditable="false" data-tstart="${def.timer}" type="button" title="Lancer un compte à rebours de ${Math.round(def.timer / 60)} min" aria-label="Lancer un compte à rebours de ${Math.round(def.timer / 60)} min">${AlixoIcons.svg('hourglass')}<span>${Math.round(def.timer / 60)} min</span></button>` : '';   // 1.52 : icône SVG (plus d'émoji)
-      return `<div class="block ${b.type === 'juris' ? 'juris' : 'fiche juris'}" data-id="${b.id}"${b.type === 'fiche' ? ` data-fk="${esc(b.fk || 'patho')}" style="--fc:${def.color}"` : ''}>
+      return `<div class="block ${b.type === 'juris' ? 'juris' : 'fiche juris'}" data-id="${esc(b.id)}"${b.type === 'fiche' ? ` data-fk="${esc(b.fk || 'patho')}" style="--fc:${def.color}"` : ''}>
         <div class="juris-head"><span class="jico" contenteditable="false">${AlixoIcons.svg(def.ico)}</span>${b.type === 'fiche' ? `<span class="jkind" contenteditable="false">${esc(def.name)}</span>` : ''}<div class="jref${f.ref ? '' : ' is-blank'}" data-f="ref" data-ph="${esc(def.head)}"${falStyle(b, 'ref')}>${f.ref || '<br>'}</div>${badge}${timer}</div>
         <div class="juris-grid">${def.fields.map(([k, lab]) => `<div class="jlabel" contenteditable="false">${lab}</div><div class="jval${f[k] ? '' : ' is-blank'}" data-f="${k}"${falStyle(b, k)}>${f[k] || '<br>'}</div>`).join('')}</div></div>`;
     }
     case 'chart': {
       const t = ownOf(AlixoCharts.TYPES, b.ck) ? b.ck : 'bar';
       const o = b.opts || {};
-      return `<div class="block chart" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+      return `<div class="block chart" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
         <div class="chart-card"><div class="cwrap">${AlixoCharts.svg(b)}</div>
         <div class="chart-tools">
           ${Object.entries(AlixoCharts.TYPES).map(([k, v]) => `<button data-ct="${k}" class="${k === t ? 'on' : ''}" title="${esc(v.name)}">${AlixoIcons.svg(v.ico)}</button>`).join('')}
@@ -4554,11 +4736,11 @@ function blockHTML(b, numMap) {
         </div></div></div>`;
     }
     case 'score': {
-      const sc = ownOf(AlixoMed.SCORES, b.sk); if (!sc) return `<div class="block score" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Score inconnu</div></div>`;
+      const sc = ownOf(AlixoMed.SCORES, b.sk); if (!sc) return `<div class="block score" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="score-card">Score inconnu</div></div>`;
       const vals = Array.isArray(b.vals) ? b.vals : [];
       const total = scoreTotal(b);
       const it = sc.interp.find(([a, z]) => total >= a && total <= z);
-      return `<div class="block score" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+      return `<div class="block score" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
         <div class="score-card"><div class="score-head"><span class="score-name">${esc(sc.name)}</span><span class="score-sub">${esc(sc.sub || '')}</span></div>
         <div class="score-items">${sc.items.map((item, i) => item.opts
           ? `<label class="score-row"><span class="score-l">${esc(item.l)}</span><select data-si="${i}">${item.opts.map(([p, lab]) => `<option value="${p}" ${vals[i] === p ? 'selected' : ''}>${esc(lab)} (${p})</option>`).join('')}${vals[i] === undefined || vals[i] === null ? '<option value="" selected>—</option>' : ''}</select></label>`
@@ -4566,11 +4748,11 @@ function blockHTML(b, numMap) {
         <div class="score-total"><span>Total</span><b>${Number.isInteger(total) ? total : total.toFixed(1)}</b>${it ? `<span class="score-interp">${esc(it[2])}</span>` : ''}</div></div></div>`;
     }
     case 'mcalc': {
-      const c = ownOf(AlixoMed.CALCS, b.ck); if (!c) return `<div class="block mcalc" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="score-card">Calculateur inconnu</div></div>`;
+      const c = ownOf(AlixoMed.CALCS, b.ck); if (!c) return `<div class="block mcalc" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="score-card">Calculateur inconnu</div></div>`;
       const vals = mcalcVals(b);
       let res = [];
       try { res = c.out(vals); } catch { res = []; }
-      return `<div class="block mcalc" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+      return `<div class="block mcalc" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
         <div class="score-card"><div class="score-head"><span class="score-name">${esc(c.name)}</span><span class="score-sub">${esc(c.sub || '')}</span></div>
         <div class="mcalc-in">${c.inputs.map(inp => inp.sel
           ? `<label><span>${esc(inp.l)}</span><select data-mk="${inp.k}">${inp.sel.map(([v, lab]) => `<option value="${v}" ${vals[inp.k] === v ? 'selected' : ''}>${esc(lab)}</option>`).join('')}</select></label>`
@@ -4578,10 +4760,10 @@ function blockHTML(b, numMap) {
         <div class="mcalc-out">${res.map(r => `<div class="mcalc-res"><span>${esc(r.l)}</span><b>${esc(typeof r.v === 'number' && !isFinite(r.v) ? '—' : String(r.v).replace('.', ','))}</b>${r.u ? `<span class="mcalc-u">${esc(r.u)}</span>` : ''}${r.note ? `<span class="score-interp">${esc(r.note)}</span>` : ''}</div>`).join('')}</div></div></div>`;
     }
     case 'hr':
-      return `<div class="block hr" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<hr></div>`;
+      return `<div class="block hr" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<hr></div>`;
     case 'toc': {   // 1.35 : table des matières — les titres de la séance, numérotés, cliquables, mis à jour tout seuls
       const depth = Math.min(PLAN_MAX, Math.max(1, +b.depth || PLAN_MAX));
-      return `<div class="block toc" data-id="${b.id}" contenteditable="false" data-depth="${depth}">${MV_HANDLE}
+      return `<div class="block toc" data-id="${esc(b.id)}" contenteditable="false" data-depth="${depth}">${MV_HANDLE}
         <div class="toc-card"><div class="toc-head">${esc(b.title || 'Table des matières')}</div><nav class="toc-list">${tocListHTML(numMap, depth)}</nav>
         <div class="toc-tools">
           <span class="toc-tl">Niveaux</span>${[1, 2, 3].map(n => `<button data-tocd="${n}" class="${depth === n ? 'on' : ''}" title="Jusqu’au niveau ${n}">${planSample(n)}</button>`).join('')}<button data-tocd="${PLAN_MAX}" class="${depth >= PLAN_MAX ? 'on' : ''}" title="Tous les niveaux">Tous</button>
@@ -4595,7 +4777,7 @@ function blockHTML(b, numMap) {
       const ico = r.st === 'locked' ? DREF_LOCK_ICON : docIcon({ kind: r.kind });
       const meta = r.st === 'ok' ? docRefMeta(r.d, r.shared) : r.st === 'locked' ? 'Son propriétaire ne vous l’a pas partagé' : (r.local ? `« ${r.local} » · supprimé ou plus accessible` : 'Supprimé ou plus accessible');
       const tip = r.st === 'ok' ? `Ouvrir « ${r.title} »` : r.st === 'locked' ? 'Ce document ne vous est pas partagé' : 'Ce document n’existe plus (supprimé, ou venu d’un autre compte)';
-      return `<div class="block docref ${r.st}" data-id="${b.id}" contenteditable="false" title="${readOnly ? '' : 'Appui long ou clic droit : changer de document, retirer'}">${MV_HANDLE}
+      return `<div class="block docref ${r.st}" data-id="${esc(b.id)}" contenteditable="false" title="${readOnly ? '' : 'Appui long ou clic droit : changer de document, retirer'}">${MV_HANDLE}
         <div class="dref-card"><button type="button" class="dref-open" data-dref="open" title="${esc(tip)}"${r.st === 'ok' ? '' : ' aria-disabled="true"'}>
           <span class="dref-ico">${ico}</span><span class="dref-txt"><b class="dref-title">${esc(r.title)}</b><small class="dref-meta">${esc(meta)}</small></span>
           <span class="dref-go" aria-hidden="true">${r.st === 'ok' ? '<svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>' : ''}</span></button>
@@ -4604,14 +4786,14 @@ function blockHTML(b, numMap) {
     case 'linkbtn':   // 1.52 : bouton de lien (voir linkBtnHTML / linkBtnInfo)
       return linkBtnHTML(b);
     case 'pb':   // 1.23 : saut de page (le texte qui suit commence sur une nouvelle page, à l'écran comme dans le PDF)
-      return `<div class="block pb" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="pb-line">Saut de page</div></div>`;
+      return `<div class="block pb" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="pb-line">Saut de page</div></div>`;
     case 'tree':
       return trBlockHTML(b);
     case 'timeline':   // 1.51 : frise chronologique (js/timeline.js, chargé avant app.js)
       return window.AlixoTimeline ? AlixoTimeline.blockHTML(b, { handle: MV_HANDLE, readOnly }) : `<div class="block timeline" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}</div>`;
     case 'cards': {
       const cards = cardsOf(b);
-      return `<div class="block cards" data-id="${b.id}">
+      return `<div class="block cards" data-id="${esc(b.id)}">
         <div class="cards-grid">${cards.map((c, i) => `<div class="card-item"><div class="cd-t${c.t ? '' : ' is-blank'}" data-f="t${i}" data-ph="Titre"${falStyle(b, 't' + i)}>${c.t || '<br>'}</div><div class="cd-x${c.x ? '' : ' is-blank'}" data-f="x${i}" data-ph="Texte de la carte…"${falStyle(b, 'x' + i)}>${c.x || '<br>'}</div></div>`).join('')}</div>
         <div class="cards-tools" contenteditable="false"><button data-cd="add" type="button" title="Ajouter une carte">＋ carte</button><button data-cd="del" type="button" title="Retirer la dernière carte">− carte</button><button data-cd="rm" class="danger" type="button" title="Supprimer le bloc">Supprimer</button></div></div>`;
     }
@@ -4619,28 +4801,28 @@ function blockHTML(b, numMap) {
       const down = b.mode !== 'up';
       /* 1.52 : carte à bord coloré, icônes SVG, anneau de progression (--p), états is-idle / is-running / is-paused / is-over */
       const st = timerBlockState(b);
-      return `<div class="block timer ${st.cls}" data-id="${b.id}" data-mode="${down ? 'down' : 'up'}" contenteditable="false" style="--p:${st.p}">${MV_HANDLE}
+      return `<div class="block timer ${st.cls}" data-id="${esc(b.id)}" data-mode="${down ? 'down' : 'up'}" contenteditable="false" style="--p:${st.p}">${MV_HANDLE}
         <div class="timer-card"><span class="timer-ring" aria-hidden="true"><svg viewBox="0 0 36 36"><circle class="tr-track" cx="18" cy="18" r="16"/><circle class="tr-bar" cx="18" cy="18" r="16"/></svg>${AlixoIcons.svg(down ? 'hourglass' : 'timer', 'timer-ico')}</span>
         <span class="timer-meta"><span class="timer-kicker">${down ? 'Compte à rebours' : 'Chronomètre'}</span>${b.label ? `<span class="timer-label">${esc(b.label)}</span>` : ''}</span>
-        <span class="timer-digits" data-tid="${b.id}" role="timer">${fmtClock(timerDisplay(b))}</span>
+        <span class="timer-digits" data-tid="${esc(b.id)}" role="timer">${fmtClock(timerDisplay(b))}</span>
         <span class="timer-state" aria-live="polite">${st.state}</span>
         <span class="timer-btns"><button type="button" data-tm="toggle" aria-label="${st.toggle}" title="${st.toggle}">${AlixoIcons.svg(st.running ? 'pause' : 'play')}</button><button type="button" data-tm="reset" aria-label="Remettre à zéro" title="Remettre à zéro">${AlixoIcons.svg('rotate-ccw')}</button><button type="button" data-tm="set" aria-label="Régler le minuteur" title="Régler : durée, libellé, mode">${AlixoIcons.svg('ellipsis')}</button></span></div></div>`;
     }
     case 'formula': {
       if (editingFormula[b.id]) {
-        return `<div class="block formula" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+        return `<div class="block formula" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
           <input class="fsrc" value="${esc(b.src || '')}" placeholder="ex. e_p = (dQ/Q)/(dP/P)   ·   x_i^2   ·   Coût total = Prix xx Quantité   ·   mat(a, b; c, d)" spellcheck="false" autocomplete="off">
           <div class="fhint">Entrée pour composer · Échap pour annuler · Maj+Entrée : nouvelle ligne · mots avec espaces, x_i^2, vec(u), abs(x), mat(…), cases(…) — aide dans le panneau Symboles</div></div>`;
       }
       const html = AlixoMath.render(b.src);
-      return `<div class="block formula ${b.src ? '' : 'empty'}" data-id="${b.id}" contenteditable="false">${MV_HANDLE}<div class="frender" title="Cliquer pour modifier">${html || 'Formule vide — cliquer pour saisir'}</div></div>`;
+      return `<div class="block formula ${b.src ? '' : 'empty'}" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}<div class="frender" title="Cliquer pour modifier">${html || 'Formule vide — cliquer pour saisir'}</div></div>`;
     }
     case 'table': {
       const rows = Array.isArray(b.rows) && b.rows.length ? b.rows : [['', ''], ['', '']];
       const nc = Math.max(1, ...rows.map(r => r.length));
       const widths = tableWidths(b, nc);
       const covered = tableCovered(b), anchors = new Map(tableSpans(b).map(x => [x.r + ':' + x.c, x]));
-      return `<div class="block table" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+      return `<div class="block table" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
         <div class="tbl-tools">
           <span class="tt-grp">
             <button data-t="row+" title="Ajouter une ligne en dessous"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="10" rx="1.5"/><path d="M3 9h18M12 17v4M10 19h4"/></svg><span>Ligne</span></button>
@@ -4682,7 +4864,7 @@ function blockHTML(b, numMap) {
           <button class="gcbtn" data-g="draw">Tracer</button>
           <span class="graph-hint">Intersection calculée automatiquement</span>`;
       }
-      return `<div class="block graph" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+      return `<div class="block graph" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
         <div class="graph-card"><div class="gwrap">${AlixoGraphs.renderSVG(t ? b.gtype : '', p)}</div>
         ${controls ? `<div class="graph-controls">${controls}</div>` : ''}</div></div>`;
     }
@@ -4690,10 +4872,10 @@ function blockHTML(b, numMap) {
       const src = AlixoImages.cache.get(b.iid);
       const al = ['left', 'right', 'center'].includes(b.align) ? b.align : 'center';
       const handles = ['nw', 'ne', 'sw', 'se', 'e', 'w'].map(k => `<span class="rz ${k}" data-rz="${k}"></span>`).join('');
-      return `<figure class="block img al-${al}${window.AlixoImgTools ? AlixoImgTools.classes(b) : ''}" data-id="${b.id}" contenteditable="false" style="${imgStyle(b)}">${MV_HANDLE}<div class="imgbox ${src ? '' : 'loading'}">${src ? `<img src="${src}" alt="${esc(b.alt || '')}" draggable="false">` : ''}${handles}</div>${b.cap !== undefined && b.cap !== null ? `<figcaption contenteditable="true" data-f="cap">${b.cap || ''}</figcaption>` : ''}</figure>`;
+      return `<figure class="block img al-${al}${window.AlixoImgTools ? AlixoImgTools.classes(b) : ''}" data-id="${esc(b.id)}" contenteditable="false" style="${imgStyle(b)}">${MV_HANDLE}<div class="imgbox ${src ? '' : 'loading'}">${src ? `<img src="${src}" alt="${esc(b.alt || '')}" draggable="false">` : ''}${handles}</div>${b.cap !== undefined && b.cap !== null ? `<figcaption contenteditable="true" data-f="cap">${b.cap || ''}</figcaption>` : ''}</figure>`;
     }
     default:
-      return `<div class="block p${alClass(b)}" data-id="${b.id}"><div class="btxt" data-ph="${PH_P}">${b.text || '<br>'}</div></div>`;
+      return `<div class="block p${alClass(b)}" data-id="${esc(b.id)}"><div class="btxt" data-ph="${PH_P}">${b.text || '<br>'}</div></div>`;
   }
 }
 
@@ -4753,17 +4935,27 @@ function renderBlocks(focusId, caretPos, caretKey) {
      restent intactes dans le modèle (syncAllFromDom et normalizeDom ne lisent rien d'un bloc .unreadable). */
   let numMap = {};
   try { numMap = computeNumbers(d.blocks); } catch (err) { console.error('Alixo — numérotation impossible', err); }
-  blocksEl.innerHTML = d.blocks.map(b => {
-    if (!b || typeof b !== 'object') return '';
-    try {
-      const html = blockHTML(b, numMap);
-      const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b) + (window.AlixoDraw ? AlixoDraw.layerHTML(b) : '');   // 1.50 : + calque des objets de dessin posés sur le bloc
-      return extra ? html.replace(/<\/(div|figure)>\s*$/, (m, tag) => extra + '</' + tag + '>') : html;   // fonction : un « $ » dans le texte d'un objet de dessin n'est pas un motif de remplacement
-    } catch (err) {
-      console.error('Alixo — bloc illisible', b.type, err);
-      return unreadableBlockHTML(b);
-    }
-  }).join('');
+  blocksEl.innerHTML = d.blocks.map(b => blockOuterHTML(b, numMap)).join('');
+  afterBlocksRender(() => {
+    if (focusId && focusId !== '__none') focusBlock(focusId, caretPos, caretKey);
+    else if (restore && restore.id) focusBlock(restore.id, restore.off, restore.key);
+  });
+}
+/* 1.56.0 : HTML complet d'un bloc (corps + notes, liens imprimés, suggestion, calque de dessin), factorisé pour le rendu
+   bloc par bloc des modifications reçues (patchBlocksDom) */
+function blockOuterHTML(b, numMap) {
+  if (!b || typeof b !== 'object') return '';
+  try {
+    const html = blockHTML(b, numMap);
+    const extra = notesHTML(b) + linkPrintHTML(b) + sugHTML(b) + (window.AlixoDraw ? AlixoDraw.layerHTML(b) : '');   // 1.50 : + calque des objets de dessin posés sur le bloc
+    return extra ? html.replace(/<\/(div|figure)>\s*$/, (m, tag) => extra + '</' + tag + '>') : html;   // fonction : un « $ » dans le texte d'un objet de dessin n'est pas un motif de remplacement
+  } catch (err) {
+    console.error('Alixo — bloc illisible', b.type, err);
+    return unreadableBlockHTML(b);
+  }
+}
+/* 1.56.0 : suite commune à renderBlocks et patchBlocksDom ; placeCaret replace le curseur (après la pagination) */
+function afterBlocksRender(placeCaret) {
   if (window.AlixoNest) AlixoNest.fixTails(blocksEl);
   renderPlan();
   applyDayFilter();
@@ -4773,13 +4965,68 @@ function renderBlocks(focusId, caretPos, caretKey) {
   scheduleNoteFade();
   applyCorrMarks();
   if (pagesActive()) paginate(true);   // 1.23 : vue par pages — sauts recalculés AVANT de replacer le curseur (sinon le défilement se cale sur une feuille sans pages)
-  if (focusId && focusId !== '__none') focusBlock(focusId, caretPos, caretKey);
-  else if (restore && restore.id) focusBlock(restore.id, restore.off, restore.key);
+  if (placeCaret) placeCaret();
   syncBlank(blocksEl);   // 1.51 : aide-mémoire des champs vides (classe is-blank)
   markCurrent();
   if (window.AlixoDraw) AlixoDraw.afterRender();
   if (readOnly) blocksEl.querySelectorAll('[contenteditable="true"], input, select, textarea').forEach(el => { if (el.getAttribute('contenteditable') === 'true') el.setAttribute('contenteditable', 'false'); else el.disabled = true; });
   renderPeers();
+}
+/* 1.56.0 : co-édition — met l'écran à jour bloc par bloc après une fusion : seuls les blocs dont le contenu a changé (ou
+   ajoutés) sont recréés ; les autres sont seulement déplacés si l'ordre a changé (insertBefore), sans être redessinés —
+   le curseur, la sélection et l'état d'un bloc non touché sont conservés. prevById : Map(id → signature avant fusion) ;
+   caret : position du curseur prise AVANT la fusion ; report : rapport de AlixoCoedit.merge3Doc. */
+function patchBlocksDom(prevById, caret, report) {
+  const d = doc(); if (!d) return;
+  if (!d.blocks.length) d.blocks.push({ id: uid(), type: 'p', text: '' });
+  let numMap = {};
+  try { numMap = computeNumbers(d.blocks); } catch (err) { console.error('Alixo — numérotation impossible', err); }
+  const keep = new Set(d.blocks.map(b => b && b.id));
+  const els = new Map();
+  for (const el of [...blocksEl.children]) {
+    const id = el.dataset && el.dataset.id;
+    if (!id || !keep.has(id) || els.has(id)) { el.remove(); continue; }   // bloc retiré à distance (ou nœud hors bloc)
+    els.set(id, el);
+  }
+  const recreated = new Set();
+  let ref = null;   // dernier bloc placé
+  for (const b of d.blocks) {
+    if (!b || typeof b !== 'object') continue;
+    let el = els.get(b.id);
+    const prev = prevById.get(b.id);
+    if (!el || prev === undefined || prev !== blockSig(b)) {
+      const tpl = document.createElement('template');
+      tpl.innerHTML = blockOuterHTML(b, numMap);
+      const fresh = tpl.content.firstElementChild;
+      if (!fresh) continue;
+      if (el) el.replaceWith(fresh);
+      el = fresh; els.set(b.id, el); recreated.add(b.id);
+    }
+    const want = ref ? ref.nextElementSibling : blocksEl.firstElementChild;
+    if (want !== el) blocksEl.insertBefore(el, want);
+    ref = el;
+  }
+  let lostCaret = false;
+  afterBlocksRender(() => {
+    if (!caret || !caret.id) return;
+    if (!keep.has(caret.id)) {
+      /* le bloc du curseur a été supprimé par un autre membre : curseur sur le bloc voisin */
+      lostCaret = true;
+      const ids = [...prevById.keys()];
+      const i = ids.indexOf(caret.id);
+      let near = null;
+      for (let k = i - 1; k >= 0 && !near; k--) if (keep.has(ids[k])) near = ids[k];
+      for (let k = i + 1; k < ids.length && !near; k++) if (keep.has(ids[k])) near = ids[k];
+      near = near || (d.blocks[0] && d.blocks[0].id);
+      if (near) focusBlock(near, 'start');
+      return;
+    }
+    if (!recreated.has(caret.id)) return;   // bloc non recréé : le curseur n'a pas bougé
+    const off = report && typeof report.caret === 'number' && !caret.key ? report.caret : caret.off;
+    focusBlock(caret.id, off, caret.key);
+  });
+  if (lostCaret) toast('Le passage où se trouvait votre curseur a été supprimé par un autre membre', { duration: 3000 });
+  setBlockNumbers();
 }
 /* bandeau « séance partagée » au-dessus du cours */
 function renderReadOnlyBanner(info) {
@@ -4964,14 +5211,20 @@ function markCurrent() {
   if (prev && prev !== bl) prev.classList.remove('cur');
   if (bl && !bl.classList.contains('cur')) bl.classList.add('cur');
   if (bl && !composing) syncBlank(bl);
-  if (window.AlixoShare && AlixoShare.enabled && currentDocId) AlixoShare.setPresence(currentDocId, bl ? bl.dataset.id : null);
+  if (window.AlixoShare && AlixoShare.enabled && currentDocId) {
+    /* 1.56.0 : + onglet affiché et position du curseur dans le bloc (trait de curseur chez les autres membres) */
+    const d = doc();
+    let off = -1;
+    if (bl) { try { const c = caretSnapshot(); if (c && c.id === bl.dataset.id && typeof c.off === 'number' && !c.key) off = c.off; } catch { /* sélection illisible */ } }
+    AlixoShare.setPresence(currentDocId, bl ? bl.dataset.id : null, d && !isSpecialDoc(d) ? d.page || null : null, off);
+  }
 }
 
 /* ---------------- lecture de l'écran → modèle ---------------- */
 function blockElType(el) {
   const c = el.classList;
   if (c.contains('unreadable')) return 'unreadable';   // 1.51 : bloc que le rendu n'a pas su afficher — jamais relu comme un paragraphe
-  for (const t of ['h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc', 'docref', 'timeline', 'linkbtn']) if (c.contains(t)) return t;
+  for (const t of ['scan', 'h', 'li', 'quote', 'callout', 'fiche', 'juris', 'formula', 'table', 'graph', 'img', 'draw', 'chart', 'score', 'mcalc', 'timer', 'hr', 'pb', 'cards', 'tree', 'toc', 'docref', 'timeline', 'linkbtn']) if (c.contains(t)) return t;   // 1.56.0 : 'scan' en tête — le bloc porte aussi la classe draw (hôte de dessin), il ne doit pas être relu comme un dessin
   return 'p';
 }
 const levelOfEl = el => { const m = el.className.match(/\bl([1-6])\b/); return m ? +m[1] : 1; };
@@ -6045,7 +6298,8 @@ if (window.AlixoSanitize) AlixoSanitize.configure({
   graphs: Object.keys(AlixoGraphs.TYPES),
   numStyles: Object.keys(NUM_STYLES),
   linkKinds: Object.keys(LBTN_KINDS), icons: Object.keys(AlixoIcons.ICONS),   // 1.52 : bouton de lien (cibles et icônes connues)
-  normShape: s => (window.AlixoDraw && AlixoDraw.normShape ? AlixoDraw.normShape(s) : null)   // draw.js est chargé après app.js
+  normShape: (s, fb) => (window.AlixoDraw && AlixoDraw.normShape ? AlixoDraw.normShape(s, fb) : null),   // draw.js est chargé après app.js ; 1.56.0 : fb = identifiant de secours stable (co-édition)
+  tidy: cleanHTML   // 1.56.0 : forme relue depuis l'écran (AlixoSanitize.doc, point fixe de la co-édition)
 });
 /* renvoie les blocs sûrs, null (rien d'exploitable : repli sur le HTML / le texte), ou false quand le contenu dépasse le
    budget d'un collage (AlixoSanitize.parseBlocks) : le collage est alors abandonné en entier, avec un message */
@@ -6298,6 +6552,13 @@ blocksEl.addEventListener('keydown', e => {
   /* --- un objet est sélectionné (image, graphique, formule, tableau) --- */
   if (objSel && (!f || f.closest('#blocks > .block') !== $(`#blocks > .block[data-id="${objSel}"]`))) {
     const id = objSel;
+    /* 1.56.0 — document scanné sélectionné, au clavier : Alt+F10, ou Tab tant qu'aucune annotation n'est sélectionnée (sinon
+       Tab passe d'une annotation à l'autre), place le focus dans sa mini-barre (#scanbar ; flèches entre les boutons, Échap en ressort) */
+    { const sb = getBlock(id);
+      if (sb && sb.type === 'scan' && window.AlixoScan && AlixoScan.focusBar) {
+        const dc = window.AlixoDraw ? AlixoDraw.ctx : null, annSel = !!(dc && dc.id === id && dc.sel);
+        if (((e.key === 'F10' && e.altKey && !e.shiftKey) || (e.key === 'Tab' && !e.shiftKey && !mod && !e.altKey && !annSel)) && AlixoScan.focusBar()) { e.preventDefault(); return; }
+      } }
     if (window.AlixoDraw && AlixoDraw.handleKey(e, id)) return;   // dessin sélectionné : formes, flèches, Suppr d'une forme…
     if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); deleteObj(id); return; }
     /* 1.51 — image sélectionnée, au clavier : Tab entre dans sa barre d'outils (Échap en ressort) ; Maj+F10 ou la touche
@@ -6631,7 +6892,7 @@ function focusFieldNearBlock(id, dir) {
     const cands = [...all[k].querySelectorAll('.btxt, .qcite, .fsrc, .jref, .jval, .tcell, figcaption')];
     const t = dir > 0 ? cands[0] : cands[cands.length - 1];
     if (t) { focusField(t, dir > 0 ? 'start' : 'end'); return true; }
-    if (['img', 'graph', 'formula', 'draw', 'chart', 'score', 'mcalc', 'timer'].some(c => all[k].classList.contains(c))) { selectObj(all[k].dataset.id); return true; }
+    if (['img', 'graph', 'formula', 'draw', 'scan', 'chart', 'score', 'mcalc', 'timer'].some(c => all[k].classList.contains(c))) { selectObj(all[k].dataset.id); return true; }   // 1.56.0 : + scan
   }
   return false;
 }
@@ -6900,7 +7161,7 @@ function trNodeHTML(n, path, depth) {
 }
 function trBlockHTML(b) {
   const root = treeRoot(b);
-  return `<div class="block tree" data-id="${b.id}" contenteditable="false">${MV_HANDLE}
+  return `<div class="block tree" data-id="${esc(b.id)}" contenteditable="false">${MV_HANDLE}
     <div class="tree-wrap"><ul class="tr">${trNodeHTML(root, '', 0)}</ul></div>
     <div class="tree-tools" contenteditable="false"><button data-trm="rm" class="danger" type="button" title="Supprimer l’arbre">Supprimer l’arbre</button></div></div>`;
 }
@@ -7040,10 +7301,10 @@ function deleteObj(id) {
   if (b.type === 'timer') stopTimerBlock(b.id);
   /* 1.51 : la frise se supprime d'un bouton toujours visible au doigt — annulation proposée dans le message (pas de Ctrl+Z sur un téléphone) */
   if (b.type === 'timeline') { toast('Frise supprimée', { action: 'Annuler', onAction: () => undoEdit() }); return; }
-  toast(`${{ img: 'Image', graph: 'Graphique', formula: 'Formule', table: 'Tableau', juris: 'Fiche d’arrêt', fiche: 'Fiche', draw: 'Dessin', chart: 'Graphique', score: 'Score', mcalc: 'Calculateur', timer: 'Minuteur', tree: 'Arbre', hr: 'Séparateur', cards: 'Cartes', timeline: 'Frise', linkbtn: 'Bouton de lien' }[b.type] || 'Bloc'} supprimé${b.type === 'img' || b.type === 'formula' || b.type === 'fiche' || b.type === 'timeline' ? 'e' : ''} — Ctrl+Z pour annuler`);
+  toast(`${{ img: 'Image', graph: 'Graphique', formula: 'Formule', table: 'Tableau', juris: 'Fiche d’arrêt', fiche: 'Fiche', draw: 'Dessin', chart: 'Graphique', score: 'Score', mcalc: 'Calculateur', timer: 'Minuteur', tree: 'Arbre', hr: 'Séparateur', cards: 'Cartes', timeline: 'Frise', linkbtn: 'Bouton de lien', scan: 'Document scanné' }[b.type] || 'Bloc'} supprimé${b.type === 'img' || b.type === 'formula' || b.type === 'fiche' || b.type === 'timeline' ? 'e' : ''} — Ctrl+Z pour annuler`);
 }
 document.addEventListener('pointerdown', e => {
-  if (objSel && !e.target.closest('#blocks, #toolbar, #popover, #aipanel, #mathpanel, #drawpanel, #ctxmenu, #imgbar')) clearObjSel();   // 1.50 : + #drawpanel (un ancien bloc Dessin se règle dans le panneau)
+  if (objSel && !e.target.closest('#blocks, #toolbar, #popover, #aipanel, #mathpanel, #drawpanel, #ctxmenu, #imgbar, #scanbar')) clearObjSel();   // 1.50 : + #drawpanel (un ancien bloc Dessin se règle dans le panneau) ; 1.56.0 : + #scanbar (mini-barre du document scanné)
   if (objSel && e.target.closest('#blocks') && !e.target.closest(`#blocks > .block[data-id="${objSel}"]`) && !cropCtx) clearObjSel();
 });
 document.addEventListener('keydown', e => {
@@ -7682,6 +7943,7 @@ $('#docwrap').addEventListener('drop', e => {
 
 /* barre flottante au-dessus de l'image sélectionnée */
 function updateImgBar() {
+  if (window.AlixoScan) AlixoScan.updateBar();   // 1.56.0 : la mini-barre du document scanné suit les mêmes occasions (sélection, défilement, redimensionnement)
   const bar = $('#imgbar');
   const el = objSel ? $(`#blocks > .block.img[data-id="${objSel}"]`) : null;
   if (!el || cropCtx) { bar.hidden = true; return; }
@@ -7957,7 +8219,7 @@ function tocListHTML(numMap, depth) {
   const d = doc(); if (!d) return '';
   const hs = d.blocks.filter(b => b.type === 'h' && (+b.level || 1) <= depth);
   if (!hs.length) return `<div class="toc-empty">La table des matières se remplit toute seule avec les titres de la séance (« / » puis un niveau du plan, ou « I. », « A. », « 1. » en début de ligne).</div>`;
-  return hs.map(b => `<a class="toc-item pl${Math.min(6, +b.level || 1)}" data-toc="${b.id}" href="#"><span class="ptnum">${numMap[b.id] || ''}</span><span class="toc-txt">${esc(stripTags(b.text)) || '…'}</span></a>`).join('');
+  return hs.map(b => `<a class="toc-item pl${Math.min(6, +b.level || 1)}" data-toc="${esc(b.id)}" href="#"><span class="ptnum">${esc(numMap[b.id] || '')}</span><span class="toc-txt">${esc(stripTags(b.text)) || '…'}</span></a>`).join('');
 }
 function refreshTocBlocks(numMap) {
   const els = blocksEl.querySelectorAll(':scope > .block.toc'); if (!els.length) return;
@@ -7976,7 +8238,7 @@ function renderPlan() {
     return;
   }
   tree.innerHTML = hs.map(b =>
-    `<button class="pt-item pl${b.level}" data-target="${b.id}">
+    `<button class="pt-item pl${b.level}" data-target="${esc(b.id)}">
       <span class="ptnum">${numMap[b.id]}</span><span>${esc(stripTags(b.text)) || '…'}</span></button>`).join('');
 }
 
@@ -8113,6 +8375,7 @@ const SLASH_ITEMS = [
   { id: 'table', ico: '▦', name: 'Tableau', sub: 'Choisissez sa taille dans un quadrillage, modifiable ensuite', kw: 'tableau table grille colonnes lignes' },
   { id: 'image', icon: 'camera', name: 'Image', sub: 'Photo, schéma, capture — recadrable, déplaçable', kw: 'image photo schema capture illustration figure' },
   { id: 'phoneimg', icon: 'smartphone', name: 'Photo depuis le téléphone', sub: 'QR code à scanner : la photo prise apparaît ici', kw: 'telephone portable smartphone qr code photo scanner mobile image envoyer' },
+  { id: 'scan', icon: 'scan', name: 'Scanner un document', sub: 'Photographiez une feuille avec le téléphone : elle occupe une page entière, à annoter au stylo et aux formes', kw: 'scan scanner numeriser document feuille copie page telephone photo annoter', desk: true },   // 1.56.0 : document scanné (js/scan.js) — pas sur téléphone (desk)
   { id: 'draw', icon: 'pen-line', name: 'Dessin', sub: 'Panneau d’objets à glisser sur le document : formes, flèches, texte, main levée', kw: 'dessin dessiner schema forme fleche croquis rectangle cercle texte objet' },
   { id: 'link', icon: 'link', name: 'Lien', sub: 'Adresse web cliquable dans le texte, avec QR code dans le PDF', kw: 'lien url site web adresse', inline: true },
   { id: 'timer', icon: 'clock', name: 'Minuteur', sub: 'Compte à rebours ou chronomètre dans le cours', kw: 'minuteur chrono chronometre compte a rebours timer temps', },
@@ -8197,6 +8460,7 @@ function renderSlash() {
   for (const it of SLASH_ITEMS) if (it.plan) { it.name = `${planName(it.plan)} (niveau ${planSample(it.plan)})`; it.ico = planSample(it.plan); }
   const items = SLASH_ITEMS.filter(it => {
     if (it.plan && it.plan > planDepth()) return false;
+    if (it.desk && document.body.classList.contains('mobile')) return false;   // 1.56.0 : entrée réservée à l'ordinateur (le QR code se scanne avec le téléphone)
     if (it.nest && !nest) return false;
     if (nest === 'cell' && !it.nest && it.spec !== 'sym') return false;
     return it.sect ? slashSpecOk(it, q) : (slashSpecOk(it, q) && (!q || norm(it.name + ' ' + (it.kw || '')).includes(q)));
@@ -8292,6 +8556,7 @@ function applySlash(sid) {
   if (sid === 'quote') { transform({ type: 'quote' }); return; }
   if (sid === 'image') { restore(); pickImages(); return; }
   if (sid === 'phoneimg') { restore(); openPhoneImage(bid); return; }
+  if (sid === 'scan') { restore(); if (window.AlixoScan) AlixoScan.capture(bid); else toast('Fonction indisponible'); return; }   // 1.56.0
   if (sid === 'draw') { restore(); if (window.AlixoDraw) AlixoDraw.openPanel(); return; }
   if (sid.startsWith('c-')) { transform({ type: 'callout', ct: sid.slice(2) }); return; }
   if (sid === 'juris') { const nb = transform({ type: 'juris', fields: {} }); focusBlock(nb.id, 'start', 'f:ref'); toast('Fiche d’arrêt — Entrée ou Tab pour passer au champ suivant'); return; }
@@ -9701,8 +9966,24 @@ async function showViewerFile(name, data, path, fileId) {
   openRightPanel('#viewpanel');
   try {
     if (ext === 'pdf') {
-      vwUrl = URL.createObjectURL(new Blob([buf], { type: 'application/pdf' }));
-      body.innerHTML = `<iframe src="${vwUrl}#toolbar=1&navpanes=0&view=FitH" title="${esc(name)}"></iframe>`;
+      /* 1.56.0 : visionneuse d'Alixo (js/pdfview.js : pages ajustées à la largeur du panneau, texte sélectionnable,
+         Ctrl + molette). Plus de bascule automatique vers le lecteur du navigateur dans un cadre : en cas d'échec, un
+         message et, sur la version PC, « Ouvrir avec une autre application » */
+      let ok = false, why = '';
+      if (window.AlixoPdf && AlixoPdf.preview) {
+        body.innerHTML = `<div class="vw-empty">Ouverture du PDF…</div>`;
+        try { vwDispose = await AlixoPdf.preview(body, { name, buf: buf.slice(0) }); ok = true; } catch (e) { console.error(e); why = (e && e.userMsg) || ''; }
+      }
+      if (!ok) {
+        const desk = !!(window.alixoDesktop && window.alixoDesktop.openData);
+        body.innerHTML = `<div class="vw-empty"><p></p>${desk ? '<button class="cta ghost small" type="button" data-vw="ext">Ouvrir avec une autre application</button>' : '<p>Ouvrez-le avec votre lecteur PDF habituel.</p>'}</div>`;
+        body.querySelector('p').textContent = why || 'Ce PDF n’a pas pu être affiché dans Alixo.';
+        const ext = body.querySelector('[data-vw="ext"]');
+        if (ext) ext.addEventListener('click', async () => {
+          const r = await window.alixoDesktop.openData({ name: /\.pdf$/i.test(name) ? name : 'document.pdf', data: new Uint8Array(buf) }).catch(e => { console.error(e); return null; });
+          if (!r || !r.ok) toast('Aucune application n’a pu ouvrir ce PDF sur l’ordinateur.', { duration: 5000 });
+        });
+      }
     } else if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'svg'].includes(ext)) {
       vwUrl = URL.createObjectURL(new Blob([buf]));
       body.innerHTML = `<img class="vw-img" src="${vwUrl}" alt="${esc(name)}">`;
@@ -9714,7 +9995,9 @@ async function showViewerFile(name, data, path, fileId) {
         console.error(e);
         if (ext !== 'docx' || typeof mammoth === 'undefined') throw e;
         const r = await mammoth.convertToHtml({ arrayBuffer: buf });
-        body.innerHTML = `<div class="vw-doc">${r.value || '<i>Document vide</i>'}</div>`;
+        // 1.56.0 : le HTML produit par mammoth vient du fichier : assaini (liens, styles et scripts retirés), comme js/files.js
+        const html = window.AlixoSanitize ? AlixoSanitize.rich(r.value || '') : esc(String(r.value || '').replace(/<[^>]*>/g, ' '));
+        body.innerHTML = `<div class="vw-doc">${html || '<i>Document vide</i>'}</div>`;
       }
     } else if (ext === 'pptx') {
       body.innerHTML = `<div class="vw-empty">Lecture du diaporama…</div>`;
@@ -9728,7 +10011,7 @@ async function showViewerFile(name, data, path, fileId) {
     }
   } catch (err) {
     console.error(err);
-    body.innerHTML = `<div class="vw-empty">Impossible d’afficher ce fichier${err && err.message ? ' : ' + esc(err.message) : ''}.<br>Astuce : exportez-le en PDF, c’est le format le plus fidèle.</div>`;
+    body.innerHTML = `<div class="vw-empty">Impossible d’afficher ce fichier : il semble endommagé ou d’un format non pris en charge.<br>Astuce : exportez-le en PDF, c’est le format le plus fidèle.</div>`;   // 1.56.0 : le détail reste dans la console
   }
 }
 /* diaporama .pptx → une carte par diapositive (titre, textes, images, notes) */
@@ -9968,6 +10251,7 @@ $('#toolbar').addEventListener('click', e => {
   }
   if (act === 'image') pickImages();
   if (act === 'phone') openPhoneImage(bid);
+  if (act === 'scan') { if (window.AlixoScan) AlixoScan.capture(bid); }   // 1.56.0 : document scanné
   if (act === 'draw') toggleDrawPanel();
   if (act === 'ai') runAiCorrection();
   if (act === 'quizia') { if (window.AlixoCoco) AlixoCoco.toggle(); return; }
@@ -10916,6 +11200,7 @@ function blockPlain(b) {
   if (b.type === 'graph') return (ownOf(AlixoGraphs.TYPES, b.gtype) || {}).name || '';
   if (b.type === 'img') return stripTags(b.cap || b.alt || '');
   if (b.type === 'draw') return window.AlixoDraw ? AlixoDraw.shapesText(b) : '';
+  if (b.type === 'scan') return 'Document scanné';   // 1.56.0 : pas de texte dans un scan (recherche par le nom du bloc)
   return stripTags(b.text);
 }
 
@@ -11185,7 +11470,7 @@ function paginate(force) {
   const s = parseFloat(getComputedStyle(docEl).zoom) || 1;    // Paramètres › Écriture › Taille
   const kids = [...blocksEl.children].filter(el => el.classList.contains('block'));
   const heights = kids.map(el => el.getBoundingClientRect().height);
-  const sig = s + '|' + head.offsetHeight + '|' + kids.map((el, i) => el.dataset.id + ':' + Math.round(heights[i]) + (el.classList.contains('pb') ? '!' : '')).join(',');
+  const sig = s + '|' + head.offsetHeight + '|' + kids.map((el, i) => el.dataset.id + ':' + Math.round(heights[i]) + (el.classList.contains('pb') || el.classList.contains('scan') ? '!' : '')).join(',');   // 1.56.0 : un document scanné force aussi les sauts
   if (!force && sig === pgSig) return;    // les hauteurs n'ont pas bougé : les sauts restent valables
   pgSig = sig;
   // bloc sous le curseur : mesuré AVANT la remise à plat, pour qu'il reste au même endroit de l'écran après le recalcul
@@ -11199,7 +11484,7 @@ function paginate(force) {
   const top0 = docEl.getBoundingClientRect().top + padTop;      // haut de la zone utile de la page 1
   const zf = window.AlixoZoom ? AlixoZoom.get('doc') : 1;          // 1.34.1 : zoom de la feuille (les pages grandissent avec)
   const H = (PG_H - PG_SAFE) * zf, GAPT = padBottom + PG_BAND * zf + padTop;  // hauteur utile ; espace entre deux zones utiles
-  const rects = kids.map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top - top0, bottom: r.bottom - top0, pb: el.classList.contains('pb') }; });
+  const rects = kids.map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top - top0, bottom: r.bottom - top0, pb: el.classList.contains('pb'), scan: el.classList.contains('scan') }; });   // 1.56.0 : scan = page entière
   let shift = 0, pageBase = 0, forced = false, pages = 1;
   const ends = [];   // fin de chaque page terminée par une bande grise (coordonnées finales, depuis top0) et son numéro
   const cuts = [];   // fin de page à l'intérieur d'un bloc plus haut qu'une page (ligne pointillée : le PDF se coupe là)
@@ -11210,8 +11495,9 @@ function paginate(force) {
     while (ft > pageBase + H) { cuts.push({ y: pageBase + H, k: pages }); pageBase += H; pages++; }
     // un bloc plus haut qu'une page entière ne gagne rien à changer de page (il déborderait de toute façon) :
     // il reste à sa place et se coupe comme dans le PDF, au lieu de laisser une page presque vide derrière lui
-    const brk = i > 0 && !r.pb && (forced || (fb - pageBase > H && ft > pageBase + 1 && fb - ft <= H));
-    forced = r.pb;
+    // 1.56.0 : un document scanné occupe une page à lui seul — saut avant lui s'il n'est pas déjà en tête de page, et après lui
+    const brk = i > 0 && !r.pb && (forced || (r.scan && ft > pageBase + 1) || (fb - pageBase > H && ft > pageBase + 1 && fb - ft <= H));
+    forced = r.pb || r.scan;
     if (!brk) return;
     const pageEnd = pageBase + H;
     const extra = pageEnd + GAPT - ft;
@@ -13272,7 +13558,19 @@ window.AlixoApp = {
   isPlus, setPlan, setPlusOffer, setBillingOffer, setBilling, openPlusDialog, requirePlus, storageAllows, openDialog, closeDialog,
   storageUsage, ageGroup,   /* 1.26 : tailles et tranche d'âge envoyées par js/cloudconfig.js au panneau admin */
   showUpdatePopup, closeUpdatePopup,
-  mergeRemoteDoc, renderAccess, onPresence: () => { renderAccess(); renderPeers(); if (!currentDocId && (libMode === 'docs' || libMode === 'shfolder')) renderLibrary(); },
+  mergeRemoteDoc, renderAccess, onPresence: () => { renderAccess(); renderPeers(); if (currentDocId && !saveTm) setSaveStatus('saved'); if (!currentDocId && (libMode === 'docs' || libMode === 'shfolder')) renderLibrary(); },
+  /* 1.56.0 : co-édition des séances partagées (js/share.js + js/coedit.js) */
+  applyMergedDoc,
+  /* relit l'écran dans le modèle de la séance affichée (avant une fusion) — jamais en lecture seule */
+  syncCurrentFromDom: () => { if (!currentDocId || readOnly || isSpecialDoc(doc())) return false; return syncAllFromDom(); },
+  /* bloc en cours de frappe (moins de 4 s) ou null */
+  typingBlockId: () => (Date.now() - hist.typingTs < 4000 ? lastBlockId : null),
+  /* position du curseur dans la séance affichée : { id, off, key } ou null */
+  caretInfo: () => { if (!currentDocId || isSpecialDoc(doc())) return null; const c = caretSnapshot(); return c && c.id ? { id: c.id, off: typeof c.off === 'number' ? c.off : null, key: c.key || '' } : null; },
+  /* saisie par touche morte / IME en cours : la réception attend la fin de la composition */
+  isComposing: () => composing,
+  /* état d'envoi changé (envoi, hors ligne, refus) : l'indicateur de la barre se met à jour */
+  onSyncStatus: () => { if (currentDocId && !saveTm) setSaveStatus('saved'); },
   showLibrary: () => { showLibrary(); return true; },
   /* 1.29 : exposés pour les tests automatisés (scripts Playwright) — pas une API pour les modules */
   calloutColor,   /* 1.53 : couleur d'un type d'encadré (réglage ou défaut) — js/nest.js, js/export.js */
@@ -13298,6 +13596,7 @@ window.AlixoApp = {
   applyRemoteDocs(upserts, removedIds) {
     for (const r of upserts) {
       const i = state.docs.findIndex(d => d.id === r.id);
+      if (i >= 0 && r.id === currentDocId) continue;   // 1.56.0 : la séance affichée est fusionnée sur place plus bas (même objet)
       if (i >= 0) state.docs[i] = r; else state.docs.push(r);
     }
     if (removedIds && removedIds.length) {
@@ -13312,9 +13611,9 @@ window.AlixoApp = {
       return;
     }
     if (currentDocId && upserts.some(r => r.id === currentDocId)) {
+      /* 1.56.0 : fusion dans l'objet affiché (avant : l'objet était d'abord remplacé, puis « fusionné » avec lui-même) */
       const r = upserts.find(x => x.id === currentDocId);
-      const i = state.docs.findIndex(x => x.id === currentDocId);
-      if (i >= 0) state.docs[i] = mergeRemoteDoc(r, r.byName);
+      if (state.docs.some(x => x.id === currentDocId)) mergeRemoteDoc(r);
     }
     else if (!currentDocId) renderLibrary();
   },
@@ -13373,6 +13672,7 @@ if (window.AlixoZoom) {
   AlixoZoom.bindWheel($('#docwrap'), 'doc');
   if (window.alixoDesktop && alixoDesktop.onZoom) alixoDesktop.onZoom(dir => {
     if (window.AlixoDocEdit && AlixoDocEdit.desktopZoom(dir)) return;   // document Word / OpenDocument ouvert
+    if (window.AlixoPdf && AlixoPdf.desktopZoom && AlixoPdf.desktopZoom(dir)) return;   // 1.56.0 : PDF affiché (onglet « pdf »)
     const kind = document.body.classList.contains('mode-slides') ? 'slides' : document.body.classList.contains('mode-sheet') ? 'sheet' : (document.body.classList.contains('mode-editor') && currentDocId) ? 'doc' : '';
     if (!kind) { if (alixoDesktop.zoomPage) alixoDesktop.zoomPage(dir); return; }
     if (dir === 0) AlixoZoom.reset(kind); else AlixoZoom.step(kind, dir);
@@ -13413,7 +13713,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Coco crée vos documents (bouton « IA »), un onglet Artéfacts pour les retrouver, des bannières pour vos cours, un vrai explorateur de fichiers et un Workspace repensé.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Vos PDF s’ouvrent et s’annotent dans Alixo (avec AlixoAI), un bloc pour scanner une feuille depuis le téléphone, une co-édition à plusieurs enfin fiable et la connexion de Claude ou Cursor à votre bibliothèque.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

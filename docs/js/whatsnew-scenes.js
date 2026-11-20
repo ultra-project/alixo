@@ -15,6 +15,29 @@
    ============================================================ */
 'use strict';
 
+/* 1.56 : PDF dans Alixo (annotations, pages, AlixoAI), bloc Scan, co-édition refaite, intégrations MCP */
+AlixoWhatsNew.register('1.56.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Vos <em>PDF</em> dans Alixo,<br>et bien plus', text: 'Cinq nouveautés, en moins d’une minute.', dur: 5000 },
+    { title: 'Vos <em>PDF</em> s’ouvrent ici', text: 'Double-clic sur un PDF de la bibliothèque : il s’ouvre dans un onglet, comme une séance.',
+      bullets: ['<b>Annotez</b> : stylo, surligneur, post-it, tampons, signature', '<b>Réorganisez</b> les pages, fusionnez, remplissez les formulaires', '<b>Ctrl+S</b> enregistre dans le fichier lui-même'],
+      art: { image: 'nouveautes/1.56.0-pdf.jpg', alt: 'Un PDF ouvert dans Alixo avec le volet Alixo AI' }, accent: '#c04343', accent2: '#3d6bb5', dur: 8000 },
+    { title: 'AlixoAI <em>lit</em> vos PDF', text: 'Bouton « Alixo AI » de la barre, sur l’application PC ou Mac.',
+      bullets: ['<b>Résumer</b>, expliquer ou traduire un passage', '<b>Quiz</b> et <b>fiche de révision</b> à partir du PDF', '<b>En séance</b> : le PDF devient un cours Alixo'],
+      art: { icon: '✨' }, accent: '#6d5bd0', accent2: '#b3762a', dur: 7500 },
+    { title: '<em>Scannez</em> une feuille', text: 'Tapez « / » puis « Scanner un document » : un QR code, une photo, une page entière.',
+      bullets: ['<b>Portrait ou paysage</b>, plusieurs pages d’affilée', '<b>Noir et blanc</b> pour un rendu bien lisible', '<b>Annotez</b> au stylo, au surligneur et aux formes'],
+      art: { image: 'nouveautes/1.56.0-scan.jpg', alt: 'Une feuille scannée annotée au surligneur et au rectangle' }, accent: '#2e8b6a', accent2: '#33658a', dur: 7500 },
+    { title: 'Travailler <em>à plusieurs</em>', text: 'La modification en direct d’une séance partagée a été refaite de fond en comble.',
+      bullets: ['<b>Rien ne se perd</b> : les deux textes sont gardés', '<b>Votre curseur</b> ne bouge plus, l’onglet non plus', '<b>Hors ligne</b> : tout est fusionné au retour du réseau'],
+      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 7500 },
+    { title: 'Claude et Cursor <em>connectés</em>', text: 'Paramètres › Intégrations : un jeton, un guide à copier, et votre assistant voit vos cours.',
+      bullets: ['<b>Lire et chercher</b> dans toute la bibliothèque', '<b>Créer</b> des séances et des dossiers', '<b>Révoquer</b> un jeton à tout moment'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3"/><path d="M6 7h12v4a6 6 0 0 1-12 0Z"/><path d="M12 17v4"/></svg>' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
+
 /* 1.55 : Coco crée vos documents, Artéfacts, bannières de dossiers, explorateur, Workspace repensé, fenêtres floutées, polices multiples */
 const SCENES_155 = {
   scenes: [
@@ -63,29 +86,6 @@ AlixoWhatsNew.register('1.54.0', {
     { title: 'Une <em>vue présentateur</em> complète', text: 'Alt+F5 : notes, suite et chrono pour vous ; la diapositive seule sur le second écran.',
       bullets: ['<b>Laser, encre, spot</b> : montrer sans rien modifier', '<b>Chrono</b>, écran noir, grille des diapositives, aide', '<b>Répétition chronométrée</b> : la durée de chaque diapositive'],
       art: { svg: '<svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/><path d="M7 8h10M7 11h7"/></svg>' }, accent: '#33658a', accent2: '#c04343', dur: 8500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-/* 1.53 : Workspace, pseudo, partage, couleur des encadrés, blocs cartes et frise */
-AlixoWhatsNew.register('1.53.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Le <em>Workspace</em>,<br>et un partage plus clair', text: 'Six nouveautés, en moins d’une minute.', dur: 5500 },
-    { title: 'Le <em>Workspace</em> : vos cours, pour tous', text: 'Un nouvel espace où chacun dépose ses cours et profite de ceux des autres.',
-      bullets: ['<b>Déposer une séance</b> : titre, matière, niveau, étiquettes', '<b>Ajouter à ma bibliothèque</b> en un clic', '<b>Étoiles, commentaires</b> : les plus utiles remontent'],
-      art: 'cards', accent: '#3d6bb5', accent2: '#b3762a', dur: 9000 },
-    { title: 'Un <em>pseudo</em> pour chacun', text: 'C’est lui que voient les autres membres, jamais votre nom ni votre e-mail.',
-      bullets: ['<b>Attribué</b> dès la connexion, par exemple « RenardLucide42 »', '<b>Modifiable</b> dans Paramètres › Compte, ou un autre au hasard'],
-      art: { icon: '🦊' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
-    { title: 'Le <em>partage</em>, revu', text: 'Une seule fenêtre : qui voit quoi, et comment ajouter quelqu’un.',
-      bullets: ['<b>Peut consulter</b> ou <b>Peut modifier</b>, lisible pour chaque personne', '<b>Par pseudo</b> ou par e-mail, avec un message clair', '<b>Lien de partage</b> à copier, désactivable quand vous voulez'],
-      art: 'list', accent: '#2e8b6a', accent2: '#33658a', dur: 8500 },
-    { title: 'Les <em>encadrés</em> à vos couleurs', text: 'Paramètres › Apparence : une couleur par type d’encadré, avec aperçu.',
-      bullets: ['<b>Définition, À retenir, Exemple, Bilan…</b> chacun sa teinte', '<b>Suit</b> le thème sombre, l’impression, le PDF et Word', '<b>Réinitialiser</b> revient aux couleurs d’origine'],
-      art: 'palette', accent: '#b3762a', accent2: '#8a4b9c', dur: 8000 },
-    { title: 'Des blocs plus <em>nets</em>', text: 'Cartes, frise, arbre, graphique : sans cadre bleu ni espace vide.',
-      bullets: ['<b>Plus de contour bleu</b> quand vous écrivez dans une carte ou une frise', '<b>Plus d’espace vide</b> en dessous : les outils apparaissent au survol'],
-      art: 'text', accent: '#33658a', accent2: '#2e8b6a', dur: 7000 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

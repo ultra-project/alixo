@@ -52,7 +52,15 @@ window.AlixoWorkspace = (() => {
   /* 1.55 : une séance créée par Coco (doc.aiFrom) est déposée avec `ai: true` (fiche publique, vérifié par les règles) */
   const AI_BADGE = 'Créé avec l’IA';
   const AI_TITLE = 'Séance créée avec AlixoAI (Coco) puis relue par son auteur';
-  const isAiDoc = d => !!(d && d.aiFrom && typeof d.aiFrom === 'object');
+  /* 1.56.0 : une séance créée ou complétée par une IA externe (serveur MCP, doc.mcpFrom) est traitée comme celle de Coco */
+  const isMcpDoc = d => !!(d && d.mcpFrom && typeof d.mcpFrom === 'object');
+  const isAiDoc = d => !!(d && ((d.aiFrom && typeof d.aiFrom === 'object') || isMcpDoc(d)));
+  /* 1.56.0 : la séance contient-elle un document scanné (pages principales et onglets, blocs imbriqués compris) ? */
+  function hasScan(d) {
+    let n = 0;
+    const walk = v => { if (n++ > 20000 || !v || typeof v !== 'object') return false; if (Array.isArray(v)) return v.some(walk); if (v.type === 'scan') return true; return Object.keys(v).some(k => typeof v[k] === 'object' && walk(v[k])); };
+    return !!d && (walk(d.blocks) || walk(d.pages));
+  }
   const CONTACT = 'contact@alixoapp.com';
   const U15_TITLE = 'Réservé aux membres de 15 ans et plus';
   const plural = (n, one, many) => `${n} ${n > 1 ? (many || one + 's') : one}`;
@@ -527,7 +535,11 @@ window.AlixoWorkspace = (() => {
   const WS_ACCEPT_LABEL = 'J’ai écrit cette séance moi-même (ou j’en détiens les droits) et j’accepte qu’elle soit mise à disposition des autres membres dans les conditions ci-dessus.';
   /* 1.55 : séance créée par Coco (aiFrom) — l'attestation « écrite moi-même » serait fausse */
   const WS_ACCEPT_AI_LABEL = `Cette séance a été créée avec AlixoAI (Coco) à partir de mes demandes ou de mes propres cours ; je l’ai relue, j’ai le droit de la partager et j’accepte qu’elle soit publique (voir les <a href="${CGU_URL}" target="_blank" rel="noopener">CGU</a>).`;
-  const acceptLabel = d => (isAiDoc(d) ? WS_ACCEPT_AI_LABEL : WS_ACCEPT_LABEL);
+  /* 1.56.0 : séance créée ou complétée par une IA externe (serveur MCP) */
+  const mcpAcceptLabel = client => `Cette séance a été créée ou complétée par une IA externe (${esc(String(client || 'IA externe').slice(0, 60))}) à partir de mes demandes ou de mes propres cours ; je l’ai relue, j’ai le droit de la partager et j’accepte qu’elle soit publique (voir les <a href="${CGU_URL}" target="_blank" rel="noopener">CGU</a>).`;
+  const acceptLabel = d => (isMcpDoc(d) && !(d.aiFrom && typeof d.aiFrom === 'object') ? mcpAcceptLabel(d.mcpFrom.client) : isAiDoc(d) ? WS_ACCEPT_AI_LABEL : WS_ACCEPT_LABEL);
+  /* 1.56.0 : pages scannées — seconde attestation, obligatoire et jamais pré-cochée (droit de copie : usage privé seulement) */
+  const WS_ACCEPT_SCAN_LABEL = 'Les pages scannées de cette séance sont mes propres documents (notes, copies) ou j’ai l’accord écrit de leur auteur ; aucune n’est une page de manuel ou un polycopié d’enseignant.';
   const mentionHTML = pseudo => `<b>Visible par tous les membres d’Alixo connectés, retirable à tout moment.</b> En déposant cette séance, vous autorisez les autres membres à la télécharger, la lire, la modifier et la réutiliser pour leurs études, sans usage commercial ; les copies déjà ajoutées à leur bibliothèque restent chez eux après un retrait. Ne déposez que ce que vous avez écrit vous-même (ou créé avec Coco à partir de vos demandes ou de vos propres cours) : pas de polycopiés ni de diapositives d’enseignants, pas d’extraits d’ouvrages, de sujets d’examen ou d’images trouvées en ligne ; pas de données personnelles (noms de camarades, d’enseignants, de patients, parties non anonymisées d’une décision). Vous en êtes responsable ; un contenu signalé peut être masqué puis retiré. Votre pseudo « ${esc(pseudo)} » apparaît comme auteur ; le nom du professeur et le dossier ne sont pas envoyés. <a href="${CGU_URL}" target="_blank" rel="noopener">Conditions d’utilisation</a>`;
   /* 1.55 : fenêtre en trois étapes (1. la séance, choisie dans l'explorateur de fichiers ; 2. sa présentation ; 3. la
      publication : récapitulatif, mention et case d'acceptation). Mêmes champs, mêmes contrôles et même appel à publish() qu'avant. */
@@ -572,6 +584,7 @@ window.AlixoWorkspace = (() => {
           <div class="po-hint ws-mention">${mentionHTML(myPseudo())}</div>
           <div class="ws-aiwarn" id="ws-aiwarn" ${isAiDoc(sel) ? '' : 'hidden'}><span class="ws-ai">${AI_BADGE}</span> Cette séance sera signalée comme créée avec l’IA sur sa fiche publique.</div>
           <label class="plus-chk ws-accept"><input type="checkbox" id="ws-accept"> <span id="ws-acclbl">${acceptLabel(sel)}</span></label>
+          <label class="plus-chk ws-accept ws-accept-scan" id="ws-scanbox" ${hasScan(sel) ? '' : 'hidden'}><input type="checkbox" id="ws-accept2"> <span>${WS_ACCEPT_SCAN_LABEL}</span></label>
         </div>
         <div class="ai-keymsg" id="ws-pmsg" role="status"></div>
       </div>`,
@@ -579,7 +592,7 @@ window.AlixoWorkspace = (() => {
       onClose: () => window.removeEventListener('keydown', onKey, true),
       onMount: (card, close) => {
         const docBtn = card.querySelector('#ws-doc'), title = card.querySelector('#ws-title'), msg = card.querySelector('#ws-pmsg');
-        const chk = card.querySelector('#ws-accept'), pub = card.querySelector('#ws-pub'), prev = card.querySelector('#ws-prev'), next = card.querySelector('#ws-next');
+        const chk = card.querySelector('#ws-accept'), chk2 = card.querySelector('#ws-accept2'), scanBox = card.querySelector('#ws-scanbox'), pub = card.querySelector('#ws-pub'), prev = card.querySelector('#ws-prev'), next = card.querySelector('#ws-next');
         const say = (t, cls) => { msg.textContent = t; msg.className = 'ai-keymsg ' + (cls || ''); };
         const tagsOfInput = () => card.querySelector('#ws-tags').value.split(/[,;]/).map(s => s.trim()).filter(Boolean);
         const setDoc = d => {
@@ -590,6 +603,8 @@ window.AlixoWorkspace = (() => {
           card.querySelector('#ws-acclbl').innerHTML = acceptLabel(d);
           card.querySelector('#ws-aiwarn').hidden = !isAiDoc(d);
           if (was !== isAiDoc(d)) { chk.checked = false; pub.disabled = true; }
+          /* 1.56.0 : seconde case pour les pages scannées — décochée à chaque changement de séance */
+          scanBox.hidden = !hasScan(d); chk2.checked = false; pub.disabled = !canPub();
           if (!title.dataset.touched) title.value = d.titre || '';
           paintRecent();
         };
@@ -631,15 +646,18 @@ window.AlixoWorkspace = (() => {
         prev.addEventListener('click', () => goStep(step - 1));
         next.addEventListener('click', () => goStep(step + 1));
         title.addEventListener('input', () => { title.dataset.touched = '1'; });
-        chk.addEventListener('change', () => { pub.disabled = !chk.checked; if (chk.checked) say(''); });
+        const canPub = () => chk.checked && (scanBox.hidden || chk2.checked);   // 1.56.0 : + case des pages scannées
+        chk.addEventListener('change', () => { pub.disabled = !canPub(); if (chk.checked) say(''); });
+        chk2.addEventListener('change', () => { pub.disabled = !canPub(); if (chk2.checked) say(''); });
         card.addEventListener('keydown', e => { if (e.key === 'Enter' && step < 2 && e.target.matches('input:not([type="checkbox"])')) { e.preventDefault(); goStep(step + 1); } });
         /* pendant l'envoi : Annuler, la croix et le clic hors de la fenêtre sont neutralisés (la fiche serait laissée incomplète) */
         const ov = card.parentElement;
         ov.addEventListener('click', e => { if (busy && (e.target === ov || e.target.closest('.set-x') || e.target.closest('[data-dlg-close]'))) { e.stopPropagation(); e.preventDefault(); } }, true);
         window.addEventListener('keydown', onKey, true);
-        const setBusy = v => { busy = v; card.querySelectorAll('button, input, select, textarea').forEach(el => { el.disabled = v || (el === pub && !chk.checked); }); card.classList.toggle('ws-busy', v); };
+        const setBusy = v => { busy = v; card.querySelectorAll('button, input, select, textarea').forEach(el => { el.disabled = v || (el === pub && !canPub()); }); card.classList.toggle('ws-busy', v); };
         pub.addEventListener('click', async () => {
           if (!chk.checked) { say('Cochez la case ci-dessus pour confirmer que la séance est la vôtre.', 'err'); chk.focus(); return; }
+          if (!scanBox.hidden && !chk2.checked) { say('Cochez la case des pages scannées pour confirmer que vous avez le droit de les partager.', 'err'); chk2.focus(); return; }
           const t = title.value.trim(); if (!t) { goStep(1); say('Donnez un titre à votre dépôt.', 'err'); title.focus(); return; }
           const tags = tagsOfInput();
           if (tags.length > LIM.tags) { goStep(1); say(`${LIM.tags} étiquettes au plus.`, 'err'); return; }

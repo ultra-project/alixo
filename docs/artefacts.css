@@ -29,14 +29,18 @@ body:not(.mobile) .art-wrap { padding-top: 43px; }
 .art-chip.on { color: var(--ink); border-color: color-mix(in srgb, var(--ak, var(--accent)) 55%, var(--border)); background: color-mix(in srgb, var(--ak, var(--accent)) 12%, var(--surface)); }
 .art-sort { font: 13px var(--font-ui); color: var(--ink); background: var(--surface); border: 1px solid var(--border); border-radius: 10px; height: 36px; padding: 0 10px; }
 .art-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
-.art-card { position: relative; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; transition: box-shadow .15s, transform .15s, border-color .15s; }
-.art-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, .08); transform: translateY(-1px); border-color: color-mix(in srgb, var(--ak) 35%, var(--border)); }
-.art-main { display: flex; flex-direction: column; text-align: left; border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
-.art-main:focus-visible { outline: 2px solid var(--ak); outline-offset: -2px; border-radius: 14px; }
-.art-band { position: relative; display: flex; align-items: center; gap: 9px; padding: 14px 14px 12px; background: linear-gradient(135deg, color-mix(in srgb, var(--ak) 16%, var(--surface)), color-mix(in srgb, var(--ak) 6%, var(--surface))); }
+/* 1.56.0 : pas d'effet au survol de la carte (retour utilisateur) ; seuls les boutons Ouvrir / corbeille réagissent */
+.art-card { position: relative; display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--border); background: var(--surface); overflow: hidden; }
+.art-main { display: flex; flex-direction: column; width: 100%; box-sizing: border-box; text-align: left; border: 0; background: none; padding: 0; color: inherit; font: inherit; cursor: pointer; }
+.art-main:focus-visible { outline: 2px solid var(--ak); outline-offset: -2px; border-radius: 14px 14px 0 0; }   /* 1.56.0 : la carte continue sous le bouton (pied) */
+/* 1.56.0 : signal discret au survol, sur le titre seulement */
+.art-main:hover .art-title { text-decoration: underline; text-decoration-thickness: 1.5px; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--ak) 60%, transparent); }
+/* 1.56.0 : bande pleine largeur, teinte quasi uniforme (le dégradé diagonal 16 % → 6 % s'éteignait à droite, surtout en sombre) */
+.art-band { position: relative; display: flex; align-items: center; gap: 9px; width: 100%; box-sizing: border-box; padding: 14px 14px 12px; background: linear-gradient(90deg, color-mix(in srgb, var(--ak) 18%, var(--surface)), color-mix(in srgb, var(--ak) 12%, var(--surface))); }
 .art-ico { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; color: #fff; background: var(--ak); flex: none; }
 .art-ico svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
-.art-kind { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, var(--ak) 80%, var(--ink)); }
+.art-kind { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, var(--ak) 65%, var(--ink)); }   /* 1.56.0 : 4,5:1 en clair */
+[data-theme="dark"] .art-kind { color: color-mix(in srgb, var(--ak) 80%, var(--ink)); }
 .art-spark { margin-left: auto; color: var(--cc-a, #4f66e0); opacity: .8; display: grid; }
 .art-spark svg { width: 16px; height: 16px; fill: currentColor; }
 .art-body { display: flex; flex-direction: column; gap: 4px; padding: 12px 14px 8px; }
@@ -75,5 +79,5 @@ body:not(.mobile) .art-wrap { padding-top: 43px; }
 @keyframes art-bob { 50% { transform: translateY(-6px) rotate(-3deg); } }
 .art-empty b { font-size: 19px; color: var(--ink); }
 .art-empty p { color: var(--ink-2); font-size: 14px; line-height: 1.55; margin: 0 0 6px; }
-@media (prefers-reduced-motion: reduce) { .art-float { animation: none; } .art-card { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .art-float { animation: none; } }
 @media (max-width: 640px) { .art-top { flex-wrap: wrap; } .art-search { flex: 1 1 100%; } }

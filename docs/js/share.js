@@ -16,7 +16,8 @@
                                    excluded: [ids], folder: { root, folders }, event: {…}, createdAt, updatedAt }
    - sharelinks/{code}         → { sid, title, ownerPseudo, role, createdAt } — lien « toute personne disposant du lien
                                    peut rejoindre » (1.53) ; code de 20 caractères aléatoires, lu par tout membre connecté
-   - shares/{sid}/docs/{docId} → { updatedAt, data: JSON de la séance, by, byName }
+   - shares/{sid}/docs/{docId} → { v, updatedAt, data: JSON de la séance, by, byName } (1.56.0 : v = version, +1 à chaque écriture ;
+                                   fusion à trois versions côté client, js/coedit.js)
    - shares/{sid}/log/{id}     → { ts, uid, name, action, docId, title, detail }
    - shares/{sid}/presence/{uid} → { name, color, docId, blockId, ts } — qui consulte / modifie quoi, en direct (1.15)
    - shares/{sid}/imgs/{iid}   → { ts, data: data URL, by } — images des séances partagées (liste dans shares/{sid}.imgIds)
@@ -91,7 +92,7 @@ window.AlixoShare = (() => {
     return { chip, body, foot };
   }
 
-  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openShareDialog() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {}, joinByCode: async () => false, ensurePseudo: async () => '', randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN } };
+  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openShareDialog() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], syncStatus: () => null, colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {}, joinByCode: async () => false, ensurePseudo: async () => '', randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN } };
   if (!acc || !window.firebase || !firebase.firestore || !window.AlixoApp) return OFF;
 
   const uid = acc.uid;
@@ -103,7 +104,6 @@ window.AlixoShare = (() => {
   const shares = new Map();     // sid → données du partage (possédé, accepté ou invitation en attente)
   const docsBy = new Map();     // sid → Map(docId → séance) — partages reçus
   const unsubDocs = new Map();  // sid → désabonnement de la sous-collection docs
-  const lastPushed = new Map(); // `${sid}/${docId}` → JSON connu du nuage
   const lastMeta = new Map();   // sid → JSON des métadonnées poussées
   const lastLog = new Map();    // `${sid}/${docId}` → horodatage de la dernière entrée « modification »
   const openedLogged = new Set();
@@ -132,6 +132,15 @@ window.AlixoShare = (() => {
   /* propriétaire d'un partage tel qu'il s'affiche : son pseudo (ownerName) ; pour un partage antérieur à 1.53 sans
      pseudo, la partie locale de l'adresse — l'adresse complète n'est plus jamais montrée */
   const ownerLabel = sh => (sh && (sh.ownerName || (sh.ownerEmail ? String(sh.ownerEmail).split('@')[0] : ''))) || '';
+  /* 1.56.0 (sécurité) : auteur d'une modification ou d'une présence, résolu par son uid dans la fiche du partage (pseudo du
+     membre, ou du propriétaire) — le nom que l'auteur écrit lui-même (byName, presence.name) n'est jamais cru */
+  function authorName(sh, by) {
+    if (!sh || typeof by !== 'string' || !by) return '';
+    if (by === uid) return String(displayName() || '').slice(0, 64);
+    if (by === sh.owner) return String(ownerLabel(sh) || '').slice(0, 64);
+    const m = sh.members && typeof sh.members === 'object' && Object.prototype.hasOwnProperty.call(sh.members, by) ? sh.members[by] : null;
+    return m && typeof m === 'object' ? String(m.name || m.pseudo || '').slice(0, 64) : '';
+  }
 
   /* ---------------- profil (pseudo) ---------------- */
   async function saveProfile(extra) {
@@ -297,12 +306,16 @@ window.AlixoShare = (() => {
     const put = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (!b || b.type !== 'img' || b.o) return; const src = from.get(b.id); if (src && src.iid === b.iid) b.o = JSON.parse(JSON.stringify(src.o)); });
     put(remote.blocks); (Array.isArray(remote.pages) ? remote.pages : []).forEach(p => put(p && p.blocks));
   }
-  function schedulePush() { clearTimeout(pushTm); pushTm = setTimeout(push, 1500); }
+  /* 1.56.0 : envoi 600 ms après le dernier enregistrement (1,5 s avant) — la co-édition doit rester réactive */
+  let pendingLocal = false;   // un enregistrement local attend l'envoi (indicateur « Envoi aux autres membres… »)
+  function schedulePush() { clearTimeout(pushTm); pushTm = setTimeout(push, 600); }
+  function onLocalSave() { if (!pendingLocal) { pendingLocal = true; notifySync(); } schedulePush(); }
   let pushing = false, pushAgain = false;
   async function push() {
     if (!ready) return;
     if (pushing) { pushAgain = true; return; }
     pushing = true;
+    if (pendingLocal) { pendingLocal = false; notifySync(); }
     try {
       for (const sh of [...shares.values()]) {
         // un partage en échec ne bloque pas les autres
@@ -358,6 +371,9 @@ window.AlixoShare = (() => {
     if (lastMeta.get(sh.id) !== mj) { await ref.set(meta, { merge: true }); lastMeta.set(sh.id, mj); }
     if (sh.kind === 'event') return;
     if (sh.kind === 'file') { await pushFiles(sh); return; }
+    /* 1.56.0 : rien n'est envoyé tant que la première réponse du serveur (versions en ligne) n'est pas arrivée — sinon la
+       version locale, peut-être ancienne, écraserait les modifications faites entre-temps par les membres */
+    if (!docsLoaded.has(sh.id)) return;
     const ids = includedDocIds(sh);
     const ops = [];
     const seen = new Set();
@@ -366,14 +382,11 @@ window.AlixoShare = (() => {
     for (const id of ids) {
       const d = state.docs.find(x => x.id === id); if (!d) continue;
       seen.add(id); docs.push(d);
-      const j = publicJSON(d), k = sh.id + '/' + id;
-      if (lastPushed.get(k) === j) continue;
-      if (j.length > DOC_MAX) { warnTooBig(d); continue; }
-      ops.push({ ref: ref.collection('docs').doc(id), data: { updatedAt: d.updatedAt || now(), data: j, by: uid, byName: displayName() }, size: j.length, done: () => { lastPushed.set(k, j); known.add(id); } });
+      pushDoc(sh, d);   // 1.56.0 : écriture conditionnelle par version (v), non attendue (hors ligne, elle reste en file)
     }
     for (const id of [...known]) {
       if (seen.has(id)) continue;
-      ops.push({ ref: ref.collection('docs').doc(id), del: true, size: 200, done: () => { known.delete(id); lastPushed.delete(sh.id + '/' + id); } });
+      ops.push({ ref: ref.collection('docs').doc(id), del: true, size: 200, done: () => { known.delete(id); syncDocs.delete(sh.id + '/' + id); } });
     }
     await commitOps(ops);
     await pushImgs(sh, docs);
@@ -381,17 +394,353 @@ window.AlixoShare = (() => {
   }
   async function pushEdits(sh) {
     const docs = docsBy.get(sh.id); if (!docs) return;
-    const ref = sharesRef.doc(sh.id);
+    if (!docsLoaded.has(sh.id)) return;
     for (const [id, d] of docs) {
-      const j = publicJSON(d), k = sh.id + '/' + id;
-      if (lastPushed.get(k) === j) continue;
-      if (j.length > DOC_MAX) { warnTooBig(d); continue; }
-      await ref.collection('docs').doc(id).set({ updatedAt: d.updatedAt || now(), data: j, by: uid, byName: displayName() });
-      lastPushed.set(k, j);
-      if (now() - (lastLog.get(k) || 0) > 5 * 60000) { lastLog.set(k, now()); log(sh.id, 'edit', id, d.titre || 'Sans titre'); }
+      const k = sh.id + '/' + id;
+      if (pushDoc(sh, d) && now() - (lastLog.get(k) || 0) > 5 * 60000) { lastLog.set(k, now()); log(sh.id, 'edit', id, d.titre || 'Sans titre'); }
     }
     await pushImgs(sh, [...docs.values()]);
   }
+
+  /* ============================================================
+     1.56.0 — co-édition : version `v` + fusion à trois versions (js/coedit.js)
+     shares/{sid}/docs/{docId} = { v (entier, +1 à chaque écriture), updatedAt, by, byName, data }.
+     Chaque client garde `base` = dernière version serveur connue. Une écriture porte v = base.v + 1 ; les règles la
+     refusent si quelqu'un a écrit entre-temps (permission-denied) → relecture, fusion, nouvel essai. Une version reçue
+     est fusionnée avec la version locale (base / local / distant) : aucune frappe locale n'est perdue.
+     ============================================================ */
+  const syncDocs = new Map();     // `${sid}/${docId}` → { base, baseJson, baseCanon, v, inflight, dirty, err, offline, lastSentAt }
+  const docsLoaded = new Set();   // sid dont la première réponse du serveur est arrivée
+  const CO = () => window.AlixoCoedit || null;
+  const canonOf = d => (CO() ? CO().canon(d) : JSON.stringify(d));
+  function recOf(sid, id) {
+    const k = sid + '/' + id;
+    let r = syncDocs.get(k);
+    if (!r) { r = { sid, id, base: null, baseJson: '', baseCanon: '', lastRaw: '', v: 0, inflight: null, dirty: false, err: '', offline: false, lastSentAt: 0, denied: 0, pendTs: 0 }; syncDocs.set(k, r); }
+    return r;
+  }
+  function notifySync() { try { if (window.AlixoApp && AlixoApp.onSyncStatus) AlixoApp.onSyncStatus(); } catch (err) { console.error('Share (état) :', err); } }
+  /* séance locale d'un partage : la mienne (state.docs) si j'en suis propriétaire, sinon la copie reçue */
+  function localDoc(sh, id) {
+    if (isOwner(sh)) return state.docs.find(d => d.id === id) || null;
+    const m = docsBy.get(sh.id); return m ? m.get(id) || null : null;
+  }
+  function setLocalDoc(sh, d) {
+    if (isOwner(sh)) {
+      const i = state.docs.findIndex(x => x.id === d.id);
+      if (i >= 0) state.docs[i] = d;
+      else if (!isTombstoned('docs', d.id)) state.docs.push(d);   // supprimée ici : elle le reste
+      else return;
+      AlixoApp.save();
+      return;
+    }
+    (docsBy.get(sh.id) || docsBy.set(sh.id, new Map()).get(sh.id)).set(d.id, d);
+  }
+  function ackSent(rec, j, v) {
+    /* base d'avant mon écriture : sert si un autre membre a écrit la même version (règles 1.56.0 pas encore publiées) */
+    rec.prevBase = rec.base; rec.prevV = rec.v;
+    try { rec.base = JSON.parse(j); } catch { rec.base = null; }
+    rec.baseJson = j; rec.lastRaw = j; rec.baseCanon = rec.base ? canonOf(rec.base) : ''; rec.v = v;
+    rec.inflight = null; rec.err = ''; rec.offline = false; rec.denied = 0;
+    const sh = shares.get(rec.sid);
+    if (sh && isOwner(sh)) (pushedIds.get(sh.id) || pushedIds.set(sh.id, new Set()).get(sh.id)).add(rec.id);
+    if (sh) pushErr.delete(sh.id);
+    persistPending();
+    notifySync();
+    if (rec.dirty) { rec.dirty = false; schedulePush(); }
+  }
+  /* envoi d'une séance → true si une écriture est partie. Jamais deux écritures en vol pour la même séance : la suivante
+     attend la réponse (rec.dirty). Hors ligne, la promesse ne se résout qu'au retour du réseau (file du SDK). */
+  function pushDoc(sh, d) {
+    const rec = recOf(sh.id, d.id);
+    const j = publicJSON(d);
+    if (j.length > DOC_MAX) { warnTooBig(d); return false; }
+    if (rec.inflight) { rec.dirty = true; return false; }
+    let pub; try { pub = JSON.parse(j); } catch { return false; }
+    const cj = canonOf(pub);
+    if (rec.baseJson && cj === rec.baseCanon) { if (rec.dirty) { rec.dirty = false; persistPending(); notifySync(); } return false; }
+    const v = rec.v + 1;
+    rec.inflight = { json: j, v }; rec.dirty = false; rec.lastSentAt = now();
+    persistPending();
+    notifySync();
+    const ref = sharesRef.doc(sh.id).collection('docs').doc(d.id);
+    ref.set({ v, updatedAt: now(), by: uid, byName: String(displayName() || '').slice(0, 64), data: j }).then(() => {
+      if (rec.inflight && rec.inflight.v === v) ackSent(rec, j, v);   // l'écho de l'écoute a pu arriver avant
+      else if (rec.dirty) { rec.dirty = false; schedulePush(); }
+    }).catch(async err => {
+      if (!rec.inflight || rec.inflight.v !== v) return;
+      rec.inflight = null;
+      const code = (err && err.code) || '';
+      if (/permission-denied/.test(code)) {
+        /* refus : soit quelqu'un a écrit entre-temps (version dépassée), soit le droit d'écriture a été retiré */
+        let raw = null, readOk = true;
+        try { const snap = await ref.get({ source: 'server' }); raw = snap && snap.exists ? snap.data() : null; } catch { readOk = false; }
+        if (readOk) {
+          const sv = raw ? (+raw.v || 0) : 0;
+          if (sv !== v - 1 || rec.v !== v - 1) {
+            /* 1.56.0 : la version lue sur le serveur fait foi, même PLUS ANCIENNE que la mienne (séance recréée, restaurée) —
+               sinon l'écriture suivante repartirait de ma version et serait refusée sans fin. Nouvel essai avec un recul
+               exponentiel ; au-delà de 5 refus d'affilée, arrêt et message (jamais de boucle d'écritures) */
+            rec.denied = (rec.denied || 0) + 1;
+            if (raw && raw.data) onRemoteDoc(sh, d.id, raw, { authoritative: true });
+            else { rec.v = 0; rec.base = null; rec.baseJson = ''; rec.lastRaw = ''; rec.baseCanon = ''; rec.prevBase = null; }   // séance absente du serveur : elle sera recréée (v = 1, propriétaire seulement)
+            if (rec.denied > 5) {
+              rec.err = 'envoi refusé à plusieurs reprises par le serveur — rouvrez la séance';
+              pushErr.set(sh.id, rec.err);
+              console.error('Share (envoi refusé 5 fois) :', sh.title, err);
+              persistPending(); notifySync();
+              return;
+            }
+            rec.dirty = true;
+            setTimeout(schedulePush, Math.min(30000, 300 * Math.pow(2, rec.denied)));
+            return;
+          }
+          rec.err = 'vous n’avez plus le droit de modifier cette séance';
+          pushErr.set(sh.id, friendly(err));
+          console.error('Share (envoi refusé) :', sh.title, err);
+          persistPending(); notifySync();
+          return;
+        }
+      }
+      /* réseau, quota… : on garde la modification et on réessaie (retour du réseau, prochain instantané ou dans 5 s) */
+      console.error('Share (envoi) :', sh.title, err);
+      rec.dirty = true; rec.offline = !navigator.onLine || /unavailable|network|deadline/.test(code);
+      persistPending(); notifySync();
+      setTimeout(schedulePush, 5000);
+    });
+    return true;
+  }
+  window.addEventListener('online', () => { for (const r of syncDocs.values()) { if (r.offline) { r.offline = false; r.dirty = true; } } notifySync(); schedulePush(); });
+  window.addEventListener('offline', () => notifySync());
+
+  /* réception d'une version d'une séance partagée (écoute de shares/{sid}/docs) — idempotente */
+  const imeWait = new Map();      // `${sid}/${docId}` → { raw, opts } reçus pendant une composition (touche morte, IME)
+  const otherToast = new Map();   // `${sid}/${docId}` → dernier message « modifiée par … » (une fois par minute au plus)
+  /* 1.56.0 (sécurité) : une séance reçue d'un membre n'est jamais digne de confiance. Séances : AlixoSanitize.doc (liste
+     blanche, identifiants conformes CONSERVÉS — la fusion en a besoin —, les autres rejetés ; titres et onglets en texte
+     simple) ; présentations : AlixoSlides.normalize. Tableurs, planches et quiz : pas encore d'assainisseur dédié (leurs
+     modules échappent leurs champs au rendu). → séance sûre, ou null (ignorée). `trusted` : Set de JSON de blocs déjà
+     sûrs (base assainie, ou ma propre version) repris sans nouvel examen. */
+  const WHOLE_KINDS = ['slides', 'sheet', 'board', 'quiz'];
+  const kindKey = d => (d && WHOLE_KINDS.includes(d.kind) ? d.kind : '');
+  function blockJsonSet(...docs) {
+    const out = new Set();
+    const add = bl => (Array.isArray(bl) ? bl : []).forEach(b => { try { out.add(JSON.stringify(b)); } catch { /* bloc illisible */ } });
+    for (const d of docs) { if (!d || typeof d !== 'object') continue; add(d.blocks); (Array.isArray(d.pages) ? d.pages : []).forEach(p => add(p && p.blocks)); }
+    return out;
+  }
+  function cleanDoc(d, id, trusted) {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+    if (kindKey(d)) {
+      if (d.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { d = AlixoSlides.normalize(d) || d; } catch (err) { console.error('Share (normalisation) :', err); return null; } }   // 1.54 : liste blanche des champs d'une présentation (anim, trans, video, quiz, credit)
+      d.id = id; if (!safeId(d.folderId)) d.folderId = null;
+      return d;
+    }
+    const AS = window.AlixoSanitize;
+    if (!AS || typeof AS.doc !== 'function') return null;   // sans assainisseur : rien n'est repris
+    let out = null;
+    try { out = AS.doc(d, { keepIds: true, same: trusted || null }); } catch (err) { console.error('Share (assainissement) :', err); return null; }
+    out.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
+    return out;
+  }
+  /* sortie de la fusion : un bloc qui n'est ni celui de ma version ni celui de la version reçue (assainie) — texte fusionné
+     mot à mot — est réassaini (une fusion peut couper une balise ou coller un texte dans un attribut) */
+  function cleanMerged(m, trusted) {
+    const AS = window.AlixoSanitize;
+    if (!m || kindKey(m) || !AS || typeof AS.blockKeep !== 'function') return m;
+    const fix = bl => (Array.isArray(bl) ? bl.flatMap(b => {
+      let j = null; try { j = JSON.stringify(b); } catch { return []; }
+      if (trusted.has(j)) return [b];
+      let c = null; try { c = AS.blockKeep(b); } catch { c = null; }
+      return c ? [c] : [];
+    }) : bl);
+    m.blocks = fix(m.blocks);
+    if (Array.isArray(m.pages)) m.pages.forEach(p => { if (p && Array.isArray(p.blocks)) p.blocks = fix(p.blocks); });
+    return m;
+  }
+  /* opts.authoritative (1.56.0) : version lue sur le serveur après un refus — elle fait foi même si son numéro est inférieur
+     au mien (séance recréée ou restaurée) : rec.v est repris d'elle, sans quoi chaque nouvel essai serait refusé */
+  function onRemoteDoc(sh, id, raw, opts) {
+    if (!raw || typeof raw.data !== 'string' || !raw.data) return;
+    const authoritative = !!(opts && opts.authoritative);
+    /* 1.56.0 : propriétaire — une séance hors du périmètre du partage n'est jamais créée ni fusionnée ici (les règles
+       réservent d'ailleurs la création au propriétaire) */
+    if (isOwner(sh) && !includedDocIds(sh).includes(id)) return;
+    const k = sh.id + '/' + id;
+    const rec = recOf(sh.id, id);
+    const rv = typeof raw.v === 'number' ? raw.v : 0;
+    /* écho de ma propre écriture */
+    if (raw.by === uid && rec.inflight && raw.data === rec.inflight.json) { ackSent(rec, raw.data, rv); return; }
+    if (!authoritative) {
+      if ((raw.data === rec.lastRaw || raw.data === rec.baseJson) && rv === rec.v) return;
+      if (typeof raw.v === 'number' && raw.v < rec.v) return;   // instantané plus ancien que la version connue
+    }
+    /* frappe en cours de composition dans cette séance : on attend la fin (300 ms, une seule version en attente) */
+    if (currentDocId === id && AlixoApp.isComposing && AlixoApp.isComposing()) {
+      const waiting = imeWait.has(k);
+      imeWait.set(k, { raw, opts });
+      if (!waiting) { const again = () => { if (AlixoApp.isComposing()) { setTimeout(again, 300); return; } const r = imeWait.get(k); imeWait.delete(k); if (r) onRemoteDoc(sh, id, r.raw, r.opts); }; setTimeout(again, 300); }
+      return;
+    }
+    let parsed; try { parsed = JSON.parse(raw.data); } catch { return; }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return;
+    const local = localDoc(sh, id);
+    if (local && kindKey(local) !== kindKey(parsed)) { console.warn('Share : changement de type de document refusé —', id); return; }
+    const remote = cleanDoc(parsed, id, blockJsonSet(rec.base));
+    if (!remote) return;
+    keepOriginals(remote, null);   // b.o n'est jamais repris d'une version reçue
+    const by = typeof raw.by === 'string' ? raw.by : '';
+    const who = authorName(sh, by) || 'un membre';
+    /* base = version reçue ASSAINIE (celle qui sert aux fusions suivantes) ; lastRaw : JSON reçu, pour ignorer ses échos */
+    const setBase = () => { rec.base = JSON.parse(JSON.stringify(remote)); rec.baseJson = JSON.stringify(rec.base); rec.lastRaw = raw.data; rec.baseCanon = canonOf(rec.base); rec.v = rv; rec.prevBase = null; };
+    if (!local) {
+      setBase();
+      setLocalDoc(sh, JSON.parse(JSON.stringify(remote)));
+      persistPending(); notifySync();
+      return;
+    }
+    const writer = isOwner(sh) || myRole(sh) === 'write';
+    const shown = currentDocId === id;
+    if (shown && writer) AlixoApp.syncCurrentFromDom();   // les dernières frappes, avant de fusionner
+    let localPub; try { localPub = JSON.parse(publicJSON(local)); } catch { localPub = null; }
+    let base = rec.base;
+    /* même numéro de version que ma dernière écriture, mais un autre auteur : écritures concurrentes acceptées toutes les
+       deux (règles non publiées) — l'ancêtre commun est la base d'avant mon écriture */
+    if (!authoritative && rv === rec.v && raw.by !== uid && rec.prevBase && rec.prevV === rv - 1) base = rec.prevBase;
+    if (!base && localPub) {
+      /* aucune version commune connue (premier démarrage, propriétaire) : la plus récente gagne là où elles diffèrent */
+      base = (+localPub.updatedAt || 0) > (+remote.updatedAt || 0) ? remote : localPub;
+    }
+    if (!writer) base = localPub;   // lecture seule : la version reçue remplace tout
+    const caret = shown && AlixoApp.caretInfo ? AlixoApp.caretInfo() : null;
+    let merged, report;
+    if (CO() && localPub) {
+      ({ doc: merged, report } = CO().merge3Doc(base, localPub, remote, { typingId: shown && AlixoApp.typingBlockId ? AlixoApp.typingBlockId() : null, caretId: caret && caret.id, caret: caret ? caret.off : null, caretKey: caret ? caret.key : '' }));
+    } else { merged = JSON.parse(JSON.stringify(remote)); report = { whole: true }; }
+    cleanMerged(merged, blockJsonSet(localPub, remote));
+    keepOriginals(merged, local);   // 1.51 : b.o n'est jamais publié — il ne doit pas disparaître chez son auteur pour autant
+    setBase();
+    if (shown && AlixoApp.applyMergedDoc) AlixoApp.applyMergedDoc(merged, report, { byName: who, by });
+    else setLocalDoc(sh, merged);
+    if (writer) {
+      const after = localDoc(sh, id);
+      let changedHere = false;
+      try { changedHere = !!after && canonOf(JSON.parse(publicJSON(after))) !== rec.baseCanon; } catch { /* illisible */ }
+      if (changedHere) { rec.dirty = true; schedulePush(); }
+      else if (rec.dirty && !rec.inflight) rec.dirty = false;
+    }
+    if (!shown && raw.by !== uid && now() - (otherToast.get(k) || 0) > 60000) {
+      otherToast.set(k, now());
+      toast(`« ${remote.titre || 'Sans titre'} » modifiée par ${who}`);
+    }
+    persistPending();
+    notifySync();
+  }
+  /* état d'envoi d'une séance partagée (indicateur de la barre) → { state, peers, err } ou null (séance non partagée) */
+  function syncStatus(docId) {
+    const sh = docId ? shareForAny(docId) : null; if (!sh) return null;
+    const peers = peersFor(docId).length;
+    if (!isOwner(sh) && myRole(sh) !== 'write') return { state: 'readonly', peers, err: '' };
+    const rec = syncDocs.get(sh.id + '/' + docId);
+    const busy = !!(rec && (rec.inflight || rec.dirty)) || (pendingLocal && docId === currentDocId);
+    if (rec && rec.err) return { state: 'error', peers, err: rec.err };
+    if (!navigator.onLine && busy) return { state: 'offline', peers, err: '' };
+    if (rec && rec.offline) return { state: 'offline', peers, err: '' };
+    if (busy) return { state: 'sending', peers, err: '' };
+    return { state: 'saved', peers, err: '' };
+  }
+
+  /* 1.56.0 : persistance hors ligne — les modifications pas encore acceptées par le serveur sont gardées sur l'appareil
+     (séances reçues : la copie locale ; les miennes sont déjà dans state.docs) avec leur base et leur version, pour être
+     fusionnées et envoyées au prochain démarrage. Plafond 3 Mo. */
+  const PENDING_LS = 'alixo.share.pending.v1.' + uid;
+  const PENDING_MAX = 3 * 1024 * 1024;
+  const PENDING_TTL = 30 * 24 * 3600 * 1000;   // 1.56.0 : une modification gardée plus de 30 jours est abandonnée
+  let persistTm = null, pendingTooBig = false;
+  /* 1.56.0 : déconnexion en cours (AlixoAuth.signOut) — la file est effacée et n'est plus réécrite (beforeunload) */
+  const signingOut = () => !!(A && typeof A.isSigningOut === 'function' && A.isSigningOut());
+  function persistPending(immediate) {
+    if (!immediate) { clearTimeout(persistTm); persistTm = setTimeout(() => persistPending(true), 300); return; }
+    if (signingOut()) { try { localStorage.removeItem(PENDING_LS); } catch { /* */ } return; }
+    const out = {};
+    for (const [k, r] of syncDocs) {
+      if (!r.inflight && !r.dirty) { r.pendTs = 0; continue; }
+      const sh = shares.get(r.sid); if (!sh) continue;
+      if (!isOwner(sh) && myRole(sh) !== 'write') continue;   // plus le droit d'écrire : rien à garder
+      const entry = { base: r.baseJson || '', v: r.v, ts: r.pendTs || (r.pendTs = now()) };
+      if (!isOwner(sh)) { const d = localDoc(sh, r.id); if (!d) continue; entry.local = publicJSON(d); }
+      out[k] = entry;
+    }
+    /* entrées pas encore remises en place (partage pas encore écouté) : gardées telles quelles */
+    for (const [sid, list] of pendingRestore) for (const e of list) { const k = sid + '/' + e.id; if (!out[k] && now() - e.ts <= PENDING_TTL) out[k] = { base: e.base, v: e.v, local: e.local || undefined, ts: e.ts }; }
+    try {
+      const j = JSON.stringify(out);
+      if (j.length > PENDING_MAX) {
+        if (!pendingTooBig) { pendingTooBig = true; toast('Modifications hors ligne trop volumineuses pour être gardées sur l’appareil : restez connecté jusqu’à leur envoi', { duration: 7000 }); }
+        return;
+      }
+      pendingTooBig = false;
+      if (j === '{}') localStorage.removeItem(PENDING_LS); else localStorage.setItem(PENDING_LS, j);
+    } catch (err) { console.error('Share (hors ligne) :', err); }
+  }
+  window.addEventListener('beforeunload', () => { clearTimeout(persistTm); persistPending(true); });
+  const pendingRestore = new Map();   // sid → [{ id, local, base, v, ts }]
+  (() => {
+    let all = null; try { all = JSON.parse(localStorage.getItem(PENDING_LS) || 'null'); } catch { all = null; }
+    if (!all || typeof all !== 'object') return;
+    for (const [k, e] of Object.entries(all)) {
+      const [sid, id] = k.split('/');
+      if (!safeId(sid) || !safeId(id) || !e || typeof e !== 'object') continue;
+      const ts = Number.isFinite(e.ts) && e.ts > 0 ? e.ts : now();   // entrée d'avant la péremption : datée d'aujourd'hui
+      if (now() - ts > PENDING_TTL) continue;   // 1.56.0 : périmée (plus de 30 jours)
+      (pendingRestore.get(sid) || pendingRestore.set(sid, []).get(sid)).push({ id, local: typeof e.local === 'string' ? e.local : '', base: typeof e.base === 'string' ? e.base : '', v: Number.isInteger(e.v) ? e.v : 0, ts });
+    }
+  })();
+  /* 1.56.0 : après les premières réponses du serveur (mes partages et partages reçus), les entrées gardées pour un partage
+     disparu, ou dont je ne suis plus qu'en lecture, sont abandonnées */
+  let pendingPurged = false;
+  const snapSources = new Set();
+  function purgePending(source, fromServer) {
+    if (pendingPurged || !fromServer) return;
+    snapSources.add(source);
+    if (!snapSources.has('owner') || !snapSources.has('member')) return;
+    pendingPurged = true;
+    for (const sid of [...pendingRestore.keys()]) { const sh = shares.get(sid); if (!sh || (!isOwner(sh) && myRole(sh) !== 'write')) pendingRestore.delete(sid); }
+    persistPending();
+  }
+  /* membre passé en lecture seule : ses modifications en attente ne partiront plus */
+  function dropPendingIfReadOnly(sh) {
+    if (!sh || isOwner(sh) || myRole(sh) === 'write') return;
+    let changed = pendingRestore.delete(sh.id);
+    for (const r of syncDocs.values()) if (r.sid === sh.id && (r.dirty || r.pendTs)) { r.dirty = false; r.pendTs = 0; changed = true; }
+    if (changed) { persistPending(); notifySync(); }
+  }
+  /* au branchement de l'écoute d'un partage : on remet en place les modifications gardées (avant la première réponse) */
+  function restorePending(sh) {
+    const list = pendingRestore.get(sh.id); if (!list) return;
+    pendingRestore.delete(sh.id);
+    if (!isOwner(sh) && myRole(sh) !== 'write') { persistPending(); return; }   // 1.56.0 : plus le droit d'écrire — abandonnées
+    for (const e of list) {
+      if (isOwner(sh) && !includedDocIds(sh).includes(e.id)) continue;   // hors du périmètre du partage
+      const rec = recOf(sh.id, e.id);
+      /* 1.56.0 : base et copie locale relues depuis l'appareil sont réassainies comme une version reçue */
+      if (e.base) {
+        let b = null; try { b = JSON.parse(e.base); } catch { b = null; }
+        const cb = b ? cleanDoc(b, e.id, null) : null;
+        if (cb) { keepOriginals(cb, null); rec.base = cb; rec.baseJson = JSON.stringify(cb); rec.lastRaw = ''; rec.baseCanon = canonOf(cb); rec.v = e.v; }
+      }
+      if (!isOwner(sh) && e.local) {
+        let d = null; try { d = JSON.parse(e.local); } catch { d = null; }
+        const cd = d ? cleanDoc(d, e.id, rec.base ? blockJsonSet(rec.base) : null) : null;
+        if (!cd) continue;
+        keepOriginals(cd, null);
+        setLocalDoc(sh, cd);
+      }
+      rec.pendTs = e.ts || now();
+      rec.dirty = true;
+    }
+  }
+
   /* images des séances partagées : copiées dans shares/{sid}/imgs/{iid} (les membres n'ont pas accès à users/{uid}/imgs) */
   const imgsTried = new Set();   // `${sid}/${iid}` déjà envoyées (ou refusées) pendant cette session
   async function pushImgs(sh, docs) {
@@ -399,7 +748,9 @@ window.AlixoShare = (() => {
     const added = [];
     const iids = [];
     for (const d of docs) {
-      for (const b of (d.blocks || [])) if (b.type === 'img' && b.iid) iids.push(b.iid);
+      /* 1.56.0 : tous les onglets de la séance (pas seulement l'onglet affiché) ; + documents scannés */
+      const blockLists = [d.blocks || []].concat((Array.isArray(d.pages) ? d.pages : []).map(p => (p && Array.isArray(p.blocks) ? p.blocks : [])));
+      for (const bl of blockLists) for (const b of bl) if (b && (b.type === 'img' || b.type === 'scan') && b.iid) iids.push(b.iid);
       for (const s of (d.slides || [])) for (const e of (s.els || [])) { if (e.t === 'image' && e.iid) iids.push(e.iid); if (e.t === 'video' && e.poster) iids.push(e.poster); }   // présentations (1.15) ; 1.54 : affiche d'une vidéo (jamais la vidéo)
       for (const it of (d.items || [])) if (it.t === 'img' && it.iid) iids.push(it.iid);   // planches (1.23)
     }
@@ -588,47 +939,29 @@ window.AlixoShare = (() => {
     if (unsubDocs.has(sid)) return;
     const sh = shares.get(sid);
     if (!sh) return;
+    restorePending(sh);   // 1.56.0 : modifications gardées hors ligne au dernier lancement
     if (!docsBy.has(sid)) setDocsState(sid, 'loading');
     const u = sharesRef.doc(sid).collection('docs').onSnapshot(snap => {
-      const owner = isOwner(shares.get(sid) || sh);
-      { const cur = docsState.get(sid); if (cur) { cur.tries = 0; clearTimeout(cur.tm); } }
+      const cur = shares.get(sid) || sh;
+      const owner = isOwner(cur);
+      { const st = docsState.get(sid); if (st) { st.tries = 0; clearTimeout(st.tm); } }
       if (!docsBy.has(sid)) docsBy.set(sid, new Map());
       if (!snap.metadata.fromCache || snap.size) setDocsState(sid, 'ready');
       const map = docsBy.get(sid) || docsBy.set(sid, new Map()).get(sid);
       const removed = [];
-      let changedCurrent = false;
       snap.docChanges().forEach(ch => {
-        const id = ch.doc.id, k = sid + '/' + id;
+        const id = ch.doc.id;
         if (owner) (pushedIds.get(sid) || pushedIds.set(sid, new Set()).get(sid))[ch.type === 'removed' ? 'delete' : 'add'](id);
-        if (ch.doc.metadata.hasPendingWrites) return;
-        if (ch.type === 'removed') { if (!owner) { map.delete(id); removed.push(id); } lastPushed.delete(k); return; }
+        if (ch.doc.metadata.hasPendingWrites) return;   // mon écriture pas encore confirmée : l'écho du serveur suivra
+        if (ch.type === 'removed') { if (!owner) { map.delete(id); removed.push(id); } syncDocs.delete(sid + '/' + id); return; }
         if (!safeId(id)) return;   // identifiant hors format Alixo : ignoré (jamais injecté dans un attribut)
-        const raw = ch.doc.data(); if (!raw || !raw.data) return;
-        if (lastPushed.get(k) === raw.data) return;
-        let remote; try { remote = JSON.parse(raw.data); } catch { return; }
-        if (!remote || typeof remote !== 'object') return;
-        remote.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
-        if (!safeId(remote.folderId)) remote.folderId = null;
-        if (remote.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { AlixoSlides.normalize(remote); } catch (err) { console.error('Share (normalisation) :', err); } }   // 1.54 : liste blanche des champs d'une présentation reçue (anim, trans, video, quiz, credit)
-        if (owner) {
-          if (raw.by === uid) { lastPushed.set(k, raw.data); return; }
-          const local = state.docs.find(d => d.id === id);
-          if (local && (local.updatedAt || 0) >= (remote.updatedAt || 0)) return;
-          lastPushed.set(k, raw.data);
-          keepOriginals(remote, local);   // 1.51 : b.o n'est jamais publié — il ne doit pas disparaître chez le propriétaire pour autant
-          AlixoApp.applyRemoteDocs([remote], []);
-          if (currentDocId !== id) toast(`« ${remote.titre || 'Sans titre'} » modifiée par ${raw.byName || 'un membre'}`);
-          return;
-        }
-        lastPushed.set(k, raw.data);
-        const local = map.get(id);
-        if (local && raw.by === uid && (local.updatedAt || 0) >= (remote.updatedAt || 0)) return;
-        if (currentDocId === id && AlixoApp.mergeRemoteDoc) { map.set(id, AlixoApp.mergeRemoteDoc(remote, raw.byName || 'un membre')); changedCurrent = true; }
-        else { map.set(id, remote); if (currentDocId === id) changedCurrent = true; }
+        /* 1.56.0 : fusion à trois versions (base / local / distant) — remplace « la plus récente gagne » (updatedAt) */
+        try { onRemoteDoc(cur, id, ch.doc.data()); } catch (err) { console.error('Share (fusion) :', err); }
       });
-      if (owner) return;
+      /* première réponse du serveur : les envois peuvent partir (versions connues) — y compris ce qui attendait hors ligne */
+      if (!snap.metadata.fromCache && !docsLoaded.has(sid)) { docsLoaded.add(sid); schedulePush(); }
+      if (owner) { if (!currentDocId && libMode !== 'shared') renderLibrary(); return; }
       if (removed.includes(currentDocId)) { toast('Cette séance n’est plus partagée avec vous'); showLibrary(); }
-      else if (changedCurrent && !AlixoApp.mergeRemoteDoc) { renderCrumbs(); renderEditor(); }
       if (!currentDocId && libMode !== 'shared') renderLibrary();
       openTabs = openTabs.filter(id => !removed.includes(id)); renderTabs();
       if (!currentDocId && libMode === 'shared') renderSharedHome();
@@ -641,7 +974,8 @@ window.AlixoShare = (() => {
     const u = unsubDocs.get(sid); if (u) { try { u(); } catch { /* déjà coupée */ } unsubDocs.delete(sid); }
     const up = unsubPres.get(sid); if (up) { try { up(); } catch { /* */ } unsubPres.delete(sid); presence.delete(sid); }
     const cur = docsState.get(sid); if (cur) clearTimeout(cur.tm);
-    docsState.delete(sid); docsBy.delete(sid);
+    docsState.delete(sid); docsBy.delete(sid); docsLoaded.delete(sid);
+    for (const k of [...syncDocs.keys()]) if (k.startsWith(sid + '/')) syncDocs.delete(k);   // 1.56.0 : versions connues de ce partage
     stopFiles(sid);
   }
 
@@ -659,7 +993,7 @@ window.AlixoShare = (() => {
     if (sh.members && typeof sh.members === 'object') for (const m of Object.values(sh.members)) if (m && typeof m === 'object') m.role = safeRole(m.role);
     return sh;
   }
-  function applyShareSnapshot(docs, source) {
+  function applyShareSnapshot(docs, source, fromServer) {
     const seen = new Set();
     docs.forEach(s => {
       if (!safeId(s.id)) return;   // identifiant de partage hors format : ignoré
@@ -670,6 +1004,7 @@ window.AlixoShare = (() => {
       shares.set(sh.id, sh);
       // membre : on n'écoute qu'une fois l'adhésion confirmée par le serveur (accept() s'en charge, sinon accès refusé)
       const pending = !!(s.metadata && s.metadata.hasPendingWrites) && !isOwner(sh);
+      if (prev && isMember(sh)) dropPendingIfReadOnly(sh);   // 1.56.0 : rétrogradé en lecture seule
       if ((isOwner(sh) || isMember(sh)) && !pending) listenDocs(sh.id);
       if (isMember(sh) && sh.kind === 'event' && sh.event) adoptEvent(sh);
       if (prev && isInvited(prev) && isMember(sh) && !isOwner(sh)) toast(`Vous avez rejoint « ${sh.title} »`);
@@ -689,6 +1024,7 @@ window.AlixoShare = (() => {
       if (sh.kind === 'event') dropEvent(sid);
     }
     if (currentDocId && !findDoc(currentDocId)) { toast('Ce contenu n’est plus partagé avec vous'); showLibrary(); }
+    purgePending(source, fromServer);   // 1.56.0 : modifications gardées pour un partage disparu ou en lecture seule
     refreshUI();
   }
   function refreshUI() {
@@ -704,9 +1040,9 @@ window.AlixoShare = (() => {
   /* ---------------- présence en direct (1.15) : qui consulte / modifie quoi ---------------- */
   const PEER_COLORS = ['#3d6bb5', '#2e8b6a', '#b3762a', '#8c4351', '#7a5ca8', '#2e8b8b', '#c04343', '#5b6b8c', '#d06a3a', '#4a7856'];
   const colorFor = u => PEER_COLORS[[...String(u || '')].reduce((a, c) => a + c.charCodeAt(0), 0) % PEER_COLORS.length];
-  const presence = new Map();    // sid → Map(uid → { name, color, docId, blockId, ts })
+  const presence = new Map();    // sid → Map(uid → { name, color, docId, blockId, pageId, caret, ts })
   const unsubPres = new Map();
-  const myPres = { sid: null, docId: null, blockId: null, ts: 0 };
+  const myPres = { sid: null, docId: null, blockId: null, pageId: null, caret: -1, ts: 0 };
   let presTm = null, presBeat = null;
   const PRES_TTL = 60000;
   /* partage qui contient la séance : reçu (membre) ou possédé (le propriétaire est aussi « présent ») */
@@ -719,7 +1055,16 @@ window.AlixoShare = (() => {
     if (unsubPres.has(sid)) return;
     const u = sharesRef.doc(sid).collection('presence').onSnapshot(snap => {
       const m = new Map();
-      snap.forEach(s => { const p = s.data(); if (p && s.id !== uid) m.set(s.id, Object.assign({ uid: s.id }, p)); });
+      snap.forEach(s => {
+        const p = s.data(); if (!p || s.id === uid) return;
+        const q = Object.assign({ uid: s.id }, p);
+        /* 1.56.0 : valeurs reçues normalisées (couleur insérée dans un style, curseur numérique, identifiants textuels) */
+        if (!/^#[0-9a-f]{6}$/i.test(String(q.color || ''))) q.color = colorFor(s.id);
+        q.caret = Number.isInteger(q.caret) && q.caret >= 0 && q.caret < 1e6 ? q.caret : -1;
+        q.blockId = typeof q.blockId === 'string' ? q.blockId : ''; q.pageId = typeof q.pageId === 'string' ? q.pageId : '';
+        q.name = authorName(shares.get(sid), s.id) || String(q.name || '').slice(0, 64);   // 1.56.0 : pseudo connu du partage d'abord (jamais usurpé)
+        m.set(s.id, q);
+      });
       presence.set(sid, m);
       if (AlixoApp.onPresence) AlixoApp.onPresence();
     }, () => { /* règles « presence » non publiées : silencieux */ });
@@ -730,32 +1075,40 @@ window.AlixoShare = (() => {
     const ref = sharesRef.doc(sid).collection('presence').doc(uid);
     try {
       if (remove) await ref.delete();
-      else await ref.set({ name: profile.pseudo || me.name, color: colorFor(uid), docId: myPres.docId, blockId: myPres.blockId || '', ts: now() });
+      else await ref.set({ name: profile.pseudo || me.name, color: colorFor(uid), docId: myPres.docId, blockId: myPres.blockId || '', pageId: myPres.pageId || '', caret: Number.isInteger(myPres.caret) ? myPres.caret : -1, ts: now() });   // 1.56.0 : + onglet et position du curseur
     } catch { /* hors ligne ou règles non publiées */ }
   }
-  /* appelée par l'application : séance affichée (ou null) et bloc en cours d'édition ; envois espacés */
-  function setPresence(docId, blockId) {
+  /* appelée par l'application : séance affichée (ou null), bloc en cours d'édition, onglet affiché et position du curseur
+     dans le bloc (-1 : inconnue) — 1.56.0 ; envois espacés */
+  function setPresence(docId, blockId, pageId, caret) {
     const sh = docId ? shareForAny(docId) : null;
     const sid = sh ? sh.id : null;
+    caret = Number.isInteger(caret) && caret >= 0 ? caret : -1;
     if (sid !== myPres.sid) {
-      if (myPres.sid) { const old = myPres.sid; myPres.sid = old; writePresence(true); }
-      myPres.sid = sid; myPres.docId = docId; myPres.blockId = blockId || null;
+      if (myPres.sid) writePresence(true);
+      myPres.sid = sid; myPres.docId = docId; myPres.blockId = blockId || null; myPres.pageId = pageId || null; myPres.caret = caret;
       clearInterval(presBeat); presBeat = null;
       if (sid) { writePresence(false); presBeat = setInterval(() => writePresence(false), 25000); }
       return;
     }
     if (!sid) return;
-    if (myPres.docId === docId && (myPres.blockId || null) === (blockId || null)) return;
-    myPres.docId = docId; myPres.blockId = blockId || null;
+    if (myPres.docId === docId && (myPres.blockId || null) === (blockId || null) && (myPres.pageId || null) === (pageId || null) && myPres.caret === caret) return;
+    myPres.docId = docId; myPres.blockId = blockId || null; myPres.pageId = pageId || null; myPres.caret = caret;
     clearTimeout(presTm); presTm = setTimeout(() => writePresence(false), 900);
   }
   window.addEventListener('beforeunload', () => { if (myPres.sid) { try { sharesRef.doc(myPres.sid).collection('presence').doc(uid).delete(); } catch { /* */ } } });
-  /* les autres membres présents sur une séance (ou sur le partage si docId absent) */
-  function peersFor(docId) {
+  /* les autres membres présents sur une séance (ou sur le partage si docId absent) ; 1.56.0 : pageId → seulement ceux
+     qui affichent cet onglet (un membre d'une version antérieure, sans onglet connu, compte partout) */
+  function peersFor(docId, pageId) {
     const sh = docId ? shareForAny(docId) : null; if (!sh) return [];
     const m = presence.get(sh.id); if (!m) return [];
     const out = [];
-    for (const p of m.values()) { if (now() - (p.ts || 0) > PRES_TTL) continue; if (docId && p.docId !== docId) continue; out.push(p); }
+    for (const p of m.values()) {
+      if (now() - (p.ts || 0) > PRES_TTL) continue;
+      if (docId && p.docId !== docId) continue;
+      if (pageId && p.pageId && p.pageId !== pageId) continue;
+      out.push(p);
+    }
     return out;
   }
 
@@ -813,8 +1166,9 @@ window.AlixoShare = (() => {
     else AlixoApp.openSharedHome();
   }
   function start() {
-    sharesRef.where('owner', '==', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'owner'), err => console.error('Share (mes partages) :', err));
-    sharesRef.where('memberIds', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'member'), err => console.error('Share (reçus) :', err));
+    const fromServer = s => !(s && s.metadata && s.metadata.fromCache);
+    sharesRef.where('owner', '==', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'owner', fromServer(s)), err => console.error('Share (mes partages) :', err));
+    sharesRef.where('memberIds', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'member', fromServer(s)), err => console.error('Share (reçus) :', err));
     if (me.email) sharesRef.where('inviteEmails', 'array-contains', me.email).onSnapshot(s => applyShareSnapshot(s.docs, 'invite'), err => console.error('Share (invitations) :', err));
     /* 1.53 : invitations par pseudo (rangées sous l'uid, sans e-mail) */
     sharesRef.where('inviteUids', 'array-contains', uid).onSnapshot(s => applyShareSnapshot(s.docs, 'inviteuid'), err => console.error('Share (invitations par pseudo) :', err));
@@ -1465,7 +1819,7 @@ window.AlixoShare = (() => {
     setTimeout(push, 2500);
   })();
 
-  return { enabled: true, docById, sharedDocs, canWrite, infoFor, tintFor, labelFor, onLocalSave: schedulePush, invites: () => [...shares.values()].filter(sh => isInvited(sh) && !isMember(sh)), pendingCount, renderSharedHome, openShareFor, openShareDialog, openShareManager, openInfo, setPseudo, pseudo: () => profile.pseudo, ensurePseudo, noteOpened, leaveEvent, mySharesOf, copyToLibrary, fetchImage, eventDeleted, accessFor, sharedFolders, sharedDocsAlone, sharedFolderView, setPresence, peersFor, colorFor, me: () => me,
+  return { enabled: true, docById, sharedDocs, canWrite, infoFor, tintFor, labelFor, onLocalSave, syncStatus, invites: () => [...shares.values()].filter(sh => isInvited(sh) && !isMember(sh)), pendingCount, renderSharedHome, openShareFor, openShareDialog, openShareManager, openInfo, setPseudo, pseudo: () => profile.pseudo, ensurePseudo, noteOpened, leaveEvent, mySharesOf, copyToLibrary, fetchImage, eventDeleted, accessFor, sharedFolders, sharedDocsAlone, sharedFolderView, setPresence, peersFor, colorFor, me: () => me,
     sharedFilesIn, sharedFileById, shareMeta, fetchFile, openSharedFile,
     /* 1.53 : lien de partage, pseudo aléatoire, rendu pur de la boîte (tests) */
     setLink, joinByCode, randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN },

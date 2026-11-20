@@ -8,6 +8,9 @@
    Les anciens blocs { type: 'draw', h, shapes: [...] } restent affichés et modifiables à leur place (même schéma
    d'objet, mêmes gestes, réglages par le panneau) ; seule leur barre d'outils intégrée a disparu, et on n'en crée plus.
    « Hôte » d'un objet : (bloc, genre) avec genre = 'fl' (objets flottants du bloc) ou 'draw' (ancien bloc Dessin).
+   1.56.0 : le bloc « Document scanné » { type: 'scan', iid, nw, nh, shapes } (js/scan.js) est aussi un hôte 'draw' : calque
+   transparent par-dessus l'image, hauteur logique dérivée des dimensions de l'image (640 × nh/nw), dessin seul — ni zone de
+   texte, ni texte dans une forme (allowShape, openTextEdit).
    Objet : { id, t, stroke, fill, sw, ls (solid|dash|dot), op (opacité 0.1-1), x,y,w,h | x1,y1,x2,y2 | pts,
              text (zone de texte) | label (texte dans une forme), fs, color, bold, ta (left|center|right), border }
    Sécurité : tout objet lu dans un document passe par normShape (liste fermée de types, nombres bornés, couleurs
@@ -165,13 +168,17 @@ window.AlixoDraw = (() => {
   /* nettoie une liste d'objets sur place, une seule fois par tableau (un tableau recréé — annulation, synchronisation,
      changement d'onglet — est revérifié) ; identifiants rendus uniques dans la liste */
   const cleanLists = new WeakSet();
-  function clean(list) {
-    if (cleanLists.has(list)) return list;
+  const scanLists = new WeakSet();   // 1.56.0 : listes déjà nettoyées comme annotations d'un document scanné
+  /* scan (1.56.0) : liste d'un document scanné — ni zone de texte ni texte dans une forme, même pour une séance arrivée par
+     la synchronisation sans passer par sanitize.js */
+  function clean(list, scan = false) {
+    if (cleanLists.has(list) && (!scan || scanLists.has(list))) return list;
     const out = [], ids = new Set();
     let pts = 0, chars = 0, i = 0;
     for (const s of list) {
       if (out.length >= MAX_SHAPES) break;
       const o = normShape(s, stableId(s, i++)); if (!o) continue;
+      if (scan) { if (o.t === 'text') continue; delete o.label; }
       if (ids.has(o.id)) o.id = uid();
       /* plafonds par bloc : points de tracé et caractères de texte (un bloc piégé ne doit pas geler le rendu) */
       if (o.t === 'path') {
@@ -188,11 +195,11 @@ window.AlixoDraw = (() => {
       ids.add(o.id); out.push(o);
     }
     list.length = 0; for (const o of out) list.push(o);
-    cleanLists.add(list);
+    cleanLists.add(list); if (scan) scanLists.add(list);
     return list;
   }
-  /* objets d'un ancien bloc Dessin */
-  const shapes = b => clean(Array.isArray(b.shapes) ? b.shapes : (b.shapes = []));
+  /* objets d'un ancien bloc Dessin (ou d'un document scanné, 1.56.0) */
+  const shapes = b => clean(Array.isArray(b.shapes) ? b.shapes : (b.shapes = []), isScan(b));
   /* objets flottants d'un bloc : lecture seule (null s'il n'y en a pas) / avec création de la liste */
   const floats = b => (b && Array.isArray(b.fl) ? clean(b.fl) : null);
   const flList = b => clean(Array.isArray(b.fl) ? b.fl : (b.fl = []));
@@ -234,7 +241,11 @@ window.AlixoDraw = (() => {
     return out;
   }
   const n1 = v => (Math.round(v * 10) / 10).toString();
-  const heightOf = b => Math.max(80, Math.min(2000, +b.h || 300));
+  /* 1.56.0 : hôtes « bloc » : ancien Dessin et Document scanné (même schéma d'objets, mêmes gestes) */
+  const isHost = b => !!b && (b.type === 'draw' || b.type === 'scan');
+  const isScan = b => !!b && b.type === 'scan';
+  /* 1.56.0 : un scan a la hauteur de son image (largeur 640), jamais stockée */
+  const heightOf = b => (isScan(b) ? Math.max(80, Math.min(2000, Math.round(640 * (+b.nh || 1) / (+b.nw || 1)) || 300)) : Math.max(80, Math.min(2000, +b.h || 300)));
   const isLine = s => LINE_TYPES.includes(s.t);
   const canLabel = s => LABEL_TYPES.includes(s.t);
   /* encre lisible sur une couleur de fond */
@@ -424,8 +435,10 @@ window.AlixoDraw = (() => {
     const h = heightOf(b), list = shapes(b);
     const live = edit && !isRO();
     const sel = live ? selIn(b, 'draw', list) : null;
-    const n = list.length;
-    return `<svg class="draw-svg" viewBox="0 0 ${W} ${h}"${plain ? ` xmlns="http://www.w3.org/2000/svg" width="${W}" height="${h}"` : ` role="img" aria-label="Dessin : ${n} objet${n > 1 ? 's' : ''}"`} preserveAspectRatio="xMinYMin meet">${plain ? `<rect width="${W}" height="${h}" fill="#fff"/>` : ''}${list.map(s => shapeSVG(s, live, false)).join('')}${sel ? handlesSVG(sel, scaleOf(b, 'draw')) : ''}</svg>`;
+    const n = list.length, scan = isScan(b);
+    /* 1.56.0 : scan — calque transparent (l'image est dessous, hors du SVG) ; à l'export, pas de fond blanc */
+    const aria = scan ? `Document scanné : ${n} annotation${n > 1 ? 's' : ''}` : `Dessin : ${n} objet${n > 1 ? 's' : ''}`;
+    return `<svg class="draw-svg" viewBox="0 0 ${W} ${h}"${plain ? ` xmlns="http://www.w3.org/2000/svg" width="${W}" height="${h}"` : ` role="img" aria-label="${aria}"`} preserveAspectRatio="xMinYMin meet">${plain && !scan ? `<rect width="${W}" height="${h}" fill="#fff"/>` : ''}${list.map(s => shapeSVG(s, live, false)).join('')}${sel ? handlesSVG(sel, scaleOf(b, 'draw')) : ''}</svg>`;
   }
   function blockHTML(b, MV) {
     capDoc();
@@ -437,7 +450,7 @@ window.AlixoDraw = (() => {
     const wrap = bl.querySelector('.draw-wrap'); if (!wrap) return;
     const old = wrap.querySelector(':scope > svg');
     if (old) old.outerHTML = svg(b, { edit: true }); else wrap.insertAdjacentHTML('afterbegin', svg(b, { edit: true }));
-    bl.classList.toggle('empty', !shapes(b).length);
+    if (!isScan(b)) bl.classList.toggle('empty', !shapes(b).length);   // 1.56.0 : un scan n'affiche jamais l'invite du dessin vide
     updatePanel();
   }
 
@@ -456,7 +469,7 @@ window.AlixoDraw = (() => {
   /* plafond d'objets par document : vérifié une fois par tableau de blocs (ouverture, annulation, synchronisation,
      changement d'onglet), les objets en trop — en fin de document — ne sont pas gardés */
   const cappedDocs = new WeakSet();
-  const countDoc = () => { let n = 0; if (inEditor()) for (const b of doc().blocks) { if (Array.isArray(b.fl)) n += b.fl.length; if (b.type === 'draw' && Array.isArray(b.shapes)) n += b.shapes.length; } return n; };
+  const countDoc = () => { let n = 0; if (inEditor()) for (const b of doc().blocks) { if (Array.isArray(b.fl)) n += b.fl.length; if (isHost(b) && Array.isArray(b.shapes)) n += b.shapes.length; } return n; };
   function capDoc() {
     const d = typeof doc === 'function' ? doc() : null;
     if (!d || !Array.isArray(d.blocks) || cappedDocs.has(d.blocks)) return;
@@ -465,7 +478,7 @@ window.AlixoDraw = (() => {
     for (const b of d.blocks) {
       if (!b || typeof b !== 'object') continue;
       for (const k of ['fl', 'shapes']) {
-        if (!Array.isArray(b[k]) || (k === 'shapes' && b.type !== 'draw')) continue;
+        if (!Array.isArray(b[k]) || (k === 'shapes' && !isHost(b))) continue;
         const list = clean(b[k]);
         if (n + list.length > MAX_DOC_SHAPES) list.length = Math.max(0, MAX_DOC_SHAPES - n);
         n += list.length;
@@ -480,6 +493,14 @@ window.AlixoDraw = (() => {
     return false;
   }
   const fullMsg = kind => (kind === 'fl' ? `Ce paragraphe contient déjà ${MAX_SHAPES} objets : posez l’objet sur un autre paragraphe.` : `Ce dessin contient déjà ${MAX_SHAPES} objets.`);
+  const fullMsgOf = (b, kind) => (kind !== 'fl' && isScan(b) ? `Ce document scanné contient déjà ${MAX_SHAPES} annotations : supprimez-en pour en ajouter.` : fullMsg(kind));   // 1.56.0
+  /* 1.56.0 : sur un document scanné, le dessin seul est permis — ni zone de texte (refusée, avec un message), ni texte dans une forme (retiré) */
+  function allowShape(b, s) {
+    if (!isScan(b) || !s) return true;
+    if (s.t === 'text') { toast('Pas de zone de texte sur un document scanné — dessinez des formes ou tracez au stylo'); return false; }
+    delete s.label;
+    return true;
+  }
   /* ajouté par renderBlocks à la fin du bloc d'ancrage, comme les notes de correction */
   function layerHTML(b) {
     capDoc();
@@ -507,7 +528,7 @@ window.AlixoDraw = (() => {
     updatePanel();
   }
   const render = (b, kind) => (kind === 'fl' ? renderLayer(b) : renderCanvas(b));
-  function rerender(id, kind) { const b = getBlock(id); if (b && (kind === 'fl' || b.type === 'draw')) render(b, kind); }
+  function rerender(id, kind) { const b = getBlock(id); if (b && (kind === 'fl' || isHost(b))) render(b, kind); }
   /* SVG de l'hôte à l'écran (le calque est créé au besoin : il sert de repère de mesure) */
   function hostSvg(b, kind) {
     if (kind === 'draw') { const bl = blockEl(b.id); return bl ? bl.querySelector('svg.draw-svg') : null; }
@@ -600,11 +621,11 @@ window.AlixoDraw = (() => {
       ctx.drag = null; ctx.textEdit = null;
       const b = getBlock(ctx.id);
       if (te && b && !te.label) {   // saisie interrompue par un rendu complet : une zone de texte restée vide n'est pas gardée
-        const l = ctx.kind === 'fl' ? floats(b) : (b.type === 'draw' ? shapes(b) : null);
+        const l = ctx.kind === 'fl' ? floats(b) : (isHost(b) ? shapes(b) : null);
         const i = l ? l.findIndex(x => x.id === te.s.id && x.t === 'text' && !String(x.text || '').trim()) : -1;
         if (i >= 0) { l.splice(i, 1); dirty.add(b.id); queueSync(); if (ctx.kind === 'draw') renderCanvas(b); }
       }
-      const list = b ? (ctx.kind === 'fl' ? floats(b) : (b.type === 'draw' ? shapes(b) : null)) : null;
+      const list = b ? (ctx.kind === 'fl' ? floats(b) : (isHost(b) ? shapes(b) : null)) : null;
       if (!list) ctx = null;
       else if (ctx.sel && !list.some(s => s.id === ctx.sel)) { if (ctx.kind === 'fl') ctx = null; else ctx.sel = null; }
       else if (ctx.kind === 'fl' && !ctx.sel) ctx = null;
@@ -618,7 +639,7 @@ window.AlixoDraw = (() => {
   function selShape() {
     if (!ctx || !ctx.sel) return null;
     const b = getBlock(ctx.id); if (!b) return null;
-    const list = ctx.kind === 'fl' ? floats(b) : (b.type === 'draw' ? shapes(b) : null);
+    const list = ctx.kind === 'fl' ? floats(b) : (isHost(b) ? shapes(b) : null);
     const s = list ? list.find(x => x.id === ctx.sel) : null;
     return s ? { b, kind: ctx.kind, list, s } : null;
   }
@@ -656,7 +677,7 @@ window.AlixoDraw = (() => {
   function activeHost() {
     if (!ctx || ctx.textEdit || !inEditor() || isRO()) return null;
     const b = getBlock(ctx.id); if (!b) return null;
-    if (ctx.kind === 'draw') return typeof objSel !== 'undefined' && objSel === ctx.id && b.type === 'draw' ? { b, kind: 'draw' } : null;
+    if (ctx.kind === 'draw') return typeof objSel !== 'undefined' && objSel === ctx.id && isHost(b) ? { b, kind: 'draw' } : null;
     if (!ctx.sel || !floats(b)) return null;
     const a = document.activeElement;
     if (a && a.closest && a.closest('input, textarea, select, [contenteditable="true"]')) return null;
@@ -705,7 +726,7 @@ window.AlixoDraw = (() => {
     for (const el of els) {
       if (!el.classList.contains('draw')) continue;
       const sv = el.querySelector('svg.draw-svg'); const r = sv ? sv.getBoundingClientRect() : null;
-      if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) { const b = getBlock(el.dataset.id); if (b && b.type === 'draw') return { b, kind: 'draw' }; }
+      if (r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) { const b = getBlock(el.dataset.id); if (isHost(b)) return { b, kind: 'draw' }; }
     }
     const el = anchorElAt(y, els);
     if (el) return { b: getBlock(el.dataset.id), kind: 'fl' };
@@ -719,8 +740,11 @@ window.AlixoDraw = (() => {
   }
   /* hôte pour une insertion sans pointeur (clic ou Entrée sur un bouton du panneau) : le bloc du curseur */
   function hostAtCaret() {
+    /* 1.56.0 : un hôte sélectionné comme objet du cours (document scanné, ancien dessin) passe avant le bloc du curseur */
+    const os = typeof objSel !== 'undefined' && objSel ? getBlock(objSel) : null;
+    if (isHost(os)) return { b: os, kind: 'draw' };
     const cur = getBlock(currentBlockId());
-    if (cur && cur.type === 'draw') return { b: cur, kind: 'draw' };
+    if (isHost(cur)) return { b: cur, kind: 'draw' };
     const els = visibleBlocks();
     const curEl = cur ? anyBlockEl(cur.id) : null;
     const i = Math.max(0, els.indexOf(curEl));
@@ -763,6 +787,7 @@ window.AlixoDraw = (() => {
   function openTextEdit(b, s, label = false, kind = 'draw') {
     commitText();
     if (isRO()) return;
+    if (kind === 'draw' && isScan(b)) return;   // 1.56.0 : pas de texte sur un document scanné
     let holder;
     if (kind === 'fl') { const sv = hostSvg(b, 'fl'); holder = sv ? sv.parentElement : null; }
     else { const bl = blockEl(b.id); holder = bl ? bl.querySelector('.draw-wrap') : null; }
@@ -853,8 +878,9 @@ window.AlixoDraw = (() => {
   /* pose un nouvel objet dans un hôte, centré sur (lx, ly) en unités logiques ; renvoie l'objet ou null */
   function addShape(host, s, lx, ly) {
     const { b, kind } = host;
+    if (kind === 'draw' && !allowShape(b, s)) return null;   // 1.56.0
     const list = listOf(b, kind);
-    if (list.length >= MAX_SHAPES) { toast(fullMsg(kind)); queueSync(); return null; }
+    if (list.length >= MAX_SHAPES) { toast(fullMsgOf(b, kind)); queueSync(); return null; }
     if (!docRoom()) { if (kind === 'fl' && !list.length) delete b.fl; queueSync(); return null; }
     const bb = bbox(s);
     moveShape(s, lx - bb.w / 2 - bb.x, Math.max(0, ly - bb.h / 2) - bb.y);
@@ -888,6 +914,22 @@ window.AlixoDraw = (() => {
     if (out) { const el = anyBlockEl(host.b.id); if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' }); }
     return out;
   }
+
+  /* 1.56.0 : insertion d'un objet dans un hôte donné (mini-barre du document scanné) — centré horizontalement, au tiers
+     haut de l'hôte, en cascade si la place est prise ; renvoie l'objet, ou null (type refusé, plafond atteint) */
+  function insertInHost(id, type) {
+    if (isRO() || !inEditor() || !TYPES.includes(type) || type === 'path') return null;
+    const b = getBlock(id); if (!isHost(b)) return null;
+    const s = newShape(type); const bb = bbox(s);
+    if (!allowShape(b, s)) return null;
+    const list = shapes(b);
+    let cx = W / 2, cy = Math.max(30 + bb.h / 2, heightOf(b) / 3), guard = 0;
+    while (guard++ < 30 && list.some(o => { const q = bbox(o); return Math.abs(q.x + q.w / 2 - cx) < 2 && Math.abs(q.y + q.h / 2 - cy) < 2; })) { cx += 14; cy += 14; }
+    if (pen) setPen(false);
+    return addShape({ b, kind: 'draw' }, s, cx, cy);
+  }
+  /* 1.56.0 : couleur du trait (objet sélectionné, sinon prochains objets) — pastilles du panneau, depuis un autre bouton */
+  const pickStroke = rect => pickColor('stroke', rect);
 
   /* ---------- souris : objets flottants ---------- */
   blocksEl.addEventListener('pointerdown', e => {
@@ -934,7 +976,7 @@ window.AlixoDraw = (() => {
   blocksEl.addEventListener('pointerdown', e => {
     if (e.button !== 0 || pen) return;
     const bl = e.target.closest('#blocks > .block.draw'); if (!bl) return;
-    const id = bl.dataset.id; const b = getBlock(id); if (!b || b.type !== 'draw') return;
+    const id = bl.dataset.id; const b = getBlock(id); if (!isHost(b)) return;
     if (e.target.closest('.draw-textedit') || e.target.closest('.fl-layer')) return;
     if (isRO()) return;
     const hrz = e.target.closest('.draw-hrz');
@@ -1051,7 +1093,8 @@ window.AlixoDraw = (() => {
     const bl = e.target.closest('#blocks > .block.draw'); if (!bl || isRO()) return;
     const svgEl = e.target.closest('svg.draw-svg'); if (!svgEl) return;
     e.preventDefault();
-    const b = getBlock(bl.dataset.id); if (!b || b.type !== 'draw') return;
+    const b = getBlock(bl.dataset.id); if (!isHost(b)) return;
+    if (isScan(b)) return;   // 1.56.0 : document scanné — pas de zone de texte au double-clic
     ensureCtx(b.id);
     const hit = e.target.closest('[data-sid]');
     const s = hit && shapes(b).find(x => x.id === hit.dataset.sid);
@@ -1080,7 +1123,7 @@ window.AlixoDraw = (() => {
     commitText();
     const host = hostAt(e.clientX, e.clientY); if (!host.b) return;
     const list = listOf(host.b, host.kind);
-    if (list.length >= MAX_SHAPES) { toast(fullMsg(host.kind)); return; }
+    if (list.length >= MAX_SHAPES) { toast(fullMsgOf(host.b, host.kind)); return; }
     if (!docRoom()) { if (host.kind === 'fl' && !list.length) delete host.b.fl; return; }
     const sv = hostSvg(host.b, host.kind); if (!sv) return;
     const raw = point(sv, e); const p = host.kind === 'fl' ? raw : clampPt(raw, host.b);
@@ -1103,7 +1146,7 @@ window.AlixoDraw = (() => {
   }
   function duplicate(b, s, kind) {
     const list = listOf(b, kind);
-    if (list.length >= MAX_SHAPES) { toast(fullMsg(kind)); return; }
+    if (list.length >= MAX_SHAPES) { toast(fullMsgOf(b, kind)); return; }
     if (!docRoom()) return;
     const copy = normShape(JSON.parse(JSON.stringify(s))); if (!copy) return;
     copy.id = uid(); moveShape(copy, 14, 14); keep(copy, b, kind);
@@ -1122,7 +1165,7 @@ window.AlixoDraw = (() => {
     const out = [];
     if (!inEditor()) return out;
     for (const b of doc().blocks) {
-      if (b.type === 'draw') for (const s of shapes(b)) out.push({ b, kind: 'draw', s });
+      if (isHost(b)) for (const s of shapes(b)) out.push({ b, kind: 'draw', s });
       const fl = floats(b); if (fl) for (const s of fl) out.push({ b, kind: 'fl', s });
     }
     return out;
@@ -1151,7 +1194,8 @@ window.AlixoDraw = (() => {
     const help = isMobile()
       ? 'Touchez un objet pour l’ajouter à l’endroit du curseur. Il se pose par-dessus le texte\u00a0: sautez des lignes pour lui faire de la place.'
       : 'Glissez un objet sur le document, ou cliquez pour l’insérer au curseur. Il se pose par-dessus le texte\u00a0: sautez des lignes pour lui faire de la place. Une forme sans remplissage se saisit par son contour.';
-    return `<p class="dp-help">${help}</p>
+    return `<p class="dp-help dp-gen">${help}</p>
+      <p class="dp-help dp-scanhelp">Document scanné : stylo, surligneur et formes seulement (pas de texte). Cliquez sur une forme pour l’insérer sur la page, ou tracez à main levée.</p>
       <div class="dp-state"><span class="dp-state-txt" id="dp-state" role="status" aria-live="polite"></span>${btn('data-dnav="-1"', 'Objet précédent (Maj+Tab)', I.prev)}${btn('data-dnav="1"', 'Objet suivant (Tab)', I.next)}</div>
       <div class="mp-sect" id="dp-h-obj">Objets</div>
       <div class="dp-objs" role="group" aria-labelledby="dp-h-obj">${OBJECTS.map(([k, name]) => `<button type="button" class="dp-obj" data-dobj="${k}" title="${esc(name)} — glisser sur le document (un clic l’insère à la position du curseur)" aria-label="${esc(name)}">${I[k]}<span class="dp-obj-n" aria-hidden="true">${esc(name)}</span></button>`).join('')}</div>
@@ -1170,7 +1214,7 @@ window.AlixoDraw = (() => {
       <div class="mp-sect" id="dp-h-z">Ordre</div>
       <div class="dp-row"><span class="dp-seg" role="group" aria-labelledby="dp-h-z">${btn('data-dz="up"', 'Avancer d’un niveau', I.up)}${btn('data-dz="down"', 'Reculer d’un niveau', I.down)}${btn('data-dz="front"', 'Mettre au premier plan', I.front)}${btn('data-dz="back"', 'Mettre à l’arrière-plan', I.back)}</span></div>
       <div class="dp-actions"><button type="button" class="dp-wide" data-ddup title="Dupliquer l’objet (Ctrl+D)">${I.dup}<span>Dupliquer</span></button><button type="button" class="dp-wide danger" data-ddel title="Supprimer l’objet (Suppr)">${I.trash}<span>Supprimer</span></button></div>
-      <p class="dp-help dp-keys">Flèches\u00a0: déplacer (Maj\u00a0: par 10) · Alt+flèches\u00a0: taille · Entrée\u00a0: texte · Suppr\u00a0: supprimer · Ctrl+D\u00a0: dupliquer · Tab\u00a0: objet suivant · Échap\u00a0: désélectionner · Clic droit\u00a0: menu</p>`;
+      <p class="dp-help dp-keys">Flèches\u00a0: déplacer (Maj\u00a0: par 10) · Alt+flèches\u00a0: taille<span class="dp-k-text"> · Entrée\u00a0: texte</span> · Suppr\u00a0: supprimer · Ctrl+D\u00a0: dupliquer · Tab\u00a0: objet suivant · Échap\u00a0: désélectionner · Clic droit\u00a0: menu</p>`;
   }
   const panelOpen = () => { const p = document.querySelector('#drawpanel'); return !!p && !p.hidden; };
   function updatePanel() {
@@ -1187,9 +1231,12 @@ window.AlixoDraw = (() => {
     const label = ro ? 'Lecture seule : les objets ne sont pas modifiables' : pen ? 'Main levée : tracez sur le document' : sel ? `Objet sélectionné : ${NAMES[sel.t] || 'Objet'}` : 'Réglages des prochains objets (repris du dernier objet modifié)';
     if (stateEl.textContent !== label) stateEl.textContent = label;
     body.classList.toggle('has-sel', !!sel);
+    /* 1.56.0 : document scanné sélectionné — les réglages de texte et la zone de texte disparaissent du panneau (CSS #draw-body.scan-host) */
+    const scanHost = !ro && typeof objSel !== 'undefined' && !!objSel && isScan(getBlock(objSel));
+    body.classList.toggle('scan-host', scanHost);
     const setOn = (el, on) => { el.classList.toggle('on', on); el.setAttribute('aria-pressed', on ? 'true' : 'false'); };
     const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
-    const hasText = !sel || sel.t === 'text' || canLabel(sel), isText = !sel || sel.t === 'text', noFill = !!sel && (isLine(sel) || sel.t === 'path');
+    const hasText = !scanHost && (!sel || sel.t === 'text' || canLabel(sel)), isText = !sel || sel.t === 'text', noFill = !!sel && (isLine(sel) || sel.t === 'path');
     const n = ro ? 0 : allObjects().length;
     const zi = cur ? cur.list.indexOf(cur.s) : -1, zn = cur ? cur.list.length : 0;   // rang de l'objet dans son hôte
     /* couleur hors de la liste rapide : c'est la pastille « Autres couleurs » qui la porte */
@@ -1211,7 +1258,8 @@ window.AlixoDraw = (() => {
       else if (ds.dfs) off = off || !hasText;
       else if ('dbold' in ds) { setOn(x, v.bold && hasText); off = off || !hasText; }
       else if ('dborder' in ds) { setOn(x, v.border && isText); off = off || !isText; }
-      else if ('dlabel' in ds) off = off || !(sel && (sel.t === 'text' || canLabel(sel)));
+      else if ('dlabel' in ds) off = off || scanHost || !(sel && (sel.t === 'text' || canLabel(sel)));
+      else if (ds.dobj === 'text') off = off || scanHost;
       else if (ds.dz) off = off || !sel || ((ds.dz === 'up' || ds.dz === 'front') ? zi >= zn - 1 : zi <= 0);   // inactifs aux extrémités, comme dans le menu
       else if ('ddup' in ds || 'ddel' in ds) off = off || !sel;
       else if (ds.dnav) off = off || !n;
@@ -1362,13 +1410,13 @@ window.AlixoDraw = (() => {
     if (isRO() || pen) return;
     const kind = hit.closest('.fl-svg') ? 'fl' : 'draw';
     const bl = hit.closest('#blocks > .block'); const b = bl && getBlock(bl.dataset.id); if (!b) return;
-    const list = kind === 'fl' ? floats(b) : (b.type === 'draw' ? shapes(b) : null);
+    const list = kind === 'fl' ? floats(b) : (isHost(b) ? shapes(b) : null);
     const sid = hit.dataset.sid || (ctx && ctx.kind === kind && ctx.id === b.id ? ctx.sel : null);
     const s = list && sid ? list.find(x => x.id === sid) : null; if (!s) return;
     if (kind === 'draw') { ensureCtx(b.id); ctx.sel = s.id; if (objSel !== b.id) selectObj(b.id); renderCanvas(b); }
     else if (!ctx || ctx.kind !== 'fl' || ctx.id !== b.id || ctx.sel !== s.id) select(b, 'fl', s.id);
     else blurEditor();
-    const canText = s.t === 'text' || canLabel(s), canFill = !isLine(s) && s.t !== 'path';
+    const canText = !(kind === 'draw' && isScan(b)) && (s.t === 'text' || canLabel(s)), canFill = !isLine(s) && s.t !== 'path';
     const i = list.indexOf(s);
     const menu = document.querySelector('#ctxmenu');
     menu.innerHTML = `<div class="cm-title">${esc(NAMES[s.t] || 'Objet')}</div>
@@ -1414,8 +1462,9 @@ window.AlixoDraw = (() => {
     let s = null; try { s = normShape(JSON.parse(json)); } catch { s = null; }
     if (!s || isRO()) return false;
     s.id = uid();
+    if (kind === 'draw' && !allowShape(b, s)) return false;   // 1.56.0
     const list = listOf(b, kind);
-    if (list.length >= MAX_SHAPES) { toast(fullMsg(kind)); return false; }
+    if (list.length >= MAX_SHAPES) { toast(fullMsgOf(b, kind)); return false; }
     if (!docRoom()) { if (!list.length && kind === 'fl') delete b.fl; return false; }
     // même endroit qu'un objet existant (collage au même endroit) : décalé pour rester visible
     let guard = 0;
@@ -1495,7 +1544,7 @@ window.AlixoDraw = (() => {
   }
   /* ancien bloc Dessin sélectionné comme objet du cours : appelé par le gestionnaire de touches d'app.js */
   function handleKey(e, id) {
-    const b = getBlock(id); if (!b || b.type !== 'draw') return false;
+    const b = getBlock(id); if (!isHost(b)) return false;
     if (ctx && ctx.textEdit) return true;   // la zone de texte gère ses touches
     if (isRO()) return false;
     ensureCtx(id);
@@ -1566,6 +1615,8 @@ window.AlixoDraw = (() => {
   return {
     svg: b => svg(b, { plain: true }), blockHTML, layerHTML, afterRender, afterTouch, syncLayers, handleKey, renderCanvas, renderLayer, pasteShape,
     openPanel, updatePanel, dropAt, insertAtCaret, setPen, deselect, floatsSVG, floatsText, shapesText, normShape,
-    get ctx() { return ctx; }, get clip() { return clip; }, get pen() { return pen; }, settings: st
+    get ctx() { return ctx; }, get clip() { return clip; }, get pen() { return pen; }, settings: st,
+    insertInHost, pickStroke, isHost, hostSVG: b => svg(b, { edit: true }),   // 1.56.0 : document scanné (js/scan.js)
+    colorName: c => COLOR_NAMES[String(c || '').toLowerCase()] || ''           // 1.56.0 : nom de couleur (mini-barre du scan)
   };
 })();

@@ -13,6 +13,8 @@
    Le nom de la session (24 caractères aléatoires) n'existe que dans le QR code ; tout est effacé après lecture et à la fermeture.
    1.52 : chaque session ouverte est notée en localStorage (alixo.photodrop.<uid>) ; une session restée sur le serveur (application
    fermée brutalement, coupure réseau) est effacée au prochain démarrage d'Alixo avec ce compte (purgeOrphans).
+   1.56.0 : mode « scan » (bloc Document scanné, js/scan.js) — même session Firestore de type 'photo' (règles inchangées) ; le
+   mode voyage dans le fragment du QR code (photo.html#<sid>-scan) et change seulement les textes, ici et sur le téléphone.
    Règles : firestore.rules (« Photo et fichiers depuis le téléphone »). Page du téléphone : app/photo.html + app/js/photo.js.
    ============================================================ */
 'use strict';
@@ -115,19 +117,25 @@
     : `<span class="file-ico mini"><svg viewBox="0 0 24 24"><path d="M6 2.5h8.5L19 7v14.5H6Z"/><path d="M14.5 2.5V7H19"/></svg><span class="file-ext">${esc((extOf(name) || '?').slice(0, 4).toUpperCase())}</span></span>`;
   const plural = (n, w) => `${n} ${w}${n > 1 ? 's' : ''}`;
 
+  /* 1.56.0 : adresse du QR code — le mode « scan » suit le nom de session après un tiret (alphabet [a-z2-9], pas d'ambiguïté) */
+  const linkOf = c => `${PHOTO_URL}#${c.sid}${c.mode === 'scan' ? '-scan' : ''}`;
   function render() {
     if (!cur) return;
-    const url = `${PHOTO_URL}#${cur.sid}`;
-    const isFile = cur.type === 'file';
+    const url = linkOf(cur);
+    const isFile = cur.type === 'file', isScan = !isFile && cur.mode === 'scan';
     const receiving = isFile ? cur.items.filter(it => it.st === 'down' || it.st === 'check').length : 0;
     const st = cur.err ? `<span class="pd-err">${esc(cur.err)}</span>`
       : cur.expired ? 'Code expiré — cliquez sur « Nouveau code ».'
       : receiving ? `<span class="pd-wait"></span>Réception en cours (${plural(receiving, 'fichier')})`
       : cur.n ? (isFile ? `<b>${plural(cur.n, 'fichier')} reçu${cur.n > 1 ? 's' : ''}</b> — vous pouvez en envoyer d’autres.`
+        : isScan ? `<b>${plural(cur.n, 'page')} reçue${cur.n > 1 ? 's' : ''}</b> — vous pouvez en scanner d’autres.`
         : `<b>${cur.n} photo${cur.n > 1 ? 's' : ''} reçue${cur.n > 1 ? 's' : ''}</b> — vous pouvez en envoyer d’autres.`)
-      : `<span class="pd-wait"></span>${isFile ? 'En attente de fichiers…' : 'En attente d’une photo…'}`;
+      : `<span class="pd-wait"></span>${isFile ? 'En attente de fichiers…' : isScan ? 'En attente de la première page…' : 'En attente d’une photo…'}`;
+    /* 1.56.0 : avertissement non bloquant (page refusée par l'ordinateur) — le QR code reste valable */
+    const warn = cur.warn && !cur.err && !cur.expired ? `<div class="pd-status pd-warnline" role="alert"><span class="pd-err">${esc(cur.warn)}</span></div>` : '';
     const steps = isFile
       ? `<li>Scannez ce QR code avec l’appareil photo de votre téléphone ou tablette.</li><li>Choisissez un ou plusieurs fichiers (PDF, Word, images, audio…).</li><li>Ils arrivent ici, dans « ${esc(cur.title)} ».</li><li>Ce QR code reste valable 30 minutes.</li>`
+      : isScan ? `<li>Scannez ce QR code avec l’appareil photo de votre téléphone.</li><li>Posez la feuille bien à plat, dans une bonne lumière, et cadrez-la en entier.</li><li>Chaque page scannée apparaît ici, sur une page entière de « ${esc(cur.title)} ». Vous pourrez l’annoter au stylo, au surligneur et aux formes.</li><li>Ce QR code reste valable 30 minutes.</li><li class="pd-legal">Ne scannez que des documents que vous avez le droit de copier pour votre usage personnel. Une page de manuel ou le polycopié d’un enseignant ne peut être ni partagé ni déposé dans le Workspace sans l’accord de son auteur.</li>`
       : `<li>Scannez ce QR code avec l’appareil photo de votre téléphone.</li><li>Prenez une photo, ou choisissez-la dans la galerie.</li><li>Elle apparaît ici, dans « ${esc(cur.title)} ».</li><li>Ce QR code reste valable 30 minutes.</li>`;
     const list = isFile && cur.items.length ? `<ul class="pd-files" aria-label="Fichiers">${cur.items.map(it => {
       const pct = it.st === 'ok' ? 100 : it.st === 'down' ? Math.round(100 * it.done / Math.max(1, it.chunks)) : 0;
@@ -135,12 +143,12 @@
       return `<li class="pd-file ${it.st}">${fileIcon(it.name)}<span class="pd-ftxt"><span class="pd-fname" title="${esc(it.name)}">${esc(it.name)}</span><span class="pd-fst">${lab}${it.size ? ` · ${fmtSize(it.size)}` : ''}</span>${it.st === 'down' || it.st === 'up' || it.st === 'check' ? `<span class="pd-bar${it.st !== 'down' ? ' wait' : ''}"><i style="width:${pct}%"></i></span>` : ''}</span></li>`;
     }).join('')}</ul>` : '';
     cur.panel.className = isFile ? 'files' : '';
-    cur.panel.innerHTML = `<div class="pd-head"><b>${isFile ? 'Importer depuis un téléphone ou une tablette' : 'Photo depuis le téléphone'}</b><button class="pd-x" data-pd="close" title="Fermer (le QR code cesse de fonctionner)" aria-label="Fermer : le QR code cessera de fonctionner">✕</button></div>
+    cur.panel.innerHTML = `<div class="pd-head"><b>${isFile ? 'Importer depuis un téléphone ou une tablette' : isScan ? 'Scanner un document' : 'Photo depuis le téléphone'}</b><button class="pd-x" data-pd="close" title="Fermer (le QR code cesse de fonctionner)" aria-label="Fermer : le QR code cessera de fonctionner">✕</button></div>
       <div class="pd-body">
         <div class="pd-qr ${cur.expired || cur.err ? 'off' : ''}">${cur.ready ? qrSvg(url) : '<span class="pd-wait"></span>'}</div>
         <ol class="pd-steps">${steps}</ol>
       </div>${list}
-      <div class="pd-status">${st}</div>
+      <div class="pd-status">${st}</div>${warn}
       <div class="pd-foot">${cur.expired || cur.err ? '<button class="cta small" data-pd="renew">Nouveau code</button>' : `<button class="cta ghost small" data-pd="copy" title="${esc(url)}">Copier le lien (à ouvrir sur le téléphone)</button>`}</div>`;
   }
 
@@ -282,7 +290,7 @@
     const db = firebase.firestore();
     const me = AlixoAuth.account();
     const sid = randomId(24);
-    cur.sid = sid; cur.ready = false; cur.err = ''; cur.expired = false; cur.items = []; cur.n = 0; cur.bytes = 0; cur.reserved = 0; cur.queue = Promise.resolve(); cur.limit = false; render();
+    cur.sid = sid; cur.ready = false; cur.err = ''; cur.expired = false; cur.items = []; cur.n = 0; cur.bytes = 0; cur.reserved = 0; cur.queue = Promise.resolve(); cur.limit = false; cur.warn = ''; render();
     regAdd(sid, cur.type);   // 1.52 : avant l'écriture, pour qu'une session créée puis abandonnée soit purgée au prochain démarrage
     try {
       await db.collection('photodrop').doc(sid).set({ host: me.uid, title: String(opts.title || 'Document').slice(0, 120), type: cur.type, createdAt: Date.now(), exp: Date.now() + LIFE });
@@ -321,14 +329,16 @@
   }
 
   /* fenêtre du QR code ; onItem(file) reçoit chaque photo ou fichier envoyé par le téléphone */
-  function openPanel(type, title, onItem) {
-    if (!dbOk()) { toast((type === 'file' ? 'L’import depuis un téléphone' : 'La photo depuis le téléphone') + ' demande un compte Alixo connecté (Paramètres › Compte)', { duration: 6000 }); return false; }
-    if (cur && cur.type !== type) close();   // 1.52 : une session d'un autre type est remplacée
+  /* 1.56.0 : mode = 'photo' | 'scan' (session de type 'photo' dans les deux cas) */
+  function openPanel(type, title, onItem, mode = 'photo') {
+    if (type === 'file') mode = 'photo';
+    if (!dbOk()) { toast((type === 'file' ? 'L’import depuis un téléphone' : mode === 'scan' ? 'Le scan d’un document' : 'La photo depuis le téléphone') + ' demande un compte Alixo connecté (Paramètres › Compte)', { duration: 6000 }); return false; }
+    if (cur && (cur.type !== type || cur.mode !== mode)) close();   // 1.52 : une session d'un autre type est remplacée ; 1.56.0 : ou d'un autre mode (le QR code change)
     if (cur) { cur.onItem = onItem; cur.title = title; render(); return true; }   // une seule session : elle suit le document ou le dossier
     const panel = document.createElement('div');
-    panel.id = 'pd-panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', type === 'file' ? 'Importer depuis un téléphone ou une tablette' : 'Photo depuis le téléphone');
+    panel.id = 'pd-panel'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', type === 'file' ? 'Importer depuis un téléphone ou une tablette' : mode === 'scan' ? 'Scanner un document' : 'Photo depuis le téléphone');
     document.body.appendChild(panel);
-    cur = { type, sid: '', unsub: null, onItem, panel, n: 0, timer: null, title, items: [], ready: false, err: '', expired: false, bytes: 0, reserved: 0, queue: Promise.resolve(), limit: false, beat: 0 };
+    cur = { type, mode, sid: '', unsub: null, onItem, panel, n: 0, timer: null, title, items: [], ready: false, err: '', expired: false, bytes: 0, reserved: 0, queue: Promise.resolve(), limit: false, beat: 0 };
     cur.beat = setInterval(() => { if (cur && cur.sid) regTouch(cur.sid); }, 30 * 1000);   // 1.52 : « cette session est encore affichée »
     purgeOrphans().catch(() => {});
     panel.addEventListener('click', e => {
@@ -336,16 +346,20 @@
       const k = b.dataset.pd;
       if (k === 'close') close();
       else if (k === 'renew') { stopListening(); dropSession(cur.sid, cur.type, cur.items); start(cur); }
-      else if (k === 'copy') { const u = `${PHOTO_URL}#${cur.sid}`; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Lien copié — ouvrez-le sur votre téléphone'), () => toast(u, { duration: 8000 })); }
+      else if (k === 'copy') { const u = linkOf(cur); (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => toast('Lien copié — ouvrez-le sur votre téléphone'), () => toast(u, { duration: 8000 })); }
     });
     start(cur);
     return true;
   }
   function open({ title = 'Document', onPhoto } = {}) { return openPanel('photo', title, onPhoto); }
+  /* 1.56.0 : scanner un document — onPhoto(file) reçoit chaque page photographiée */
+  function openScan({ title = 'Document', onPhoto } = {}) { return openPanel('photo', title, onPhoto, 'scan'); }
+  /* 1.56.0 : message non bloquant sous l'état du panneau ('' l'efface) — ex. page refusée par js/scan.js */
+  function warn(msg) { if (!cur) return; const m = String(msg || ''); if (m === (cur.warn || '')) return; cur.warn = m; render(); }
   /* 1.52 : import de fichiers dans un dossier ; onFile(file) reçoit chaque fichier vérifié et assemblé */
   function openFiles({ title = 'Mes cours', onFile } = {}) { return openPanel('file', title, onFile); }
 
   window.addEventListener('beforeunload', () => { if (cur) close(); });
   schedulePurge();
-  window.AlixoPhotoDrop = { open, openFiles, close, isOpen: () => !!cur, purgeOrphans, PHOTO_URL, MAX_PHONE_FILE, CHUNK, MAX_CHUNKS, MAX_FILES };
+  window.AlixoPhotoDrop = { open, openScan, openFiles, close, warn, mode: () => (cur ? cur.mode : ''), isOpen: () => !!cur, purgeOrphans, PHOTO_URL, MAX_PHONE_FILE, CHUNK, MAX_CHUNKS, MAX_FILES };
 })();

@@ -97,6 +97,29 @@ window.AlixoSync = (() => {
     } catch (err) { console.error('Sync (envoi) :', err); }
   }
 
+  /* 1.56.0 (sécurité) : une séance reçue de users/{uid}/docs (autre appareil, serveur MCP) est réassainie avant d'atteindre
+     l'écran — AlixoSanitize.doc, identifiants CONSERVÉS (fusion bloc par bloc), autres champs du compte gardés (keepMeta) ;
+     les champs propres à CET appareil (fichier .alx lié, fichiers du lecteur) ne sont jamais repris du nuage : ceux de la
+     copie locale restent. Présentations : AlixoSlides.normalize ; tableurs, planches, quiz : tels quels (pas d'assainisseur
+     dédié). → séance sûre, ou null (ignorée). */
+  const WHOLE_KINDS = ['slides', 'sheet', 'board', 'quiz'];
+  const DEVICE_KEYS = ['alxFile', 'files'];
+  function cleanRemote(remote) {
+    if (!remote || typeof remote !== 'object' || Array.isArray(remote) || typeof remote.id !== 'string') return null;
+    const local = app.state.docs.find(d => d.id === remote.id) || null;
+    let out = remote;
+    if (WHOLE_KINDS.includes(remote.kind)) {
+      if (remote.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { out = AlixoSlides.normalize(remote) || remote; } catch (err) { console.error('Sync (normalisation) :', err); return null; } }
+    } else {
+      const AS = window.AlixoSanitize;
+      if (!AS || typeof AS.doc !== 'function') return null;
+      try { out = AS.doc(remote, { keepIds: true, keepMeta: true }); } catch (err) { console.error('Sync (assainissement) :', err); return null; }
+      if (out.id !== remote.id) return null;   // identifiant hors format : ignorée
+    }
+    for (const k of DEVICE_KEYS) { delete out[k]; if (local && local[k] !== undefined) out[k] = JSON.parse(JSON.stringify(local[k])); }
+    return out;
+  }
+
   /* ---------------- réception (temps réel) ---------------- */
   function listen() {
     docsRef.onSnapshot(snap => {
@@ -117,8 +140,11 @@ window.AlixoSync = (() => {
         if (tombstoned('docs', id, remote.updatedAt || 0)) { schedulePush(); return; }   // supprimée ici : on ne la reprend pas
         const local = app.state.docs.find(d => d.id === id);
         if (local && (local.updatedAt || 0) > (remote.updatedAt || 0)) return; // le local est plus récent
-        lastPushedDocs.set(id, raw.data);
-        upserts.push(remote);
+        if (remote && typeof remote === 'object') remote.id = id;
+        const clean = cleanRemote(remote);
+        if (!clean) return;
+        lastPushedDocs.set(id, docJson(clean));   // version assainie : pas de renvoi tant qu'elle n'est pas modifiée ici
+        upserts.push(clean);
       });
       if (upserts.length || removed.length) app.applyRemoteDocs(upserts, removed);
       statusTxt = 'synchronisé';
@@ -151,7 +177,11 @@ window.AlixoSync = (() => {
         cloudIds.add(r.id);
         if (tombstoned('docs', r.id, r.d.updatedAt || 0)) continue;   // supprimée ici : sera effacée du nuage au push
         const local = app.state.docs.find(d => d.id === r.id);
-        if (!local || (r.d.updatedAt || 0) > (local.updatedAt || 0)) upserts.push(r.d);
+        if (!local || (r.d.updatedAt || 0) > (local.updatedAt || 0)) {
+          if (r.d && typeof r.d === 'object') r.d.id = r.id;
+          const clean = cleanRemote(r.d);
+          if (clean) { upserts.push(clean); lastPushedDocs.set(r.id, docJson(clean)); continue; }
+        }
         lastPushedDocs.set(r.id, r.json);
       }
       // docs locaux absents du nuage → seront poussés par le premier push()

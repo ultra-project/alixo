@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="coco.css">
 <link rel="stylesheet" href="whatsnew.css">
 <link rel="stylesheet" href="docedit.css">
+<link rel="stylesheet" href="pdfview.css">
 <link rel="stylesheet" href="alx.css">
 <link rel="stylesheet" href="imagepick.css">
 <link rel="stylesheet" href="imgtools.css">
@@ -290,6 +291,8 @@
 
 <!-- ===== Vue document Word / OpenDocument (js/docedit.js, 1.35) : un .wdx-doc par onglet ouvert ===== -->
 <section id="view-word" hidden></section>
+<!-- 1.56.0 : visionneuse et éditeur PDF (js/pdfview.js) — un .pdx-doc par onglet ouvert -->
+<section id="view-pdf" hidden></section>
 
 <!-- ===== Vue Quiz (js/quiz.js) : éditeur ; #qz-play = écran de jeu (test local, présentation en direct) ===== -->
 <section id="view-quiz" hidden>
@@ -399,6 +402,8 @@
   <span class="tb-sep"></span>
   <button data-ib="delete" class="danger" title="Supprimer l’image"><svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></button>
 </div>
+<!-- 1.56.0 : mini-barre du document scanné sélectionné (boutons créés par js/scan.js) -->
+<div id="scanbar" class="glass" hidden></div>
 
 <!-- ===== Recherche universelle ===== -->
 <div id="searchov" hidden>
@@ -438,6 +443,8 @@
 <script src="js/xlsx.js"></script>
 <script src="js/vendor/mammoth.browser.min.js"></script>
 <script src="js/vendor/three.min.js"></script>
+<script src="js/vendor/pdf-lib.min.js"></script>
+<script type="module" src="js/pdfboot.mjs"></script>
 <script src="js/auth.js"></script>
 <script src="js/icons.js"></script>
 <script src="js/math.js"></script>
@@ -474,14 +481,20 @@
 <script src="js/docedit.js"></script>
 <script src="js/docx.js"></script>
 <script src="js/odt.js"></script>
+<script src="js/pdf-write.js"></script>
+<script src="js/pdf-annot.js"></script>
+<script src="js/pdfview.js"></script>
 <script src="js/aiquiz.js"></script>
 <script src="js/aifiche.js"></script>
 <script src="js/cocotools.js"></script>
 <script src="js/coco.js"></script>
+<script src="js/pdf-ai.js"></script>
 <script src="js/draw.js"></script>
+<script src="js/scan.js"></script>   <!-- 1.56.0 : document scanné (après draw.js : hôte de dessin ; js/photodrop.js n'est appelé qu'à la capture) -->
 <script src="js/export.js"></script>
 <script src="js/alx.js"></script>
 <script src="js/sync.js"></script>
+<script src="js/coedit.js"></script>
 <script src="js/share.js"></script>
 <script src="js/workspace.js"></script>
 <script src="js/notify.js"></script>
@@ -492,6 +505,7 @@
 <script src="js/stats.js"></script>
 <script src="js/widgets.js"></script>
 <script src="js/cloudconfig.js"></script>
+<script src="js/mcp.js"></script>
 <script src="js/business.js"></script>
 <script src="js/bizchat.js"></script>
 <script src="js/wallpaper.js"></script>

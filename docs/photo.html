@@ -52,6 +52,11 @@
   .msg p { margin: 0; color: var(--ink2); }
   /* 1.52 : bouton « Réessayer » sur une ligne en échec */
   .item .retry { flex: none; min-height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--tint); font: inherit; font-size: 14.5px; font-weight: 650; cursor: pointer; }
+  /* 1.56.0 : mode scan — case « Noir et blanc (mode document) », cible de 48 px au doigt */
+  .chk { display: flex; align-items: center; gap: 12px; min-height: 48px; padding: 2px 4px; font-size: 15.5px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .chk input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--tint); }
+  /* 1.56.0 : rappel du droit de copie (mode scan) */
+  .legal { margin: -8px 0 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink2); font-size: 13.5px; line-height: 1.45; }
   .foot { text-align: center; color: var(--ink2); font-size: 12.5px; padding: 18px 0 14px; }
   .foot a { color: inherit; }
 </style>
@@ -59,7 +64,7 @@
 <body>
   <div class="top"><img src="logo.png" alt="">Alixo</div>
   <main id="main"><div class="msg"><b>Connexion…</b><p>Un instant.</p></div></main>
-  <div class="foot">Vos photos et fichiers passent quelques instants par le serveur d’Alixo (Google Firebase), puis en sont effacés dès leur arrivée sur votre ordinateur · <a href="https://alixoapp.com/confidentialite.html" target="_blank" rel="noopener">confidentialité</a></div>
+  <div class="foot">Vos photos et fichiers passent quelques instants par le serveur d’Alixo (Google Firebase), puis en sont effacés dès leur arrivée sur votre ordinateur, qui les enregistre dans votre document et dans votre compte Alixo. · <a href="https://alixoapp.com/confidentialite.html" target="_blank" rel="noopener">confidentialité</a></div>
   <script src="firebase-config.js"></script>
   <script src="js/vendor/firebase-app-compat.js"></script>
   <script src="js/vendor/firebase-firestore-compat.js"></script>

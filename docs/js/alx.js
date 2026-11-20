@@ -45,7 +45,7 @@ window.AlixoAlx = (() => {
     const add = v => { if (typeof v === 'string' && v) ids.add(v); };
     /* 1.51 : l'original d'une image retouchée (b.o, js/imgtools.js) n'est PAS exporté — le fond retiré par « Supprimer le fond »
        ne voyage pas avec le fichier (voir publicJSON plus bas) */
-    const fromBlocks = bl => (bl || []).forEach(b => { if (b && b.type === 'img') add(b.iid); });
+    const fromBlocks = bl => (bl || []).forEach(b => { if (b && (b.type === 'img' || b.type === 'scan')) add(b.iid); });   // 1.56.0 : + documents scannés
     fromBlocks(d.blocks);
     (d.pages || []).forEach(p => fromBlocks(p.blocks));
     (d.slides || []).forEach(s => (s.els || []).forEach(e => { if (e && e.t === 'image') add(e.iid); if (e && e.t === 'video') add(e.poster); }));   // 1.54 : l'affiche d'une vidéo voyage, pas la vidéo
@@ -133,7 +133,7 @@ window.AlixoAlx = (() => {
   /* nouveaux identifiants partout (même logique que duplicateDoc dans app.js), images comprises (`imap` : ancien iid → nouveau) */
   function freshIds(copy, imap) {
     const remapImg = v => (v && imap.has(v) ? imap.get(v) : v);
-    const blocks = bl => (bl || []).forEach(b => { if (!b) return; b.id = uid(); if (b.type === 'img') { b.iid = remapImg(b.iid); if (b.o && typeof b.o === 'object' && b.o.iid) b.o.iid = remapImg(b.o.iid); } });
+    const blocks = bl => (bl || []).forEach(b => { if (!b) return; b.id = uid(); if (b.type === 'img') { b.iid = remapImg(b.iid); if (b.o && typeof b.o === 'object' && b.o.iid) b.o.iid = remapImg(b.o.iid); } if (b.type === 'scan') b.iid = remapImg(b.iid); });   // 1.56.0 : + documents scannés
     copy.id = uid();
     blocks(copy.blocks);
     (copy.pages || []).forEach(p => { p.id = p.id === 'main' ? 'main' : uid(); blocks(p.blocks); });
@@ -210,6 +210,12 @@ window.AlixoAlx = (() => {
       const cur = d.pages.findIndex(p => p && p.id === d.page);
       out.page = cur >= 0 && out.pages[cur] ? out.pages[cur].id : (out.pages[0] ? out.pages[0].id : undefined);
     }
+    /* 1.56.0 : marque d'une séance créée ou complétée par une IA externe (serveur MCP) — gardée, en texte simple : elle
+       empêche de la déposer dans le Workspace comme écrite par soi (js/workspace.js) */
+    if (d.mcpFrom && typeof d.mcpFrom === 'object' && !Array.isArray(d.mcpFrom)) {
+      const at = Number(d.mcpFrom.at);
+      out.mcpFrom = { client: plainText(d.mcpFrom.client, 60) || 'IA externe', at: Number.isFinite(at) && at > 0 ? Math.floor(at) : Date.now() };
+    }
     if (typeof d.font === 'string' && typeof fontByKey === 'function' && fontByKey(d.font)) out.font = d.font;
     if (typeof d.planMode === 'string' && ['auto', 'adaptive', 'none'].includes(d.planMode)) out.planMode = d.planMode;
     if (d.plan && Array.isArray(d.plan.levels) && typeof normLevels === 'function') { try { const lv = normLevels(d.plan.levels); if (Array.isArray(lv) && lv.length) out.plan = { levels: lv.slice(0, 6) }; } catch { /* plan ignoré */ } }
@@ -222,7 +228,7 @@ window.AlixoAlx = (() => {
   const safeImage = (iid, data) => ID_RE.test(iid) && typeof data === 'string' && SAFE_IMAGE_RE.test(data);
   /* un bloc image dont l'image a été refusée ou manque disparaît (pas de référence qui pointe ailleurs) */
   function dropOrphanImages(raw, has) {
-    const keep = bl => (Array.isArray(bl) ? bl.filter(b => !(b && b.type === 'img' && !has(b.iid))) : bl);
+    const keep = bl => (Array.isArray(bl) ? bl.filter(b => !(b && (b.type === 'img' || b.type === 'scan') && !has(b.iid))) : bl);   // 1.56.0 : + documents scannés
     raw.blocks = keep(raw.blocks);
     (raw.pages || []).forEach(p => { p.blocks = keep(p.blocks); });
   }

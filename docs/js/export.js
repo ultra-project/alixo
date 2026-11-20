@@ -306,10 +306,14 @@
   }
   /* image d'un bloc (recadrage appliqué) rasterisée pour l'export */
   async function rasterizeImage(b, mime = 'image/jpeg') {
-    const src = (window.AlixoImages && AlixoImages.cache.get(b.iid)) || (window.AlixoImages ? await AlixoImages.get(b.iid) : null);
+    /* 1.56.0 : AlixoImages est une constante globale d'app.js, pas une propriété de window — le test window.AlixoImages
+       était toujours faux, et les images manquaient dans les PDF et Word produits ici */
+    const store = typeof AlixoImages !== 'undefined' ? AlixoImages : null;
+    const src = store ? (store.cache.get(b.iid) || await store.get(b.iid)) : null;
     if (!src) return null;
     const img = new Image();
-    await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = src; });
+    /* 1.56.0 : image illisible (données abîmées) — l'export continue sans elle, signalé avec les dessins omis */
+    try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = src; }); } catch { drawFails++; return null; }
     const c0 = b.crop && b.crop.w > 0 && b.crop.h > 0 ? b.crop : { x: 0, y: 0, w: 1, h: 1 };
     const sx = Math.round(c0.x * img.naturalWidth), sy = Math.round(c0.y * img.naturalHeight);
     const sw = Math.max(1, Math.round(c0.w * img.naturalWidth)), sh = Math.max(1, Math.round(c0.h * img.naturalHeight));
@@ -322,6 +326,40 @@
        une image détourée ou aux coins arrondis sort sur blanc, pas sur noir. */
     if (b.fx && window.AlixoImgTools) { try { AlixoImgTools.bake(ctx, b.fx, c.width, c.height); } catch (e) { console.error('Retouches non appliquées à l’export :', e); } }
     if (mime === 'image/jpeg') { ctx.globalCompositeOperation = 'destination-over'; ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.globalCompositeOperation = 'source-over'; }
+    const blob = await new Promise(res => c.toBlob(res, mime, 0.9));
+    return { data: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height, pw: c.width, ph: c.height };
+  }
+
+  /* 1.56.0 : document scanné → image de la page (1600 px au plus de côté) avec ses annotations par-dessus (calque de
+     js/draw.js, transparent pour un scan, mis à la largeur de l'image) ; fond blanc. Annotations impossibles à dessiner :
+     la page sort quand même, sans elles (comptée dans les dessins omis). */
+  async function rasterizeScan(b, mime = 'image/jpeg') {
+    /* AlixoImages est une constante globale d'app.js (pas une propriété de window) */
+    const store = typeof AlixoImages !== 'undefined' ? AlixoImages : null;
+    const src = store ? (store.cache.get(b.iid) || await store.get(b.iid)) : null;
+    if (!src) return null;
+    /* 1.56.0 : seules les images JPEG, PNG ou WebP en data URL (comme l'écran, js/scan.js) ; décodage impossible → page omise,
+       signalée avec les dessins omis, le reste du cours sort quand même */
+    if (typeof src !== 'string' || !/^data:image\/(jpeg|png|webp);/.test(src)) { drawFails++; return null; }
+    const img = new Image();
+    try { await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = src; }); } catch { drawFails++; return null; }
+    const iw = img.naturalWidth || 1, ih = img.naturalHeight || 1;
+    const scale = Math.min(1, 1600 / Math.max(iw, ih));
+    const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(iw * scale)); c.height = Math.max(1, Math.round(ih * scale));
+    const ctx = c.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+    ctx.drawImage(img, 0, 0, c.width, c.height);
+    if (window.AlixoDraw && Array.isArray(b.shapes) && b.shapes.length) {
+      try {
+        const svg = AlixoDraw.svg(b);
+        const m = svg.match(/viewBox="0 0 (\d+) (\d+)"/);
+        const LW = m ? +m[1] : 640, LH = m ? +m[2] : Math.round(640 * ih / iw);
+        const ov = new Image();
+        await new Promise((res, rej) => { ov.onload = res; ov.onerror = rej; ov.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg); });
+        const k = c.width / LW;   // même échelle en x et en y que l'écran (preserveAspectRatio meet, ancré en haut à gauche)
+        ctx.drawImage(ov, 0, 0, LW * k, LH * k);
+      } catch { drawFails++; }
+    }
     const blob = await new Promise(res => c.toBlob(res, mime, 0.9));
     return { data: new Uint8Array(await blob.arrayBuffer()), w: c.width, h: c.height, pw: c.width, ph: c.height };
   }
@@ -391,6 +429,17 @@
           pdf.y += 6; pdf.ensure(h + 6);
           pdf.image(img, pdf.M + (pdf.cw - w) / 2, pdf.y, w, h);
           pdf.y += h + 8;
+          break;
+        }
+        case 'scan': {   // 1.56.0 : une page à lui seul — page neuve s'il y a déjà du contenu, image ajustée à la page, page suivante ensuite
+          const img = await rasterizeScan(b, 'image/jpeg');
+          if (!img) break;
+          if (pdf.y > pdf.M + 1) pdf.newPage();
+          let w = pdf.cw, h = w * img.h / img.w;
+          const maxH = pdf.H - pdf.M - pdf.MB;
+          if (h > maxH) { w *= maxH / h; h = maxH; }
+          pdf.image(img, pdf.M + (pdf.cw - w) / 2, pdf.M, w, h);
+          pdf.y = pdf.H;   // le bloc suivant ouvre une page (aucune page vide si c'est le dernier)
           break;
         }
         case 'img': {
@@ -856,8 +905,17 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
     const numMap = computeNumbers(d.blocks);
     const images = [];
     let body = para(runXml({ text: d.titre || 'Sans titre' }), '<w:pStyle w:val="Title"/>');
-    for (const b of d.blocks) {
+    for (const [bi, b] of d.blocks.entries()) {
       switch (b.type) {
+        case 'scan': {   // 1.56.0 : document scanné — saut de page avant l'image, et après elle s'il reste des blocs
+          const img = await rasterizeScan(b, 'image/png');
+          if (!img) break;
+          images.push(img);
+          const fit = Math.min(1, 1.62 * img.w / img.h);   // une page portrait tient en hauteur (zone utile ≈ 1,62 × sa largeur)
+          body += imageParaXml(images.length, img, fit, 'center').replace('<w:pPr>', '<w:pPr><w:pageBreakBefore/>').replace('<w:spacing w:before="120" w:after="120"/>', '<w:spacing w:before="0" w:after="0"/>');
+          if (bi < d.blocks.length - 1) body += '<w:p><w:pPr><w:spacing w:before="0" w:after="0"/></w:pPr><w:r><w:br w:type="page"/></w:r></w:p>';
+          break;
+        }
         case 'h':
           body += para(runXml({ text: (numMap[b.id] || '') + '  ', b: true, color: ACCENT }) + runsXml(htmlRuns(b.text)), `<w:pStyle w:val="Heading${Math.min(4, Math.max(1, +b.level || 1))}"/>${b.level > 4 ? `<w:ind w:left="${(b.level - 1) * 280}"/>` : ''}${jcXml(ALIGN_OF(b))}`);
           break;
@@ -983,5 +1041,5 @@ ${[1, 2, 3, 4].map(l => `<w:style w:type="paragraph" w:styleId="Heading${l}"><w:
     return new Blob([blob], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
   }
 
-  window.AlixoExport = { exportDocPdf, exportDocDocx, rasterizeGraph, rasterizeImage, rasterizeDraw, rasterizeFloats, rasterizeChart, htmlRuns };
+  window.AlixoExport = { exportDocPdf, exportDocDocx, rasterizeGraph, rasterizeImage, rasterizeScan, rasterizeDraw, rasterizeFloats, rasterizeChart, htmlRuns };
 })();

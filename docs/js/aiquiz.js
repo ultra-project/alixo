@@ -239,7 +239,7 @@ window.AlixoAIQuiz = (() => {
     const cards = Array.from({ length: Math.min(n, 10) }, (_, i) => `<div class="aq-gcard" style="--i:${i}"><i class="aq-gnum">${i + 1}</i><span class="aq-gl aq-gl1"></span><span class="aq-gl aq-gl2"></span><span class="aq-gl aq-gl3"></span><b class="aq-gok">✓</b></div>`).join('');
     return `<div class="aq-gen">
       <div class="aq-orb"><span></span><span></span><span></span><em>${ICON}</em></div>
-      <div class="aq-gtxt"><b class="aq-gstep">Lecture ${s.d.kind === 'slides' ? 'de la présentation' : s.d.kind === 'sheet' ? 'du tableur' : 'du cours'}…</b><p class="aq-gsub">${n} question${n > 1 ? 's' : ''} · ${esc((KINDS.find(k => k[0] === opts.kind) || KINDS[0])[1])} · niveau ${esc((LEVELS.find(l => l[0] === opts.level) || LEVELS[1])[1].toLowerCase())} — la première question arrive dans quelques secondes, la suite s’écrit pendant que vous répondez.</p></div>
+      <div class="aq-gtxt"><b class="aq-gstep">Lecture ${s.d.kind === 'slides' ? 'de la présentation' : s.d.kind === 'sheet' ? 'du tableur' : s.d.kind === 'pdf' ? 'du PDF' : 'du cours'}…</b><p class="aq-gsub">${n} question${n > 1 ? 's' : ''} · ${esc((KINDS.find(k => k[0] === opts.kind) || KINDS[0])[1])} · niveau ${esc((LEVELS.find(l => l[0] === opts.level) || LEVELS[1])[1].toLowerCase())} — la première question arrive dans quelques secondes, la suite s’écrit pendant que vous répondez.</p></div>
       <div class="aq-gbar"><i style="width:0%"></i></div>
       <div class="aq-gcards">${cards}</div>
       <button type="button" class="aq-btn ghost" data-aq="cancel">Annuler</button>
