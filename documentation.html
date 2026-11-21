@@ -6,24 +6,24 @@
 <meta name="robots" content="index, follow, noai, noimageai">
 <meta name="tdm-reservation" content="1">
 <title>Documentation Alixo — guide complet de l'application</title>
-<meta name="description" content="Guide complet d'Alixo : premiers pas, menu « / », titres et plan, encadrés, fiches d'arrêt, formules, graphiques, tableaux, dessins, tableurs, présentations, bibliothèque, partage, IA, export, raccourcis. Avec des vidéos pour chaque fonctionnalité.">
+<meta name="description" content="Guide complet d'Alixo 1.56 : premiers pas, menu « / », titres et plan, encadrés, fiches d'arrêt, formules, graphiques, tableaux, dessins, frise, scan depuis le téléphone, tableurs, présentations, quiz, PDF, bibliothèque, Alixo AI et Coco, partage et co-édition, Workspace, intégrations, export, raccourcis. Avec une vidéo pour chaque fonctionnalité.">
 <link rel="canonical" href="https://alixoapp.com/documentation.html">
 <meta property="og:title" content="Documentation Alixo">
 <meta property="og:description" content="Chaque fonctionnalité d'Alixo expliquée, avec une vidéo.">
 <meta property="og:type" content="article">
 <meta property="og:url" content="https://alixoapp.com/documentation.html">
-<meta property="og:image" content="https://alixoapp.com/videos/01-menu-slash.jpg">
+<meta property="og:image" content="https://alixoapp.com/videos/01-premiers-pas.jpg">
 <meta name="theme-color" content="#f7f8fa">
 <link rel="stylesheet" href="/fonts/fonts.css">
 <link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css?v=20261116">
-<link rel="stylesheet" href="/pages.css?v=20261116">
-<link rel="stylesheet" href="/doc.css?v=20261116">
+<link rel="stylesheet" href="/site.css?v=20261121">
+<link rel="stylesheet" href="/pages.css?v=20261121">
+<link rel="stylesheet" href="/doc.css?v=20261121">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <script defer src="/protection.js"></script>
-<script defer src="/site.js?v=20261116"></script>
-<script defer src="/documentation.js?v=20261116"></script>
+<script defer src="/site.js?v=20261121"></script>
+<script defer src="/documentation.js?v=20261121"></script>
 </head>
 <body>
 
@@ -67,15 +67,15 @@
   <div class="page-head-in">
     <p class="page-eyebrow">Documentation</p>
     <h1>Tout Alixo, <em>expliqué.</em></h1>
-    <p class="page-lead">Chaque bloc de l'éditeur et chaque fonction de l'application, avec une courte vidéo pour voir le geste. Commence par les premiers pas, ou cherche directement ce qu'il te faut.</p>
+    <p class="page-lead">Chaque bloc de l’éditeur et chaque fonction de l’application, avec une courte vidéo pour voir le geste. Commence par les premiers pas, ou cherche directement ce qu’il te faut.</p>
     <div class="doc-search">
       <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="doc-q" type="search" placeholder="Rechercher dans la documentation… (fiche d'arrêt, formule, Ctrl+K, export)" aria-label="Rechercher dans la documentation" autocomplete="off">
+      <input id="doc-q" type="search" placeholder="Rechercher dans la documentation… (fiche d’arrêt, formule, PDF, Coco, export)" aria-label="Rechercher dans la documentation" autocomplete="off">
       <kbd aria-hidden="true">/</kbd>
     </div>
     <p id="doc-count" class="doc-count" role="status"></p>
     <div class="doc-quick">
-      <a href="#demarrer">Premiers pas</a><a href="#menu-slash">Menu « / »</a><a href="#titres">Titres et plan</a><a href="#droit">Droit</a><a href="#formules">Formules</a><a href="#tableur">Tableurs</a><a href="#partage">Partage</a><a href="#export">Export</a><a href="#raccourcis">Raccourcis</a>
+      <a href="#demarrer">Premiers pas</a><a href="#menu-slash">Menu « / »</a><a href="#droit">Droit</a><a href="#pdf">PDF</a><a href="#presentations">Présentations</a><a href="#coco">Coco</a><a href="#partage">Partage</a><a href="#raccourcis">Raccourcis</a>
     </div>
   </div>
 </section>
@@ -85,14 +85,14 @@
     <button class="doc-side-toggle" type="button" aria-expanded="false">Sommaire <span aria-hidden="true">☰</span></button>
     <div class="grp"><div class="grp-t">Commencer</div>
       <a href="#demarrer">Premiers pas</a>
-      <a href="#compte">Compte et synchronisation</a>
-      <a href="#interface">L'interface</a>
+      <a href="#compte">Compte, pseudo et synchronisation</a>
+      <a href="#interface">L’interface</a>
     </div>
     <div class="grp"><div class="grp-t">Écrire un cours</div>
       <a href="#menu-slash">Le menu « / »</a>
       <a href="#titres">Titres et plan</a>
       <a href="#listes">Listes</a>
-      <a href="#mise-en-forme">Mise en forme</a>
+      <a href="#mise-en-forme">Mise en forme, polices et styles</a>
       <a href="#citation">Citation</a>
       <a href="#encadres">Encadrés</a>
       <a href="#onglets">Onglets dans une séance</a>
@@ -107,31 +107,42 @@
     </div>
     <div class="grp"><div class="grp-t">Mise en page</div>
       <a href="#tableau">Tableau</a>
-      <a href="#image">Image</a>
+      <a href="#image">Image et retouches</a>
       <a href="#dessin">Dessin</a>
       <a href="#arbre">Arbre</a>
       <a href="#cartes">Cartes</a>
-      <a href="#petits-blocs">Minuteur, lien, séparateur</a>
+      <a href="#frise">Frise chronologique</a>
+      <a href="#petits-blocs">Minuteur, lien, bouton, séparateur</a>
       <a href="#imbriques">Blocs imbriqués</a>
+      <a href="#scan">Scanner une feuille</a>
     </div>
     <div class="grp"><div class="grp-t">Documents</div>
       <a href="#tableur">Tableurs</a>
       <a href="#presentations">Présentations</a>
-      <a href="#fichiers">Fichiers</a>
+      <a href="#presenter">Présenter</a>
+      <a href="#planche">Planche</a>
+      <a href="#quiz">Quiz</a>
+      <a href="#pdf">PDF</a>
+      <a href="#fichiers">Fichiers et import</a>
     </div>
     <div class="grp"><div class="grp-t">Organiser</div>
-      <a href="#bibliotheque">Bibliothèque et galaxie</a>
+      <a href="#bibliotheque">Bibliothèque</a>
       <a href="#recherche">Recherche</a>
       <a href="#agenda">Agenda, tâches, bilan</a>
       <a href="#notifications">Notifications</a>
     </div>
-    <div class="grp"><div class="grp-t">Collaborer et sortir</div>
-      <a href="#partage">Alixo Share</a>
-      <a href="#correction">Correction et IA</a>
-      <a href="#outils">Dictionnaire, calculatrices</a>
-      <a href="#export">Export</a>
+    <div class="grp"><div class="grp-t">IA</div>
+      <a href="#coco">Coco, Alixo AI</a>
+      <a href="#coco-cree">Coco crée et modifie</a>
+      <a href="#correction">Correction</a>
     </div>
-    <div class="grp"><div class="grp-t">Réglages</div>
+    <div class="grp"><div class="grp-t">Collaborer</div>
+      <a href="#partage">Alixo Share et co-édition</a>
+      <a href="#workspace">Le Workspace</a>
+      <a href="#integrations">Intégrations IA</a>
+    </div>
+    <div class="grp"><div class="grp-t">Sortir et régler</div>
+      <a href="#export">Export</a>
       <a href="#apparence">Apparence et polices</a>
       <a href="#alixo-plus">Alixo+</a>
       <a href="#plateformes">PC, web, mobile</a>
@@ -147,46 +158,50 @@
     <section id="demarrer">
       <div class="eyebrow">Commencer</div>
       <h2>Premiers <em>pas</em></h2>
-      <p class="lead">Alixo est une application de prise de notes conçue pour l'amphi&nbsp;: un cours est une <strong>séance</strong>, faite de blocs (paragraphes, titres, encadrés, fiches, formules, graphiques…), rangée dans des <strong>dossiers</strong>. Tout se fait au clavier, et tout fonctionne hors ligne.</p>
-      <h3>Trois façons d'ouvrir Alixo</h3>
+      <p class="lead">Alixo est une application de prise de notes conçue pour l’amphi&nbsp;: un cours est une <strong>séance</strong>, faite de blocs (paragraphes, titres, encadrés, fiches, formules, graphiques…), rangée dans des <strong>dossiers</strong>. Tout se fait au clavier, et tout fonctionne hors ligne.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/01-premiers-pas.jpg"><source src="videos/01-premiers-pas.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Premiers pas — Un dossier, une séance, et on écrit</b><span class="dur" data-video="01-premiers-pas">0:00</span></figcaption></figure>
+      <h3>Trois façons d’ouvrir Alixo</h3>
       <div class="doc-cards">
-        <div class="doc-card"><b>Windows</b><span>Télécharge <a href="/telecharger/windows/">Alixo-Setup.exe</a>, double-clique, c'est installé. Les mises à jour s'installent ensuite toutes seules au démarrage. Une <a href="/telecharger/windows-portable/">version portable</a> existe aussi. Sur Mac&nbsp;: <a href="/telecharger/mac/">Alixo-Mac.dmg</a>.</span></div>
-        <div class="doc-card"><b>Navigateur</b><span>Ouvre <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">alixoapp.com/docs</a> dans Chrome, Edge, Firefox ou Safari. Rien à installer, toujours au niveau de la version PC.</span></div>
+        <div class="doc-card"><b>Windows et Mac</b><span>Télécharge <a href="/telecharger/windows/">Alixo pour Windows</a>, double-clique, c’est installé. Les mises à jour s’installent ensuite toutes seules au démarrage. Une <a href="/telecharger/windows-portable/">version portable</a> existe aussi. Sur Mac&nbsp;: <a href="/telecharger/mac/">Alixo pour macOS</a>.</span></div>
+        <div class="doc-card"><b>Navigateur</b><span>Ouvre <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">alixoapp.com/docs</a> dans Chrome, Edge, Firefox ou Safari. Rien à installer. Seule l’intelligence artificielle AlixoAI (Coco, relecture) demande l’application pour Windows ou Mac.</span></div>
         <div class="doc-card"><b>Téléphone</b><span>La même adresse ouvre la version mobile toute seule&nbsp;: explorateur en tiroir, bouton «&nbsp;+&nbsp;» flottant, panneaux en plein écran.</span></div>
       </div>
       <h3>Créer son premier cours</h3>
       <ol class="doc-steps">
-        <li><strong>Crée un dossier par matière</strong> avec «&nbsp;+ Dossier&nbsp;» (par exemple Droit › Droit des obligations). Chaque dossier a une couleur et un professeur, repris sur ses séances.</li>
-        <li><strong>Ouvre une séance</strong> avec «&nbsp;+ Nouvelle séance&nbsp;», donne-lui un titre, puis écris. La feuille est une seule zone d'écriture, comme un traitement de texte.</li>
-        <li><strong>Tape <kbd>/</kbd></strong> sur une ligne vide pour insérer un bloc&nbsp;: titre, encadré, fiche d'arrêt, formule, graphique, tableau, image, dessin…</li>
-        <li><strong>Tape «&nbsp;I.&nbsp;»</strong> ou «&nbsp;A.&nbsp;» en début de ligne&nbsp;: la ligne devient un titre, numéroté, et le plan se construit à gauche.</li>
-        <li><strong>Tout est enregistré</strong> au fur et à mesure («&nbsp;Enregistré à…&nbsp;» dans la barre du haut). Avec un compte, la séance arrive aussi sur tes autres appareils.</li>
+        <li><strong>Crée un dossier par matière</strong> avec <strong>Nouveau › Dossier</strong> (par exemple Droit › Droit des obligations). Chaque dossier a un nom, une couleur, un professeur et une bannière, repris sur ses séances.</li>
+        <li><strong>Ouvre une séance</strong> avec <strong>Nouveau › Séance</strong>, donne-lui un titre, puis écris. La feuille est une seule zone d’écriture, découpée en pages A4 comme le PDF final.</li>
+        <li><strong>Tape <kbd>/</kbd></strong> sur une ligne vide pour insérer un bloc&nbsp;: titre, encadré, fiche d’arrêt, formule, graphique, tableau, image, frise, dessin…</li>
+        <li><strong>Tape «&nbsp;I.&nbsp;»</strong> ou «&nbsp;A.&nbsp;» en début de ligne&nbsp;: la ligne devient un titre, numéroté, et le plan se construit dans le volet de gauche.</li>
+        <li><strong>Tout est enregistré</strong> au fur et à mesure&nbsp;: l’icône en haut à droite tourne en orange pendant l’enregistrement, puis devient un nuage vert quand c’est fait. Avec un compte, la séance arrive aussi sur tes autres appareils.</li>
       </ol>
-      <div class="doc-note"><p><b>Choisis tes spécialités</b> dans Paramètres › Compte › Modifier mon profil (Droit, Économie, Médecine, Commerce, STAPS…)&nbsp;: le menu «&nbsp;/&nbsp;» n'affiche que les blocs de tes filières. Profil vide&nbsp;: tout est disponible.</p></div>
+      <div class="doc-note"><p><b>Choisis tes spécialités</b> dans Paramètres › Compte › Modifier mon profil (Droit, Économie, Médecine, Commerce, STAPS…)&nbsp;: le menu «&nbsp;/&nbsp;» n’affiche que les blocs de tes filières. Profil vide&nbsp;: tout est disponible. Le profil se règle aussi sans compte.</p></div>
     </section>
 
     <section id="compte">
       <div class="eyebrow">Commencer</div>
-      <h2>Compte et <em>synchronisation</em></h2>
-      <p>Un compte Alixo (Google, Apple ou e-mail) n'est <strong>pas obligatoire</strong>. Il sert à retrouver tes cours sur tous tes appareils, à partager, et à activer Alixo+.</p>
+      <h2>Compte, pseudo et <em>synchronisation</em></h2>
+      <p>Un compte Alixo (Google, Apple ou e-mail) n’est <strong>pas obligatoire</strong>. Il sert à retrouver tes cours sur tous tes appareils, à partager, à importer depuis ton téléphone, à parcourir le Workspace et à activer Alixo+.</p>
       <ul>
-        <li><strong>Sans compte</strong>&nbsp;: sur l'écran de connexion, choisis «&nbsp;Continuer sans compte (local uniquement)&nbsp;». Tes cours restent sur cet appareil. Tu peux te connecter plus tard&nbsp;: les cours créés sans compte sont <strong>récupérés à la première connexion</strong>.</li>
-        <li><strong>Se connecter ou créer un compte</strong>&nbsp;: bouton <a href="https://alixoapp.com/docs/?login">Se connecter</a> du site, ou Paramètres › Compte › Se connecter dans l'application. Le questionnaire de bienvenue (niveau, spécialités) n'est posé qu'une fois&nbsp;: le profil suit le compte.</li>
-        <li><strong>Ce qui se synchronise</strong>&nbsp;: séances, dossiers, présentations, tableurs, images, fichiers, agenda, tâches, réglages (thème, police, profil, IA). Hors ligne, tu continues d'écrire&nbsp;: tout repart dès que le réseau revient.</li>
-        <li><strong>Stockage</strong>&nbsp;: 3 Go pour le compte gratuit (cours, images, fichiers), détaillés dans Paramètres › Compte. Alixo+ lève cette limite.</li>
+        <li><strong>Sans compte</strong>&nbsp;: sur l’écran de connexion, choisis «&nbsp;Continuer sans compte (local uniquement)&nbsp;». Tes cours restent sur cet appareil. Tu peux te connecter plus tard&nbsp;: les cours créés sans compte sont <strong>récupérés à la première connexion</strong>.</li>
+        <li><strong>Se connecter ou créer un compte</strong>&nbsp;: bouton <a href="https://alixoapp.com/docs/?login">Se connecter</a> du site, ou Paramètres › Compte › Se connecter dans l’application. Le questionnaire de bienvenue (niveau, spécialités) n’est posé qu’une fois&nbsp;: le profil suit le compte.</li>
+        <li><strong>Ton pseudo Alixo</strong>&nbsp;: dès la première connexion, Alixo t’attribue un pseudo (par exemple «&nbsp;RenardLucide42&nbsp;»). C’est lui que voient les autres membres dans les partages, le Workspace et les commentaires&nbsp;: jamais ton nom ni ton adresse e-mail. Change-le quand tu veux dans Paramètres › Compte, ou tire-en un autre au hasard.</li>
+        <li><strong>Ce qui se synchronise</strong>&nbsp;: séances, dossiers et bannières, présentations, tableurs, planches, quiz, images, fichiers, agenda, tâches, styles enregistrés, réglages (thème, police, couleurs des encadrés, profil). Hors ligne, tu continues d’écrire&nbsp;: tout repart dès que le réseau revient.</li>
+        <li><strong>Stockage</strong>&nbsp;: 3 Go pour le compte gratuit (cours, images, fichiers), détaillés par catégorie dans Paramètres › Compte, avec la liste des plus gros éléments. Alixo+ lève cette limite.</li>
       </ul>
-      <figure class="doc-video"><video controls preload="none" poster="videos/26-pc-mobile-sync.jpg"><source src="videos/26-pc-mobile-sync.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>PC, web, mobile et synchronisation</b><span class="dur">0:34</span></figcaption></figure>
     </section>
 
     <section id="interface">
       <div class="eyebrow">Commencer</div>
-      <h2>L'<em>interface</em></h2>
+      <h2>L’<em>interface</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/02-interface.jpg"><source src="videos/02-interface.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>L’interface — Barre du haut, barre de gauche, onglets, volets</b><span class="dur" data-video="02-interface">0:00</span></figcaption></figure>
       <ul>
-        <li><strong>Barre du haut</strong>&nbsp;: fil d'Ariane (Mes cours › dossier › séance), état d'enregistrement, recherche <kbd>Ctrl</kbd><kbd>K</kbd>, Partager, Exporter, cloche des notifications, Paramètres. L'événement en cours de l'agenda et le temps restant s'y affichent aussi.</li>
-        <li><strong>Onglets</strong>&nbsp;: chaque séance, présentation ou tableur ouvert a son onglet, réordonnable à la souris. Avec beaucoup d'onglets, le bouton <strong>▾</strong> les liste tous.</li>
-        <li><strong>Barre d'outils</strong> (dans une séance)&nbsp;: taille du texte, gras, italique, souligné, barré, exposant, indice, couleurs, titres, listes, alignement, lien, référence d'article, puis les outils&nbsp;: IA, calculatrices, dictionnaire, chronomètre, agenda, document à côté.</li>
-        <li><strong>Volet de gauche</strong>&nbsp;: le <strong>plan du cours</strong> (numéroté, cliquable, barre d'avancement) et le <strong>journal</strong> des jours de travail. Bouton <kbd>‹</kbd> pour le replier.</li>
-        <li><strong>Volet de droite</strong>&nbsp;: selon l'outil ouvert, symboles et modèles de formules, calculatrice, dictionnaire, agenda, chronomètre, ou un document (PDF, Word, diaporama) affiché à côté du cours.</li>
+        <li><strong>Barre du haut</strong>&nbsp;: elle ne parle que de l’application. Au centre, le champ <strong>Rechercher…</strong> (<kbd>Ctrl</kbd><kbd>K</kbd>, une simple loupe quand un document est ouvert)&nbsp;; à droite, l’<strong>agenda</strong> avec le cours en cours et le temps restant, la <strong>cloche</strong> des notifications, les <strong>Paramètres</strong> et, si tu l’actives, un bouton soleil / lune pour changer de thème. Dans un document, le titre et le fil d’Ariane (Mes cours › dossier › séance) passent en premier.</li>
+        <li><strong>Barre de gauche</strong> (bibliothèque)&nbsp;: <strong>Agenda</strong>, <strong>Partagés avec moi</strong>, <strong>Workspace</strong>, <strong>Artéfacts</strong> (ce que Coco a créé), <strong>Tâches</strong>, puis l’<strong>explorateur</strong> de tes dossiers avec une pastille de couleur devant chacun. Un petit bouton à gauche du titre replie cette barre pour laisser toute la largeur à tes cours&nbsp;; le choix est mémorisé.</li>
+        <li><strong>Onglets</strong>&nbsp;: chaque séance, présentation, tableur, planche, quiz, PDF ou document Word ouvert a son onglet, avec la pastille de couleur de son dossier. Réordonnables à la souris&nbsp;; clic droit&nbsp;: Renommer, Afficher dans la bibliothèque, Afficher à côté, Fermer. Glisse un onglet vers un bord de la page pour afficher deux documents côte à côte (jusqu’à quatre). Avec beaucoup d’onglets, le bouton <strong>▾</strong> les liste tous. Double-clic sur un espace libre de la barre&nbsp;: une nouvelle séance dans le dossier du cours en cours.</li>
+        <li><strong>Barre d’outils</strong> (dans une séance)&nbsp;: niveau de plan, police, taille, gras, italique, souligné, barré, exposant, indice, couleurs, Styles, listes, alignement, lien, référence d’article, Image, Dessin, puis les outils&nbsp;: Alixo AI, correction, calculatrices (TI-83 Premium CE et fx-92 Collège), dictionnaire, chronomètre, document à côté. <strong>Tout à droite</strong>&nbsp;: <strong>Partager</strong> et <strong>Télécharger</strong>, avec les pastilles des personnes qui ont accès quand la séance est partagée.</li>
+        <li><strong>Volet de gauche</strong>&nbsp;: le <strong>plan du cours</strong> (numéroté, cliquable, barre d’avancement), replié par défaut, et le <strong>journal</strong> des jours de travail.</li>
+        <li><strong>Volet de droite</strong>&nbsp;: selon l’outil ouvert, le panneau Coco, le panneau Dessin, les symboles et modèles de formules, une calculatrice, le dictionnaire, l’agenda de la semaine, le chronomètre, ou un document (PDF, Word, diaporama) affiché à côté du cours.</li>
+        <li><strong>Une fenêtre par document</strong> (Paramètres › Apparence › Fenêtres)&nbsp;: comme Word, chaque document s’ouvre dans sa propre fenêtre, l’accueil restant ouvert à côté. Sur le web, chaque document s’ouvre dans un nouvel onglet du navigateur.</li>
       </ul>
     </section>
 
@@ -194,14 +209,14 @@
     <section id="menu-slash">
       <div class="eyebrow">Écrire un cours</div>
       <h2>Le menu <em>« / »</em></h2>
-      <p class="lead">C'est le geste central d'Alixo&nbsp;: sur une ligne vide, tape <kbd>/</kbd> et choisis un bloc. Tous les blocs passent par là.</p>
-      <figure class="doc-video"><video controls preload="none" poster="videos/01-menu-slash.jpg"><source src="videos/01-menu-slash.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Le menu « / »</b><span class="dur">0:39</span></figcaption></figure>
+      <p class="lead">C’est le geste central d’Alixo&nbsp;: sur une ligne vide, tape <kbd>/</kbd> et choisis un bloc. Tous les blocs passent par là.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/03-menu-slash.jpg"><source src="videos/03-menu-slash.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Le menu « / » — Insérer n’importe quel bloc en tapant une barre oblique</b><span class="dur" data-video="03-menu-slash">0:00</span></figcaption></figure>
       <ul>
-        <li><strong>Sections</strong>&nbsp;: Structure (titres, listes, cases à cocher, citation, encadrés, bilan), Droit, Santé, Commerce &amp; marketing, STAPS, Économie / maths / données, Mise en page (tableau, image, dessin, lien, minuteur, arbre, cartes, séparateur), Symboles.</li>
+        <li><strong>Sections</strong>&nbsp;: Structure (titres, listes, cases à cocher, citation, encadrés, bilan, table des matières), Droit, Santé, Commerce &amp; marketing, STAPS, Économie / maths / données, Mise en page (tableau, image, dessin, arbre, cartes, frise, lien, bouton, minuteur, séparateur, saut de page, Document, Scanner un document), Symboles.</li>
         <li><strong>Filtrer</strong>&nbsp;: tape quelques lettres («&nbsp;enc&nbsp;» → les encadrés, «&nbsp;fiche&nbsp;» → les fiches). <kbd>↑</kbd> <kbd>↓</kbd> pour parcourir, <kbd>Entrée</kbd> pour insérer, <kbd>Échap</kbd> pour fermer.</li>
         <li><strong>Les plus utilisés</strong>&nbsp;: les blocs que tu insères souvent remontent en tête du menu.</li>
-        <li><strong>Au milieu d'une phrase</strong>&nbsp;: après un espace, <kbd>/</kbd> ouvre un menu <em>en ligne</em> (référence d'article, item LiSA, rang A / B, lien, lettre grecque…) inséré à l'endroit du curseur.</li>
-        <li><strong>Autres accès</strong>&nbsp;: le bouton «&nbsp;/ blocs&nbsp;» de la barre d'outils et «&nbsp;Insérer un bloc&nbsp;» dans le volet du plan.</li>
+        <li><strong>Au milieu d’une phrase</strong>&nbsp;: après un espace, <kbd>/</kbd> ouvre un menu <em>en ligne</em> (référence d’article, item LiSA, rang A / B, lien, lettre grecque…) inséré à l’endroit du curseur.</li>
+        <li><strong>Autres accès</strong>&nbsp;: le bouton «&nbsp;/ blocs&nbsp;» de la barre d’outils et «&nbsp;Insérer un bloc&nbsp;» dans le volet du plan.</li>
       </ul>
     </section>
 
@@ -209,7 +224,7 @@
       <div class="eyebrow">Écrire un cours</div>
       <h2>Titres et <em>plan automatique</em></h2>
       <p>La numérotation juridique I. A. 1. a. se gère toute seule, et le plan du cours se construit dans le volet de gauche.</p>
-      <figure class="doc-video"><video controls preload="none" poster="videos/02-titres-plan.jpg"><source src="videos/02-titres-plan.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Titres et plan automatique</b><span class="dur">0:36</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/04-titres-plan.jpg"><source src="videos/04-titres-plan.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Titres et plan automatique — I. A. 1. a.&nbsp;: la numérotation se fait toute seule</b><span class="dur" data-video="04-titres-plan">0:00</span></figcaption></figure>
       <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Titres et plan automatique"><table class="doc-table">
         <tr><th>Niveau</th><th>En début de ligne</th><th>Raccourci</th><th>Menu « / »</th></tr>
         <tr><td>Partie</td><td>«&nbsp;I.&nbsp;» ou «&nbsp;I)&nbsp;» puis un espace</td><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1</kbd></td><td>Partie (niveau I.)</td></tr>
@@ -218,19 +233,20 @@
         <tr><td>Paragraphe</td><td>«&nbsp;a.&nbsp;»</td><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>4</kbd></td><td>Paragraphe (niveau a.)</td></tr>
       </table></div>
       <ul>
-        <li><kbd>Tab</kbd> et <kbd>Maj</kbd><kbd>Tab</kbd> changent le niveau d'un titre&nbsp;; la numérotation suit. <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>0</kbd> remet un titre en paragraphe.</li>
+        <li><kbd>Tab</kbd> et <kbd>Maj</kbd><kbd>Tab</kbd> changent le niveau d’un titre&nbsp;; la numérotation suit. <kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>0</kbd> remet un titre en paragraphe.</li>
+        <li><strong>Un plan à ta façon</strong>&nbsp;: Paramètres › Écriture › Plan du cours présente les niveaux en pyramide. Tu les glisses, en ajoutes (jusqu’à six&nbsp;: Chapitre, Titre, §…), choisis leur numérotation et des mots déclencheurs («&nbsp;Chapitre 1&nbsp;:&nbsp;» en début de ligne crée un chapitre). Trois modes&nbsp;: <strong>Automatique</strong>, <strong>Adaptatif</strong> (le premier style de numéro que tu tapes devient le niveau 1) ou <strong>Aucun plan</strong>. Le bouton <strong>Niveau de plan</strong> de la barre d’outils › «&nbsp;Plan de cette séance…&nbsp;» règle une seule séance.</li>
         <li>Un clic dans le plan amène au titre. La barre en haut du plan indique ton avancement dans le cours.</li>
-        <li>Le plan et sa numérotation sont repris dans l'export PDF et Word, avec un sommaire au-delà de six titres.</li>
+        <li>Le bloc <strong>Table des matières</strong> (/table des matières) liste les titres de la séance, cliquables, mis à jour tout seuls. Le plan et sa numérotation sont repris dans l’export PDF et Word.</li>
       </ul>
     </section>
 
     <section id="listes">
       <div class="eyebrow">Écrire un cours</div>
       <h2><em>Listes</em> à puces, numérotées, cases à cocher</h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/03-listes.jpg"><source src="videos/03-listes.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Listes</b><span class="dur">0:45</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/05-listes.jpg"><source src="videos/05-listes.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Listes — Puces, numéros, cases à cocher</b><span class="dur" data-video="05-listes">0:00</span></figcaption></figure>
       <ul>
         <li><strong>Puces</strong>&nbsp;: «&nbsp;-&nbsp;» puis un espace, ou <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>8</kbd>.</li>
-        <li><strong>Numérotée</strong>&nbsp;: «&nbsp;1.&nbsp;» à la suite d'une liste numérotée, <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>7</kbd>, ou /numérotée. Les sous-niveaux passent en a. b. c. puis i. ii. iii.</li>
+        <li><strong>Numérotée</strong>&nbsp;: «&nbsp;1.&nbsp;» à la suite d’une liste numérotée, <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>7</kbd>, ou /numérotée. Les sous-niveaux passent en a. b. c. puis i. ii. iii.</li>
         <li><strong>Cases à cocher</strong>&nbsp;: «&nbsp;[]&nbsp;» puis un espace, ou <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>9</kbd>. Un clic coche la case.</li>
         <li><kbd>Tab</kbd> / <kbd>Maj</kbd><kbd>Tab</kbd>&nbsp;: quatre niveaux de retrait. <kbd>Entrée</kbd> sur un élément vide termine la liste.</li>
         <li>Dans les encadrés, les citations et les cases de tableau, «&nbsp;-&nbsp;» en début de ligne donne aussi une puce.</li>
@@ -239,25 +255,29 @@
 
     <section id="mise-en-forme">
       <div class="eyebrow">Écrire un cours</div>
-      <h2>Mise en <em>forme</em></h2>
+      <h2>Mise en forme, polices et <em>styles</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/06-styles-polices.jpg"><source src="videos/06-styles-polices.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Mise en forme, polices et styles — Gras, couleurs, police par passage, styles enregistrés</b><span class="dur" data-video="06-styles-polices">0:00</span></figcaption></figure>
       <ul>
         <li><strong>Gras, italique, souligné, barré</strong>&nbsp;: <kbd>Ctrl</kbd><kbd>B</kbd>, <kbd>Ctrl</kbd><kbd>I</kbd>, <kbd>Ctrl</kbd><kbd>U</kbd>. <strong>Exposant</strong> <kbd>Ctrl</kbd><kbd>.</kbd>, <strong>indice</strong> <kbd>Ctrl</kbd><kbd>,</kbd>. <kbd>Ctrl</kbd><kbd>\</kbd> efface la mise en forme.</li>
-        <li><strong>Taille du texte</strong>&nbsp;: champ − 16 + dans la barre, ou <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>&gt;</kbd> / <kbd>&lt;</kbd>. S'applique à la sélection ou à la suite de la frappe.</li>
-        <li><strong>Couleurs</strong>&nbsp;: 80 teintes pour le texte, le surlignage, le fond des cases et le dessin, plus les couleurs récentes et une couleur personnalisée. L'encre s'adapte au fond (surlignage foncé → texte blanc).</li>
-        <li><strong>Alignement</strong>&nbsp;: gauche, centré, droite, justifié (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>L</kbd> / <kbd>E</kbd> / <kbd>R</kbd> / <kbd>J</kbd>) pour les paragraphes, titres, listes, encadrés, cases de tableau et images.</li>
+        <li><strong>Taille du texte</strong>&nbsp;: en points comme dans Word (11 par défaut), champ − 11 + dans la barre, ou <kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>&gt;</kbd> / <kbd>&lt;</kbd>. S’applique à la sélection ou à la suite de la frappe.</li>
+        <li><strong>Couleurs</strong>&nbsp;: 80 teintes pour le texte, le surlignage et le fond des cases, plus les couleurs récentes et une couleur personnalisée. L’encre s’adapte au fond (surlignage foncé → texte blanc).</li>
+        <li><strong>Polices</strong>&nbsp;: le bouton <strong>Police</strong> de la barre change la police du texte sélectionné (ou du mot sous le curseur, ou de ce que tu vas taper)&nbsp;: plusieurs polices peuvent cohabiter dans une séance, et la barre affiche celle sous le curseur. L’entrée <strong>Police de tout le document…</strong> change toute la séance d’un coup. Toutes les polices sont libres, sans abonnement&nbsp;; la police générale de tes cours se règle dans Paramètres › Écriture. Les polices de chaque passage sont gardées dans l’export Word.</li>
+        <li><strong>Styles enregistrés</strong>&nbsp;: tu as trouvé la bonne combinaison (gras, couleur, surlignage, police, taille, alignement)&nbsp;? Sélectionne le texte, ouvre <strong>Styles</strong> dans la barre, puis <strong>Enregistrer le style de la sélection…</strong>, donne-lui un nom («&nbsp;Définition&nbsp;», «&nbsp;À retenir&nbsp;»…) et applique-le ensuite d’un clic. Chaque style se renomme, se met à jour ou se supprime depuis le même menu.</li>
+        <li><strong>Alignement</strong>&nbsp;: gauche, centré, droite, justifié (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>L</kbd> / <kbd>E</kbd> / <kbd>R</kbd> / <kbd>J</kbd>) pour les paragraphes, titres, listes, encadrés, cases de tableau, champs de fiche et images.</li>
+        <li><strong>Copier-coller qui garde le style</strong>&nbsp;: taille, couleur, surlignage, police, gras, italique et alignement voyagent d’un cours Alixo à un autre (même pour quelques mots au milieu d’un passage coloré) et jusque dans Word. Un texte copié depuis un site ou Word arrive sans ses couleurs. Tout ce qui est collé est vérifié avant d’entrer dans le cours.</li>
         <li><strong>Remplacements automatiques</strong>&nbsp;: <code>-&gt;</code> → →, <code>=&gt;</code> → ⇒, <code>&lt;=&gt;</code> → ⇔, <code>&gt;=</code> → ≥, <code>!=</code> → ≠, <code>+/-</code> → ±. En mode Santé&nbsp;: Na+ → Na⁺, HCO3- → HCO₃⁻, umol/L → µmol/L. Réglables dans Paramètres › Écriture.</li>
-        <li><strong>Objets</strong> (formule, graphique, tableau, image, dessin)&nbsp;: un clic les sélectionne, <kbd>Suppr</kbd> les retire, la poignée ⋮⋮ les déplace. <kbd>Entrée</kbd> sur un objet sélectionné crée un paragraphe dessous.</li>
-        <li><strong>Correcteur natif</strong>&nbsp;: le soulignement rouge du navigateur est actif (clic droit sur un mot pour les suggestions dans la version PC).</li>
+        <li><strong>Objets</strong> (formule, graphique, tableau, image, arbre, frise)&nbsp;: un clic les sélectionne, <kbd>Suppr</kbd> les retire, la poignée ⋮⋮ les déplace. <kbd>Entrée</kbd> sur un objet sélectionné crée un paragraphe dessous. Un bloc sélectionné au clavier est signalé par une fine barre à gauche.</li>
+        <li><strong>Zoom</strong>&nbsp;: <kbd>Ctrl</kbd> + molette, <kbd>Ctrl</kbd><kbd>+</kbd> / <kbd>−</kbd>, <kbd>Ctrl</kbd><kbd>0</kbd>&nbsp;: toute la feuille grandit, le point sous le curseur reste sous le curseur.</li>
       </ul>
     </section>
 
     <section id="citation">
       <div class="eyebrow">Écrire un cours</div>
       <h2><em>Citation</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/04-citation.jpg"><source src="videos/04-citation.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Citation</b><span class="dur">0:42</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/07-citation.jpg"><source src="videos/07-citation.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Citation — « &gt; » puis la source</b><span class="dur" data-video="07-citation">0:00</span></figcaption></figure>
       <ul>
         <li>«&nbsp;&gt;&nbsp;» puis un espace en début de ligne, ou /citation.</li>
-        <li>Le champ du bas reçoit l'auteur, l'œuvre et l'année (imprimé seulement s'il est rempli). Clic droit sur la source&nbsp;: saisir un <strong>DOI ou un PMID</strong>, la référence est complétée au format Vancouver.</li>
+        <li>La ligne du bas, sous le texte, reçoit l’auteur, l’œuvre et l’année (imprimée seulement si elle est remplie). Clic droit sur la source&nbsp;: saisir un <strong>DOI ou un PMID</strong>, la référence est complétée au format Vancouver.</li>
         <li><kbd>Entrée</kbd> va à la ligne dans la citation&nbsp;; une ligne vide puis <kbd>Entrée</kbd> en sort. <kbd>Entrée</kbd> dans la source crée le paragraphe suivant.</li>
       </ul>
     </section>
@@ -265,17 +285,19 @@
     <section id="encadres">
       <div class="eyebrow">Écrire un cours</div>
       <h2>Les <em>encadrés</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/05-encadres.jpg"><source src="videos/05-encadres.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Définition, À retenir, Exemple, Bilan</b><span class="dur">0:53</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/08-encadres.jpg"><source src="videos/08-encadres.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Les encadrés — Définition, À retenir, Exemple, Bilan — à vos couleurs</b><span class="dur" data-video="08-encadres">0:00</span></figcaption></figure>
+      <p>Les encadrés ont un fond légèrement teinté, une fine barre de couleur et une étiquette discrète&nbsp;: plus de cadre lourd, à l’écran comme à l’impression.</p>
       <div class="doc-cards">
         <div class="doc-card"><b>Définition</b><span>/définition — une notion et sa définition. Reprise dans le dictionnaire de tous les cours.</span></div>
-        <div class="doc-card"><b>À retenir</b><span>/retenir — l'essentiel, mis en valeur.</span></div>
+        <div class="doc-card"><b>À retenir</b><span>/retenir — l’essentiel, mis en valeur.</span></div>
         <div class="doc-card"><b>Exemple</b><span>/exemple — un cas concret.</span></div>
-        <div class="doc-card"><b>Bilan</b><span>/bilan, ou «&nbsp;Bilan :&nbsp;» en début de ligne — la synthèse de fin de partie, sous-titrée «&nbsp;Ce qu'il faut retenir de cette partie&nbsp;».</span></div>
+        <div class="doc-card"><b>Bilan</b><span>/bilan, ou «&nbsp;Bilan&nbsp;:&nbsp;» en début de ligne — la synthèse de fin de partie, sous-titrée «&nbsp;Ce qu’il faut retenir de cette partie&nbsp;».</span></div>
         <div class="doc-card"><b>Droit</b><span>Arrêt de principe, Controverse (doctrine).</span></div>
         <div class="doc-card"><b>Santé</b><span>Drapeaux rouges, Réflexe / piège, Moyen mnémotechnique, Objectifs pédagogiques.</span></div>
       </div>
       <ul>
-        <li>Dans un encadré, <kbd>Entrée</kbd> va à la ligne. Une ligne vide puis <kbd>Entrée</kbd> sort de l'encadré.</li>
+        <li><strong>Tes couleurs</strong>&nbsp;: Paramètres › Apparence › <strong>Couleurs des encadrés</strong> choisit une couleur pour Définition, À retenir, Exemple, Bilan… avec un aperçu immédiat&nbsp;; <strong>Réinitialiser</strong> revient aux couleurs d’origine. Le réglage suit ton compte, s’adapte au thème sombre et vaut aussi pour l’impression, le PDF et le Word.</li>
+        <li>Dans un encadré, <kbd>Entrée</kbd> va à la ligne. Une ligne vide puis <kbd>Entrée</kbd> sort de l’encadré.</li>
         <li>«&nbsp;-&nbsp;» ou «&nbsp;*&nbsp;» en début de ligne donne une puce&nbsp;; <kbd>Entrée</kbd> continue la liste.</li>
         <li>Un encadré peut contenir un tableau, une citation ou un autre encadré&nbsp;: voir <a href="#imbriques">Blocs imbriqués</a>.</li>
       </ul>
@@ -284,30 +306,31 @@
     <section id="onglets">
       <div class="eyebrow">Écrire un cours</div>
       <h2>Onglets dans <em>une séance</em></h2>
-      <p>Comme dans Google Docs, une séance peut avoir plusieurs pages&nbsp;: Cours, TD, Fiches… Bouton <strong>Nouvel onglet</strong> dans le volet du plan (ou clic droit sur un onglet). La barre d'onglets apparaît au-dessus de la feuille dès qu'il y en a deux.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/09-onglets-seance.jpg"><source src="videos/09-onglets-seance.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Onglets dans une séance — Cours, TD, Fiches&nbsp;: plusieurs pages dans une séance</b><span class="dur" data-video="09-onglets-seance">0:00</span></figcaption></figure>
+      <p>Une séance peut avoir plusieurs pages&nbsp;: Cours, TD, Fiches… Bouton <strong>Nouvel onglet</strong> dans le volet du plan (ou clic droit sur un onglet). Le nouvel onglet se nomme directement dans l’onglet, <kbd>Entrée</kbd> valide. La barre d’onglets apparaît au-dessus de la feuille dès qu’il y en a deux.</p>
       <ul>
         <li>Renommer (double-clic), déplacer, supprimer. Chaque onglet a ses blocs, son plan et son journal.</li>
-        <li>La recherche <kbd>Ctrl</kbd><kbd>K</kbd>, le dictionnaire, l'export PDF (un onglet par section) et les archives .zip couvrent tous les onglets.</li>
+        <li>La recherche <kbd>Ctrl</kbd><kbd>K</kbd>, le dictionnaire, l’export PDF (un onglet par section) et les archives .zip couvrent tous les onglets.</li>
       </ul>
     </section>
 
     <!-- ================= PAR FILIÈRE ================= -->
     <section id="droit">
       <div class="eyebrow">Par filière</div>
-      <h2><em>Droit</em>&nbsp;: fiche d'arrêt et références</h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/06-droit.jpg"><source src="videos/06-droit.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Fiche d'arrêt, arrêt de principe, référence Légifrance</b><span class="dur">0:58</span></figcaption></figure>
-      <h3>Fiche d'arrêt</h3>
-      <p>/fiche d'arrêt&nbsp;: référence de l'arrêt, puis <strong>Faits → Problème → Solution → Portée</strong>. <kbd>Entrée</kbd> ou <kbd>Tab</kbd> passe au champ suivant. La fiche est reprise dans le plan, le dictionnaire et les exports.</p>
-      <h3>Référence d'article</h3>
-      <p>Au milieu d'une phrase&nbsp;: <kbd>/</kbd> puis «&nbsp;réf&nbsp;», ou le bouton <strong>§</strong> de la barre. Saisie rapide&nbsp;: «&nbsp;1240 c. civ.&nbsp;», «&nbsp;61-1 const.&nbsp;», «&nbsp;L. 121-1 c. conso&nbsp;»… Codes reconnus&nbsp;: civil, pénal, commerce, travail, procédure civile, Constitution, consommation, CGI. La référence devient un <strong>bouton vers Légifrance</strong>. Une référence tapée au clavier («&nbsp;art. 1240 c. civ.&nbsp;») propose le bouton&nbsp;: <kbd>Tab</kbd> pour l'accepter.</p>
+      <h2><em>Droit</em>&nbsp;: fiche d’arrêt et références</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/10-droit.jpg"><source src="videos/10-droit.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Droit — Fiche d’arrêt, arrêt de principe, référence Légifrance</b><span class="dur" data-video="10-droit">0:00</span></figcaption></figure>
+      <h3>Fiche d’arrêt</h3>
+      <p>/fiche d’arrêt&nbsp;: référence de l’arrêt, puis <strong>Faits → Problème → Solution → Portée</strong>. <kbd>Entrée</kbd> ou <kbd>Tab</kbd> passe au champ suivant. La fiche est reprise dans le plan, le dictionnaire et les exports.</p>
+      <h3>Référence d’article</h3>
+      <p>Tape <strong>«&nbsp;art. 1240 c. civ.&nbsp;»</strong> dans ton texte puis un espace&nbsp;: le lien Légifrance se crée tout seul («&nbsp;Garder en texte&nbsp;» pour annuler). Ça marche avec le nom complet («&nbsp;article 1240 du Code civil&nbsp;»), les articles L. / R. / D., les alinéas et plusieurs articles d’un coup («&nbsp;art. 1240 et 1241 c. civ.&nbsp;»). Le bouton <strong>§</strong> de la barre (ou <kbd>/</kbd> puis «&nbsp;réf&nbsp;» au milieu d’une phrase) ouvre une fenêtre qui retient le dernier code utilisé et tes références récentes. 25 codes et textes reconnus&nbsp;: civil, pénal, commerce, travail, procédures civile et pénale, Constitution, DDHC, Conv. EDH, consommation, CGI, santé publique, sécurité sociale, CJA, CGCT, CRPA, environnement, urbanisme, propriété intellectuelle, monétaire et financier, assurances, rural, éducation, CESEDA, TFUE, TUE. Double-clic sur une référence pour la modifier.</p>
       <h3>Encadrés Droit</h3>
-      <p><strong>Arrêt de principe</strong> et <strong>Controverse</strong> dans la section Droit du menu «&nbsp;/&nbsp;». Les blocs Droit n'apparaissent que si Droit (ou Science politique) est dans ton profil.</p>
+      <p><strong>Arrêt de principe</strong> et <strong>Controverse</strong> dans la section Droit du menu «&nbsp;/&nbsp;». Les blocs Droit n’apparaissent que si Droit (ou Science politique) est dans ton profil. Sur une planche, le modèle <strong>Fiche d’arrêt</strong> et le <strong>plan de dissertation</strong> sont aussi disponibles.</p>
     </section>
 
     <section id="formules">
       <div class="eyebrow">Par filière</div>
       <h2><em>Formules</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/07-formule.jpg"><source src="videos/07-formule.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Formules et bibliothèque de formules</b><span class="dur">0:37</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/11-formules.jpg"><source src="videos/11-formules.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Formules — Tapez en ligne, Entrée compose</b><span class="dur" data-video="11-formules">0:00</span></figcaption></figure>
       <p>/formule (ou <kbd>Ctrl</kbd><kbd>E</kbd>)&nbsp;: on tape la formule <strong>en ligne</strong>, <kbd>Entrée</kbd> la compose. Cliquer sur la formule pour la modifier, <kbd>Maj</kbd><kbd>Entrée</kbd> pour une seconde ligne, <kbd>Échap</kbd> pour annuler.</p>
       <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Formules"><table class="doc-table">
         <tr><th>Tu tapes</th><th>Tu obtiens</th></tr>
@@ -330,8 +353,8 @@
     <section id="graphiques-eco">
       <div class="eyebrow">Par filière</div>
       <h2>Graphiques <em>économiques</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/08-graphique-eco.jpg"><source src="videos/08-graphique-eco.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Offre / demande, IS-LM, traceur de fonctions</b><span class="dur">0:51</span></figcaption></figure>
-      <p>/graphique économique (ou <kbd>Ctrl</kbd><kbd>G</kbd>)&nbsp;: dix gabarits interactifs, les courbes se <strong>glissent à la souris</strong> et l'équilibre se recalcule.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/12-graphiques-eco.jpg"><source src="videos/12-graphiques-eco.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Graphiques économiques — Offre / demande, IS-LM, traceur de fonctions</b><span class="dur" data-video="12-graphiques-eco">0:00</span></figcaption></figure>
+      <p>/graphique économique (ou <kbd>Ctrl</kbd><kbd>G</kbd>)&nbsp;: dix gabarits interactifs, les courbes se <strong>glissent à la souris</strong> et l’équilibre se recalcule.</p>
       <div class="doc-cards">
         <div class="doc-card"><b>Offre / Demande</b><span>▲ ▼ déplacent D et O, bouton Surplus (consommateur et producteur), réinitialiser.</span></div>
         <div class="doc-card"><b>IS-LM</b><span>Taux, revenu, déplacement des courbes.</span></div>
@@ -347,35 +370,35 @@
     <section id="graphique-donnees">
       <div class="eyebrow">Par filière</div>
       <h2>Graphique de <em>données</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/09-graphique-donnees.jpg"><source src="videos/09-graphique-donnees.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Barres, courbes, aires, secteurs</b><span class="dur">0:41</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/13-graphique-donnees.jpg"><source src="videos/13-graphique-donnees.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Graphique de données — Barres, courbes, aires, secteurs</b><span class="dur" data-video="13-graphique-donnees">0:00</span></figcaption></figure>
       <ul>
         <li>/graphique de données&nbsp;: barres, barres horizontales, courbes, aires, secteurs, anneau.</li>
-        <li><strong>Données…</strong>&nbsp;: une ligne par catégorie, une colonne par série, la première ligne nomme les séries. On peut <strong>coller une plage depuis Excel ou Google Sheets</strong>. Titre, unité, bornes de l'axe.</li>
-        <li>Légende, valeurs sur les barres, empilement, couleurs par série. Rendu en SVG, net dans le PDF et le Word.</li>
+        <li><strong>Données…</strong> ouvre une grille&nbsp;: catégories en lignes, séries en colonnes, <kbd>Entrée</kbd> passe à la ligne suivante, + Ligne / + Série, et le graphique se met à jour pendant la saisie. On peut <strong>coller une plage depuis Excel ou Google Sheets</strong>. Titre, unité, bornes de l’axe. Un mode texte (une ligne par catégorie) reste disponible.</li>
+        <li>Légende, valeurs sur les barres, empilement, couleurs par série. Rendu net dans le PDF et le Word. Même grille dans les présentations.</li>
       </ul>
     </section>
 
     <section id="sante">
       <div class="eyebrow">Par filière</div>
       <h2><em>Santé</em>&nbsp;: fiches, scores, calculateurs</h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/16-sante.jpg"><source src="videos/16-sante.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Fiche pathologie, score CURB-65, calculateur IMC</b><span class="dur">0:56</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/14-sante.jpg"><source src="videos/14-sante.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Santé — Fiche pathologie, score CURB-65, calculateur IMC</b><span class="dur" data-video="14-sante">0:00</span></figcaption></figure>
       <p>Avec Médecine, Pharmacie, Odontologie, Maïeutique ou Kinésithérapie dans le profil, le menu «&nbsp;/&nbsp;» ajoute une section Santé.</p>
       <ul>
-        <li><strong>Fiches</strong>&nbsp;: pathologie (définition → épidémio → physiopath → clinique → paraclinique → DDx → traitement), médicament (DCI, classe, mécanisme, indications, CI, EI, posologie), sémiologie, cas clinique, conduite à tenir, recommandation HAS, lecture critique d'article (PICO), anatomie, histologie, génétique, vaccin, station ECOS (minuteur 7 min), dossier progressif / QI, et par filière&nbsp;: galénique, dent FDI, bilan kiné, suivi de grossesse. <kbd>Entrée</kbd> ou <kbd>Tab</kbd> passe au champ suivant.</li>
+        <li><strong>Fiches</strong>&nbsp;: pathologie (définition → épidémio → physiopath → clinique → paraclinique → DDx → traitement), médicament (DCI, classe, mécanisme, indications, CI, EI, posologie), sémiologie, cas clinique, conduite à tenir, recommandation HAS, lecture critique d’article (PICO), anatomie, histologie, génétique, vaccin, station ECOS (minuteur 7 min), dossier progressif / QI, et par filière&nbsp;: galénique, dent FDI, bilan kiné, suivi de grossesse. <kbd>Entrée</kbd> ou <kbd>Tab</kbd> passe au champ suivant.</li>
         <li><strong>Encadrés</strong>&nbsp;: Drapeaux rouges, Réflexe / piège, Mnémotechnique, Objectifs pédagogiques (à cocher). <strong>Triade / tétrade</strong> et <strong>diagnostic différentiel</strong> en tableaux.</li>
-        <li><strong>Scores cliniques</strong> calculés&nbsp;: Glasgow, CHA₂DS₂-VASc, HAS-BLED, Wells, CURB-65, qSOFA, Apgar, Bishop, Child, NYHA, Killip… On coche les critères, le total et l'interprétation se mettent à jour.</li>
+        <li><strong>Scores cliniques</strong> calculés&nbsp;: Glasgow, CHA₂DS₂-VASc, HAS-BLED, Wells, CURB-65, qSOFA, Apgar, Bishop, Child, NYHA, Killip… On coche les critères, le total et l’interprétation se mettent à jour.</li>
         <li><strong>Calculateurs</strong>&nbsp;: IMC, surface corporelle, Cockcroft, CKD-EPI, MDRD, QTc, PAM, trou anionique, LDL, osmolarité, Bayes…</li>
-        <li><strong>Item LiSA</strong> (numéro, intitulé, rang) et <strong>rang A / B</strong> au milieu d'une phrase, avec le filtre «&nbsp;Rang A seulement&nbsp;» dans le plan. Notation automatique des ions, unités et symboles.</li>
+        <li><strong>Item LiSA</strong> (numéro, intitulé, rang) et <strong>rang A / B</strong> au milieu d’une phrase, avec le filtre «&nbsp;Rang A seulement&nbsp;» dans le plan. Notation automatique des ions, unités et symboles.</li>
       </ul>
     </section>
 
     <section id="commerce-staps">
       <div class="eyebrow">Par filière</div>
       <h2><em>Commerce</em> et <em>STAPS</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/17-commerce-staps.jpg"><source src="videos/17-commerce-staps.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Analyse SWOT, séance d'entraînement</b><span class="dur">0:56</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/15-commerce-staps.jpg"><source src="videos/15-commerce-staps.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Commerce et STAPS — Analyse SWOT, séance d’entraînement</b><span class="dur" data-video="15-commerce-staps">0:00</span></figcaption></figure>
       <ul>
         <li><strong>Commerce &amp; marketing</strong>&nbsp;: analyse SWOT, PESTEL, marketing mix (4P), persona client, étude de cas, fiche négociation / vente (CAP / SONCAS). Formules&nbsp;: marge, taux de marque, seuil de rentabilité, élasticité, panier moyen, CAC, LTV. Les graphiques économiques sont ouverts à Commerce.</li>
-        <li><strong>STAPS</strong>&nbsp;: séance d'entraînement, fiche APSA, cycle / progression, fiche muscle, physiologie de l'effort, observation de pratique. Formules&nbsp;: FC max, Karvonen, VO₂max, MET, charge d'entraînement, index de fatigue.</li>
+        <li><strong>STAPS</strong>&nbsp;: séance d’entraînement, fiche APSA, cycle / progression, fiche muscle, physiologie de l’effort, observation de pratique. Formules&nbsp;: FC max, Karvonen, VO₂max, MET, charge d’entraînement, index de fatigue.</li>
       </ul>
     </section>
 
@@ -383,278 +406,462 @@
     <section id="tableau">
       <div class="eyebrow">Mise en page</div>
       <h2><em>Tableau</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/10-tableau.jpg"><source src="videos/10-tableau.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Tableau, fusion de cases</b><span class="dur">0:47</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/16-tableau.jpg"><source src="videos/16-tableau.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Tableau — Cases, fusion, copier-coller</b><span class="dur" data-video="16-tableau">0:00</span></figcaption></figure>
       <ul>
-        <li>/tableau&nbsp;: 3 × 3, première ligne en en-tête. <kbd>Tab</kbd> passe de case en case et ajoute une ligne en bout de tableau&nbsp;; <kbd>Retour arrière</kbd> au début d'une ligne vide la supprime.</li>
-        <li>Barre du tableau&nbsp;: + / − ligne, + / − colonne, <strong>Fusionner</strong> (sélection de plusieurs cases par glisser ou <kbd>Maj</kbd>+clic) et <strong>Scinder</strong>, en-tête, Copier, Dupliquer, Supprimer. Largeur des colonnes réglable à la souris.</li>
-        <li>Clic droit dans une case&nbsp;: couleur de fond, alignement, lignes et colonnes, convertir en texte.</li>
+        <li>/tableau&nbsp;: un <strong>quadrillage</strong> s’affiche, tu glisses la souris pour choisir le nombre de colonnes et de lignes («&nbsp;5 colonnes × 4 lignes&nbsp;») puis tu cliques (<kbd>Entrée</kbd> tout de suite&nbsp;: 3 × 3). Première ligne en en-tête. <kbd>Tab</kbd> passe de case en case et ajoute une ligne en bout de tableau&nbsp;; <kbd>Retour arrière</kbd> au début d’une ligne vide la supprime.</li>
+        <li>Barre du tableau, qui flotte au-dessus&nbsp;: + / − ligne, + / − colonne, <strong>Fusionner</strong> (sélection de plusieurs cases par glisser ou <kbd>Maj</kbd>+clic) et <strong>Scinder</strong>, en-tête, Copier, Dupliquer, Supprimer. Largeur des colonnes réglable à la souris.</li>
+        <li>Clic droit dans une case&nbsp;: couleur de fond, alignement, lignes et colonnes, convertir en texte. Sur un mot souligné en rouge, le clic droit propose d’abord les corrections, puis «&nbsp;Actions du tableau…&nbsp;».</li>
         <li><strong>Copier-coller</strong>&nbsp;: un tableau copié se recolle dans le cours, dans une case ou un encadré, ou dans Word / Excel. Un tableau copié depuis Excel, Word ou une page web crée un vrai tableau. Les fusions sont conservées partout, y compris dans le PDF et le Word.</li>
       </ul>
     </section>
 
     <section id="image">
       <div class="eyebrow">Mise en page</div>
-      <h2><em>Image</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/11-image.jpg"><source src="videos/11-image.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Insérer, aligner, redimensionner, légender</b><span class="dur">0:37</span></figcaption></figure>
+      <h2><em>Image</em> et retouches</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/17-image.jpg"><source src="videos/17-image.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Image et retouches — Insérer, aligner, légender, retoucher</b><span class="dur" data-video="17-image">0:00</span></figcaption></figure>
       <ul>
-        <li>/image, collage d'une capture (<kbd>Ctrl</kbd><kbd>V</kbd>) ou glisser-déposer d'un fichier sur la feuille.</li>
-        <li>Un clic sélectionne l'image&nbsp;: poignées de taille, barre flottante (à gauche / centrée / à droite avec le texte autour, taille, recadrer, remplacer, légende, supprimer). Clic droit&nbsp;: taille en % ou en pixels, recadrage non destructif.</li>
-        <li>Réduites à 1 400 px, stockées sur l'appareil et synchronisées avec le compte. Exportées en PDF, Word et HTML.</li>
+        <li>/image ou le bouton <strong>Image</strong> de la barre&nbsp;: <strong>Insérer une image</strong> (les photos déjà présentes dans tes documents, ou «&nbsp;Importer depuis l’ordinateur&nbsp;» avec une fenêtre où glisser ou coller) ou <strong>Insérer une image via téléphone</strong> (QR code, photo prise ou choisie dans la galerie, qui arrive au curseur). Collage d’une capture (<kbd>Ctrl</kbd><kbd>V</kbd>) ou glisser-déposer d’un fichier sur la feuille.</li>
+        <li>Un clic sélectionne l’image&nbsp;: poignées de taille, barre flottante (à gauche / centrée / à droite avec le texte autour, taille, recadrer, remplacer, légende, supprimer, Plus d’outils).</li>
+        <li><strong>Clic droit › Retouches</strong>&nbsp;: luminosité, contraste, saturation, noir et blanc, pivoter, retourner, coins arrondis, bordure, ombre, taille en % ou en pixels, recadrage non destructif, <strong>texte alternatif</strong>, copier, télécharger, dupliquer. <strong>Réinitialiser l’image</strong> revient à l’original à tout moment, <kbd>Ctrl</kbd><kbd>Z</kbd> annule chaque retouche.</li>
+        <li><strong>Supprimer le fond</strong> <span class="plus-badge">Alixo+</span>&nbsp;: tolérance réglable, aperçu, clic dans l’image pour désigner la couleur à retirer. Le détourage est calculé sur ton appareil, sans service externe.</li>
+        <li>Réduites à 1 400 px, stockées sur l’appareil et synchronisées avec le compte. Exportées en PDF, Word et page web.</li>
       </ul>
     </section>
 
     <section id="dessin">
       <div class="eyebrow">Mise en page</div>
       <h2><em>Dessin</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/12-dessin.jpg"><source src="videos/12-dessin.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Formes, flèches, texte, main levée</b><span class="dur">0:44</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/18-dessin.jpg"><source src="videos/18-dessin.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Dessin — Des objets posés sur le cours</b><span class="dur" data-video="18-dessin">0:00</span></figcaption></figure>
+      <p>Dessiner, c’est glisser un objet sur la page. Le bouton <strong>Dessin</strong> de la barre d’outils (ou /dessin) ouvre un panneau à droite&nbsp;: tu y attrapes un objet et tu le déposes où tu veux sur le document.</p>
       <ul>
-        <li>/dessin&nbsp;: une feuille façon Google Docs dans le cours. Outils&nbsp;: sélection, rectangle, rectangle arrondi, ellipse, triangle, losange, pentagone, hexagone, étoile, parallélogramme, cylindre, bulle, trait, flèche, double flèche, texte, main levée.</li>
-        <li>Raccourcis&nbsp;: <kbd>V</kbd> sélection, <kbd>R</kbd> rectangle, <kbd>O</kbd> ellipse, <kbd>L</kbd> trait, <kbd>A</kbd> flèche, <kbd>T</kbd> texte, <kbd>P</kbd> main levée. Un simple clic avec un outil pose une forme standard&nbsp;; double-clic ou <kbd>Entrée</kbd> écrit dans la forme.</li>
-        <li>Couleurs de trait et de fond, épaisseur, pointillés, opacité, grille magnétique, alignement sur la feuille, avancer / reculer, <kbd>Maj</kbd> pour garder les proportions, <kbd>Tab</kbd> pour passer de forme en forme, <kbd>Ctrl</kbd><kbd>C</kbd> / <kbd>V</kbd> copie une forme, <kbd>Ctrl</kbd><kbd>D</kbd> duplique.</li>
-        <li>Rendu en SVG, rasterisé dans le PDF et le Word.</li>
+        <li><strong>Quinze objets</strong> — rectangle, ellipse, triangle, étoile, bulle, trait, flèche, zone de texte… — plus la <strong>main levée</strong>. L’objet se pose <strong>par-dessus le texte</strong> et reste accroché à son paragraphe&nbsp;: saute des lignes pour lui faire de la place, il suit le texte si tu écris au-dessus. Un clic sur un bouton du panneau l’insère aussi à l’endroit du curseur.</li>
+        <li><strong>Clic gauche pour régler</strong>&nbsp;: l’objet sélectionné affiche ses réglages dans le panneau (couleur et épaisseur du trait, tirets, remplissage, opacité, texte, ordre). Sans sélection, le panneau règle les prochains objets.</li>
+        <li><strong>Clic droit pour agir</strong>&nbsp;: Avancer d’un niveau, Reculer d’un niveau, Dupliquer, Supprimer, couleurs et texte.</li>
+        <li><strong>Au clavier</strong>&nbsp;: flèches pour déplacer, <kbd>Alt</kbd>+flèches pour la taille, <kbd>Suppr</kbd>, <kbd>Ctrl</kbd><kbd>D</kbd> duplique, <kbd>Tab</kbd> passe à l’objet suivant, <kbd>Échap</kbd>. Annuler / rétablir à chaque étape.</li>
+        <li>Les <strong>anciens cadres Dessin</strong> de tes cours restent à leur place et se modifient avec le même panneau. À l’impression et dans le PDF, les objets sortent là où tu les as posés&nbsp;; dans le Word, en image sous leur paragraphe.</li>
       </ul>
     </section>
 
     <section id="arbre">
       <div class="eyebrow">Mise en page</div>
       <h2><em>Arbre</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/13-arbre.jpg"><source src="videos/13-arbre.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Racine, branches, feuilles</b><span class="dur">0:35</span></figcaption></figure>
-      <p>/arbre&nbsp;: une arborescence dessinée de haut en bas avec ses connecteurs, pour un plan, un arbre de décision, un organigramme ou une généalogie. On tape dans chaque nœud&nbsp;; <kbd>Tab</kbd> ajoute un enfant, <kbd>Entrée</kbd> un frère, <kbd>Retour arrière</kbd> sur un nœud vide le supprime. Des boutons apparaissent au survol. Exporté en plan indenté.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/19-arbre.jpg"><source src="videos/19-arbre.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Arbre — Racine, branches, feuilles</b><span class="dur" data-video="19-arbre">0:00</span></figcaption></figure>
+      <p>/arbre&nbsp;: une arborescence dessinée de haut en bas avec ses connecteurs, pour un plan, un arbre de décision, un organigramme ou une généalogie. On tape dans chaque nœud&nbsp;; <kbd>Tab</kbd> ajoute un enfant, <kbd>Entrée</kbd> un frère, <kbd>Retour arrière</kbd> sur un nœud vide le supprime. Des boutons apparaissent au survol, sans décaler le cours. Exporté en plan indenté.</p>
     </section>
 
     <section id="cartes">
       <div class="eyebrow">Mise en page</div>
       <h2><em>Cartes</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/14-cartes.jpg"><source src="videos/14-cartes.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Vignettes titre + texte</b><span class="dur">0:39</span></figcaption></figure>
-      <p>/cartes&nbsp;: une grille de trois cartes par ligne, chacune avec un titre et un texte (notions, acteurs, étapes…). <kbd>Entrée</kbd> passe du titre au texte, <kbd>Tab</kbd> à la carte suivante, boutons + carte / − carte. Relues par l'IA pendant la frappe, exportées en PDF et Word.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/20-cartes.jpg"><source src="videos/20-cartes.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Cartes — Vignettes titre + texte</b><span class="dur" data-video="20-cartes">0:00</span></figcaption></figure>
+      <p>/cartes&nbsp;: une grille de trois cartes par ligne, chacune avec un titre et un texte (notions, acteurs, étapes…). Un clic place le curseur directement dans le champ, <kbd>Entrée</kbd> passe du titre au texte, <kbd>Tab</kbd> à la carte suivante, boutons + carte / − carte au survol. Exportées en PDF et Word.</p>
+    </section>
+
+    <section id="frise">
+      <div class="eyebrow">Mise en page</div>
+      <h2>Frise <em>chronologique</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/21-frise.jpg"><source src="videos/21-frise.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Frise chronologique — Dates, titres, à l’horizontale ou à la verticale</b><span class="dur" data-video="21-frise">0:00</span></figcaption></figure>
+      <p>/frise&nbsp;: une frise se pose dans le cours, avec pour chaque événement une <strong>date</strong> (libre&nbsp;: «&nbsp;1789&nbsp;», «&nbsp;v. 1450&nbsp;», «&nbsp;1914-1918&nbsp;»), un <strong>titre</strong> et une <strong>description</strong>. <kbd>Entrée</kbd> passe au champ suivant puis crée l’événement d’après&nbsp;; au survol, chaque événement se déplace, change de couleur ou se supprime. Un bouton bascule la frise <strong>à la verticale ou à l’horizontale</strong>. Elle sort dans le PDF, l’impression et l’export Word.</p>
     </section>
 
     <section id="petits-blocs">
       <div class="eyebrow">Mise en page</div>
-      <h2>Minuteur, lien, <em>séparateur</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/15-minuteur-lien-separateur.jpg"><source src="videos/15-minuteur-lien-separateur.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Minuteur, lien, séparateur</b><span class="dur">0:44</span></figcaption></figure>
+      <h2>Minuteur, lien, bouton, <em>séparateur</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/22-petits-blocs.jpg"><source src="videos/22-petits-blocs.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Minuteur, lien, bouton, séparateur — Les petits blocs qui rendent service</b><span class="dur" data-video="22-petits-blocs">0:00</span></figcaption></figure>
       <ul>
-        <li><strong>Minuteur</strong> (/minuteur)&nbsp;: compte à rebours ou chronomètre dans le cours, presets de 1 à 60 min, libellé. Le panneau ⏱ de la barre (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>T</kbd>) propose en plus les tours, un signal sonore et le temps restant dans la barre du haut.</li>
-        <li><strong>Lien</strong> (/lien ou bouton de la barre)&nbsp;: un bouton cliquable dans le cours&nbsp;; dans le PDF, un <strong>QR code</strong> est ajouté sous le paragraphe.</li>
+        <li><strong>Minuteur</strong> (/minuteur)&nbsp;: compte à rebours ou chronomètre dans le cours, avec un anneau de progression, un état clair (En pause, Temps écoulé) et les boutons Démarrer, Mettre en pause, Reprendre, Relancer. Le temps restant reste visible en haut de l’écran, dans tous les cours. Le panneau chronomètre de la barre (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>T</kbd>) propose en plus les tours et un signal sonore.</li>
+        <li><strong>Lien</strong> (/lien ou bouton de la barre)&nbsp;: un lien cliquable dans le cours&nbsp;; dans le PDF, un <strong>QR code</strong> est ajouté sous le paragraphe.</li>
+        <li><strong>Bouton de lien</strong> (/bouton)&nbsp;: un bouton coloré qui ouvre un autre cours, un fichier de ta bibliothèque ou une page web. Texte, icône, couleur, taille et alignement, avec un aperçu en direct. Si la cible est supprimée ou n’est pas partagée avec tes lecteurs, le bouton l’indique au lieu de mener nulle part.</li>
+        <li><strong>Document</strong> (/document)&nbsp;: une carte cliquable vers une séance, une présentation, un tableur, un quiz ou une planche de ta bibliothèque&nbsp;; un clic l’ouvre dans un onglet. «&nbsp;Changer de document…&nbsp;» et «&nbsp;Retirer&nbsp;» au survol ou par clic droit.</li>
         <li><strong>Séparateur</strong>&nbsp;: «&nbsp;--&nbsp;» seul sur la ligne puis <kbd>Entrée</kbd>, ou /séparateur.</li>
-        <li><strong>Saut de page</strong> (/saut)&nbsp;: ce qui suit commence sur une nouvelle page, à l'écran comme dans le PDF.</li>
+        <li><strong>Saut de page</strong> (/saut)&nbsp;: ce qui suit commence sur une nouvelle page, à l’écran comme dans le PDF et le Word.</li>
       </ul>
     </section>
 
     <section id="imbriques">
       <div class="eyebrow">Mise en page</div>
       <h2>Blocs <em>imbriqués</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/18-blocs-imbriques.jpg"><source src="videos/18-blocs-imbriques.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Tableau, citation, encadré dans un encadré</b><span class="dur">0:41</span></figcaption></figure>
-      <p>Dans un encadré, une citation ou une case de tableau, <kbd>/</kbd> propose la section «&nbsp;Dans ce bloc&nbsp;»&nbsp;: tableau, citation ou encadré imbriqué, jusqu'à trois niveaux. <kbd>Tab</kbd> passe de case en case, <kbd>Ctrl</kbd><kbd>Entrée</kbd> (ou <kbd>Entrée</kbd> sur une ligne vide) sort du bloc imbriqué, <kbd>Retour arrière</kbd> au début retire l'habillage, clic droit&nbsp;: lignes, colonnes, en-tête, copier, convertir en texte.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/23-imbriques.jpg"><source src="videos/23-imbriques.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Blocs imbriqués — Un tableau dans un encadré, une citation dans une case</b><span class="dur" data-video="23-imbriques">0:00</span></figcaption></figure>
+      <p>Dans un encadré, une citation ou une case de tableau, <kbd>/</kbd> propose la section «&nbsp;Dans ce bloc&nbsp;»&nbsp;: tableau, citation ou encadré imbriqué, jusqu’à trois niveaux. <kbd>Tab</kbd> passe de case en case, <kbd>Ctrl</kbd><kbd>Entrée</kbd> (ou <kbd>Entrée</kbd> sur une ligne vide) sort du bloc imbriqué, <kbd>Retour arrière</kbd> au début retire l’habillage, clic droit&nbsp;: lignes, colonnes, en-tête, copier, convertir en texte.</p>
+    </section>
+
+    <section id="scan">
+      <div class="eyebrow">Mise en page</div>
+      <h2>Scanner une <em>feuille</em> depuis le téléphone</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/24-scan.jpg"><source src="videos/24-scan.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Scanner une feuille — Un QR code, une photo, une page entière</b><span class="dur" data-video="24-scan">0:00</span></figcaption></figure>
+      <ol class="doc-steps">
+        <li>Tape <kbd>/</kbd> puis <strong>Scanner un document</strong> (ou clic droit dans la bibliothèque › Nouveau › <strong>Scanner une feuille avec le téléphone…</strong>)&nbsp;: un QR code s’affiche. Il faut être connecté à ton compte sur l’ordinateur&nbsp;; rien à installer sur le téléphone.</li>
+        <li>Scanne le code avec l’appareil photo du téléphone et photographie la feuille, en portrait ou en paysage. La case <strong>Noir et blanc</strong> donne un rendu «&nbsp;photocopie&nbsp;» bien lisible.</li>
+        <li>Chaque page arrive sur <strong>une page entière</strong> de la séance&nbsp;; tu peux en scanner plusieurs d’affilée.</li>
+        <li>Sur un document scanné, on <strong>dessine seulement</strong>&nbsp;: stylo, surligneur, rectangle, ellipse, flèche, trait, avec une petite barre d’outils sous la page (utilisable au clavier&nbsp;: <kbd>Tab</kbd> ou <kbd>Alt</kbd><kbd>F10</kbd>).</li>
+      </ol>
+      <div class="doc-note warn"><p><b>Droit de copie.</b> Ne scanne que des documents que tu as le droit de copier pour toi. Une page de manuel ou le polycopié d’un enseignant ne se partage pas et ne se dépose pas dans le Workspace sans l’accord de son auteur&nbsp;: le dépôt d’une séance contenant des scans te demande de le confirmer.</p></div>
     </section>
 
     <!-- ================= DOCUMENTS ================= -->
     <section id="tableur">
       <div class="eyebrow">Documents</div>
       <h2><em>Tableurs</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/19-tableur.jpg"><source src="videos/19-tableur.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Formules, assistant, graphique de la sélection</b><span class="dur">0:51</span></figcaption></figure>
-      <p>«&nbsp;+ Tableur&nbsp;» dans la bibliothèque (ou clic droit › Nouveau tableur ici). Grille A1 extensible, plusieurs feuilles par classeur, colonnes et lignes réglables, lignes et colonnes figées.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/25-tableur.jpg"><source src="videos/25-tableur.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Tableurs — Formules, assistant, graphique de la sélection</b><span class="dur" data-video="25-tableur">0:00</span></figcaption></figure>
+      <p><strong>Nouveau › Tableur</strong> dans la bibliothèque (ou clic droit sur le fond › Nouveau). Grille A1 extensible, plusieurs feuilles par classeur (double-clic sur l’onglet pour renommer), colonnes et lignes réglables, lignes et colonnes figées.</p>
       <ul>
         <li><strong>Formules</strong>&nbsp;: <code>=A1+B2</code>, plages <code>A1:B10</code>, opérateurs + − × ÷ ^ % &amp;, une cinquantaine de fonctions <strong>en français et en anglais</strong>&nbsp;: SOMME, MOYENNE, MIN, MAX, NB, NBVAL, MEDIANE, ECARTYPE, SOMME.SI, NB.SI, MOYENNE.SI, RANG, SI, ET, OU, SIERREUR, ARRONDI, RACINE, PUISSANCE, MOD, RECHERCHEV, INDEX, EQUIV, CONCATENER, GAUCHE, DROITE, NBCAR, MAJUSCULE, AUJOURDHUI, ANNEE… Erreurs lisibles&nbsp;: #DIV/0!, #NOM?, #VALEUR!, #CYCLE!.</li>
-        <li><strong>Assistant</strong>&nbsp;: dès qu'une cellule commence par <code>=</code>, les fonctions sont proposées (<kbd>↑</kbd> <kbd>↓</kbd> puis <kbd>Tab</kbd>), la signature s'affiche avec l'argument en cours, un aperçu du résultat ou l'explication de l'erreur, et les cellules citées se colorent. Bouton <strong>fx</strong>&nbsp;: insérer une fonction par catégories. Bouton <strong>?</strong>&nbsp;: guide des formules.</li>
+        <li><strong>Assistant</strong>&nbsp;: dès qu’une cellule commence par <code>=</code>, les fonctions sont proposées (<kbd>↑</kbd> <kbd>↓</kbd> puis <kbd>Tab</kbd>), la signature s’affiche avec l’argument en cours, un aperçu du résultat ou l’explication de l’erreur, et les cellules citées se colorent. Bouton <strong>fx</strong>&nbsp;: insérer une fonction par catégories. Bouton <strong>?</strong>&nbsp;: guide des formules.</li>
         <li><strong>Mise en forme</strong>&nbsp;: gras, italique, souligné, alignement, renvoi à la ligne, couleurs, formats Nombre / Monnaie (€) / Pourcentage / Date et décimales. Saisir «&nbsp;12,5 %&nbsp;» ou «&nbsp;40 €&nbsp;» applique le format tout seul.</li>
-        <li><strong>Édition</strong>&nbsp;: insérer et supprimer des lignes et colonnes, tri A→Z / Z→A, copier-coller avec Excel, LibreOffice et Google Sheets, annuler / rétablir, menus contextuels. <kbd>F2</kbd> modifier, <kbd>Ctrl</kbd>+flèche bord de la zone remplie.</li>
-        <li><strong>Barre d'état</strong>&nbsp;: somme, moyenne, min, max et nombre de valeurs de la sélection. <strong>Graphique de la sélection</strong> dans le volet de droite (barres, courbes, aires, secteurs, anneau).</li>
-        <li><strong>Entrées et sorties</strong>&nbsp;: import CSV, export CSV, export PDF (A4 paysage, une page par feuille)&nbsp;; dans l'archive .zip d'un dossier, chaque feuille part en CSV. Synchronisé, partageable, cherchable avec <kbd>Ctrl</kbd><kbd>K</kbd>.</li>
+        <li><strong>Édition</strong>&nbsp;: insérer et supprimer des lignes et colonnes, tri A→Z / Z→A, copier-coller avec Excel, LibreOffice et Google Sheets, annuler / rétablir, menus contextuels. <kbd>F2</kbd> modifier, <kbd>Ctrl</kbd>+flèche bord de la zone remplie, <kbd>Ctrl</kbd> + molette pour zoomer.</li>
+        <li><strong>Barre d’état</strong>&nbsp;: somme, moyenne, min, max et nombre de valeurs de la sélection. <strong>Graphique de la sélection</strong> dans le volet de droite (barres, courbes, aires, secteurs, anneau).</li>
+        <li><strong>Entrées et sorties</strong>&nbsp;: import CSV&nbsp;; le bouton <strong>Télécharger</strong> propose le fichier Alixo, le PDF (A4 paysage, une page par feuille) et le CSV de la feuille&nbsp;; dans l’archive .zip d’un dossier, chaque feuille part en CSV. Synchronisé, partageable, cherchable avec <kbd>Ctrl</kbd><kbd>K</kbd>. Coco (<kbd>F8</kbd>) répond à tes questions sur le classeur et peut le modifier.</li>
       </ul>
     </section>
 
     <section id="presentations">
       <div class="eyebrow">Documents</div>
       <h2><em>Présentations</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/20-presentation.jpg"><source src="videos/20-presentation.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Diapositives, palette de blocs, mode présentation</b><span class="dur">0:48</span></figcaption></figure>
-      <p>«&nbsp;+ Présentation&nbsp;» dans la bibliothèque&nbsp;: des diapositives 16:9 dans le style Alixo, l'accent prenant la teinte du dossier.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/26-presentation.jpg"><source src="videos/26-presentation.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Présentations — Diapositives, dispositions, thèmes, blocs</b><span class="dur" data-video="26-presentation">0:00</span></figcaption></figure>
+      <p><strong>Nouveau › Présentation</strong> dans la bibliothèque&nbsp;: des diapositives 16:9 dans le style Alixo, l’accent prenant la teinte du dossier.</p>
       <ul>
-        <li><strong>34 blocs</strong> en trois catégories, avec recherche&nbsp;: Texte (titre, sous-titre, texte, étiquette, listes, cases, citation, code), Cours (encadré, terme + définition, fiche d'arrêt, formule, tableau, chiffre clé, trois chiffres, question à choix, étapes / frise, comparaison, plan, infos de séance), Visuel (image, icône, forme, flèche, séparateur, post-it, bulle, badge, barre de progression, graphiques, lien + QR code, numéro de page). Un clic ou un glisser les pose sur la diapositive.</li>
-        <li>Double-clic pour écrire dans un élément&nbsp;; chaque élément se déplace (poignée) et se redimensionne (8 poignées)&nbsp;; sélection multiple, alignement, duplication, Annuler / Rétablir.</li>
-        <li><strong>+ Diapositive</strong> propose des gabarits (titre, titre et texte, deux colonnes, section, chiffres clés, plan…). Vignettes réordonnables, dupliquer, supprimer. Fond de la diapositive (papier, teinte douce, teinte pleine, sombre), <strong>12 thèmes</strong> de couleurs et polices, couleur d'accent.</li>
-        <li><strong>Notes</strong> pour l'orateur, mode <strong>Présenter</strong> (<kbd>F5</kbd>) en plein écran avec flèches, export <strong>PDF 16:9</strong> une diapositive par page. Se partage comme une séance.</li>
+        <li><strong>Diapositives</strong>&nbsp;: + Diapositive (<kbd>Ctrl</kbd><kbd>M</kbd>) propose <strong>seize dispositions</strong>&nbsp;: titre, titre et texte, deux colonnes, trois colonnes, section, chiffres clés, plan, image et texte, image plein cadre, citation, comparaison, titre et vidéo, titre et quiz, Merci / Questions&nbsp;?… Vignettes réordonnables, dupliquer, supprimer. Fond de la diapositive (papier, teinte douce, teinte pleine, sombre), couleur d’accent.</li>
+        <li><strong>Thèmes</strong>&nbsp;: 12 thèmes de couleurs et polices pour tous, plus <strong>12 thèmes signature</strong> <span class="plus-badge">Alixo+</span> avec motif de fond et forme signature (Aurore, Granit, Lagon, Kraft, Bauhaus, Prisme, Olive, Cobalt, Pointillé, Rubis, Nuit étoilée, Menthe). Une présentation reçue garde son thème, quel que soit ton abonnement.</li>
+        <li><strong>Blocs</strong>, en trois catégories avec recherche&nbsp;: Texte (titre, sous-titre, texte, étiquette, listes, cases, citation, code), Cours (encadré, terme + définition, fiche d’arrêt, formule, tableau, chiffre clé, trois chiffres, question à choix, étapes / frise, comparaison, plan, infos de séance), Visuel (image, icône, forme, flèche, séparateur, post-it, bulle, badge, barre de progression, graphiques, lien + QR code, numéro de page, vidéo, quiz). Un clic ou un glisser les pose sur la diapositive&nbsp;; double-clic pour écrire&nbsp;; déplacement, huit poignées, sélection multiple, alignement, duplication, Annuler / Rétablir.</li>
+        <li><strong>Vidéo</strong>&nbsp;: un fichier de ton ordinateur (jusqu’à 300 Mo, une affiche est tirée de la vidéo) ou une <strong>vidéo en ligne</strong> YouTube, Vimeo ou Dailymotion en collant son adresse&nbsp;; options lecture automatique, boucle, muet. Dans l’éditeur, rien n’est chargé depuis Internet. En présentation, la vidéo en ligne attend ton clic sur <strong>Lire la vidéo</strong>&nbsp;: la plateforme reçoit alors l’adresse IP de l’appareil et peut déposer des cookies ou traceurs&nbsp;; tu peux préférer «&nbsp;Ouvrir sur YouTube à la place&nbsp;» ou cocher «&nbsp;Ne plus demander&nbsp;» pour cette plateforme (six mois, effaçable dans Paramètres › Compte › Oublier les autorisations vidéo). Les vidéos importées depuis l’ordinateur ne voyagent pas dans le fichier Alixo. N’importe que des vidéos que tu as le droit d’utiliser.</li>
+        <li><strong>Quiz</strong>&nbsp;: le bloc Quiz lie un de tes quiz à une diapositive, en mode Test ou En direct. En présentation, <strong>Lancer le quiz</strong> l’ouvre et une pastille <strong>Revenir à la présentation</strong> te ramène à la diapositive.</li>
+        <li><strong>Banque d’images</strong>&nbsp;: double-clic sur un bloc Image › Mon ordinateur, Mes photos du compte ou <strong>Banque d’images libres</strong>, qui cherche sur Wikimedia Commons après <kbd>Entrée</kbd> seulement. Alixo ne garde que les images dont la licence déclarée autorise la réutilisation (domaine public, CC0, CC BY, CC BY-SA), affiche l’auteur et la licence, et insère le <strong>crédit sous l’image</strong>, qui ne se retire pas et voyage avec la présentation (édition, présentation, PDF). Ta recherche est envoyée à Wikimedia Commons (Wikimedia Foundation, États-Unis), qui reçoit aussi l’adresse IP de ton appareil&nbsp;; Alixo ne la conserve pas et ne vérifie pas les licences déclarées. Ce sont des images sous licence libre, pas des images «&nbsp;libres de droits&nbsp;»&nbsp;: vérifie l’usage que tu en fais.</li>
+        <li><strong>Notes</strong> pour l’orateur avec une durée visée, zoom <kbd>Ctrl</kbd> + molette, bouton <strong>Télécharger</strong> (fichier Alixo, PDF 16:9 une diapositive par page). Se partage comme une séance. Sans Alixo+, une petite mention «&nbsp;Fait avec Alixo · alixoapp.com&nbsp;» apparaît dans un coin libre de l’écran pendant la présentation (jamais dans l’éditeur ni la vue présentateur).</li>
+      </ul>
+    </section>
+
+    <section id="presenter">
+      <div class="eyebrow">Documents</div>
+      <h2><em>Présenter</em>&nbsp;: animations, outils, vue présentateur</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/27-presenter.jpg"><source src="videos/27-presenter.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Présenter — Animations, transitions, vue présentateur</b><span class="dur" data-video="27-presenter">0:00</span></figcaption></figure>
+      <ul>
+        <li><strong>Animations</strong>&nbsp;: sélectionne un bloc (ou plusieurs) et clique <strong>Animation</strong>&nbsp;: dix effets (Fondu, Montée, Descente, Depuis la gauche, Depuis la droite, Zoom, Rebond, Retournement, Volet, Machine à écrire pour les textes), chaque tuile rejoue son effet au survol, avec la durée et l’<strong>ordre d’apparition</strong> («&nbsp;Avec la diapositive&nbsp;», «&nbsp;Au 1er clic&nbsp;», «&nbsp;En même temps que le précédent&nbsp;»…). Une pastille numérotée rappelle l’ordre sur la scène.</li>
+        <li><strong>Transitions</strong>&nbsp;: sans bloc sélectionné, le bouton devient <strong>Transition</strong>&nbsp;: Aucune, Fondu, Glissement, Poussée, Zoom, Volet, Cube, Retournement, avec Aperçu et «&nbsp;Appliquer à toutes les diapositives&nbsp;». Les effets 3D deviennent un fondu sur téléphone et quand le système demande moins d’animations.</li>
+        <li><strong>Présenter</strong>&nbsp;: Depuis le début (<kbd>F5</kbd>), Depuis cette diapositive (<kbd>Maj</kbd><kbd>F5</kbd>), Vue présentateur (<kbd>Alt</kbd><kbd>F5</kbd>), Répétition chronométrée. Chaque clic révèle le groupe suivant, puis passe à la diapositive suivante avec sa transition. Tape un numéro puis <kbd>Entrée</kbd> pour aller à une diapositive. Sur téléphone, un toucher à droite ou à gauche suffit.</li>
+        <li><strong>Outils pendant la présentation</strong> (barre discrète au survol)&nbsp;: chrono (<kbd>T</kbd> le remet à zéro), <strong>Laser</strong> <kbd>L</kbd>, <strong>Stylo</strong> <kbd>P</kbd>, <strong>Surligneur</strong> <kbd>H</kbd>, <strong>Gomme</strong> <kbd>E</kbd> (<kbd>Maj</kbd><kbd>E</kbd> efface tout), <strong>Spot</strong> <kbd>S</kbd> puis clic sur un bloc (il s’agrandit, le reste s’assombrit), écran <strong>Noir</strong> <kbd>B</kbd> ou <strong>Blanc</strong> <kbd>W</kbd>, <strong>Grille</strong> <kbd>G</kbd>, <strong>Notes</strong> <kbd>N</kbd>, Aide <kbd>?</kbd>. L’encre en direct ne modifie jamais la présentation.</li>
+        <li><strong>Vue présentateur</strong> (<kbd>Alt</kbd><kbd>F5</kbd>)&nbsp;: ton écran montre la diapositive en cours, la suite, tes notes (A− / A+), le chrono et l’heure. <strong>Ouvrir sur le second écran</strong> projette la présentation sur le vidéoprojecteur (application Windows et Mac&nbsp;: plein écran sur l’autre écran&nbsp;; navigateur&nbsp;: une seconde fenêtre, autorise les fenêtres surgissantes). Le laser et l’encre se voient aussi sur l’écran public.</li>
+        <li><strong>Répétition chronométrée</strong>&nbsp;: à la fin, un récapitulatif donne la durée passée sur chaque diapositive&nbsp;; «&nbsp;Définir ces durées comme cibles&nbsp;» remplit la durée visée des notes, et la vue présentateur indique si tu es en avance ou en retard.</li>
+      </ul>
+    </section>
+
+    <section id="planche">
+      <div class="eyebrow">Documents</div>
+      <h2><em>Planche</em>&nbsp;: un tableau blanc libre</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/28-planche.jpg"><source src="videos/28-planche.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Planche — Un tableau blanc libre</b><span class="dur" data-video="28-planche">0:00</span></figcaption></figure>
+      <p><strong>Nouveau › Planche</strong>&nbsp;: un canevas infini où étaler des idées et des morceaux de plusieurs cours côte à côte. Déplacement à la souris (ou <kbd>Espace</kbd> + glisser), zoom <kbd>Ctrl</kbd> + molette, <kbd>Ctrl</kbd><kbd>0</kbd> pour tout voir, mini-carte en bas à droite.</p>
+      <ul>
+        <li><strong>Éléments</strong>&nbsp;: post-it (<kbd>N</kbd>, double-clic sur le fond), texte (<kbd>T</kbd>), images (collage ou glisser-déposer), flèches (<kbd>F</kbd>&nbsp;: droites ou courbes, pointillés, double sens, libellé), formes avec du texte dedans, zones nommées (déplacer une zone emporte ce qu’elle contient), liens web, listes à cocher, stickers, fiches de séance et blocs de cours épinglés (copie en lecture seule d’un bloc d’une séance, qui l’ouvre au double-clic).</li>
+        <li><strong>Modèles</strong> (bouton Modèles, <kbd>M</kbd>)&nbsp;: carte mentale générée à partir d’une idée centrale et de branches saisies au clavier, matrice SWOT, kanban, frise chronologique, fiche d’arrêt, plan de dissertation, comparatif, processus.</li>
+        <li><strong>Agencer</strong>&nbsp;: sélection (<kbd>Maj</kbd>+clic, rectangle), déplacement aimanté (<kbd>Alt</kbd>&nbsp;: libre), alignement et répartition, devant / derrière, dupliquer (<kbd>Ctrl</kbd><kbd>D</kbd>), <strong>verrouiller</strong> un élément (<kbd>Ctrl</kbd><kbd>L</kbd>), fond points / lignes / uni, clic droit sur un élément ou sur le fond. Un clic dans le vide désélectionne.</li>
+        <li><strong>Présenter</strong> (<kbd>F11</kbd>) affiche la planche en plein écran sans barres. Coco (<kbd>F8</kbd>) répond et modifie la planche. Télécharger&nbsp;: fichier Alixo ou PDF (A4 paysage, vue d’ensemble). Recherche <kbd>Ctrl</kbd><kbd>K</kbd> dans les post-it, partage comme une séance.</li>
+      </ul>
+    </section>
+
+    <section id="quiz">
+      <div class="eyebrow">Documents</div>
+      <h2><em>Quiz</em>&nbsp;: tester, présenter en direct</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/29-quiz.jpg"><source src="videos/29-quiz.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Quiz — Tester, présenter en direct</b><span class="dur" data-video="29-quiz">0:00</span></figcaption></figure>
+      <p><strong>Nouveau › Quiz</strong>&nbsp;: une palette de types de questions à glisser (ou cliquer) dans la liste, un aperçu en direct de la question dans le thème du quiz, temps et points par question, <kbd>Ctrl</kbd><kbd>Z</kbd> / <kbd>Ctrl</kbd><kbd>Y</kbd>.</p>
+      <ul>
+        <li><strong>Questions notées</strong>&nbsp;: choix multiple (2 à 6 propositions), vrai / faux, nombre (avec tolérance et unité), curseur, réponse écrite (variantes acceptées), ordre, association, <strong>texte à trous</strong> (sélectionne un mot puis «&nbsp;Faire un trou&nbsp;»&nbsp;: menu déroulant ou saisie libre). <strong>Avis du public</strong>&nbsp;: sondage, échelle, nuage de mots, <strong>vote d’assemblée</strong> dont les résultats se dessinent en direct dans un hémicycle. <strong>Pages</strong> sans question (titre, texte, image) pour présenter ou faire une pause. Une image possible sur chaque question.</li>
+        <li><strong>Apparence</strong>&nbsp;: thèmes Alixo, Nuit, Océan, Forêt, Sable, Ardoise, Prune, Lavande, les thèmes animés Aurore, Verre, Néon, Papier, Galaxie et Minéral, ou un thème personnalisé (fond, cartes, texte, accent, police). <strong>Musiques</strong> de fond générées par Alixo (calme, entraînante, concentration, suspense) ou ton fichier audio, sons de jeu, <kbd>M</kbd> pour couper le son.</li>
+        <li><strong>Tester</strong> (<kbd>F5</kbd>) joue le quiz sur ton appareil&nbsp;: chronomètre, retour immédiat, score enregistré.</li>
+        <li><strong>Présenter en direct</strong>&nbsp;: ton écran affiche un <strong>code à six chiffres et un QR code</strong>&nbsp;; les participants ouvrent <a href="/quiz/">alixoapp.com/quiz</a> sur leur téléphone ou ordinateur, sans compte, entrent le code et un pseudo, puis répondent sur leur appareil. Salle d’attente, compteur de réponses, révélation avec pourcentages ou histogramme, classement avec montées et descentes, podium final. <kbd>Espace</kbd> ou <kbd>→</kbd> passe à la suite, <kbd>Échap</kbd> arrête.</li>
+        <li><strong>Résultats</strong>&nbsp;: participants, score moyen, médiane, réussite question par question, tableau des participants&nbsp;; export <strong>Excel</strong> (classeur mis en forme, deux feuilles) ou CSV.</li>
+        <li>Partage comme une séance, recherche <kbd>Ctrl</kbd><kbd>K</kbd> dans les questions, PDF des questions avec les bonnes réponses, et Coco (<kbd>F8</kbd>) pour compléter ou corriger le quiz. Un quiz peut aussi être lié à une diapositive de présentation.</li>
+      </ul>
+    </section>
+
+    <section id="pdf">
+      <div class="eyebrow">Documents</div>
+      <h2>Tes <em>PDF</em> dans Alixo</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/30-pdf.jpg"><source src="videos/30-pdf.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Vos PDF dans Alixo — Lire, annoter, réorganiser les pages</b><span class="dur" data-video="30-pdf">0:00</span></figcaption></figure>
+      <p>Double-clique sur un PDF de ta bibliothèque&nbsp;: il s’ouvre dans un onglet, comme une séance.</p>
+      <ul>
+        <li><strong>Lire</strong>&nbsp;: zoom (<kbd>Ctrl</kbd> + molette, Ajuster à la largeur, Page entière), recherche dans tout le texte (<kbd>Ctrl</kbd><kbd>F</kbd>, sans tenir compte des accents), vignettes des pages, plan du document, rotation de l’affichage, <strong>mode nuit</strong> et présentation plein écran (<kbd>F5</kbd>). Le texte se sélectionne et se copie&nbsp;; une petite barre propose de surligner, copier, faire expliquer ou traduire le passage.</li>
+        <li><strong>Annoter</strong>&nbsp;: stylo, surligneur, rectangle, ellipse, ligne, flèche, texte, <strong>post-it</strong>, <strong>tampons</strong> («&nbsp;Vu&nbsp;», «&nbsp;À revoir&nbsp;», «&nbsp;Important&nbsp;»…), image, <strong>signature dessinée</strong> (jusqu’à trois mémorisées si tu le coches) et gomme. <kbd>Ctrl</kbd><kbd>Z</kbd> / <kbd>Ctrl</kbd><kbd>Y</kbd> sur 100 étapes.</li>
+        <li><strong>Enregistrer</strong>&nbsp;: <kbd>Ctrl</kbd><kbd>S</kbd> enregistre dans le fichier lui-même&nbsp;: tes annotations sont alors <strong>fondues dans les pages</strong> (une fenêtre le rappelle au premier enregistrement&nbsp;; les post-it restent de vrais commentaires, lisibles dans tout lecteur PDF). Tant que tu n’as pas enregistré, un <strong>brouillon</strong> est gardé sur l’appareil et proposé à la réouverture.</li>
+        <li><strong>Pages</strong>&nbsp;: glisse les vignettes pour changer l’ordre&nbsp;; depuis leur menu&nbsp;: tourner, dupliquer, insérer une page vierge, extraire, supprimer. Menu <strong>Pages</strong>&nbsp;: numéroter, ajouter un filigrane, <strong>fusionner un autre PDF</strong>. Les <strong>formulaires</strong> se remplissent dans le volet de gauche (et peuvent être figés).</li>
+        <li><strong>Protections</strong>&nbsp;: un PDF verrouillé par son auteur s’ouvre en lecture seule (lecture, recherche, impression)&nbsp;; un PDF signé électroniquement te prévient avant d’écrire dedans, car l’enregistrer invalide sa signature. Un PDF reçu en partage s’enregistre en copie dans ta bibliothèque.</li>
+        <li><strong>Alixo AI sur un PDF</strong> <span class="plus-badge">Alixo+</span>&nbsp;: bouton Alixo AI de la barre&nbsp;: résumer, expliquer ou traduire la sélection, poser tes questions, créer un quiz ou une fiche de révision à partir du PDF. Comme Coco, il demande l’application PC ou Mac et Alixo+&nbsp;; sur le web, le volet propose ce qui marche sans IA&nbsp;: <strong>transformer le PDF en séance Alixo</strong> (titres et listes reconnus) ou copier son texte. Un PDF scanné sans texte ne peut pas être lu par l’IA.</li>
+        <li><strong>Télécharger</strong>&nbsp;: une copie du PDF modifié, la page affichée en image, le texte brut&nbsp;; impression fidèle. Les aperçus (fenêtre d’un fichier, panneau «&nbsp;à côté du cours&nbsp;») utilisent la même visionneuse.</li>
       </ul>
     </section>
 
     <section id="fichiers">
       <div class="eyebrow">Documents</div>
-      <h2>Tes <em>fichiers</em> à côté du cours</h2>
-      <p>«&nbsp;+ Fichier&nbsp;», clic droit › Importer des fichiers, ou glisser-déposer depuis l'ordinateur sur la grille ou sur un dossier. PDF, Word, PowerPoint, Excel / CSV, images, texte, audio, vidéo s'ouvrent <strong>dans Alixo</strong>&nbsp;; sinon «&nbsp;Ouvrir avec…&nbsp;» ou «&nbsp;Enregistrer une copie&nbsp;».</p>
+      <h2>Fichiers et <em>import</em> depuis le téléphone</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/31-fichiers-import.jpg"><source src="videos/31-fichiers-import.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Fichiers et import depuis le téléphone — Glisser, importer, un QR code</b><span class="dur" data-video="31-fichiers-import">0:00</span></figcaption></figure>
       <ul>
-        <li>Renommer, déplacer (glisser sur un dossier), supprimer (annulable), recherche <kbd>Ctrl</kbd><kbd>K</kbd> par nom, joints à l'export .zip d'un dossier.</li>
-        <li><strong>Document à côté</strong>&nbsp;: le bouton de la barre d'outils affiche un PDF, un diaporama ou un Word dans le volet de droite, à côté du cours. Mémorisé par séance, avec un historique des récents.</li>
-        <li>Stockés sur l'appareil, synchronisés avec le compte par morceaux, et <strong>partageables</strong> comme une séance.</li>
+        <li><strong>Depuis l’ordinateur</strong>&nbsp;: bouton <strong>Importer › Depuis l’ordinateur</strong>, menu Nouveau, clic droit sur un dossier, ou glisser-déposer sur la grille ou sur un dossier. PDF, Word, PowerPoint, Excel / CSV, images, texte, audio, vidéo s’ouvrent <strong>dans Alixo</strong>&nbsp;; sinon «&nbsp;Ouvrir avec…&nbsp;» ou «&nbsp;Enregistrer une copie&nbsp;». Un fichier Alixo (séance, présentation, tableur, planche, quiz) importé est recréé comme un nouveau document.</li>
+        <li><strong>Depuis un téléphone ou une tablette</strong>&nbsp;: <strong>Importer › Depuis un téléphone ou une tablette</strong> affiche un QR code. Scanne-le avec l’appareil photo, choisis un ou plusieurs fichiers ou prends une photo&nbsp;: ils arrivent aussitôt dans le dossier ouvert. Jusqu’à <strong>20 Mo par fichier</strong>&nbsp;; le QR code reste valable <strong>30 minutes</strong>. Les fichiers ne restent pas sur les serveurs d’Alixo&nbsp;: ils sont effacés dès leur arrivée. Il faut être connecté à ton compte.</li>
+        <li><strong>Word et OpenDocument modifiables</strong>&nbsp;: un double-clic sur un .docx ou un .odt l’ouvre dans un onglet, avec sa barre d’outils, exactement comme il a été écrit (pages, polices, images, en-têtes et pieds de page). Enregistrer (<kbd>Ctrl</kbd><kbd>S</kbd>, et tout seul après chaque pause) remplace le même fichier, synchronisé avec le compte, et le document se rouvre dans Word ou LibreOffice comme avant. Télécharger donne le .docx / .odt, Imprimer / PDF imprime les pages telles qu’affichées.</li>
+        <li><strong>Document à côté</strong>&nbsp;: le bouton de la barre d’outils affiche un PDF, un diaporama ou un Word dans le volet de droite, à côté du cours. Mémorisé par séance, avec un historique des récents.</li>
+        <li>Renommer, déplacer, supprimer (annulable), recherche <kbd>Ctrl</kbd><kbd>K</kbd> par nom, joints à l’export .zip d’un dossier. Stockés sur l’appareil, synchronisés avec le compte, <strong>partageables</strong> comme une séance.</li>
       </ul>
     </section>
 
     <!-- ================= ORGANISER ================= -->
     <section id="bibliotheque">
       <div class="eyebrow">Organiser</div>
-      <h2>Bibliothèque et vue <em>Galaxie</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/21-bibliotheque-galaxie.jpg"><source src="videos/21-bibliotheque-galaxie.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Dossiers, explorateur, galaxie 3D, recherche</b><span class="dur">0:44</span></figcaption></figure>
+      <h2>La <em>bibliothèque</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/32-bibliotheque.jpg"><source src="videos/32-bibliotheque.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Bibliothèque — Dossiers, bannières, vues, explorateur</b><span class="dur" data-video="32-bibliotheque">0:00</span></figcaption></figure>
       <ul>
-        <li><strong>Dossiers</strong> par matière, avec couleur et professeur&nbsp;; sous-dossiers à volonté. Un clic ouvre un dossier, le fil d'Ariane et l'<strong>explorateur</strong> à gauche gardent le repère. Glisser-déposer pour ranger séances, dossiers et fichiers.</li>
-        <li><strong>Trois affichages</strong>&nbsp;: grille, arbre, galaxie. Dans la galaxie, le dossier affiché est un soleil, ses sous-dossiers des planètes, les séances des étoiles en orbite&nbsp;; molette pour s'approcher, glisser le fond pour tourner, glisser un astre pour le déplacer, clic pour ouvrir, clic droit pour les menus habituels. Bouton Vue 2D / 3D.</li>
-        <li><strong>Clic droit</strong> sur une carte&nbsp;: renommer, déplacer, dupliquer, partager, exporter, télécharger en .zip, supprimer.</li>
-        <li>Les dossiers et séances <strong>partagés avec moi</strong> apparaissent dans la bibliothèque, en pointillé avec le nom du propriétaire.</li>
+        <li><strong>Dossiers</strong> par matière, sous-dossiers à volonté. Clic droit › <strong>Modifier</strong>&nbsp;: aperçu en direct, nom et professeur, <strong>bannière</strong> (Aucune, Couleur, Motif — points, rayures, quadrillage, diagonales — ou Image importée <span class="plus-badge">Alixo+</span>), <strong>16 couleurs</strong> plus une couleur libre, et une recherche d’icônes rangées par catégorie (Études, Droit, Économie, Sciences, Lettres, Divers). Chaque carte montre une tuile à initiales et résume son contenu («&nbsp;3 séances · 1 dossier · 2 fichiers&nbsp;»).</li>
+        <li><strong>Reprendre</strong>&nbsp;: en haut de Mes cours, le cours en ce moment d’après ton agenda, avec sa barre de progression et «&nbsp;Prendre des notes&nbsp;» (ouvre ou crée la séance du jour dans le bon dossier)&nbsp;; hors cours, le prochain cours avec «&nbsp;Préparer la séance&nbsp;». À côté, les deux derniers documents ouverts.</li>
+        <li><strong>Une seule liste</strong>&nbsp;: sous les cartes de dossiers, séances, fichiers importés et éléments partagés sont réunis, avec une puce de type colorée (séance bleue, présentation orange, tableur vert, planche, quiz, trombone pour les fichiers), le titre, un aperçu, le professeur, la date, l’épingle et la corbeille.</li>
+        <li><strong>Quatre vues</strong>&nbsp;: <strong>Grille</strong>, <strong>Liste</strong> (tout en lignes, dossiers compris), <strong>Arbre</strong> et <strong>Galaxie</strong>. Dans la galaxie, le dossier affiché est un soleil, ses sous-dossiers des planètes, les séances des étoiles en orbite&nbsp;; molette pour s’approcher, glisser le fond pour tourner, clic pour ouvrir, clic droit pour les menus habituels, bouton Vue 2D / 3D.</li>
+        <li><strong>Rechercher dans ce dossier…</strong> filtre les cours du dossier et de ses sous-dossiers à mesure que tu tapes (le chemin s’affiche sur chaque résultat&nbsp;; <kbd>/</kbd> ou <kbd>Ctrl</kbd><kbd>F</kbd> y placent le curseur). À côté, le <strong>tri</strong> par date, nom, type ou taille, mémorisé.</li>
+        <li><strong>Créer</strong>&nbsp;: <strong>Importer</strong> et <strong>Nouveau ▾</strong> (Séance, Présentation, Tableur, Planche, Quiz, Dossier, Importer, Scanner une feuille), le bouton <strong>IA</strong> pour demander un document à Coco, et le même menu au clic droit sur le fond.</li>
+        <li><strong>Clic droit</strong> sur une carte&nbsp;: renommer <strong>sur place</strong> (<kbd>F2</kbd> sur la séance sélectionnée, <kbd>Entrée</kbd> valide), épingler, déplacer vers (un <strong>explorateur de fichiers</strong> s’ouvre&nbsp;: arbre des dossiers à gauche, contenu à droite, fil d’Ariane, recherche, clavier), dupliquer, partager, déposer dans le Workspace, télécharger en .zip, supprimer. L’élément reste en surbrillance tant que le menu est ouvert. Glisser-déposer pour ranger séances, dossiers et fichiers.</li>
+        <li>Les dossiers et séances <strong>partagés avec toi</strong> apparaissent dans la bibliothèque, en pointillé avec le pseudo du propriétaire, et dans Partagés avec moi.</li>
       </ul>
     </section>
 
     <section id="recherche">
       <div class="eyebrow">Organiser</div>
       <h2>Recherche <em>universelle</em></h2>
-      <p><kbd>Ctrl</kbd><kbd>K</kbd> (ou la loupe) cherche dans tous les cours, tous les onglets, les cellules des tableurs, les présentations et les noms de fichiers. Les résultats montrent le dossier et le passage&nbsp;; <kbd>Entrée</kbd> ouvre au bon endroit.</p>
+      <figure class="doc-video"><video controls preload="none" poster="videos/33-recherche.jpg"><source src="videos/33-recherche.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Recherche — Ctrl K dans tous les cours</b><span class="dur" data-video="33-recherche">0:00</span></figcaption></figure>
+      <p><kbd>Ctrl</kbd><kbd>K</kbd> (ou le champ Rechercher… de la barre du haut) cherche dans tous les cours, tous les onglets, les cellules des tableurs, les présentations, les post-it des planches, les questions des quiz et les noms de fichiers. Les résultats montrent le dossier et le passage&nbsp;; <kbd>Entrée</kbd> ouvre au bon endroit. Dans un dossier, le champ «&nbsp;Rechercher dans ce dossier…&nbsp;» filtre son contenu&nbsp;; dans un PDF, <kbd>Ctrl</kbd><kbd>F</kbd> cherche dans le texte du document.</p>
     </section>
 
     <section id="agenda">
       <div class="eyebrow">Organiser</div>
       <h2>Agenda, tâches et <em>bilan</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/24-taches-agenda.jpg"><source src="videos/24-taches-agenda.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Tâches, agenda, bilan de la semaine</b><span class="dur">0:46</span></figcaption></figure>
+      <figure class="doc-video"><video controls preload="none" poster="videos/34-agenda-taches.jpg"><source src="videos/34-agenda-taches.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Agenda, tâches et bilan — Le cours en cours, la semaine, les tâches</b><span class="dur" data-video="34-agenda-taches">0:00</span></figcaption></figure>
       <h3>Agenda</h3>
-      <p>Bibliothèque › Agenda (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd>)&nbsp;: tes cours dans un calendrier mensuel. «&nbsp;+ Événement&nbsp;» ou double-clic sur un jour&nbsp;: titre, date, heures (saisie tolérante «&nbsp;8h30&nbsp;», «&nbsp;14&nbsp;»), <strong>chaque semaine</strong>, cours lié, lieu, couleur. L'événement en cours et le temps restant s'affichent en haut de l'écran, et «&nbsp;+ séance&nbsp;» crée la prise de notes du jour dans le bon dossier. Un événement peut être partagé&nbsp;: il arrive dans l'agenda des membres.</p>
+      <p><strong>Agenda</strong> dans la barre de gauche&nbsp;: tes cours dans un calendrier mensuel. «&nbsp;+ Événement&nbsp;» ou double-clic sur un jour&nbsp;: titre, date, heures (saisie tolérante «&nbsp;8h30&nbsp;», «&nbsp;14&nbsp;»), <strong>chaque semaine</strong>, cours lié (choisi dans l’explorateur), lieu, couleur. L’événement en cours et le temps restant s’affichent en haut de l’écran et dans le bloc Reprendre. Le <strong>panneau Agenda</strong> (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd>) montre toute la semaine jour par jour, l’événement en cours («&nbsp;En cours · reste 25 min&nbsp;»), le prochain («&nbsp;Dans 40 min&nbsp;») et une ligne rouge à l’heure qu’il est. Un événement peut être partagé&nbsp;: il arrive dans l’agenda des membres.</p>
       <h3>Tâches <span class="plus-badge">Alixo+</span></h3>
-      <p>Bibliothèque › Tâches (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>K</kbd>)&nbsp;: catégories (couleur, glisser une tâche dessus), échéance, priorité, filtres À faire / Faites / Toutes, retards en rouge, compteur dans l'explorateur, rappel quotidien dans la cloche. Synchronisées avec le compte.</p>
+      <p><strong>Tâches</strong> dans la barre de gauche (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>K</kbd>)&nbsp;: une grande zone de saisie en haut (<kbd>Entrée</kbd> pour ajouter&nbsp;; «&nbsp;!&nbsp;» importante, «&nbsp;!!&nbsp;» urgente, «&nbsp;#catégorie&nbsp;»), sections En retard, Aujourd’hui, À venir, Sans échéance, Terminées, vues Aujourd’hui / Importantes / Planifiées, catégories colorées, échéance, priorité, anneau d’avancement de la journée, rappel quotidien dans la cloche. Synchronisées avec le compte.</p>
       <h3>Bilan de la semaine</h3>
-      <p>À chaque ouverture, «&nbsp;Bonjour&nbsp;»&nbsp;: mots écrits (et tendance), séances travaillées, heures de cours à l'agenda, tâches, mots par jour, prochain cours, série de jours consécutifs. Aussi dans Paramètres › Compte › Voir mon bilan.</p>
+      <p>À chaque ouverture, «&nbsp;Bonjour&nbsp;»&nbsp;: mots écrits (et tendance), séances travaillées, heures de cours à l’agenda, tâches, mots par jour, prochain cours, série de jours consécutifs. Aussi dans Paramètres › Compte › Voir mon bilan.</p>
     </section>
 
     <section id="notifications">
       <div class="eyebrow">Organiser</div>
       <h2><em>Notifications</em></h2>
-      <p>La cloche de la barre du haut regroupe&nbsp;: mise à jour disponible ou téléchargée («&nbsp;Redémarrer pour installer&nbsp;» sur PC), nouvelle version installée, invitations et cours partagés, annonces et messages de l'administrateur, clé IA attribuée, tâches du jour. Marquer lu, effacer. Quand une version minimale est fixée, une fenêtre «&nbsp;Mise à jour disponible&nbsp;» s'ouvre au démarrage.</p>
+      <p>La cloche de la barre du haut regroupe&nbsp;: mise à jour disponible ou téléchargée («&nbsp;Redémarrer pour installer&nbsp;» sur PC), nouvelle version installée, invitations et cours partagés, annonces de l’équipe, tâches du jour. Marquer lu, effacer. Quand une version minimale est fixée, une fenêtre «&nbsp;Mise à jour disponible&nbsp;» s’ouvre au démarrage.</p>
+    </section>
+
+    <!-- ================= IA ================= -->
+    <section id="coco">
+      <div class="eyebrow">IA</div>
+      <h2><em>Coco</em>, Alixo AI <span class="plus-badge">Alixo+</span></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/35-coco.jpg"><source src="videos/35-coco.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Coco, Alixo AI — Elle lit votre cours et répond</b><span class="dur" data-video="35-coco">0:00</span></figcaption></figure>
+      <p class="lead">Le bouton <strong>Alixo AI</strong> de la barre d’outils (ou <kbd>F8</kbd>), depuis une séance, une présentation, un tableur, une planche, un quiz ou un PDF, ouvre un panneau sur la moitié droite de l’écran. Le cours reste visible et modifiable à gauche&nbsp;; le panneau se redimensionne en tirant son bord et se referme d’un clic.</p>
+      <ul>
+        <li><strong>Coco répond</strong>&nbsp;: le panneau est un chat. Pose une question («&nbsp;C’est quoi la différence entre interruption et suspension&nbsp;?&nbsp;», «&nbsp;Résume-moi la partie 2&nbsp;»)&nbsp;: Coco, la mascotte, répond en s’appuyant d’abord sur ce qui est écrit dans le document ouvert, phrase par phrase pendant qu’elle écrit, avec les mots importants en gras. Bouton <strong>Stop</strong> pour interrompre&nbsp;; chaque document garde sa conversation tant que l’application est ouverte.</li>
+        <li><strong>Quiz en fenêtre</strong>&nbsp;: la carte Quiz en haut du panneau ouvre une fenêtre (type de questions, nombre, niveau)&nbsp;; la première question se joue pendant que les suivantes s’écrivent, <kbd>Entrée</kbd> passe à la suivante. Le score revient dans le chat, avec Rejouer et Nouveau quiz&nbsp;; «&nbsp;Enregistrer comme document Quiz&nbsp;» et «&nbsp;Imprimer / PDF&nbsp;» sont là aussi.</li>
+        <li><strong>Fiche de révision</strong>&nbsp;: une fiche visuelle en cartes de couleur — À retenir (avec des cases à cocher), Les grandes idées, Définitions, Dates clés sur une frise, Formules, Mots-clés, Astuce, Pièges — qui apparaissent une à une. Ensuite&nbsp;: l’insérer à la fin de la séance, en faire une nouvelle séance, la copier ou l’imprimer en couleur. Les quiz et fiches générés sont enregistrés automatiquement dans l’onglet <strong>Artéfacts</strong>.</li>
+        <li><strong>Tout sur ton ordinateur</strong>&nbsp;: comme le reste d’AlixoAI, Coco tourne entièrement sur l’ordinateur. Rien n’est envoyé à un service d’IA, sans limite d’utilisation, et tout fonctionne hors ligne une fois le modèle installé. L’IA peut se tromper&nbsp;: relis ce qu’elle écrit.</li>
+      </ul>
+      <div class="doc-note plus"><p><b>Alixo+, application PC ou Mac.</b> Coco, le quiz et la fiche demandent l’application pour Windows ou Mac et un abonnement Alixo+. Dans le navigateur et sur téléphone, le panneau l’explique et donne le lien de téléchargement. Voir <a href="#correction">Correction</a> pour l’installation d’AlixoAI.</p></div>
+    </section>
+
+    <section id="coco-cree">
+      <div class="eyebrow">IA</div>
+      <h2>Coco <em>crée et modifie</em> tes documents <span class="plus-badge">Alixo+</span></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/36-coco-cree.jpg"><source src="videos/36-coco-cree.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Coco crée et modifie — Un document en une phrase, Artéfacts</b><span class="dur" data-video="36-coco-cree">0:00</span></figcaption></figure>
+      <ul>
+        <li><strong>Créer</strong>&nbsp;: le bouton <strong>IA</strong>, à droite du bouton bleu Nouveau, ouvre une barre au centre de l’écran. Écris ce que tu veux («&nbsp;un exposé sur la Révolution française&nbsp;», «&nbsp;un quiz sur ce chapitre&nbsp;»), choisis le type — <strong>Séance, Présentation, Tableur, Planche, Quiz ou Fiche de révision</strong> — puis <kbd>Entrée</kbd>. Coco crée le document dans le dossier ouvert et l’écrit sous tes yeux. <kbd>Ctrl</kbd><kbd>Z</kbd> (ou «&nbsp;Annuler les modifications&nbsp;» dans le panneau) retire ce qu’elle a écrit. Tu peux aussi le lui demander dans le chat («&nbsp;crée-moi une présentation sur…&nbsp;»), et elle propose d’écrire une séance encore vide.</li>
+        <li><strong>Modifier</strong>&nbsp;: dans le panneau Alixo AI, demande simplement «&nbsp;corrige les fautes&nbsp;», «&nbsp;mets les définitions en encadré&nbsp;», «&nbsp;ajoute une conclusion&nbsp;», «&nbsp;ajoute une diapositive de conclusion&nbsp;»… Coco travaille directement dans la séance, la présentation, le tableur, la planche ou le quiz, montre où elle en est, puis résume ce qu’elle a fait («&nbsp;3 fautes corrigées dans 3 paragraphes&nbsp;»). <strong>Annuler les modifications</strong> remet le document comme avant, <strong>Voir le détail</strong> liste chaque changement.</li>
+        <li><strong>Jamais de suppression sans ton accord</strong>&nbsp;: avant de supprimer quoi que ce soit, Coco te montre le passage concerné et attend ta confirmation.</li>
+        <li><strong>Artéfacts</strong>&nbsp;: dans la barre de gauche, sous Workspace, tous les documents créés par Coco (quiz, fiches, séances, présentations, tableurs, planches), avec leur date, leur provenance («&nbsp;depuis&nbsp;: la séance d’origine&nbsp;» ou «&nbsp;demande&nbsp;: …&nbsp;»), des filtres par type, une recherche et un tri.</li>
+        <li>Le contenu est généré par AlixoAI sur ton ordinateur&nbsp;: relis-le, l’IA peut se tromper. Comme Coco, la création demande l’application PC ou Mac et Alixo+.</li>
+      </ul>
+    </section>
+
+    <section id="correction">
+      <div class="eyebrow">IA</div>
+      <h2><em>Correction</em>&nbsp;: sans IA, et avec AlixoAI</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/37-correction.jpg"><source src="videos/37-correction.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Correction — Fautes de frappe sans IA, relecture avec AlixoAI</b><span class="dur" data-video="37-correction">0:00</span></figcaption></figure>
+      <h3>Sans IA ni Internet, pour tous</h3>
+      <ul>
+        <li>Les <strong>fautes de frappe</strong> évidentes («&nbsp;qaund&nbsp;» → «&nbsp;quand&nbsp;») et les <strong>mots presque justes</strong> («&nbsp;resposabilité&nbsp;» → «&nbsp;responsabilité&nbsp;») se corrigent dès l’espace suivant. Tu préfères ton mot&nbsp;? Un clic sur <strong>Garder</strong> dans le message qui s’affiche, et il ne sera plus touché. Les noms propres et les sigles sont laissés tels quels. Réglable dans Paramètres › Écriture.</li>
+        <li>Le <strong>correcteur orthographique</strong> de Windows, macOS ou du navigateur souligne les fautes en rouge (clic droit pour les suggestions), et un <strong>correcteur de grammaire</strong> intégré propose sous le paragraphe les fautes courantes sans ambiguïté («&nbsp;il à&nbsp;» → «&nbsp;il a&nbsp;», «&nbsp;quelque soit&nbsp;» → «&nbsp;quel que soit&nbsp;», mot répété…)&nbsp;: <kbd>Tab</kbd> pour accepter. Instantané, hors ligne, rien ne quitte l’appareil.</li>
+      </ul>
+      <h3>Avec AlixoAI, dans l’application PC ou Mac <span class="plus-badge">Alixo+</span></h3>
+      <ul>
+        <li><strong>Relecture</strong> pendant la frappe ou à la demande avec le bouton Correction / <kbd>F7</kbd>. Deux cartes sous le paragraphe&nbsp;: <strong>corrections</strong> (orthographe, accords, conjugaison, homophones) acceptées avec <kbd>Tab</kbd>, et <strong>mise en forme</strong> proposée à part (encadré, titre, liste) avec <kbd>Maj</kbd><kbd>Tab</kbd>. <kbd>Échap</kbd> ignore.</li>
+        <li>Les fautes dont l’IA est sûre s’appliquent d’elles-mêmes (<kbd>Ctrl</kbd><kbd>Z</kbd> pour revenir). Niveau de correction léger / standard / strict, reformulations activables, seconde lecture sur un long cours. Un bloc en anglais, espagnol, allemand, italien ou portugais n’est jamais «&nbsp;corrigé&nbsp;» en français&nbsp;; une citation en langue étrangère non plus.</li>
+        <li><strong>AlixoAI est 100 % locale</strong>&nbsp;: elle fonctionne <strong>entièrement sur ton ordinateur</strong>, dans l’application pour Windows et Mac, sans aucune limite d’usage et sans rien envoyer à un service d’IA. Au premier usage, avec ton accord, Paramètres › IA › <strong>Installer AlixoAI</strong> télécharge une seule fois le modèle ouvert Qwen3&nbsp;: profil <strong>Standard</strong> (environ 2,5&nbsp;Go, conseillé à partir de 12&nbsp;Go de mémoire vive) ou <strong>Léger</strong> (environ 1,1&nbsp;Go), proposé selon ton ordinateur. Ensuite, tout fonctionne hors ligne (<a href="/confidentialite.html#alixoai">détails</a>). La rapidité dépend de ton ordinateur&nbsp;; le modèle se supprime ou se change à tout moment.</li>
+        <li><strong>Dans le navigateur et sur téléphone</strong>, la relecture par IA, la mise en forme, Coco, le quiz et les fiches ne sont pas proposés&nbsp;: ils demandent l’application pour Windows ou Mac. La correction des fautes de frappe et de grammaire, elle, fonctionne partout, gratuitement.</li>
+      </ul>
     </section>
 
     <!-- ================= COLLABORER ================= -->
     <section id="partage">
       <div class="eyebrow">Collaborer</div>
-      <h2>Alixo <em>Share</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/22-partage.jpg"><source src="videos/22-partage.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Partager séances, dossiers, événements</b><span class="dur">0:34</span></figcaption></figure>
-      <div class="doc-note"><p><b>Compte requis</b> pour partager et recevoir. Paramètres › Compte › Se connecter, puis choisis un pseudo Alixo Share.</p></div>
+      <h2>Alixo <em>Share</em> et co-édition</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/38-partage.jpg"><source src="videos/38-partage.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Alixo Share et co-édition — Partager, inviter, écrire à plusieurs</b><span class="dur" data-video="38-partage">0:00</span></figcaption></figure>
+      <div class="doc-note"><p><b>Compte requis</b> pour partager et recevoir, des deux côtés. Les autres membres te voient sous ton pseudo Alixo (Paramètres › Compte).</p></div>
+      <h3>Partager</h3>
       <ul>
-        <li><strong>Partager</strong> une séance, une présentation, un tableur, un fichier ou un <strong>dossier entier</strong> (avec retrait de séances ou de sous-dossiers)&nbsp;: bouton Partager de la barre, ou clic droit › Partager…. Invitation par <strong>e-mail</strong> ou par <strong>pseudo</strong>.</li>
-        <li><strong>Droits</strong> lecture ou écriture par membre, retrait d'accès, <strong>journal</strong> (rejoint, consulté, modifié) dans le gestionnaire de partage (Membres / Contenu / Journal).</li>
-        <li><strong>En direct</strong>&nbsp;: pastilles des membres présents dans la barre, le bloc qu'un camarade modifie se colore, les modifications se fondent bloc par bloc sans couper ta saisie.</li>
-        <li><strong>Reçus</strong>&nbsp;: dans Bibliothèque › Partagés avec moi (et dans l'explorateur), en lecture ou en écriture selon le droit, copiables dans Mes cours, trouvés par la recherche. Les événements partagés arrivent dans l'agenda. Messages directs entre membres.</li>
+        <li>Le bouton <strong>Partager</strong>, tout à droite de la barre d’outils (ou clic droit › Partager…), partage une séance, une présentation, un tableur, une planche, un quiz, un fichier ou un <strong>dossier entier</strong>. Une seule fenêtre&nbsp;: la liste des personnes avec leur rôle, <strong>Peut consulter</strong> ou <strong>Peut modifier</strong>, et un champ unique pour ajouter quelqu’un <strong>par pseudo ou par e-mail</strong>.</li>
+        <li><strong>Lien de partage</strong>&nbsp;: toute personne connectée qui l’ouvre rejoint le partage avec le rôle que tu as choisi&nbsp;; désactive-le quand tu veux. Retrait d’accès et journal (rejoint, consulté, modifié) dans la même fenêtre.</li>
+        <li><strong>Partagés avec moi</strong>, dans la barre de gauche, sépare ce que tu <strong>reçois</strong> de ce que tu <strong>partages</strong>. Les éléments reçus s’ouvrent en lecture ou en écriture selon le droit, se copient dans Mes cours et sont trouvés par la recherche. Les événements partagés arrivent dans l’agenda. Ce qui est reçu d’un autre membre est vérifié avant affichage.</li>
+      </ul>
+      <h3>Écrire à plusieurs</h3>
+      <ul>
+        <li>Une séance partagée «&nbsp;Peut modifier&nbsp;» se modifie à plusieurs en même temps&nbsp;: tes modifications partent environ une seconde après la frappe, celles des autres arrivent <strong>bloc par bloc</strong>, sans redessiner la page ni déplacer ton curseur. L’onglet que tu consultes ne change jamais à cause d’un autre membre.</li>
+        <li><strong>Rien ne se perd</strong>&nbsp;: deux personnes qui écrivent dans deux blocs différents, ou au début et à la fin du même paragraphe, retrouvent les deux textes. Si deux personnes modifient les mêmes mots au même instant, les deux versions sont gardées l’une après l’autre et le bloc est surligné quelques secondes&nbsp;: à relire.</li>
+        <li><kbd>Ctrl</kbd><kbd>Z</kbd> n’annule que <strong>tes propres modifications</strong>, jamais celles des autres.</li>
+        <li><strong>Hors ligne</strong>, l’indicateur en haut affiche «&nbsp;Hors ligne — modifications en attente&nbsp;»&nbsp;; tes modifications sont gardées sur l’appareil (même si tu fermes Alixo) et fusionnées au retour du réseau. En ligne&nbsp;: «&nbsp;Enregistré · 2 personnes ici&nbsp;», «&nbsp;Envoi aux autres membres…&nbsp;».</li>
+        <li><strong>Présence</strong>&nbsp;: le bloc où se trouve chaque membre est marqué de sa couleur et son curseur s’affiche avec son pseudo, s’il consulte le même onglet que toi.</li>
+        <li><strong>Limites</strong>&nbsp;: pour les tableaux, arbres, fiches et images, la dernière version reçue gagne (sauf pour la personne en train de les modifier)&nbsp;; pour les présentations, tableurs, planches et quiz, la dernière version enregistrée gagne. Une séance partagée ne dépasse pas 1 Mo de texte.</li>
       </ul>
     </section>
 
-    <section id="correction">
-      <div class="eyebrow">Écriture</div>
-      <h2>Correction et <em>IA</em></h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/23-ia.jpg"><source src="videos/23-ia.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Fautes de frappe automatiques, relecture par IA</b><span class="dur">0:41</span></figcaption></figure>
-      <h3>Sans IA ni Internet</h3>
-      <p>Les fautes de frappe évidentes («&nbsp;qaund&nbsp;» → «&nbsp;quand&nbsp;», «&nbsp;aevc&nbsp;» → «&nbsp;avec&nbsp;») se corrigent dès l'espace suivant, à partir d'une liste fermée de mots qui n'existent pas en français. Le mot corrigé est surligné un instant&nbsp;; <kbd>Retour arrière</kbd> juste après garde ta saisie. Réglable dans Paramètres › Écriture.</p>
-      <h3>Avec Alixo+, dans l'application PC <span class="plus-badge">Alixo+</span></h3>
+    <section id="workspace">
+      <div class="eyebrow">Collaborer</div>
+      <h2>Le <em>Workspace</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/39-workspace.jpg"><source src="videos/39-workspace.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Le Workspace — Des cours partagés par tous, pour tous</b><span class="dur" data-video="39-workspace">0:00</span></figcaption></figure>
+      <p>Le <strong>Workspace</strong>, dans la barre de gauche, est une vitrine de cours déposés par les membres d’Alixo&nbsp;: une grande recherche, des filtres par matière et par niveau, un tri (Populaires, Récents, Mieux notés), des cartes avec un aperçu de la séance.</p>
       <ul>
-        <li><strong>Analyse pendant la frappe</strong> ou à la demande avec ✨ / <kbd>F7</kbd>. Deux cartes sous le paragraphe&nbsp;: <strong>corrections</strong> (orthographe, accords, conjugaison, homophones) acceptées avec <kbd>Tab</kbd>, et <strong>mise en forme</strong> proposée à part (encadré, titre, liste) avec <kbd>Maj</kbd><kbd>Tab</kbd>. <kbd>Échap</kbd> ignore.</li>
-        <li>Les fautes dont l'IA est sûre s'appliquent d'elles-mêmes (<kbd>Ctrl</kbd><kbd>Z</kbd> pour revenir). Niveau de correction léger / standard / strict, reformulations activables, grille de relecture mot à mot et seconde lecture sur un long cours.</li>
-        <li>Un bloc en anglais, espagnol, allemand, italien ou portugais n'est jamais «&nbsp;corrigé&nbsp;» en français&nbsp;; une citation en langue étrangère non plus.</li>
-        <li><strong>AlixoAI</strong>, l'intelligence artificielle d'Alixo+, fonctionne <strong>entièrement sur ton ordinateur</strong>, dans l'application PC (Windows et Mac), sans aucune limite d'usage. Au premier usage, avec ton accord, elle télécharge une seule fois le modèle ouvert Qwen3 (profil Standard, environ 2,5&nbsp;Go, ou Léger, environ 1,1&nbsp;Go, conseillé à partir de 8&nbsp;Go de mémoire vive)&nbsp;; ensuite, tout fonctionne hors ligne et aucun texte n'est envoyé (<a href="/confidentialite.html#alixoai">détails</a>). La rapidité dépend de ton ordinateur. Dans le navigateur et sur téléphone, la relecture approfondie, la mise en forme, le Quiz IA et les fiches ne sont pas proposés&nbsp;; la correction des fautes de frappe, elle, fonctionne partout. Paramètres › IA se résume à «&nbsp;Désactiver&nbsp;» / «&nbsp;Réactiver&nbsp;» et aux réglages de ce qu'elle propose. Le Quiz IA (<kbd>F8</kbd>) commence dès la première question, les suivantes s'écrivent pendant que tu réponds.</li>
-
+        <li><strong>Parcourir</strong>&nbsp;: ouvre la fiche d’un dépôt, <strong>Ajouter à ma bibliothèque</strong> ou enregistrer le fichier Alixo, mettre une <strong>étoile</strong>, laisser un <strong>commentaire</strong>, ou <strong>signaler</strong> un contenu qui pose problème (il est masqué puis vérifié par l’équipe). Plus un cours est téléchargé, plus il remonte.</li>
+        <li><strong>Déposer</strong>&nbsp;: bouton <strong>Déposer une séance</strong> (ou clic droit sur une séance › Déposer dans le Workspace…), en trois étapes&nbsp;: la séance (choisie dans l’explorateur), sa présentation (titre, description, matière, niveau, étiquettes), la publication. Onglet <strong>Mes dépôts</strong> pour les retirer à tout moment (les copies déjà ajoutées par d’autres restent dans leur bibliothèque). Jusqu’à <strong>20 dépôts</strong> par personne, <strong>10 Mo</strong> par dépôt.</li>
+        <li><strong>Seulement des séances Alixo</strong>, pas de PDF ni d’autres fichiers&nbsp;; les présentations, tableurs, planches et quiz viendront plus tard. Ce que tu ajoutes depuis le Workspace est <strong>nettoyé</strong> avant d’entrer dans ta bibliothèque&nbsp;: aucun code ne peut s’y glisser.</li>
+        <li>Les dépôts portent ton <strong>pseudo</strong>, jamais ton nom ni ton adresse e-mail. Un document créé par une IA externe (voir <a href="#integrations">Intégrations</a>) ne peut pas être déposé comme écrit par toi.</li>
       </ul>
+      <div class="doc-note warn"><p><b>Tes propres cours seulement.</b> En déposant, tu autorises les autres membres à réutiliser ton cours pour leurs études. Ne dépose pas le polycopié d’un enseignant ni des pages scannées d’un manuel sans l’accord de leur auteur. Les comptes de <b>moins de 15 ans</b> consultent et téléchargent, sans déposer, commenter ni mettre d’étoile.</p></div>
     </section>
 
-    <section id="outils">
-      <div class="eyebrow">Écriture</div>
-      <h2>Dictionnaire et <em>calculatrices</em></h2>
-      <ul>
-        <li><strong>Dictionnaire</strong> (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>D</kbd>)&nbsp;: toutes les définitions de tous tes cours (encadrés Définition, fiches), cherchables, avec le lien vers la séance.</li>
-        <li><strong>Calculatrices</strong>&nbsp;: calculatrice contextuelle, <strong>TI-83 Premium CE</strong> et <strong>Casio fx-92 Collège</strong> (émulateurs) dans le volet de droite, chacune gardant ses calculs.</li>
-        <li><strong>Chronomètre</strong> (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>T</kbd>) et <strong>agenda</strong> (<kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd>) dans le même volet.</li>
-      </ul>
+    <section id="integrations">
+      <div class="eyebrow">Collaborer</div>
+      <h2><em>Intégrations</em>&nbsp;: Claude, Cursor et VS Code</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/40-integrations.jpg"><source src="videos/40-integrations.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Claude, Cursor et VS Code — Un jeton, un guide, votre bibliothèque</b><span class="dur" data-video="40-integrations">0:00</span></figcaption></figure>
+      <p><strong>Paramètres › Intégrations</strong> connecte un assistant d’IA à ta bibliothèque&nbsp;: il peut lire et chercher tes documents, créer des séances et des dossiers, ou compléter une séance.</p>
+      <ol class="doc-steps">
+        <li><strong>Crée un jeton</strong>&nbsp;: une clé d’accès, affichée <strong>une seule fois</strong>, que tu peux révoquer à tout moment depuis la même page.</li>
+        <li><strong>Copie le guide prêt à l’emploi</strong> pour <strong>Claude Code</strong>, <strong>Claude Desktop</strong>, <strong>Cursor</strong> ou <strong>VS Code</strong>, et colle-le dans l’outil choisi.</li>
+        <li><strong>Travaille</strong>&nbsp;: chaque jeton permet <strong>500 lectures et 50 écritures par jour</strong>. Les documents créés par une IA externe le signalent dans leur fil d’Ariane et ne peuvent pas être déposés dans le Workspace comme écrits par toi.</li>
+      </ol>
+      <div class="doc-note warn"><p><b>Ce que l’IA reçoit.</b> L’assistant connecté reçoit le contenu des documents qu’il lit et les traite selon les conditions de son éditeur, pas celles d’Alixo (voir la <a href="/confidentialite.html">politique de confidentialité</a>). Réservé aux membres de <b>15 ans et plus</b>. claude.ai (navigateur) et ChatGPT arriveront dans une prochaine version.</p></div>
     </section>
 
+    <!-- ================= SORTIR ET RÉGLER ================= -->
     <section id="export">
-      <div class="eyebrow">Sortir</div>
-      <h2><em>Exporter</em>&nbsp;: PDF, Word, page web</h2>
-      <figure class="doc-video"><video controls preload="none" poster="videos/25-export.jpg"><source src="videos/25-export.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Export PDF, Word, HTML, dossier .zip</b><span class="dur">0:39</span></figcaption></figure>
+      <div class="eyebrow">Sortir et régler</div>
+      <h2><em>Exporter</em>&nbsp;: PDF, Word, page web, fichier Alixo</h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/41-export.jpg"><source src="videos/41-export.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Exporter — PDF, Word, page web, fichier Alixo</b><span class="dur" data-video="41-export">0:00</span></figcaption></figure>
       <ul>
-        <li>Le bouton <strong>⤓</strong> de la barre exporte la séance au format choisi dans <strong>Paramètres › Export</strong> (PDF, Word .docx ou page web .html). <kbd>Ctrl</kbd><kbd>P</kbd> exporte toujours en PDF.</li>
-        <li><strong>Contenu</strong>&nbsp;: plan numéroté et sommaire au-delà de six titres, encadrés, fiches, citations, listes, tableaux (fusions comprises), formules composées, graphiques et dessins en images nettes, images et légendes, liens avec QR code, pied de page «&nbsp;titre · n / N&nbsp;» (version PC).</li>
-        <li><strong>Dossier entier</strong>&nbsp;: clic droit › Télécharger en .zip, chaque séance au format choisi, les tableurs en CSV, les fichiers joints.</li>
-        <li>Présentations&nbsp;: PDF 16:9 une diapositive par page. Tableurs&nbsp;: CSV et PDF A4 paysage.</li>
-        <li>Version PC&nbsp;: export PDF natif avec boîte «&nbsp;Enregistrer sous&nbsp;» et le nom de la séance. Version web&nbsp;: boîte d'impression du navigateur, choisir «&nbsp;Enregistrer en PDF&nbsp;».</li>
-        <li><strong>Pages A4 à l'écran</strong>&nbsp;: la séance est découpée en pages identiques à celles du PDF (numéros entre les pages, en-tête sur la première)&nbsp;: ce que tu vois est ce qui s'exporte. Le bloc <strong>Saut de page</strong> (/saut) force le passage à la page suivante. Réglage dans <strong>Paramètres › Écriture › «&nbsp;Feuille découpée en pages A4&nbsp;»</strong>.</li>
+        <li>Le bouton <strong>Télécharger</strong>, tout à droite de la barre d’outils, ouvre le choix du format&nbsp;: <strong>fichier Alixo</strong>, <strong>PDF</strong>, <strong>Word</strong>, <strong>page web</strong> (fichier Alixo et PDF pour une présentation, une planche ou un quiz&nbsp;; CSV en plus pour un tableur). Le dernier choix est proposé en premier. <kbd>Ctrl</kbd><kbd>P</kbd> exporte toujours en PDF.</li>
+        <li><strong>Contenu</strong>&nbsp;: plan numéroté et sommaire, encadrés à tes couleurs, fiches, citations, listes, tableaux (fusions comprises), formules composées, graphiques, frises et dessins, images et légendes (et leur crédit), liens avec QR code, polices de chaque passage dans le Word.</li>
+        <li><strong>Pages A4 à l’écran</strong>&nbsp;: la séance est découpée en pages identiques à celles du PDF (numéros entre les pages)&nbsp;: ce que tu vois est ce qui s’exporte. Le bloc <strong>Saut de page</strong> force le passage à la page suivante. Réglage dans Paramètres › Écriture › «&nbsp;Feuille découpée en pages A4&nbsp;».</li>
+        <li><strong>Dossier entier</strong>&nbsp;: clic droit › Télécharger en .zip, chaque séance au dernier format choisi, les tableurs en CSV, les fichiers joints.</li>
+        <li><strong>Fichier Alixo</strong>&nbsp;: le document entier (onglets, images, diapositives, cellules, questions) dans un fichier à part, avec l’icône de son type sur le bureau. Rouvert dans l’application, il devient son propre document. Sur Windows, un double-clic sur le fichier l’ouvre dans Alixo, et clic droit sur le bureau › Nouveau crée une séance, une présentation, un tableur, un quiz ou une planche Alixo.</li>
+        <li>Version PC&nbsp;: export PDF natif avec boîte «&nbsp;Enregistrer sous&nbsp;». Version web&nbsp;: boîte d’impression du navigateur, choisir «&nbsp;Enregistrer en PDF&nbsp;».</li>
+        <li>Sans Alixo+, une petite mention «&nbsp;Fait avec Alixo · alixoapp.com&nbsp;» figure au bas des PDF, des Word et des pages web exportés. Alixo+ exporte des documents vierges.</li>
       </ul>
     </section>
 
-    <!-- ================= RÉGLAGES ================= -->
     <section id="apparence">
-      <div class="eyebrow">Réglages</div>
+      <div class="eyebrow">Sortir et régler</div>
       <h2>Apparence et <em>polices</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/42-apparence.jpg"><source src="videos/42-apparence.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>Apparence — Thèmes, polices, bouton soleil / lune</b><span class="dur" data-video="42-apparence">0:00</span></figcaption></figure>
       <ul>
-        <li><strong>Thèmes</strong> (Paramètres › Apparence)&nbsp;: Automatique, Clair, Sombre pour tous. Avec Alixo+&nbsp;: Bleu galaxie, Nuit d'encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande. Bouton soleil / lune optionnel dans la barre du haut.</li>
-        <li><strong>Police des cours</strong> (Paramètres › Écriture)&nbsp;: Alixo, Times New Roman, Segoe UI pour tous&nbsp;; Georgia, Garamond, Cambria, Calibri, Verdana, Trebuchet, Monospace, Comic Sans avec Alixo+. Police des titres à part, taille du texte. Appliquée à l'export PDF.</li>
-        <li>Les réglages sont datés et synchronisés&nbsp;: les plus récents gagnent entre appareils.</li>
+        <li><strong>Thèmes</strong> (Paramètres › Apparence)&nbsp;: Automatique, Clair, Sombre pour tous. Avec Alixo+&nbsp;: Bleu galaxie, Nuit d’encre, Forêt, Ardoise, Ambre, Rose néon, Violette, Océan, Braise, Azur, Vert sauge, Rose pastel, Sable, Lavande. Bouton soleil / lune optionnel dans la barre du haut. Un thème Alixo+ choisi est mémorisé et revient à la réactivation.</li>
+        <li><strong>Polices des cours</strong>, toutes libres&nbsp;: Alixo, Georgia, Garamond, Cambria, Times New Roman, Segoe UI, Calibri, Verdana, Trebuchet MS, Monospace, Comic Sans, Arial, Tahoma, Century Gothic, Book Antiqua, Baskerville, Courier New. Police générale et police des titres dans Paramètres › Écriture, taille du texte&nbsp;; police par document ou par passage depuis la barre d’outils (voir <a href="#mise-en-forme">Mise en forme</a>). Appliquées à l’export PDF et Word.</li>
+        <li><strong>Couleurs des encadrés</strong>&nbsp;: Paramètres › Apparence › Couleurs des encadrés, avec aperçu et Réinitialiser (voir <a href="#encadres">Encadrés</a>).</li>
+        <li><strong>Vue de la bibliothèque</strong> par défaut (Grille, Liste, Arbre, Galaxie) et <strong>Fenêtres</strong>&nbsp;: «&nbsp;Une fenêtre par document&nbsp;», comme Word.</li>
+        <li><strong>Fond d’écran des documents</strong> <span class="plus-badge">Alixo+</span>&nbsp;: une image à toi (ou un dégradé) derrière tes séances, présentations, tableurs et planches, avec réglage de l’assombrissement et du flou.</li>
+        <li>Les réglages sont datés et synchronisés&nbsp;: les plus récents gagnent entre appareils. L’interface utilise des polices embarquées&nbsp;: rien n’est téléchargé, aucun appel à un service extérieur.</li>
       </ul>
     </section>
 
     <section id="alixo-plus">
-      <div class="eyebrow">Réglages</div>
+      <div class="eyebrow">Sortir et régler</div>
       <h2><em>Alixo+</em></h2>
-      <p>Le compte gratuit garde tout l'essentiel&nbsp;: cours, présentations, tableurs, dossiers, fichiers jusqu'à 3 Go, agenda, partage, dictionnaire, export PDF et Word, synchronisation, thèmes clair / sombre / automatique, trois polices.</p>
-      <p><strong>Alixo+</strong> ajoute l'intelligence artificielle (correction, mise en forme, reformulations), les tâches, tous les thèmes et toutes les polices, et le stockage au-delà de 3 Go. Il suit ton compte&nbsp;: une seule fois pour le PC, le Mac, le web et le téléphone.</p>
+      <p>Le compte gratuit garde tout l’essentiel&nbsp;: séances, présentations, tableurs, planches, quiz, PDF, dossiers et fichiers jusqu’à 3 Go, agenda, partage et co-édition, Workspace, dictionnaire, correction des fautes, export PDF et Word, synchronisation, thèmes clair / sombre / automatique, toutes les polices, 12 thèmes de présentation.</p>
+      <p><strong>Alixo+</strong> suit ton compte&nbsp;: une seule fois pour le PC, le Mac, le web et le téléphone. Il ajoute&nbsp;:</p>
+      <div class="doc-cards">
+        <div class="doc-card"><b>AlixoAI et Coco</b><span>Relecture du cours (F7), mise en forme et reformulations&nbsp;; Coco qui répond, crée et modifie tes documents&nbsp;; quiz et fiches de révision&nbsp;; Alixo AI sur les PDF. Sur l’ordinateur, sans limite. Application Windows ou Mac.</span></div>
+        <div class="doc-card"><b>Tâches</b><span>Tâches, catégories, échéances, priorités et rappel du matin, synchronisés.</span></div>
+        <div class="doc-card"><b>Thèmes</b><span>14 thèmes de couleurs pour l’application et 12 thèmes signature pour les présentations.</span></div>
+        <div class="doc-card"><b>Images</b><span>Bannière en image sur tes dossiers, Supprimer le fond d’une image, fond d’écran des documents.</span></div>
+        <div class="doc-card"><b>Stockage</b><span>Fichiers, images et cours au-delà des 3 Go du compte gratuit.</span></div>
+        <div class="doc-card"><b>Sans mention « Fait avec Alixo »</b><span>Ni sur les PDF, Word et pages web exportés, ni à l’écran pendant une présentation.</span></div>
+        <div class="doc-card"><b>Widgets de bureau</b><span>Tâches du jour, agenda, minuteur, Jour J, bilan de la semaine, question de quiz, pense-bête… posés sur le bureau de l’ordinateur (version PC), disposition préparée dans Paramètres › Widgets.</span></div>
+      </div>
       <ul>
-        <li><strong>Activer</strong>&nbsp;: Paramètres › Alixo+ › «&nbsp;Passer à Alixo+&nbsp;». Abonnement <strong>mensuel</strong> sans engagement ou <strong>annuel</strong> reconduit chaque année, payé par Stripe, dont le prix baisse par paliers avec ton ancienneté&nbsp;: voir les <a href="tarifs.html">tarifs</a>. Résiliable à tout moment dans Paramètres › Alixo+ › Gérer mon abonnement, avec effet à la fin de la période payée. Les clés d'activation déjà reçues restent valables pour leur durée.</li>
-        <li>Sur un compte Alixo+, le logo devient le «&nbsp;A&nbsp;» orange avec le +. Un thème ou une police Alixo+ choisis sont mémorisés et reviennent à la réactivation.</li>
+        <li><strong>Activer</strong>&nbsp;: Paramètres › Alixo+ › «&nbsp;Passer à Alixo+&nbsp;», abonnement mensuel sans engagement ou annuel&nbsp;: voir les <a href="/tarifs.html">tarifs</a>. Résiliable à tout moment dans Paramètres › Alixo+ › Gérer mon abonnement, avec effet à la fin de la période payée.</li>
+        <li>Le nom affiché en haut à gauche dit ta formule&nbsp;: «&nbsp;Alixo&nbsp;» ou «&nbsp;Alixo+&nbsp;». Un thème Alixo+ ou une bannière en image choisis sont mémorisés et reviennent à la réactivation&nbsp;; en attendant, la bannière est remplacée par un motif neutre sans être effacée.</li>
       </ul>
     </section>
 
     <section id="plateformes">
-      <div class="eyebrow">Réglages</div>
+      <div class="eyebrow">Sortir et régler</div>
       <h2>PC, web et <em>mobile</em></h2>
+      <figure class="doc-video"><video controls preload="none" poster="videos/43-plateformes.jpg"><source src="videos/43-plateformes.mp4" type="video/mp4"></video><figcaption><svg class="play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7z"/></svg><b>PC, web et mobile — La même application partout, synchronisée</b><span class="dur" data-video="43-plateformes">0:00</span></figcaption></figure>
       <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : PC, web et mobile"><table class="doc-table">
         <tr><th>Version</th><th>Où</th><th>Particularités</th></tr>
-        <tr><td>Windows</td><td><a href="/telecharger/windows/">Alixo-Setup.exe</a>, <a href="/telecharger/windows-portable/">version portable</a></td><td>Mises à jour automatiques au démarrage, export PDF natif, liens Légifrance dans le navigateur, document à côté mémorisé par séance, protocole alixo:// pour les liens de partage. SmartScreen&nbsp;: «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».</td></tr>
-        <tr><td>macOS</td><td><a href="/telecharger/mac/">Alixo-Mac.dmg</a> (universel)</td><td>Application non signée par Apple&nbsp;: au premier lancement, Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (<a href="/telecharger/mac/">mode d'emploi</a>). Les mises à jour sont signalées par une notification.</td></tr>
-        <tr><td>Web</td><td><a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">alixoapp.com/docs</a></td><td>Même application, toujours au niveau de la version PC. Export PDF par la boîte d'impression du navigateur.</td></tr>
-        <tr><td>Mobile</td><td>Même adresse, s'ouvre seule sur téléphone</td><td>Explorateur en tiroir, bouton + flottant, plan replié, panneaux en plein écran. Lien «&nbsp;Version complète&nbsp;» pour revenir à l'affichage de bureau.</td></tr>
+        <tr><td>Windows</td><td><a href="/telecharger/windows/">Installateur</a>, <a href="/telecharger/windows-portable/">version portable</a></td><td>Mises à jour automatiques au démarrage, AlixoAI et Coco, export PDF natif, fichiers Alixo associés (double-clic, Nouveau sur le bureau), widgets de bureau, une fenêtre par document, second écran pour présenter. SmartScreen&nbsp;: «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».</td></tr>
+        <tr><td>macOS</td><td><a href="/telecharger/mac/">Image disque</a> (universelle)</td><td>Mêmes fonctions que Windows, AlixoAI comprise. Application non signée par Apple&nbsp;: au premier lancement, Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (<a href="/telecharger/mac/">mode d’emploi</a>). Les mises à jour sont signalées par une notification.</td></tr>
+        <tr><td>Web</td><td><a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">alixoapp.com/docs</a></td><td>Même application, sans AlixoAI (la correction des fautes fonctionne). Export PDF par la boîte d’impression du navigateur, second écran dans une seconde fenêtre, «&nbsp;Une fenêtre par document&nbsp;» ouvre un onglet du navigateur.</td></tr>
+        <tr><td>Mobile</td><td>Même adresse, s’ouvre seule sur téléphone</td><td>Explorateur en tiroir, bouton + flottant, plan replié, panneaux en plein écran, présentation au toucher. Lien «&nbsp;Version complète&nbsp;» pour revenir à l’affichage de bureau. Le téléphone sert aussi à envoyer photos, fichiers et scans vers l’ordinateur par QR code.</td></tr>
       </table></div>
     </section>
 
     <section id="raccourcis">
-      <div class="eyebrow">Réglages</div>
+      <div class="eyebrow">Sortir et régler</div>
       <h2>Raccourcis <em>clavier</em></h2>
+      <p>La liste complète, rangée par catégorie, est aussi dans Paramètres › À propos. Sur Mac, <kbd>⌘</kbd> remplace <kbd>Ctrl</kbd>.</p>
       <div class="doc-table-wrap" tabindex="0" role="region" aria-label="Tableau : Raccourcis clavier"><table class="doc-table">
         <tr><th>Raccourci</th><th>Action</th></tr>
         <tr><td><kbd>/</kbd></td><td>Insérer un bloc (sur une ligne vide) ou un élément en ligne (après un espace)</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>K</kbd></td><td>Recherche universelle</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>E</kbd></td><td>Formule</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>G</kbd></td><td>Graphique</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>P</kbd></td><td>Export PDF</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1…4</kbd> / <kbd>0</kbd></td><td>Titre de niveau I. / A. / 1. / a., retour en paragraphe</td></tr>
-        <tr><td><kbd>Tab</kbd> / <kbd>Maj</kbd><kbd>Tab</kbd></td><td>Changer le niveau d'un titre ou d'une liste, case suivante, champ suivant, accepter la correction IA</td></tr>
+        <tr><td><kbd>F8</kbd></td><td>Alixo AI&nbsp;: Coco, quiz, fiche de révision (Alixo+)</td></tr>
+        <tr><td><kbd>F7</kbd></td><td>Relecture du cours par AlixoAI (Alixo+)</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>E</kbd> / <kbd>Ctrl</kbd><kbd>G</kbd></td><td>Formule, graphique économique</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>P</kbd></td><td>Exporter en PDF</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>Alt</kbd><kbd>1…6</kbd> / <kbd>0</kbd></td><td>Niveau de titre selon le plan, retour en paragraphe</td></tr>
+        <tr><td><kbd>Tab</kbd> / <kbd>Maj</kbd><kbd>Tab</kbd></td><td>Niveau d’un titre ou d’une liste, case suivante, champ suivant, accepter une correction</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>8</kbd> / <kbd>7</kbd> / <kbd>9</kbd></td><td>Liste à puces, numérotée, cases à cocher</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>B</kbd> / <kbd>I</kbd> / <kbd>U</kbd></td><td>Gras, italique, souligné</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>.</kbd> / <kbd>Ctrl</kbd><kbd>,</kbd></td><td>Exposant, indice</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>&gt;</kbd> / <kbd>&lt;</kbd></td><td>Agrandir, réduire le texte</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>L</kbd> / <kbd>E</kbd> / <kbd>R</kbd> / <kbd>J</kbd></td><td>Aligner à gauche, centrer, à droite, justifier</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>\</kbd></td><td>Effacer la mise en forme</td></tr>
-        <tr><td><kbd>F7</kbd></td><td>Relecture par l'IA (Alixo+)</td></tr>
+        <tr><td><kbd>Ctrl</kbd> + molette, <kbd>Ctrl</kbd><kbd>+</kbd> / <kbd>−</kbd> / <kbd>0</kbd></td><td>Zoom (séances, présentations, tableurs, planches, PDF)</td></tr>
         <tr><td><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>A</kbd> / <kbd>T</kbd> / <kbd>D</kbd> / <kbd>K</kbd></td><td>Agenda, chronomètre, dictionnaire, tâches</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>Maj</kbd><kbd>PageUp</kbd> / <kbd>PageDown</kbd></td><td>Réordonner les onglets</td></tr>
-        <tr><td><kbd>Ctrl</kbd><kbd>Entrée</kbd></td><td>Sortir d'un tableau imbriqué</td></tr>
-        <tr><td><kbd>F5</kbd></td><td>Présenter (présentations)</td></tr>
-        <tr><td><kbd>V</kbd> <kbd>R</kbd> <kbd>O</kbd> <kbd>L</kbd> <kbd>A</kbd> <kbd>T</kbd> <kbd>P</kbd></td><td>Outils du dessin</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>Tab</kbd> / <kbd>Ctrl</kbd><kbd>W</kbd> / <kbd>Alt</kbd><kbd>←</kbd></td><td>Onglet suivant, fermer l’onglet, retour à la bibliothèque</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>Entrée</kbd></td><td>Sortir d’un bloc imbriqué</td></tr>
+        <tr><td><kbd>F2</kbd></td><td>Renommer la séance sélectionnée (bibliothèque)&nbsp;; modifier la cellule (tableur)</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>M</kbd></td><td>Nouvelle diapositive (présentation)</td></tr>
+        <tr><td><kbd>F5</kbd> / <kbd>Maj</kbd><kbd>F5</kbd> / <kbd>Alt</kbd><kbd>F5</kbd></td><td>Présenter depuis le début, depuis cette diapositive, vue présentateur</td></tr>
+        <tr><td><kbd>L</kbd> <kbd>P</kbd> <kbd>H</kbd> <kbd>E</kbd> <kbd>S</kbd> <kbd>B</kbd> <kbd>W</kbd> <kbd>G</kbd> <kbd>N</kbd></td><td>En présentation&nbsp;: laser, stylo, surligneur, gomme, spot, écran noir, écran blanc, grille, notes</td></tr>
+        <tr><td><kbd>F5</kbd></td><td>Tester le quiz&nbsp;; présenter un PDF en plein écran</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>S</kbd> / <kbd>Ctrl</kbd><kbd>F</kbd></td><td>Dans un PDF&nbsp;: enregistrer (annotations fondues dans les pages), rechercher dans le texte</td></tr>
+        <tr><td><kbd>N</kbd> <kbd>T</kbd> <kbd>F</kbd> <kbd>M</kbd> / <kbd>Ctrl</kbd><kbd>L</kbd> / <kbd>Ctrl</kbd><kbd>0</kbd> / <kbd>F11</kbd></td><td>Sur une planche&nbsp;: post-it, texte, flèche, modèles, verrouiller, tout voir, présenter</td></tr>
+        <tr><td><kbd>Ctrl</kbd><kbd>D</kbd> / <kbd>Alt</kbd> + flèches</td><td>Dupliquer un objet (dessin, planche), redimensionner un objet de dessin</td></tr>
+        <tr><td><kbd>Maj</kbd> + clic droit</td><td>Menu du système (navigateur)</td></tr>
       </table></div>
     </section>
 
     <section id="depannage">
-      <div class="eyebrow">Réglages</div>
+      <div class="eyebrow">Sortir et régler</div>
       <h2><em>Dépannage</em></h2>
-      <h4>Je ne vois pas les fiches d'arrêt (ou les fiches Santé) dans le menu «&nbsp;/&nbsp;»</h4>
+      <h4>Je ne vois pas les fiches d’arrêt (ou les fiches Santé) dans le menu «&nbsp;/&nbsp;»</h4>
       <p>Le menu ne montre que les blocs de tes spécialités. Ajoute la filière dans Paramètres › Compte › Modifier mon profil, ou laisse le profil vide pour tout voir.</p>
+      <h4>Coco répond «&nbsp;Demande refusée&nbsp;»</h4>
+      <p>Mets Alixo à jour&nbsp;: sur PC, la cloche propose «&nbsp;Redémarrer pour installer&nbsp;» dès que la nouvelle version est téléchargée. Vérifie aussi dans Paramètres › IA qu’AlixoAI est installée et activée. Coco demande l’application Windows ou Mac et Alixo+.</p>
+      <h4>Une vidéo en ligne ne se charge pas dans ma présentation</h4>
+      <p>C’est voulu&nbsp;: rien n’est chargé depuis Internet avant ton clic sur «&nbsp;Lire la vidéo&nbsp;». Clique, ou choisis «&nbsp;Ouvrir sur YouTube à la place&nbsp;». Si tu as coché «&nbsp;Ne plus demander&nbsp;» par erreur, Paramètres › Compte › Oublier les autorisations vidéo remet la question.</p>
+      <h4>Paramètres › Intégrations affiche «&nbsp;Bientôt disponible&nbsp;»</h4>
+      <p>La connexion d’assistants IA n’est pas encore ouverte sur ton compte ou sur le service&nbsp;: la page s’activera d’elle-même, sans mise à jour. Les intégrations demandent aussi un compte connecté et 15 ans ou plus.</p>
+      <h4>Le QR code du scan ou de l’import a expiré</h4>
+      <p>Un code reste valable 30 minutes et s’arrête quand la fenêtre se ferme. Clique sur «&nbsp;Nouveau code&nbsp;» et scanne-le à nouveau. Il faut être connecté à ton compte sur l’ordinateur&nbsp;; chaque fichier ne doit pas dépasser 20 Mo (coche «&nbsp;Noir et blanc&nbsp;» pour un scan plus léger).</p>
+      <h4>Je ne peux pas annoter un PDF</h4>
+      <p>Un PDF verrouillé par son auteur s’ouvre en lecture seule&nbsp;: lecture, recherche et impression, mais pas de modification. Un PDF signé électroniquement peut être annoté, mais l’enregistrer invalide sa signature&nbsp;: Alixo te prévient&nbsp;; pour garder l’original, utilise Télécharger › Copie du PDF.</p>
+      <h4>Le Mac refuse d’ouvrir Alixo</h4>
+      <p>L’application n’est pas encore signée par Apple. Ferme le message, puis Réglages Système › Confidentialité et sécurité › «&nbsp;Ouvrir quand même&nbsp;» (une seule fois). Le <a href="/telecharger/mac/">mode d’emploi</a> détaille les trois étapes.</p>
       <h4>Windows affiche «&nbsp;Windows a protégé votre ordinateur&nbsp;»</h4>
-      <p>L'application n'est pas encore signée. Clique sur «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».</p>
-      <h4>L'IA ne corrige plus rien</h4>
-      <p>Vérifie dans Paramètres › IA qu'AlixoAI est activée, que son modèle a bien été téléchargé et que l'analyse automatique est activée. L'IA fait partie d'Alixo+ et demande l'application PC (Windows ou Mac)&nbsp;: dans le navigateur et sur téléphone, seule la correction des fautes de frappe est proposée.</p>
-      <h4>J'ai choisi «&nbsp;Continuer sans compte&nbsp;» et je veux me connecter</h4>
-      <p>Paramètres › Compte › Se connecter, ou le bouton <a href="https://alixoapp.com/docs/?login">Se connecter</a> du site. Les cours créés sans compte sont récupérés.</p>
+      <p>L’application n’est pas encore signée. Clique sur «&nbsp;Informations complémentaires&nbsp;» puis «&nbsp;Exécuter quand même&nbsp;».</p>
+      <h4>J’ai choisi «&nbsp;Continuer sans compte&nbsp;» et je veux partager, importer depuis mon téléphone ou ouvrir le Workspace</h4>
+      <p>Ces fonctions demandent un compte. Paramètres › Compte › Se connecter, ou le bouton <a href="https://alixoapp.com/docs/?login">Se connecter</a> du site. Les cours créés sans compte sont récupérés à la première connexion.</p>
       <h4>Le partage reste sur «&nbsp;Chargement…&nbsp;»</h4>
-      <p>Un bouton Réessayer apparaît&nbsp;; vérifie la connexion. Le partage demande un compte en ligne des deux côtés.</p>
+      <p>Un bouton Réessayer apparaît&nbsp;; vérifie la connexion. Le partage demande un compte en ligne des deux côtés. Dans une séance partagée, «&nbsp;Envoi refusé&nbsp;» signifie que ton droit d’écriture a été retiré.</p>
       <h4>Une mise à jour est demandée au démarrage</h4>
-      <p>Sur PC, «&nbsp;Redémarrer maintenant&nbsp;» installe la version téléchargée. Sur le web, recharge la page. En dessous de la version minimale fixée par l'administrateur, la fenêtre est bloquante.</p>
+      <p>Sur PC, «&nbsp;Redémarrer maintenant&nbsp;» installe la version téléchargée. Sur le web, recharge la page. En dessous de la version minimale, la fenêtre est bloquante.</p>
       <div class="doc-foot-nav">
         <a href="#demarrer">↑ Revenir aux premiers pas</a>
         <a href="/versions/">Toutes les versions et nouveautés →</a>
@@ -667,7 +874,7 @@
   <div class="wrap foot-in">
     <div class="foot-brand">
       <img src="/img/logo-96.png" alt="" width="34" height="34" loading="lazy">
-      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
+      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d’amphi des étudiants.</p></div>
     </div>
     <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
