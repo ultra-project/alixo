@@ -1,11 +1,13 @@
 <!--
-  GABARIT — navigation flottante et pied de page des pages du site (hors accueil).
+  GABARIT — barre de navigation et pied de page des pages du site (hors accueil).
   Fichier de référence, jamais lié ni chargé par une page : on en COPIE les deux blocs.
 
   Usage
   1. Copier le bloc « NAV » juste après <body> et le bloc « PIED » juste après </main> (ou le conteneur du contenu).
   2. Ne rien changer aux libellés, à l'ordre ni aux adresses : ils sont identiques à ceux de index.html.
-     Seule différence avec l'accueil : les liens sont ABSOLUS, donc valables à toute profondeur (/status/, /telecharger/mac/…).
+     Seule différence avec l'accueil : les liens sont ABSOLUS, donc valables à toute profondeur (/status/, /telecharger/mac/…),
+     et la barre est blanche (pas de classe nav-dark : sur l'accueil elle est posée sur le héros sombre),
+     avec le bouton « Ouvrir Alixo » en encre (btn-ink) au lieu de blanc.
      Les sections de l'accueil s'écrivent /index.html?site#ancre : « ?site » est obligatoire, sans lui un compte
      connecté est renvoyé vers l'application.
   3. Page courante : ajouter aria-current="page" sur CHAQUE lien qui pointe vers la page affichée
@@ -16,7 +18,16 @@
   4. Le lien d'évitement vise #contenu : poser id="contenu" sur l'en-tête de page (section.page-head),
      ou sur <main> si la page n'a pas d'en-tête séparé. Exception : conditions.html, où #contenu est une ancre
      historique du texte (section 4) ; l'en-tête y porte id="haut" et le lien d'évitement vise #haut.
-  5. Feuilles et scripts attendus : /site.css (barre, pied), /pages.css, /site.js (menu mobile). Pas de bouton de thème.
+  5. <head> attendu (dans cet ordre) :
+       <meta name="theme-color" content="#ffffff">
+       <link rel="stylesheet" href="/fonts/fonts.css?v=20261122">
+       <link rel="preload" href="/fonts/inter-tight-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+       <link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+       <link rel="stylesheet" href="/site.css?v=20261122">
+       <link rel="stylesheet" href="/pages.css?v=20261122">
+     et en fin de <body> : <script src="/site.js?v=20261122" defer></script> (menu mobile). Pas de bouton de thème.
+     Le paramètre ?v= est le même pour toutes les feuilles et scripts (cache-busting) : le changer partout à chaque livraison.
+  6. La barre est dans le flux (position: relative), pas fixe : le contenu commence juste en dessous, sans marge haute de compensation.
 
   Toute modification de la barre ou du pied se fait d'abord dans index.html, puis ici, puis dans chaque page.
 -->
@@ -25,9 +36,9 @@
 <a class="skip" href="#contenu">Aller au contenu</a>
 
 <header class="nav" id="nav">
-  <div class="nav-pill">
+  <div class="nav-in">
     <a class="nav-logo" href="/index.html?site" aria-label="Alixo — accueil">
-      <img src="/img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
+      <img src="/img/logo.png" alt="" width="34" height="34"><span>Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="/index.html?site#fonctions">Fonctionnalités</a>
@@ -39,11 +50,11 @@
     </nav>
     <div class="nav-actions">
       <a class="nav-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">Se connecter</a>
-      <a class="btn btn-ink btn-s" href="/index.html?site#telecharger">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
-        Télécharger
-      </a>
-      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
+      <a class="btn btn-ink btn-s" href="https://alixoapp.com/docs/">Ouvrir Alixo</a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet">
+        <svg class="ico-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="ico-close" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
     </div>
   </div>
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
@@ -62,10 +73,10 @@
 
 <!-- ================= PIED : début ================= -->
 <footer class="foot">
-  <div class="wrap foot-in">
+  <div class="foot-in">
     <div class="foot-brand">
-      <img src="/img/logo-96.png" alt="" width="34" height="34" loading="lazy">
-      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
+      <p class="foot-name"><img src="/img/logo.png" alt="" width="30" height="30" loading="lazy">Alixo</p>
+      <p class="foot-tag">Le cockpit d'amphi des étudiants.</p>
     </div>
     <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
@@ -81,7 +92,7 @@
       </div>
       <div class="foot-col">
         <h2>Utiliser</h2>
-        <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Application web<span class="sr-only"> (nouvel onglet)</span></a>
+        <a href="https://alixoapp.com/docs/">Application web</a>
         <a href="https://alixoapp.com/docs/?login">Se connecter</a>
         <a href="/quiz/">Rejoindre un quiz</a>
         <a href="/index.html?site#faq">Questions fréquentes</a>
@@ -95,7 +106,7 @@
         <a href="/mentions-legales.html">Mentions légales</a>
       </div>
     </nav>
-    <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
   </div>
+  <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
 </footer>
 <!-- ================= PIED : fin ================= -->

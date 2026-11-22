@@ -27,8 +27,11 @@ const srv = http.createServer((req, res) => {
   await page.waitForTimeout(1200);
   for (let y = 0; y < 12000; y += 500) { await page.evaluate(v => window.scrollTo(0, v), y); await page.waitForTimeout(60); }
   await page.evaluate(() => window.scrollTo(0, 0));
-  await page.waitForTimeout(4500);
-  await page.screenshot({ path: out, fullPage: true });
+  /* la capture « fullPage » de Playwright relance les animations CSS : on agrandit la fenêtre à la hauteur de la page, on laisse jouer, puis capture simple */
+  const H = await page.evaluate(() => document.documentElement.scrollHeight);
+  await page.setViewportSize({ width: +w || (mobile ? 390 : 1440), height: Math.min(H, 16000) });
+  await page.waitForTimeout(6500);
+  await page.screenshot({ path: out, fullPage: false });
   console.log('ok', out, 'height', await page.evaluate(() => document.body.scrollHeight));
   if (errors.length) console.log('ERRORS:\n' + errors.join('\n'));
   if (resp404.length) console.log('HTTP>=400:\n' + resp404.join('\n'));
