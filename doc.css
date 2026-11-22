@@ -9,7 +9,7 @@
 
 :root {
   --doc-col: 48rem;        /* largeur des blocs de la colonne de lecture (vidéos, tableaux, cartes) */
-  --doc-top: 108px;        /* haut du sommaire collant : sous la barre de navigation fixe */
+  --doc-top: 24px;         /* haut du sommaire collant : la barre de navigation est dans le flux, rien à compenser */
 }
 
 /* ---------- En-tête : recherche et raccourcis ---------- */
@@ -19,11 +19,11 @@
 .doc-search {
   position: relative; display: flex; align-items: center; gap: 12px;
   max-width: 640px; min-height: 56px; margin: 30px 0 0; padding: 0 14px 0 18px;
-  border: 1.5px solid var(--line-strong); border-radius: 18px; background: #fff;
+  border: 1.5px solid var(--border); border-radius: 18px; background: #fff;
   transition: border-color .15s;
 }
-.doc-search:hover { border-color: #aab1bd; }
-.doc-search:focus-within { border-color: var(--ink); outline: 3px solid var(--blue); outline-offset: 2px; }
+.doc-search:hover { border-color: var(--ink-4); }
+.doc-search:focus-within { border-color: var(--violet-900); outline: 3px solid var(--violet-900); outline-offset: 2px; }
 .doc-search svg { position: static; flex: none; margin: 0; width: 19px; height: 19px; color: var(--ink-2); }
 .doc-search input {
   flex: 1 1 auto; min-width: 0; width: auto; min-height: 53px; padding: 0; border: 0; border-radius: 0; background: none;
@@ -34,12 +34,12 @@
 .doc-search kbd { position: static; flex: none; margin: 0; min-width: 26px; padding: 2px 8px; font-size: 13px; text-align: center; color: var(--ink-2); }
 /* Effacer la recherche : visible dès que le champ n'est pas vide (documentation.js), même famille que la touche « / » */
 .doc-search .doc-clear {
-  flex: none; min-height: 30px; margin: 0; padding: 3px 10px; border: 1px solid #d5d9e0; border-radius: 8px;
+  flex: none; min-height: 30px; margin: 0; padding: 3px 10px; border: 1px solid var(--border); border-radius: 8px;
   background: var(--fill); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 500; line-height: 1.5; cursor: pointer;
   transition: background-color .15s, color .15s, border-color .15s;
 }
 .doc-search .doc-clear:hover { background: var(--tile-lilac); border-color: #d8cffa; color: var(--ink); }
-.doc-search .doc-clear:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.doc-search .doc-clear:focus-visible { outline: 2px solid var(--violet-900); outline-offset: 2px; }
 .doc-search .doc-clear[hidden] { display: none; }
 
 /* Résultat de la recherche (role=status, rempli par documentation.js) : la ligne garde sa place, vide ou non */
@@ -61,7 +61,7 @@
 .doc-side .grp-t {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   margin: 0 0 2px; padding: 8px 8px 8px 12px; border-radius: 10px;
-  font-size: 12px; letter-spacing: .08em; color: var(--ink-2);
+  font-size: 13px; letter-spacing: 0; color: var(--ink);
 }
 .doc-side .grp-t[role="button"] { cursor: pointer; user-select: none; -webkit-user-select: none; transition: background-color .15s, color .15s; }
 .doc-side .grp-t[role="button"]:hover { background: var(--fill); color: var(--ink); }
@@ -82,14 +82,14 @@
 /* ---------- Colonne de lecture ---------- */
 .doc-main { font-size: 16px; line-height: 1.7; }
 /* Chaque section commence par un filet : la page est longue, on doit voir où l'on est.
-   html porte déjà scroll-padding-top: 96px (site.css) : le filet s'arrête sous la barre fixe, le titre juste dessous. */
+   html porte scroll-padding-top: 24px (site.css) : la barre est dans le flux, le filet s'arrête juste sous le bord de la fenêtre. */
 .doc-main > section { max-width: var(--doc-col); margin-bottom: 0; padding: 0 0 60px; scroll-margin-top: 28px; }
 /* filet au-dessus de toute section précédée d'une section visible (la recherche en masque avec [hidden]) */
 .doc-main > section:not([hidden]) ~ section { padding-top: 40px; border-top: 1px solid var(--border); scroll-margin-top: 8px; }
 .doc-main > section:last-child { padding-bottom: 0; }
 .doc-main :is(p, ul, ol, h2, h3, h4) { max-width: min(72ch, var(--doc-col), 100%); }
 
-.doc-main .eyebrow { margin-bottom: 12px; font-size: 12px; line-height: 1.4; color: var(--tint-ink); }
+.doc-main .eyebrow { margin-bottom: 12px; font-size: 13px; line-height: 1.4; color: var(--violet-900); }
 .doc-main h2 { margin: 0 0 18px; font-size: clamp(1.7rem, 2.7vw, 2.15rem); letter-spacing: -.035em; line-height: 1.1; }
 .doc-main h3 { margin: 36px 0 12px; font-size: 1.3rem; scroll-margin-top: 20px; }
 .doc-main h4 { margin: 28px 0 6px; font-size: 1.02rem; }
@@ -127,7 +127,7 @@
 .doc-main .doc-table { width: 100%; margin: 0; border-top: 0; font-size: 14.5px; line-height: 1.55; }
 .doc-main .doc-table :is(th, td) { padding: 12px 18px; border-bottom: 1px solid var(--border); }
 .doc-main .doc-table :is(th, td):last-child { padding-right: 18px; }
-.doc-main .doc-table th { padding-block: 11px; background: var(--fill); font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
+.doc-main .doc-table th { padding-block: 11px; background: var(--fill); font-size: 13px; letter-spacing: 0; white-space: nowrap; }
 .doc-main .doc-table tr:last-child td { border-bottom: 0; }
 .doc-table td:first-child { white-space: nowrap; }
 .doc-table td:first-child:has(code) { white-space: normal; min-width: 15em; }
@@ -146,8 +146,8 @@
 .doc-main .doc-steps li { margin: 0; padding: 0 0 18px 48px; }
 .doc-main .doc-steps li:last-child { padding-bottom: 0; }
 .doc-steps li::before {
-  top: -1px; width: 30px; height: 30px; background: var(--hl-lilac); color: var(--ink);
-  font-family: var(--font-mono); font-size: 13px; font-weight: 600;
+  top: -1px; width: 30px; height: 30px; background: var(--violet-100); color: var(--violet-900);
+  font-family: var(--font-ui); font-size: 13px; font-weight: 700;
 }
 /* trait qui relie les pastilles */
 .doc-steps li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 35px; bottom: 5px; width: 2px; border-radius: 2px; background: var(--border); }
@@ -161,11 +161,11 @@ mark.hit { background: var(--hl-lilac); color: var(--ink); border-radius: 4px; p
 
 .doc-foot-nav { flex-wrap: wrap; gap: 10px; margin-top: 52px; padding-top: 28px; }
 .doc-main .doc-foot-nav a {
-  display: inline-flex; align-items: center; min-height: 44px; padding: 9px 18px; border: 1.5px solid var(--line-strong); border-radius: 999px;
+  display: inline-flex; align-items: center; min-height: 44px; padding: 9px 18px; border: 1.5px solid var(--ink); border-radius: 999px;
   background: #fff; color: var(--ink); font-size: 14.5px; font-weight: 600; text-decoration: none;
   transition: background-color .15s, border-color .15s;
 }
-.doc-main .doc-foot-nav a:hover { background: var(--fill); border-color: #aab1bd; color: var(--ink); }
+.doc-main .doc-foot-nav a:hover { background: var(--surface); color: var(--ink); }
 
 /* ============================================================
    Paliers
@@ -176,11 +176,11 @@ mark.hit { background: var(--hl-lilac); color: var(--ink); border-radius: 4px; p
 @media (max-width: 900px) {
   /* Une colonne, en flux simple (pas de grille) : le sommaire peut ainsi rester collé sur toute la hauteur de la page */
   .doc-layout { display: block; }
-  /* Sommaire : une carte repliée, collée sous la barre de navigation, ouverte par .doc-side-toggle.
-     Barre : 16 + 58 px ; sommaire replié : 84 → 146 px ; une ancre s'arrête donc sous les deux. */
-  html { scroll-padding-top: 156px; }
-  .doc-side { position: sticky; top: 84px; z-index: 5; max-height: none; margin-bottom: 28px; padding: 6px; border: 1px solid var(--border); border-radius: var(--r-m); background: #fff; overflow: visible; }
-  .doc-side.open { max-height: calc(100vh - 100px); max-height: calc(100dvh - 100px); overflow: auto; }
+  /* Sommaire : une carte repliée, collée en haut de la fenêtre (la barre de navigation défile avec la page), ouverte par .doc-side-toggle.
+     Sommaire replié : 12 → 74 px ; une ancre s'arrête donc sous lui. */
+  html { scroll-padding-top: 88px; }
+  .doc-side { position: sticky; top: 12px; z-index: 5; max-height: none; margin-bottom: 28px; padding: 6px; border: 1px solid var(--border); border-radius: var(--r-m); background: #fff; overflow: visible; }
+  .doc-side.open { max-height: calc(100vh - 28px); max-height: calc(100dvh - 28px); overflow: auto; }
   .doc-side-toggle { -webkit-tap-highlight-color: transparent; min-height: 48px; padding: 8px 14px; border-radius: 14px; font-size: 15.5px; color: var(--ink); transition: background-color .15s; }
   .doc-side-toggle:hover { background: var(--fill); }
   .doc-side-toggle span { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--tile-lilac); font-size: 15px; line-height: 1; }
