@@ -2,7 +2,7 @@
    Alixo — Documentation (/documentation.html uniquement)
    À charger après /site.css et /pages.css : cette feuille SURCHARGE les styles .doc-* provisoires de pages.css.
    Classes et ids lus par documentation.js :
-   #doc-q, #doc-noresult, .doc-main > section, .doc-side a, .doc-side-toggle, .grp, .on, .open, mark.hit.
+   #doc-q, #doc-clear, #doc-noresult, #doc-noresult-clear, .doc-main > section, .doc-side a, .doc-side-toggle, .grp, .on, .open, mark.hit.
    Règles du site : cartes blanches bordées 1 px, aucune ombre, rayons 20 / 32 px,
    survol = couleur, fond ou soulignement uniquement.
    ============================================================ */
@@ -32,6 +32,15 @@
 .doc-search input::placeholder { color: var(--ink-3); opacity: 1; text-overflow: ellipsis; }
 .doc-search input:focus, .doc-search input:focus-visible { outline: none; border: 0; border-radius: 0; }
 .doc-search kbd { position: static; flex: none; margin: 0; min-width: 26px; padding: 2px 8px; font-size: 13px; text-align: center; color: var(--ink-2); }
+/* Effacer la recherche : visible dès que le champ n'est pas vide (documentation.js), même famille que la touche « / » */
+.doc-search .doc-clear {
+  flex: none; min-height: 30px; margin: 0; padding: 3px 10px; border: 1px solid #d5d9e0; border-radius: 8px;
+  background: var(--fill); color: var(--ink-2); font: inherit; font-size: 13px; font-weight: 500; line-height: 1.5; cursor: pointer;
+  transition: background-color .15s, color .15s, border-color .15s;
+}
+.doc-search .doc-clear:hover { background: var(--tile-lilac); border-color: #d8cffa; color: var(--ink); }
+.doc-search .doc-clear:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.doc-search .doc-clear[hidden] { display: none; }
 
 /* Résultat de la recherche (role=status, rempli par documentation.js) : la ligne garde sa place, vide ou non */
 .doc-count { min-height: 20px; margin-top: 8px; font-size: 13.5px; line-height: 20px; color: var(--ink-2); }
@@ -52,7 +61,7 @@
 .doc-side .grp-t {
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
   margin: 0 0 2px; padding: 8px 8px 8px 12px; border-radius: 10px;
-  font-size: 11.5px; letter-spacing: .08em; color: var(--ink-2);
+  font-size: 12px; letter-spacing: .08em; color: var(--ink-2);
 }
 .doc-side .grp-t[role="button"] { cursor: pointer; user-select: none; -webkit-user-select: none; transition: background-color .15s, color .15s; }
 .doc-side .grp-t[role="button"]:hover { background: var(--fill); color: var(--ink); }
@@ -84,6 +93,9 @@
 .doc-main h2 { margin: 0 0 18px; font-size: clamp(1.7rem, 2.7vw, 2.15rem); letter-spacing: -.035em; line-height: 1.1; }
 .doc-main h3 { margin: 36px 0 12px; font-size: 1.3rem; scroll-margin-top: 20px; }
 .doc-main h4 { margin: 28px 0 6px; font-size: 1.02rem; }
+/* Raccourcis : un petit titre par zone (Partout, Dans une séance…) au-dessus de chaque tableau */
+#raccourcis h3 { margin: 28px 0 10px; font-size: 1.1rem; }
+#raccourcis h3 + .doc-table-wrap { margin-top: 12px; }
 .doc-main h2 + h4 { margin-top: 0; }
 .doc-main .lead { font-size: 1.12rem; line-height: 1.6; color: var(--ink); }
 .doc-main li { margin: 9px 0; }
@@ -115,7 +127,7 @@
 .doc-main .doc-table { width: 100%; margin: 0; border-top: 0; font-size: 14.5px; line-height: 1.55; }
 .doc-main .doc-table :is(th, td) { padding: 12px 18px; border-bottom: 1px solid var(--border); }
 .doc-main .doc-table :is(th, td):last-child { padding-right: 18px; }
-.doc-main .doc-table th { padding-block: 11px; background: var(--fill); font-size: 11.5px; letter-spacing: .08em; white-space: nowrap; }
+.doc-main .doc-table th { padding-block: 11px; background: var(--fill); font-size: 12px; letter-spacing: .08em; white-space: nowrap; }
 .doc-main .doc-table tr:last-child td { border-bottom: 0; }
 .doc-table td:first-child { white-space: nowrap; }
 .doc-table td:first-child:has(code) { white-space: normal; min-width: 15em; }
@@ -141,9 +153,11 @@
 .doc-steps li:not(:last-child)::after { content: ""; position: absolute; left: 14px; top: 35px; bottom: 5px; width: 2px; border-radius: 2px; background: var(--border); }
 
 /* ---------- Divers ---------- */
-.plus-badge { margin-left: 4px; padding: 3px 10px; font-family: var(--font-ui); font-size: 11.5px; letter-spacing: .02em; line-height: 1.4; vertical-align: .22em; }
+.plus-badge { margin-left: 4px; padding: 3px 10px; font-family: var(--font-ui); font-size: 12px; letter-spacing: .02em; line-height: 1.4; vertical-align: .22em; }
 mark.hit { background: var(--hl-lilac); color: var(--ink); border-radius: 4px; padding: 0 2px; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 .doc-noresult { max-width: var(--doc-col); margin-bottom: 24px; padding: 28px 22px; border-radius: var(--r-m); background: #fff; font-size: 15.5px; }
+.doc-noresult-clear { padding: 0; border: 0; background: none; color: var(--tint-ink); font: inherit; text-decoration: underline; text-decoration-color: var(--indigo); cursor: pointer; }
+.doc-noresult-clear:hover { color: var(--ink); }
 
 .doc-foot-nav { flex-wrap: wrap; gap: 10px; margin-top: 52px; padding-top: 28px; }
 .doc-main .doc-foot-nav a {
@@ -208,5 +222,6 @@ mark.hit { background: var(--hl-lilac); color: var(--ink); border-radius: 4px; p
   .doc-main > section { padding-bottom: 24px; }
   .doc-main > section:not([hidden]) ~ section { padding-top: 18px; }
   .doc-video video { display: none; }
+  .doc-video .play, .doc-video .dur, .doc-search, .doc-quick { display: none; }
   .doc-side .grp.closed a { display: block; }
 }

@@ -17,11 +17,12 @@ function reveal(a) {
 /* La barre de navigation est fixe (pilule flottante) : la zone d'observation commence dessous, juste après la ligne
    où s'arrête une section visée par une ancre (scroll-padding-top 96 px + scroll-margin-top 8 px = 104 px).
    Section courante = la première, dans l'ordre de la page, qui traverse cette zone. */
-/* Sur téléphone, le sommaire replié reste collé sous la barre : la zone commence sous lui (voir doc.css, scroll-padding-top). */
-const SPY_TOP = matchMedia('(max-width: 900px)').matches ? 172 : 112;
+/* Sur téléphone, le sommaire replié reste collé sous la barre : la zone commence sous lui (voir doc.css, scroll-padding-top).
+   La zone est recalculée quand la fenêtre change de taille (passage bureau ↔ téléphone). */
+const spyTop = () => matchMedia('(max-width: 900px)').matches ? 172 : 112;
 const seen = new Set();
-const spy = new IntersectionObserver(entries => {
-  for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
+let spy = null, spyTopNow = -1;
+function paint() {
   const top = targets.find(t => seen.has(t) && !t.hidden);
   if (top) current = top.id;
   if (!current) return;
@@ -30,8 +31,20 @@ const spy = new IntersectionObserver(entries => {
     a.classList.toggle('on', on);
     if (on) { a.setAttribute('aria-current', 'location'); reveal(a); } else a.removeAttribute('aria-current');
   });
-}, { rootMargin: '-' + SPY_TOP + 'px 0px -70% 0px', threshold: 0 });
-targets.forEach(t => spy.observe(t));
+}
+function buildSpy() {
+  const top = spyTop(); if (top === spyTopNow) return;
+  spyTopNow = top;
+  if (spy) spy.disconnect();
+  seen.clear();
+  spy = new IntersectionObserver(entries => {
+    for (const e of entries) { if (e.isIntersecting) seen.add(e.target); else seen.delete(e.target); }
+    paint();
+  }, { rootMargin: '-' + top + 'px 0px -70% 0px', threshold: 0 });
+  targets.forEach(t => spy.observe(t));
+}
+buildSpy();
+let resizeTimer; addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(buildSpy, 150); });
 
 /* Sommaire : groupes repliables (clic ou Entrée / Espace sur le titre du groupe) */
 document.querySelectorAll('.doc-side .grp').forEach(g => {
@@ -42,7 +55,7 @@ document.querySelectorAll('.doc-side .grp').forEach(g => {
   t.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
 });
 
-/* Sommaire repliable sur téléphone */
+/* Sommaire repliable sur téléphone (le bouton porte aria-controls="doc-toc" dans le HTML) */
 const toggle = document.querySelector('.doc-side-toggle');
 const setSide = open => { side.classList.toggle('open', open); if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false'); };
 if (toggle) toggle.addEventListener('click', () => setSide(!side.classList.contains('open')));
@@ -51,51 +64,86 @@ addEventListener('keydown', e => { if (e.key === 'Escape' && side.classList.cont
 
 /* Recherche dans la page : filtre les sections, surligne les mots */
 const input = document.getElementById('doc-q');
+const clearBtn = document.getElementById('doc-clear');
+const noResClear = document.getElementById('doc-noresult-clear');
 const sections = [...document.querySelectorAll('.doc-main > section')];
 const noRes = document.getElementById('doc-noresult');
 const countEl = document.getElementById('doc-count');   /* role=status : le nombre de sections trouvées est annoncé */
-const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+/* norm : minuscules sans accents ; apostrophes typographiques ’ ‘ ` ´ → ' ; œ → oe ; espace insécable (et fine) → espace.
+   Ainsi « fiche d'arrêt » tapé avec une apostrophe droite trouve « fiche d’arrêt » de la page. */
+const norm = s => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
+  .replace(/[’‘`´]/g, "'").replace(/œ/g, 'oe').replace(/[  ]/g, ' ');
+/* forme compactée : sans espaces ni « + », pour que « ctrl k », « ctrl+k » et « Ctrl K » se retrouvent */
+const compact = s => s.replace(/[\s+]/g, '');
 function clearMarks() { document.querySelectorAll('mark.hit').forEach(m => m.replaceWith(m.textContent)); }
-function markIn(el, q) {
+/* Surligne q (déjà normalisé) dans un nœud texte ; si rien n'est trouvé et que qc (compacté) est donné, cherche
+   dans la forme compactée du texte et remonte aux positions d'origine (les caractères retirés sont des espaces / « + »). */
+function hitsIn(txt, q, qc) {
+  const low = norm(txt), hits = [];
+  let i = low.indexOf(q);
+  if (i >= 0) { while (i >= 0) { hits.push([i, i + q.length]); i = low.indexOf(q, i + q.length); } return hits; }
+  if (!qc || qc === q) return hits;
+  /* positions d'origine de chaque caractère gardé par compact() */
+  const map = []; let c = '';
+  for (let k = 0; k < low.length; k++) { const ch = low[k]; if (ch === '+' || /\s/.test(ch)) continue; map.push(k); c += ch; }
+  let j = c.indexOf(qc);
+  while (j >= 0) { hits.push([map[j], map[j + qc.length - 1] + 1]); j = c.indexOf(qc, j + qc.length); }
+  return hits;
+}
+function markIn(el, q, qc) {
   const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT, { acceptNode: n => (n.parentElement.closest('video, script, style, mark') ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT) });
   const nodes = []; let n; while ((n = walker.nextNode())) nodes.push(n);
   let count = 0;
   for (const t of nodes) {
-    const txt = t.nodeValue, low = norm(txt); let i = low.indexOf(q); if (i < 0) continue;
+    const txt = t.nodeValue, hits = hitsIn(txt, q, qc); if (!hits.length) continue;
     const frag = document.createDocumentFragment(); let last = 0;
-    while (i >= 0 && count < 400) { frag.append(txt.slice(last, i)); const m = document.createElement('mark'); m.className = 'hit'; m.textContent = txt.slice(i, i + q.length); frag.append(m); last = i + q.length; i = low.indexOf(q, last); count++; }
+    for (const [a, b] of hits) {
+      if (count >= 400 || a < last) break;
+      frag.append(txt.slice(last, a)); const m = document.createElement('mark'); m.className = 'hit'; m.textContent = txt.slice(a, b); frag.append(m); last = b; count++;
+    }
     frag.append(txt.slice(last)); t.replaceWith(frag);
   }
   return count;
 }
 function search() {
-  const q = norm(input.value.trim());
+  const raw = input.value.trim();
+  const q = norm(raw), qc = compact(q);
   clearMarks();
+  if (clearBtn) clearBtn.hidden = !input.value;
   let shown = 0;
   for (const s of sections) {
-    const ok = q.length < 2 || norm(s.textContent).includes(q);
+    const txt = norm(s.textContent);
+    const ok = q.length < 2 || txt.includes(q) || (qc.length >= 2 && compact(txt).includes(qc));
     s.hidden = !ok; if (ok) shown++;
-    if (ok && q.length >= 2) markIn(s, q);
+    if (ok && q.length >= 2) markIn(s, q, qc.length >= 2 ? qc : '');
   }
   noRes.style.display = shown ? 'none' : 'block';
   if (countEl) {
-    const word = input.value.trim();   /* espaces insécables à l'intérieur des guillemets */
+    const word = raw;   /* espaces insécables à l'intérieur des guillemets */
     const msg = q.length < 2 ? '' : !shown ? 'Aucune section ne contient ce mot.'
-      : shown + (shown > 1 ? ' sections contiennent' : ' section contient') + ' «\u00a0' + word + '\u00a0».';
+      : shown + (shown > 1 ? ' sections contiennent' : ' section contient') + ' « ' + word + ' ».';
     if (countEl.textContent !== msg) countEl.textContent = msg;
   }
   links.forEach(a => { const s = document.getElementById(a.getAttribute('href').slice(1)); a.style.display = (s && s.closest('section') && s.closest('section').hidden) ? 'none' : ''; });
   /* un groupe du sommaire dont tous les liens sont masqués disparaît avec eux */
   document.querySelectorAll('.doc-side .grp').forEach(g => { g.hidden = ![...g.querySelectorAll('a')].some(a => a.style.display !== 'none'); });
 }
+function clearSearch(focus) { clearTimeout(timer); input.value = ''; search(); if (focus) input.focus(); }
+if (clearBtn) clearBtn.addEventListener('click', () => clearSearch(true));
+if (noResClear) noResClear.addEventListener('click', () => clearSearch(true));
 /* Lien interne vers une section masquée par la recherche (raccourcis, sommaire, renvois dans le texte) :
    la recherche est vidée d'abord, puis le saut se fait normalement. */
 document.addEventListener('click', e => {
   const a = e.target.closest && e.target.closest('a[href^="#"]'); if (!a) return;
   const id = decodeURIComponent(a.getAttribute('href').slice(1)); if (!id) return;
   const t = document.getElementById(id), s = t && t.closest('.doc-main > section');
-  if (s && s.hidden) { clearTimeout(timer); input.value = ''; search(); }
+  if (s && s.hidden) clearSearch(false);
 });
 let timer; input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(search, 120); });
-addEventListener('keydown', e => { if (e.key === '/' && document.activeElement !== input && !/INPUT|TEXTAREA/.test(document.activeElement.tagName)) { e.preventDefault(); input.focus(); } if (e.key === 'Escape' && document.activeElement === input) { input.value = ''; search(); input.blur(); } });
+/* « / » met le curseur dans la recherche, sauf si l'on tape déjà dans un champ (input, textarea, select, zone modifiable) */
+const typing = el => !!el && (/INPUT|TEXTAREA|SELECT/.test(el.tagName) || el.isContentEditable);
+addEventListener('keydown', e => {
+  if (e.key === '/' && document.activeElement !== input && !typing(document.activeElement)) { e.preventDefault(); input.focus(); }
+  if (e.key === 'Escape' && document.activeElement === input) { clearSearch(false); input.blur(); }
+});
 if (location.hash) { const el = document.getElementById(location.hash.slice(1)); if (el) setTimeout(() => el.scrollIntoView(), 50); }
