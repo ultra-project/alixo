@@ -57,6 +57,60 @@
   .chk input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--tint); }
   /* 1.56.0 : rappel du droit de copie (mode scan) */
   .legal { margin: -8px 0 14px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--ink2); font-size: 13.5px; line-height: 1.45; }
+  /* 1.57.0 : mode scan — écran « Vérifiez le cadrage » (détection de la feuille, quatre coins à ajuster) */
+  body.rv-open { overflow: hidden; }
+  .rv { --acc: #3d8bfd; position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: #0f1215; color: #f2f4f6; padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); outline: none; }
+  .rv-top { padding: 12px 16px 2px; text-align: center; }
+  .rv-top h2 { margin: 0; font-size: 18px; line-height: 1.3; }
+  .rv-st { margin: 4px 0 0; font-size: 14.5px; color: #c9d1d9; }
+  .rv-warn { margin: 2px 0 0; min-height: 1.45em; font-size: 14.5px; font-weight: 650; color: #ffb4a8; }
+  .rv-stage { flex: 1; min-height: 0; position: relative; display: grid; place-items: center; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+  .rv-box { position: relative; }
+  .rv-box[hidden] { display: none; }
+  .rv-img { display: block; width: 100%; height: 100%; }
+  .rv-svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+  .rv-veil { fill: rgba(0, 0, 0, .55); }
+  .rv-l1 { fill: none; stroke: #fff; stroke-width: 3; stroke-linejoin: round; }
+  .rv-l2 { fill: none; stroke: var(--acc); stroke-width: 1.5; stroke-linejoin: round; }
+  .rv-h { position: absolute; width: 48px; height: 48px; margin: -24px 0 0 -24px; padding: 0; border: 0; border-radius: 50%; background: transparent; cursor: grab; touch-action: none; -webkit-tap-highlight-color: transparent; }
+  .rv-h::after { content: ''; position: absolute; left: 13px; top: 13px; width: 22px; height: 22px; box-sizing: border-box; border-radius: 50%; background: var(--acc); border: 3px solid #fff; box-shadow: 0 1px 5px rgba(0, 0, 0, .6); transition: transform .12s; }
+  .rv-h:focus { outline: none; }
+  .rv-h:focus-visible::after { box-shadow: 0 0 0 3px #0f1215, 0 0 0 6px #ffd166; }
+  .rv-h.on { cursor: grabbing; }
+  .rv-h.on::after { transform: scale(1.25); }
+  .rv-loupe { position: absolute; width: 96px; height: 96px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; box-shadow: 0 2px 12px rgba(0, 0, 0, .6); pointer-events: none; z-index: 2; }
+  .rv-loupe[hidden] { display: none; }
+  .rv-loupe canvas { display: block; width: 100%; height: 100%; }
+  .rv-help { margin: 4px 16px 0; text-align: center; font-size: 14px; color: #c9d1d9; }
+  .rv-help[hidden] { display: none; }
+  .rv-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0; }
+  /* lot : « Envoyer les suivantes sans vérifier », lien discret sous les boutons */
+  .rv-rest { display: block; margin: 8px auto 0; min-height: 44px; padding: 0 12px; border: 0; background: none; color: #9cc3ff; font: inherit; font-size: 14.5px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .rv-rest:disabled { opacity: .45; cursor: not-allowed; }
+  .rv-rest:focus-visible { outline: 3px solid #ffd166; outline-offset: 2px; border-radius: 6px; }
+  .rv-bar { width: 100%; max-width: 480px; margin: 0 auto; padding: 10px 16px 14px; }
+  .rv-bar .btn { min-height: 52px; margin-bottom: 10px; }
+  .rv-row { display: flex; gap: 10px; }
+  .rv-row .btn { flex: 1; margin-bottom: 0; font-size: 15.5px; }
+  .rv .btn.ghost { background: #1d232a; color: #f2f4f6; border-color: #3a434d; }
+  .rv .btn:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+  .rv .btn:focus-visible { outline: 3px solid #ffd166; outline-offset: 2px; }
+  /* anneau jaune réservé au clavier : au toucher, le focus posé par programme (bouton principal, poignée tirée) reste discret */
+  .rv.ptr .btn:focus-visible, .rv.ptr .rv-rest:focus-visible { outline: none; }
+  .rv.ptr .rv-h:focus-visible::after { box-shadow: 0 1px 5px rgba(0, 0, 0, .6); }
+  /* paysage (téléphone couché) : titre resserré, consigne masquée, boutons sur une ligne — la photo prend la hauteur */
+  @media (max-height: 500px) {
+    .rv-top { padding: 6px 16px 0; display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; column-gap: 12px; }
+    .rv-top h2 { font-size: 16px; }
+    .rv-st, .rv-warn { margin: 0; font-size: 13.5px; }
+    .rv-warn { min-height: 0; flex-basis: 100%; }
+    .rv-help { display: none; }
+    .rv-bar { max-width: none; display: flex; align-items: center; gap: 10px; padding: 6px 16px 8px; }
+    .rv-bar .btn { min-height: 44px; margin: 0; flex: 1 1 auto; padding: 0 14px; font-size: 15px; white-space: nowrap; }
+    .rv-row { flex: 2 1 auto; }
+    .rv-rest { flex: 0 0 13em; max-width: none; margin: 0; line-height: 1.25; text-align: center; }
+  }
+  @media (prefers-reduced-motion: reduce) { .rv-h::after, .item .bar i { transition: none; } .btn:active { transform: none; } .st.busy svg { animation-duration: 2.4s; } }
   .foot { text-align: center; color: var(--ink2); font-size: 12.5px; padding: 18px 0 14px; }
   .foot a { color: inherit; }
 </style>
@@ -68,6 +122,7 @@
   <script src="firebase-config.js"></script>
   <script src="js/vendor/firebase-app-compat.js"></script>
   <script src="js/vendor/firebase-firestore-compat.js"></script>
+  <script src="js/scandetect.js"></script>
   <script src="js/photo.js"></script>
 </body>
 </html>

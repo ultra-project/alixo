@@ -9,6 +9,11 @@
      L'ordinateur vérifie, assemble, range dans la bibliothèque et efface. Cette page ne lit, ne liste ni n'efface rien.
    - 1.56.0 : mode « scan » (adresse photo.html#<sid>-scan, session de type 'photo') : même envoi qu'une photo, avec un écran
      dédié (« Photographier la page ») et un redressement des contrastes de la page (papier blanc, noir et blanc au choix).
+   - 1.57.0 : mode scan — détection automatique de la feuille (js/scandetect.js, sur le téléphone) puis écran « Vérifiez le
+     cadrage » : quatre coins à ajuster (doigt, loupe, flèches du clavier), « Recadrer et envoyer » redresse la page
+     (perspective corrigée, format A4 reconnu), « Envoyer sans recadrer » l'envoie telle quelle, « Reprendre la photo »
+     relance l'appareil photo ; en lot (galerie), « Passer cette image » et « Envoyer les suivantes sans vérifier ».
+     Case « Détecter et redresser la feuille » (clé alixo.scan.crop, '0' = désactivée) : décochée, envoi direct comme en 1.56.
    ============================================================ */
 'use strict';
 
@@ -83,29 +88,45 @@
     ctx.putImageData(img, 0, 0);
   }
 
-  /* réduit l'image (orientation de l'appareil photo respectée) jusqu'à tenir sous MAX_BYTES ;
-     1.56.0 : opts.enhance = { gray } → page redressée (enhance) une fois, sur la première copie réduite */
-  async function shrink(file, opts = {}) {
+  /* 1.57.0 : décodage d'une photo (orientation de l'appareil photo respectée), partagé par shrink et l'écran de vérification */
+  async function loadImage(file) {
     let src, w, h;
     try { src = await createImageBitmap(file, { imageOrientation: 'from-image' }); w = src.width; h = src.height; }
     catch {
       src = await new Promise((res, rej) => { const u = URL.createObjectURL(file); const im = new Image(); im.onload = () => { URL.revokeObjectURL(u); res(im); }; im.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Image illisible')); }; im.src = u; });
       w = src.naturalWidth; h = src.naturalHeight;
     }
-    if (!w || !h) throw new Error('Image illisible');
-    let s = Math.min(1, MAX_SIDE / Math.max(w, h)), q = 0.86, data = '', cw = w, ch = h, base = null;
+    if (!w || !h) { if (src.close) src.close(); throw new Error('Image illisible'); }
+    return { src, w, h };
+  }
+
+  /* réduit l'image (orientation de l'appareil photo respectée) jusqu'à tenir sous MAX_BYTES ;
+     1.56.0 : opts.enhance = { gray } → page redressée (enhance) une fois, sur la première copie réduite ;
+     1.57.0 : opts.quad = 4 coins normalisés (HG, HD, BD, BG) → page d'abord redressée (perspective) à MAX_SIDE au plus ;
+     si le redressement échoue, la photo entière part (uncropped: true, signalé dans la liste) */
+  async function shrink(file, opts = {}) {
+    const { src, w: w0, h: h0 } = await loadImage(file);
+    let w = w0, h = h0, base = null, uncropped = false;
+    if (opts.quad) {
+      try { base = window.AlixoScanDetect.warp(src, w0, h0, opts.quad, { maxSide: MAX_SIDE }); }
+      catch (e) { console.warn('Redressement impossible', e); base = null; uncropped = true; }
+      if (base) { if (src.close) src.close(); w = base.width; h = base.height; if (opts.enhance) enhance(base, opts.enhance); }
+    }
+    let s = base ? 1 : Math.min(1, MAX_SIDE / Math.max(w, h)), q = 0.86, data = '', cw = w, ch = h;
     for (let k = 0; k < 8; k++) {
       cw = Math.max(1, Math.round(w * s)); ch = Math.max(1, Math.round(h * s));
       const c = document.createElement('canvas'); c.width = cw; c.height = ch;
       const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cw, ch); ctx.drawImage(base || src, 0, 0, cw, ch);
       if (opts.enhance && !base) { enhance(c, opts.enhance); base = c; }   // les réductions suivantes partent de la page redressée
       data = c.toDataURL('image/jpeg', q);
+      if (c !== base) { c.width = 0; c.height = 0; }
       if (data.length <= MAX_BYTES) break;
       q = Math.max(0.5, q - 0.1); s *= 0.82;
     }
     if (src.close) src.close();
+    if (base) { base.width = 0; base.height = 0; }
     if (data.length > MAX_BYTES) throw new Error('Photo trop lourde');
-    return { data, w: cw, h: ch };
+    return { data, w: cw, h: ch, uncropped };
   }
 
   /* ---------------- photo (1.40) ---------------- */
@@ -124,11 +145,16 @@
   /* ---------------- document scanné (1.56.0) ---------------- */
   const bwGet = () => { try { return localStorage.getItem(BW_KEY) === '1'; } catch { return false; } };
   const bwSet = v => { try { if (v) localStorage.setItem(BW_KEY, '1'); else localStorage.removeItem(BW_KEY); } catch { /* stockage interdit */ } };
+  /* 1.57.0 : « Détecter et redresser la feuille » — cochée par défaut, '0' mémorisé quand on la décoche */
+  const CROP_KEY = 'alixo.scan.crop';
+  const cropGet = () => { try { return localStorage.getItem(CROP_KEY) !== '0'; } catch { return true; } };
+  const cropSet = v => { try { if (v) localStorage.removeItem(CROP_KEY); else localStorage.setItem(CROP_KEY, '0'); } catch { /* stockage interdit */ } };
   function screenScan() {
     main.innerHTML = `<h1>Scanner une page dans « ${esc(session.title || 'Document')} »</h1>
       <p class="sub">Cadrez le document en entier, bien à plat. Chaque page apparaît sur une page entière de votre document, sur l’ordinateur.</p>
       <p class="legal">Ne scannez que des documents que vous avez le droit de copier pour votre usage personnel. Une page de manuel ou le polycopié d’un enseignant ne peut être ni partagé ni déposé dans le Workspace sans l’accord de son auteur.</p>
       <label class="chk"><input type="checkbox" id="c-bw"${bwGet() ? ' checked' : ''}><span>Noir et blanc (mode document)</span></label>
+      <label class="chk"><input type="checkbox" id="c-crop"${cropGet() ? ' checked' : ''}><span>Détecter et redresser la feuille</span></label>
       <button class="btn primary" id="b-cam" type="button">${ICO.scan}Photographier la page</button>
       <button class="btn ghost" id="b-gal" type="button">${ICO.gal}Choisir dans la galerie</button>
       <input type="file" id="f-cam" accept="image/*" capture="environment">
@@ -137,14 +163,293 @@
     $('#b-cam').addEventListener('click', () => $('#f-cam').click());
     $('#b-gal').addEventListener('click', () => $('#f-gal').click());
     $('#c-bw').addEventListener('change', e => bwSet(e.target.checked));
-    ['#f-cam', '#f-gal'].forEach(id => $(id).addEventListener('change', e => { const files = [...(e.target.files || [])]; e.target.value = ''; sendAll(files, { enhance: { gray: $('#c-bw').checked } }); }));
+    $('#c-crop').addEventListener('change', e => cropSet(e.target.checked));
+    [['#f-cam', 'cam'], ['#f-gal', 'gal']].forEach(([id, from]) => $(id).addEventListener('change', e => { const files = [...(e.target.files || [])]; e.target.value = ''; scanFiles(files, { gray: $('#c-bw').checked, from }); }));
+  }
+
+  /* ---------------- 1.57.0 : détection de la feuille et écran « Vérifiez le cadrage » ---------------- */
+  const isImg = f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
+  let reviewChain = Promise.resolve();
+  const FULL_QUAD = () => [{ x: 0, y: 0 }, { x: 1, y: 0 }, { x: 1, y: 1 }, { x: 0, y: 1 }];
+  const isFullQuad = q => q.every((p, i) => Math.abs(p.x - (i === 1 || i === 2 ? 1 : 0)) < 0.002 && Math.abs(p.y - (i >= 2 ? 1 : 0)) < 0.002);
+  /* case décochée (ou module absent) : envoi direct comme en 1.56 ; sinon une vérification par image, l'une après l'autre ;
+     « Envoyer les suivantes sans vérifier » (lot) : les images restantes partent avec le cadre détecté (photo entière sinon) */
+  function scanFiles(files, { gray = false, from = 'cam' } = {}) {
+    const imgs = files.filter(isImg);
+    if (!imgs.length) return;
+    const enh = { gray };
+    const box = $('#c-crop');
+    if (!box || !box.checked || !window.AlixoScanDetect) { sendAll(imgs, { enhance: enh }); return; }
+    const batch = from !== 'cam' || imgs.length > 1;
+    reviewChain = reviewChain.then(async () => {
+      for (let k = 0; k < imgs.length; k++) {
+        const f = imgs[k];
+        const r = await review(f, { batch, index: k + 1, total: imgs.length });
+        if (r.quad) sendAll([f], { enhance: enh, quad: r.quad });
+        else if (r.full || r.fail) sendAll([f], { enhance: enh });   // fail : sendAll affichera « Image illisible »
+        else if (r.retake || r.cancel) break;
+        if (r.rest) {
+          for (const g of imgs.slice(k + 1)) { const q = await autoQuad(g); sendAll([g], q ? { enhance: enh, quad: q } : { enhance: enh }); }
+          break;
+        }
+      }
+    }).catch(e => console.error(e));
+  }
+  /* copie d'aperçu (≤ 1024 px) ; la photo décodée est libérée aussitôt */
+  async function prepareReview(file) {
+    const { src, w, h } = await loadImage(file);
+    try {
+      const k = Math.min(1, 1024 / Math.max(w, h));
+      const c = document.createElement('canvas'); c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      const ctx = c.getContext('2d'); ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high'; ctx.drawImage(src, 0, 0, c.width, c.height);
+      return { canvas: c, w, h };
+    } finally { if (src.close) src.close(); }
+  }
+  /* cadre détecté sans vérification (lot « Envoyer les suivantes sans vérifier ») : null = photo entière */
+  async function autoQuad(file) {
+    let prep = null;
+    try {
+      prep = await prepareReview(file);
+      const det = window.AlixoScanDetect.detect(prep.canvas);
+      if (!det.ok || det.full || !det.quad) return null;
+      const q = det.quad.map(p => ({ x: Math.min(1, Math.max(0, p.x)), y: Math.min(1, Math.max(0, p.y)) }));
+      return isFullQuad(q) ? null : q;
+    } catch (e) { console.warn(e); return null; }
+    finally { if (prep) { prep.canvas.width = 0; prep.canvas.height = 0; } }
+  }
+  const nextFrame = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+  const CORNER_LABELS = ['Coin supérieur gauche', 'Coin supérieur droit', 'Coin inférieur droit', 'Coin inférieur gauche'];
+  /* raisons de AlixoScanDetect.validate ; « outside » n'arrive jamais ici (coins ramenés dans la photo par clamp01) */
+  const RV_WARN = { cross: 'Les coins se croisent : remettez chacun à sa place', small: 'Cadre trop petit : écartez les coins', shape: 'Cadre trop déformé : placez les coins sur ceux de la feuille' };
+  /* entrées d'historique des écrans de vérification : { alixoRv: n }, n propre à chaque écran */
+  let rvSeq = 0;
+  /* écran de vérification d'une photo → { quad } | { full } | { retake } | { cancel } | { skip } | { fail } (photo illisible) ;
+     + rest: true (lot) : les images suivantes partent sans vérification */
+  function review(file, { batch = false, index = 1, total = 1 } = {}) {
+    return new Promise(resolve => {
+      const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
+      const prevFocus = document.activeElement;
+      const rvId = ++rvSeq;
+      const more = batch && index < total;   // images à suivre dans le lot
+      const pre = batch && total > 1 ? `Image ${index} sur ${total} · ` : '';
+      const dlg = document.createElement('div');
+      dlg.className = 'rv'; dlg.tabIndex = -1;
+      dlg.setAttribute('role', 'dialog'); dlg.setAttribute('aria-modal', 'true'); dlg.setAttribute('aria-labelledby', 'rv-t');
+      dlg.innerHTML = `<div class="rv-top"><h2 id="rv-t">Vérifiez le cadrage</h2><p class="rv-st" role="status">${esc(pre)}Analyse de la photo…</p><p class="rv-warn" aria-live="polite"></p></div>
+        <div class="rv-stage"><div class="rv-box" hidden><svg class="rv-svg" aria-hidden="true" focusable="false"><path class="rv-veil" fill-rule="evenodd"/><path class="rv-l1"/><path class="rv-l2"/></svg><div class="rv-loupe" hidden><canvas></canvas></div></div></div>
+        <p class="rv-help" id="rv-help" hidden>Faites glisser les coins sur les bords de la feuille</p>
+        <p class="rv-sr" id="rv-kbd">Flèches pour déplacer le coin, Maj + flèches pour aller plus vite</p>
+        <div class="rv-bar"><button class="btn primary" id="rv-ok" type="button" disabled>Recadrer et envoyer</button>
+          <div class="rv-row"><button class="btn ghost" id="rv-full" type="button" disabled>Envoyer sans recadrer</button><button class="btn ghost" id="rv-back" type="button">${batch ? 'Passer cette image' : 'Reprendre la photo'}</button></div>${more ? `
+          <button class="rv-rest" id="rv-rest" type="button" disabled>Envoyer les suivantes sans vérifier</button>` : ''}</div>`;
+      const q$ = s => dlg.querySelector(s);
+      const st = q$('.rv-st'), warnEl = q$('.rv-warn'), stage = q$('.rv-stage'), box = q$('.rv-box'), svg = q$('.rv-svg'), help = q$('.rv-help');
+      const loupe = q$('.rv-loupe'), lc = loupe.querySelector('canvas');
+      const okB = q$('#rv-ok'), fullB = q$('#rv-full'), backB = q$('#rv-back'), restB = q$('#rv-rest');
+      let quad = null, prep = null, bw = 0, bh = 0, done = false, popped = false, drag = null;
+      const handles = [];
+      /* anneau de focus jaune réservé au clavier : au toucher (doigt, souris), classe ptr — retirée dès qu'une touche est frappée */
+      try { if (window.matchMedia && matchMedia('(pointer: coarse)').matches) dlg.classList.add('ptr'); } catch { /* rien */ }
+      dlg.addEventListener('pointerdown', () => dlg.classList.add('ptr'), true);
+      dlg.addEventListener('keydown', () => dlg.classList.remove('ptr'), true);
+
+      const layout = () => {
+        if (!prep) return;
+        const r = stage.getBoundingClientRect(), pad = 26;
+        const k = Math.min(Math.max(40, r.width - 2 * pad) / prep.canvas.width, Math.max(40, r.height - 2 * pad) / prep.canvas.height);
+        bw = Math.max(1, Math.round(prep.canvas.width * k)); bh = Math.max(1, Math.round(prep.canvas.height * k));
+        box.style.width = bw + 'px'; box.style.height = bh + 'px';
+        svg.setAttribute('viewBox', `0 0 ${bw} ${bh}`);
+        draw();
+      };
+      const draw = () => {
+        if (!quad) return;
+        const P = quad.map(p => [+(p.x * bw).toFixed(1), +(p.y * bh).toFixed(1)]);
+        const poly = 'M' + P.map(p => p.join(' ')).join('L') + 'Z';
+        q$('.rv-veil').setAttribute('d', `M0 0H${bw}V${bh}H0Z` + poly);
+        q$('.rv-l1').setAttribute('d', poly); q$('.rv-l2').setAttribute('d', poly);
+        handles.forEach((hd, i) => { hd.style.left = P[i][0] + 'px'; hd.style.top = P[i][1] + 'px'; });
+      };
+      const check = () => {
+        const v = window.AlixoScanDetect.validate(quad, prep.w, prep.h);
+        okB.disabled = !v.ok;
+        const t = v.ok ? '' : (RV_WARN[v.reason] || RV_WARN.shape);
+        if (warnEl.textContent !== t) warnEl.textContent = t;
+      };
+      /* loupe : agrandissement ×2 autour du coin tiré, avec les deux côtés du cadre qui s'y rejoignent. Elle se pose là où elle
+         ne cache aucune poignée : bande vide autour de la photo si la place suffit, sinon l'angle ou le milieu de bord de la photo
+         le plus éloigné des quatre poignées */
+      const L = 96, GAP = 6;
+      const loupeSpot = () => {
+        const P = quad.map(p => [p.x * bw, p.y * bh]);
+        const ox = box.offsetLeft, oy = box.offsetTop, sw = stage.clientWidth, sh = stage.clientHeight;
+        const spots = [];
+        // dans la photo : angles puis milieux des bords
+        [[GAP, GAP], [bw - L - GAP, GAP], [GAP, bh - L - GAP], [bw - L - GAP, bh - L - GAP],
+          [(bw - L) / 2, GAP], [(bw - L) / 2, bh - L - GAP], [GAP, (bh - L) / 2], [bw - L - GAP, (bh - L) / 2]].forEach(s => spots.push({ x: s[0], y: s[1], out: false }));
+        // hors de la photo (bande vide de la scène), au-dessus, en dessous, à gauche, à droite
+        if (oy >= L + GAP) spots.push({ x: (bw - L) / 2, y: -L - GAP, out: true });
+        if (sh - oy - bh >= L + GAP) spots.push({ x: (bw - L) / 2, y: bh + GAP, out: true });
+        if (ox >= L + GAP) spots.push({ x: -L - GAP, y: (bh - L) / 2, out: true });
+        if (sw - ox - bw >= L + GAP) spots.push({ x: bw + GAP, y: (bh - L) / 2, out: true });
+        const clear = s => Math.min(...P.map(([px, py]) => {   // distance entre le disque de la loupe et le centre de chaque poignée
+          const dx = px - (s.x + L / 2), dy = py - (s.y + L / 2);
+          return Math.hypot(dx, dy) - L / 2;
+        }));
+        let best = null, bestD = -Infinity;
+        for (const s of spots) {
+          const d = clear(s) + (s.out ? 1000 : 0);   // hors de la photo : rien n'y est caché
+          if (d > bestD + 0.5) { best = s; bestD = d; }
+        }
+        return best;   // photo minuscule : aucune place sûre, la moins gênante
+      };
+      const showLoupe = i => {
+        const dpr = Math.min(3, window.devicePixelRatio || 1), c = prep.canvas;
+        if (lc.width !== L * dpr) { lc.width = L * dpr; lc.height = L * dpr; }
+        const ctx = lc.getContext('2d'), S = lc.width;
+        const cx = quad[i].x * c.width, cy = quad[i].y * c.height, half = (L / 2) / (bw / c.width) / 2;   // ×2
+        ctx.fillStyle = '#000'; ctx.fillRect(0, 0, S, S);
+        ctx.drawImage(c, cx - half, cy - half, 2 * half, 2 * half, 0, 0, S, S);
+        /* côtés du cadre autour du coin : vers le coin précédent et le suivant */
+        const toL = p => [(p.x * c.width - (cx - half)) * S / (2 * half), (p.y * c.height - (cy - half)) * S / (2 * half)];
+        const A = toL(quad[(i + 3) % 4]), B = toL(quad[(i + 1) % 4]);
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        ctx.beginPath(); ctx.moveTo(A[0], A[1]); ctx.lineTo(S / 2, S / 2); ctx.lineTo(B[0], B[1]);
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 3 * dpr; ctx.stroke();
+        ctx.strokeStyle = '#3d8bfd'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+        /* réticule */
+        ctx.beginPath(); ctx.moveTo(S / 2, S / 2 - 10 * dpr); ctx.lineTo(S / 2, S / 2 + 10 * dpr); ctx.moveTo(S / 2 - 10 * dpr, S / 2); ctx.lineTo(S / 2 + 10 * dpr, S / 2);
+        ctx.strokeStyle = 'rgba(0, 0, 0, .55)'; ctx.lineWidth = 3 * dpr; ctx.stroke();
+        ctx.strokeStyle = '#ffd166'; ctx.lineWidth = 1.5 * dpr; ctx.stroke();
+        const s = loupeSpot();
+        loupe.style.left = Math.round(s.x) + 'px'; loupe.style.top = Math.round(s.y) + 'px';
+        loupe.hidden = false;
+      };
+      const moved = i => { draw(); check(); if (drag) showLoupe(i); };
+
+      const close = async result => {
+        if (done) return; done = true;
+        window.removeEventListener('popstate', onPop); window.removeEventListener('resize', layout);
+        document.removeEventListener('focusin', onFocusIn);
+        dlg.remove(); document.body.classList.remove('rv-open');
+        if (prep) { prep.canvas.width = 0; prep.canvas.height = 0; }
+        lc.width = 0; lc.height = 0;
+        const back = (prevFocus && prevFocus.isConnected && prevFocus !== document.body) ? prevFocus : $('#b-cam');
+        if (back) try { back.focus({ preventScroll: true }); } catch { /* rien */ }
+        /* l'entrée d'historique de l'écran est retirée avant la photo suivante (sinon le retour arrière la fermerait). Si le
+           retour tarde (> 500 ms), l'écran suivant s'ouvre quand même : le popstate tardif est alors marqué (alixoLate) et
+           l'écran suivant l'ignore au lieu de se fermer */
+        if (!popped && history.state && history.state.alixoRv) {
+          await new Promise(res => {
+            let late = false;
+            const on = ev => { window.removeEventListener('popstate', on); clearTimeout(drop); if (late) ev.alixoLate = true; else res(); };
+            window.addEventListener('popstate', on);
+            const drop = setTimeout(() => window.removeEventListener('popstate', on), 5000);
+            history.back();
+            setTimeout(() => { late = true; res(); }, 500);
+          });
+        }
+        resolve(result);
+      };
+      /* retour arrière du téléphone : ferme l'écran seulement s'il quitte vraiment son entrée { alixoRv: rvId } */
+      const onPop = e => {
+        const s = history.state && history.state.alixoRv;
+        if (e.alixoLate) {   // retour tardif de l'écran précédent : l'entrée de celui-ci est remise en place
+          try { if (s && s !== rvId) history.replaceState({ alixoRv: rvId }, ''); else if (!s) history.pushState({ alixoRv: rvId }, ''); } catch { /* rien */ }
+          return;
+        }
+        if (s === rvId) return;   // toujours sur l'entrée de cet écran (retour en avant, popstate d'un autre écran)
+        popped = true; close(batch ? { skip: true } : { retake: true });
+      };
+      const onFocusIn = e => { if (!dlg.contains(e.target)) (okB.disabled ? backB : okB).focus(); };
+
+      okB.addEventListener('click', () => {
+        if (!quad || okB.disabled) return;
+        close(isFullQuad(quad) ? { full: true } : { quad: quad.map(p => ({ x: p.x, y: p.y })) });
+      });
+      fullB.addEventListener('click', () => close({ full: true }));
+      backB.addEventListener('click', () => {
+        if (!batch) { const cam = $('#f-cam'); if (cam) cam.click(); }   // depuis le clic : le navigateur autorise l'appareil photo
+        close(batch ? { skip: true } : { retake: true });
+      });
+      /* lot : celle-ci part avec son cadre (photo entière s'il n'est pas valable), les suivantes avec le cadre détecté */
+      if (restB) restB.addEventListener('click', () => {
+        if (!quad) return;
+        close(okB.disabled || isFullQuad(quad) ? { full: true, rest: true } : { quad: quad.map(p => ({ x: p.x, y: p.y })), rest: true });
+      });
+      dlg.addEventListener('keydown', e => {
+        /* Échap ferme seulement : image passée dans un lot, sinon fermeture sans envoi ni appareil photo */
+        if (e.key === 'Escape') { e.preventDefault(); close(batch ? { skip: true } : { cancel: true }); return; }
+        if (e.key !== 'Tab') return;
+        const f = [...dlg.querySelectorAll('button:not([disabled])')];
+        if (!f.length) return;
+        const i = f.indexOf(document.activeElement);
+        if (e.shiftKey && (i <= 0)) { e.preventDefault(); f[f.length - 1].focus(); }
+        else if (!e.shiftKey && (i === f.length - 1 || i < 0)) { e.preventDefault(); f[0].focus(); }
+      });
+
+      document.body.appendChild(dlg); document.body.classList.add('rv-open');
+      dlg.focus({ preventScroll: true });
+      try { history.pushState({ alixoRv: rvId }, ''); } catch { /* historique indisponible */ }
+      window.addEventListener('popstate', onPop);
+      document.addEventListener('focusin', onFocusIn);
+
+      (async () => {
+        await nextFrame();   // « Analyse de la photo… » s'affiche avant le calcul
+        try { prep = await prepareReview(file); } catch (e) { console.warn(e); close({ fail: true }); return; }
+        if (done) { prep.canvas.width = 0; prep.canvas.height = 0; return; }   // fermé pendant l'analyse
+        let det;
+        try { det = window.AlixoScanDetect.detect(prep.canvas); } catch (e) { console.warn(e); det = { ok: false, reason: 'contrast', quad: null, full: false }; }
+        if (det.reason === 'tiny-image') { close({ full: true }); return; }   // trop petite pour être recadrée : envoyée telle quelle
+        quad = (det.quad || FULL_QUAD()).map(p => ({ x: clamp01(p.x), y: clamp01(p.y) }));
+        st.textContent = pre + (!det.ok ? 'Feuille non détectée : placez les coins ou envoyez la photo entière' : det.full ? 'La page remplit déjà la photo' : 'Feuille détectée');
+        help.hidden = false;
+        prep.canvas.className = 'rv-img'; prep.canvas.setAttribute('aria-hidden', 'true');
+        box.insertBefore(prep.canvas, svg);
+        CORNER_LABELS.forEach((label, i) => {
+          const hd = document.createElement('button');
+          hd.type = 'button'; hd.className = 'rv-h'; hd.setAttribute('aria-label', label); hd.setAttribute('aria-describedby', 'rv-kbd');
+          hd.addEventListener('pointerdown', e => {
+            if (e.button > 0) return;
+            e.preventDefault(); hd.focus({ preventScroll: true });
+            try { hd.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
+            const r = box.getBoundingClientRect();
+            drag = { id: e.pointerId, i, dx: r.left + quad[i].x * bw - e.clientX, dy: r.top + quad[i].y * bh - e.clientY };   // décalage de prise
+            hd.classList.add('on'); showLoupe(i);
+          });
+          hd.addEventListener('pointermove', e => {
+            if (!drag || drag.id !== e.pointerId || drag.i !== i) return;
+            const r = box.getBoundingClientRect();
+            quad[i] = { x: clamp01((e.clientX + drag.dx - r.left) / bw), y: clamp01((e.clientY + drag.dy - r.top) / bh) };
+            moved(i);
+          });
+          const end = e => { if (drag && drag.id === e.pointerId) { drag = null; hd.classList.remove('on'); loupe.hidden = true; } };
+          hd.addEventListener('pointerup', end); hd.addEventListener('pointercancel', end); hd.addEventListener('lostpointercapture', end);
+          hd.addEventListener('keydown', e => {
+            const s = e.shiftKey ? 0.03 : 0.005;
+            const d = { ArrowLeft: [-s, 0], ArrowRight: [s, 0], ArrowUp: [0, -s], ArrowDown: [0, s] }[e.key];
+            if (!d) return;
+            e.preventDefault();
+            quad[i] = { x: clamp01(quad[i].x + d[0]), y: clamp01(quad[i].y + d[1]) };
+            moved(i);
+          });
+          box.appendChild(hd); handles.push(hd);
+        });
+        box.hidden = false;
+        window.addEventListener('resize', layout);
+        layout(); check();
+        fullB.disabled = false; if (restB) restB.disabled = false;
+        if (!okB.disabled) okB.focus(); else handles[0].focus();
+      })();
+    });
   }
 
   let chain = Promise.resolve();
   let pages = 0;   // 1.56.0 : pages scannées envoyées (numérotées dans la liste)
-  /* 1.56.0 : opts.enhance (mode scan) → page redressée avant l'envoi ; échec réseau → « Réessayer » (comme sendFiles) */
+  /* 1.56.0 : opts.enhance (mode scan) → page redressée avant l'envoi ; échec réseau → « Réessayer » (comme sendFiles) ;
+     1.57.0 : opts.quad → page recadrée et redressée avant l'envoi (le même cadre resservira pour « Réessayer ») */
   function sendAll(files, opts = {}) {
-    files.filter(f => /^image\//.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name)).forEach(f => {
+    files.filter(isImg).forEach(f => {
       const li = document.createElement('li'); li.className = 'item';
       const thumb = URL.createObjectURL(f);
       li.innerHTML = `<img src="${thumb}" alt=""><span class="t">Envoi…<small>${esc(f.name || 'Photo')}</small></span><span class="st busy">${ICO.busy}</span>`;
@@ -156,7 +461,7 @@
             if (Date.now() > session.exp) throw new Error('expired');
             const im = await shrink(f, opts);
             await db.collection('photodrop').doc(sid).collection('photos').add({ data: im.data, w: im.w, h: im.h, name: String(f.name || 'photo.jpg').slice(0, 80), at: Date.now() });
-            set('ok', opts.enhance ? `Page ${++pages} envoyée — vérifiez qu’elle apparaît sur l’ordinateur` : 'Dans votre document');
+            set('ok', opts.enhance ? `Page ${++pages} envoyée${im.uncropped ? ' sans recadrage' : ''} — vérifiez qu’elle apparaît sur l’ordinateur` : 'Dans votre document');
           } catch (e) {
             console.error(e);
             const expired = expiredErr(e), heavy = e && e.message === 'Photo trop lourde', bad = e && e.message === 'Image illisible';

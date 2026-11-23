@@ -1846,21 +1846,35 @@ body.img-resizing, body.img-resizing * { user-select: none !important; }
 .block.img .imgbox img { cursor: default; }
 .block.img.objsel .imgbox img { cursor: move; }
 /* recadrage */
-.block.img.cropping .imgbox { overflow: visible; aspect-ratio: var(--nar); background: none; }
-.block.img.cropping .imgbox img { --iw: 100%; --tx: 0; --ty: 0; transform: none; opacity: .55; cursor: default; }
+.block.img.cropping .imgbox { overflow: visible; aspect-ratio: var(--nar); background: none; max-width: min(100%, calc(60vh * var(--nar))); }   /* 1.57.0 : image entière très haute (recadrage serré, image pivotée) : elle tient dans la fenêtre */
+/* 1.57.0 : pendant le recadrage, UNE image entière et nette ; le voile .crop-dim (rogné à l'image) assombrit ce qui sera
+   retiré, son « trou » et le cadre sont placés en % de l'image (justes sous le zoom de la feuille) */
+.block.img.cropping .imgbox > img { width: 100%; height: 100%; transform: none; cursor: default; }
 .block.img.cropping .rz { display: none; }
-.crop-rect { position: absolute; box-sizing: border-box; border: 1.5px solid #fff; box-shadow: 0 0 0 1px var(--tint), 0 0 0 9999px rgba(0, 0, 0, .35); cursor: move; z-index: 5; overflow: visible; }
-.crop-rect .cimg { position: absolute; left: 0; top: 0; overflow: hidden; width: 100%; height: 100%; pointer-events: none; }
-.crop-rect .cimg img { position: absolute; display: block; max-width: none; opacity: 1 !important; transform: none !important; }
-.crop-rect .ch { position: absolute; width: 12px; height: 12px; background: #fff; border: 1.5px solid var(--tint); border-radius: 2px; z-index: 6; }
-.crop-rect .ch.nw { left: -7px; top: -7px; cursor: nwse-resize; } .crop-rect .ch.ne { right: -7px; top: -7px; cursor: nesw-resize; }
-.crop-rect .ch.sw { left: -7px; bottom: -7px; cursor: nesw-resize; } .crop-rect .ch.se { right: -7px; bottom: -7px; cursor: nwse-resize; }
-.crop-rect .ch.n { left: calc(50% - 6px); top: -7px; cursor: ns-resize; } .crop-rect .ch.s { left: calc(50% - 6px); bottom: -7px; cursor: ns-resize; }
-.crop-rect .ch.e { right: -7px; top: calc(50% - 6px); cursor: ew-resize; } .crop-rect .ch.w { left: -7px; top: calc(50% - 6px); cursor: ew-resize; }
-.crop-bar { display: flex; gap: 6px; justify-content: center; padding: 8px 0 0; font-family: var(--font-ui); }
+.crop-dim { position: absolute; inset: 0; overflow: hidden; pointer-events: none; z-index: 4; border-radius: inherit; }
+.crop-dim i { position: absolute; display: block; box-shadow: 0 0 0 9999px rgba(0, 0, 0, .55); }
+html[data-theme="dark"] .crop-dim i { box-shadow: 0 0 0 9999px rgba(0, 0, 0, .62); }
+.crop-rect { position: absolute; box-sizing: border-box; outline: 1.5px solid #fff; outline-offset: -1.5px; box-shadow: 0 0 0 1px var(--tint); cursor: move; z-index: 5; touch-action: none; user-select: none; -webkit-user-select: none; }
+.crop-rect .ch { position: absolute; width: 12px; height: 12px; background: #fff; border: 1.5px solid var(--tint); border-radius: 2px; z-index: 6; box-sizing: border-box; }
+.crop-rect .ch.nw { left: -6px; top: -6px; cursor: nwse-resize; } .crop-rect .ch.ne { right: -6px; top: -6px; cursor: nesw-resize; }
+.crop-rect .ch.sw { left: -6px; bottom: -6px; cursor: nesw-resize; } .crop-rect .ch.se { right: -6px; bottom: -6px; cursor: nwse-resize; }
+.crop-rect .ch.n { left: calc(50% - 6px); top: -6px; cursor: ns-resize; } .crop-rect .ch.s { left: calc(50% - 6px); bottom: -6px; cursor: ns-resize; }
+.crop-rect .ch.e { right: -6px; top: calc(50% - 6px); cursor: ew-resize; } .crop-rect .ch.w { left: -6px; top: calc(50% - 6px); cursor: ew-resize; }
+.crop-bar { display: flex; gap: 6px; justify-content: center; padding: 8px 0 0; font-family: var(--font-ui); user-select: none; -webkit-user-select: none; }   /* 1.57.0 : la figure est sélectionnée (selectObj) : la barre ne doit pas apparaître surlignée */
+.crop-bar ::selection, .block.img.cropping ::selection { background: transparent; }
 .crop-bar button { padding: 5px 12px; border-radius: 6px; font-size: 12.5px; font-weight: 600; background: var(--surface); border: 1px solid var(--border); color: var(--ink); }
 .crop-bar button.ok { background: var(--tint); color: #fff; border-color: transparent; }
 .crop-bar button:hover { filter: brightness(1.06); }
+.crop-bar button:not(.ok):hover { background: var(--hover); }
+.crop-bar button:focus-visible { outline: 2px solid var(--tint); outline-offset: 2px; }
+.crop-rect .ch::before { content: ""; position: absolute; inset: -8px; }   /* 1.57.0 : zone de prise plus large, même apparence */
+@media (pointer: coarse) {
+  .crop-rect .ch { width: 18px; height: 18px; }
+  .crop-rect .ch.nw { left: -9px; top: -9px; } .crop-rect .ch.ne { right: -9px; top: -9px; }
+  .crop-rect .ch.sw { left: -9px; bottom: -9px; } .crop-rect .ch.se { right: -9px; bottom: -9px; }
+  .crop-rect .ch.n { left: calc(50% - 9px); top: -9px; } .crop-rect .ch.s { left: calc(50% - 9px); bottom: -9px; }
+  .crop-rect .ch.e { right: -9px; top: calc(50% - 9px); } .crop-rect .ch.w { left: -9px; top: calc(50% - 9px); }
+}
 /* barre flottante de l'image */
 #imgbar {
   position: fixed; z-index: 94; display: flex; align-items: center; gap: 2px; padding: 4px;
@@ -3886,7 +3900,6 @@ body.pages-mode #pg-head.ph-empty { display: none; }   /* 1.38 : plus de titre n
 #pg-layer .pg-num { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--font-ui); font-size: 10.5px; line-height: 14px; color: var(--ink-3); }
 /* fin de page à l'intérieur d'un bloc plus haut qu'une page : le PDF se coupe là, le bloc continue sur la page suivante */
 #pg-layer .pg-cut { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--ink-3); opacity: .55; }
-#pg-layer .pg-cut span { position: absolute; right: 8px; top: -9px; font-family: var(--font-ui); font-size: 10px; line-height: 16px; padding: 0 6px; border-radius: 8px; color: var(--ink-3); background: var(--paper); border: 1px solid var(--border); }
 .block.pg-first { margin-top: var(--pg-mt) !important; }
 /* bloc « Saut de page » */
 .block.pb { margin: 10px 0; padding: 6px 0; cursor: pointer; }

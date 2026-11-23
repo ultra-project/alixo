@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.56.0';
+const ALIXO_VERSION = '1.57.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -750,6 +750,9 @@ $('#tabbar').addEventListener('contextmenu', e => {
   const sp = window.AlixoSplit;
   const canSide = !!sp && !sp.isPane && typeof sp.openInPane === 'function' && !ALIXO_AUX && !document.body.classList.contains('mobile');
   const inPane = canSide && sp.panes().some(p => p.id === id);
+  /* 1.57.0 : « Télécharger » — une séance (formats), ou le fichier d'origine d'un onglet PDF / Word de la bibliothèque */
+  const tabFileId = vt && (vt.kind === 'pdf' || vt.kind === 'file') && vt.data && vt.data.fileId;
+  const canDl = !!d || !!(tabFileId && window.AlixoFiles && AlixoFiles.download && AlixoFiles.byId(tabFileId));
   const menu = $('#ctxmenu');
   menu.classList.remove('cm-create'); menu.removeAttribute('role');
   menu.innerHTML = `
@@ -757,7 +760,8 @@ $('#tabbar').addEventListener('contextmenu', e => {
     ${canRenameTab(id) ? `<button data-cm="tabrename">${CM_ICO.pen}Renommer</button>` : ''}
     ${mine && !ALIXO_AUX ? `<button data-cm="tabreveal">${CM_ICO.folder}Afficher dans la bibliothèque</button>` : ''}
     ${canSide ? `<button data-cm="tabside" ${inPane ? 'disabled title="Ce document est déjà affiché à côté"' : ''}>${TAB_ICO.side}Afficher à côté</button>` : ''}
-    ${canRenameTab(id) || (mine && !ALIXO_AUX) || canSide ? '<div class="cm-sep"></div>' : ''}
+    ${canDl ? `<button data-cm="tabdl">${CM_ICO.zip}Télécharger${d ? '…' : ''}</button>` : ''}
+    ${canRenameTab(id) || (mine && !ALIXO_AUX) || canSide || canDl ? '<div class="cm-sep"></div>' : ''}
     <button data-cm="tabclose">${TAB_ICO.close}Fermer l’onglet</button>`;
   for (const k of ['fid', 'did', 'tbl', 'img', 'root', 'page', 'cfid', 'dref', 'quote']) menu.dataset[k] = '';
   menu.dataset.tab = id;
@@ -2202,7 +2206,7 @@ function openDocCtxMenu(x, y, did, srcEl) {
     <button data-cm="dpin">${CM_ICO.pin}${d.pinned ? 'Désépingler' : 'Épingler'}</button>
     <button data-cm="dmove">${CM_ICO.move}Déplacer vers…</button>
     <button data-cm="ddup">${CM_ICO.dup}Dupliquer</button>
-    <button data-cm="dalx" title="Fichier .alx : se rouvre dans Alixo (sur un autre ordinateur, par e-mail, en double-cliquant sur la version PC)">${CM_ICO.zip}Exporter (.alx)</button>
+    <button data-cm="ddl" title="Choisir le format et enregistrer sur l’ordinateur">${CM_ICO.zip}Télécharger…</button>
     <button data-cm="dshare">${CM_ICO.share}Partager…</button>
     <button data-cm="dws" title="Workspace : rendre cette séance disponible à tous les membres d’Alixo (retirable à tout moment)">${CM_ICO.ws}Déposer dans le Workspace…</button>
     <button data-cm="ddelete" class="danger">${CM_ICO.trash}Supprimer</button>`;
@@ -2625,6 +2629,11 @@ $('#ctxmenu').addEventListener('click', e => {
   if (cm.startsWith('tab') && menu.dataset.tab) {   // 1.50 : menu d'un onglet (avant le test « t… » des tableaux)
     const tid = menu.dataset.tab; menu.dataset.tab = '';
     if (cm === 'tabrename') renameTabInline(tid); else if (cm === 'tabreveal') revealDocInLibrary(tid); else if (cm === 'tabside') openTabAside(tid); else if (cm === 'tabclose') closeTab(tid);
+    else if (cm === 'tabdl') {   // 1.57.0
+      const vt = vtabs.get(tid);
+      if (vt) { if (vt.data && vt.data.fileId && window.AlixoFiles && AlixoFiles.download) AlixoFiles.download(vt.data.fileId); }
+      else { const x = parseFloat(menu.style.left) || e.clientX, y = parseFloat(menu.style.top) || e.clientY; openExportMenu({ left: x, right: x + 320, top: y, bottom: y }, tid); }
+    }
     return;
   }
   const cfid = menu.dataset.cfid || null;   // 1.47 : dossier visé par le menu « Nouveau »
@@ -2674,6 +2683,7 @@ $('#ctxmenu').addEventListener('click', e => {
     if (cm === 'dmove') openMovePopover('doc', d.id);
     if (cm === 'ddup') duplicateDoc(d.id);
     if (cm === 'dalx' && window.AlixoAlx) AlixoAlx.exportDoc(d.id);
+    if (cm === 'ddl') { const x = parseFloat(menu.style.left) || e.clientX, y = parseFloat(menu.style.top) || e.clientY; openExportMenu({ left: x, right: x + 320, top: y, bottom: y }, d.id); }   // 1.57.0 : formats (PDF, Word, page web, .alx) — remplace « Exporter (.alx) »
     if (cm === 'dshare') openShare('doc', d.id);
     if (cm === 'dws' && window.AlixoWorkspace) AlixoWorkspace.openPublish(d.id);   // 1.53
     if (cm === 'ddelete') deleteDoc(d.id);
@@ -2776,15 +2786,51 @@ const safeFileName = s => String(s || '').replace(/[\u0000-\u001F\u007F-\u009F؜
 async function exportCssText() {
   let css = '';
   for (const f of ['styles.css', 'timeline.css', 'imgtools.css']) { try { const r = await fetch(f); if (r.ok || r.status === 0) css += await r.text() + '\n'; } catch { /* export sans cette feuille */ } }
+  await loadExportFontUris();
   return css;
+}
+/* 1.57.0 : fichiers des polices embarquées en data: URI (une fois par session), pour la page web exportée — les chemins
+   relatifs de styles.css (url("fonts/…")) ne mènent à rien une fois le fichier .html enregistré ailleurs */
+const exportFontUris = {};
+async function loadExportFontUris() {
+  for (const name of EMBED_FONTS.flatMap(f => f.files)) {
+    if (exportFontUris[name]) continue;
+    try {
+      const r = await fetch('fonts/' + name); if (!r.ok && r.status !== 0) continue;
+      const blob = await r.blob();
+      exportFontUris[name] = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).replace(/^data:[^;,]*/, 'data:font/woff2')); fr.onerror = ko; fr.readAsDataURL(blob); });
+    } catch { /* hors ligne : la pile de repli s'applique */ }
+  }
+}
+const GEIST_OFL_NOTE = '/* Geist / Geist Mono — Copyright 2024 The Geist Project Authors (https://github.com/vercel/geist-font.git) — SIL Open Font License 1.1, https://openfontlicense.org */';
+/* 1.57.0 : police du document (comme à l'écran : la sienne, sinon celle des Paramètres) et polices embarquées utilisées */
+function exportFontCss(d, body, cssText) {
+  const dk = docFontKey(d);
+  const f = (dk !== null ? fontByKey(dk) : fontByKey(state.settings.docFont)) || DOC_FONTS[0];
+  const fh = dk !== null ? null : fontByKey(state.settings.docFontHead);
+  const vars = (f.css ? `--doc-font: ${f.css}; ` : '') + (fh && fh.css ? `--doc-font-head: ${fh.css}; ` : '');
+  const used = body + ' ' + vars;
+  let css = cssText, embedded = false;
+  for (const ef of EMBED_FONTS) {
+    if (!(ef.fam === 'Geist' ? /geist(?![\s-]*mono)/i : /geist[\s-]*mono/i).test(used)) continue;
+    for (const name of ef.files) if (exportFontUris[name]) { css = css.split(`url("fonts/${name}")`).join(`url("${exportFontUris[name]}")`); embedded = true; }
+  }
+  /* 1.57.0 : police intégrée au fichier → mention de la licence OFL (app/fonts/LICENSE-Geist.txt) juste avant ses @font-face */
+  if (embedded) {
+    const m = /@font-face\s*\{[^}]*Geist/i.exec(css), at = m ? m.index : 0;
+    css = css.slice(0, at) + GEIST_OFL_NOTE + '\n' + css.slice(at);
+  }
+  return { css, vars };
 }
 function docExportHTML(d, cssText) {
   const numMap = computeNumbers(d.blocks);
   const body = d.blocks.map(b => blockHTML(b, numMap)).join('')
     .replace(/ contenteditable="(?:true|false)"/g, '').replace(/ draggable="false"/g, '')
     .replace(/ draggable="true"/g, '');
+  const ff = exportFontCss(d, body, cssText);
   return `<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><title>${esc(d.titre || 'Sans titre')}</title>
-<style>${cssText}
+<style>${ff.css}
+${ff.vars ? `:root { ${ff.vars}}` : ''}
 body { overflow: auto; background: #fff; padding: 40px 16px; }
 #doc { margin: 0 auto; border: 1px solid #dadce0; }
 .bhandle, .mv-handle, .rz, .graph-controls, .fhint, .tbl-tools, .corr-notes, .ai-sug, .draw-tools, .draw-hrz, .dh, .dhz, .dsel, .draw-textedit, .dref-tools, .dref-go, .q-src, .tml-tools, .tml-evtools { display: none !important; }
@@ -3792,10 +3838,14 @@ const DOC_FONTS = [
   { k: 'cambria', name: 'Cambria', sub: 'Serif moderne (Office)', css: 'Cambria, "Book Antiqua", Georgia, serif' },
   { k: 'times', name: 'Times New Roman', sub: 'Le standard des copies', css: '"Times New Roman", Times, serif' },
   { k: 'segoe', name: 'Segoe UI', sub: 'Sans-serif de Windows', css: '"Segoe UI", Roboto, Helvetica, Arial, sans-serif' },
+  /* 1.57.0 : Geist et Geist Mono (police de l'interface, embarquées dans app/fonts/ — styles.css @font-face) : les mêmes
+     partout, sans dépendre des polices installées ; gratuites comme les autres. Rangées près de leurs cousines */
+  { k: 'geist', name: 'Geist', sub: 'Sans-serif moderne, nette', css: 'Geist, "Segoe UI", Roboto, sans-serif' },
   { k: 'calibri', name: 'Calibri', sub: 'Sans-serif d’Office', css: 'Calibri, Carlito, "Segoe UI", sans-serif' },
   { k: 'verdana', name: 'Verdana', sub: 'Large et aérée', css: 'Verdana, Geneva, sans-serif' },
   { k: 'trebuchet', name: 'Trebuchet MS', sub: 'Sans-serif humaniste', css: '"Trebuchet MS", "Segoe UI", sans-serif' },
   { k: 'mono', name: 'Monospace', sub: 'Chasse fixe (Consolas)', css: '"Cascadia Code", Consolas, "Courier New", monospace' },
+  { k: 'geistmono', name: 'Geist Mono', sub: 'Chasse fixe moderne', css: '"Geist Mono", "Cascadia Code", Consolas, monospace' },
   { k: 'dys', name: 'Comic Sans', sub: 'Souvent préférée en cas de dyslexie', css: '"Comic Sans MS", "Comic Neue", sans-serif' },
   /* 1.35 : polices supplémentaires, toutes libres */
   { k: 'arial', name: 'Arial', sub: 'Sans-serif universelle', css: 'Arial, "Liberation Sans", Helvetica, sans-serif' },
@@ -3805,6 +3855,17 @@ const DOC_FONTS = [
   { k: 'baskerville', name: 'Baskerville', sub: 'Serif de transition, élégante', css: 'Baskerville, "Libre Baskerville", "Times New Roman", serif' },
   { k: 'courier', name: 'Courier New', sub: 'Machine à écrire', css: '"Courier New", Courier, "Liberation Mono", monospace' }
 ];
+/* 1.57.0 : polices embarquées (app/fonts/) — chargées avant l'impression / le PDF (sinon la police de repli s'imprime
+   si le fichier n'a pas encore été demandé) et intégrées à la page web exportée quand le document s'en sert */
+const EMBED_FONTS = [
+  { fam: 'Geist', files: ['geist-latin.woff2', 'geist-latin-ext.woff2'], weights: [400, 700] },
+  { fam: 'Geist Mono', files: ['geist-mono-latin.woff2', 'geist-mono-latin-ext.woff2'], weights: [400, 600] }
+];
+async function ensureEmbedFonts(timeout = 2000) {
+  if (!document.fonts || !document.fonts.load) return;
+  const all = Promise.all(EMBED_FONTS.flatMap(f => f.weights.map(w => document.fonts.load(`${w} 16px "${f.fam}"`, 'Aaé€').catch(() => null))));
+  await Promise.race([all, new Promise(r => setTimeout(r, timeout))]);
+}
 const fontByKey = k => DOC_FONTS.find(x => x.k === (k || '')) || null;
 /* 1.35 : police propre à un document (d.font = clé de DOC_FONTS ; absente = celle des Paramètres) */
 const docFontKey = d => (d && typeof d.font === 'string' && fontByKey(d.font) ? d.font : null);
@@ -4928,6 +4989,7 @@ function unreadableBlockHTML(b) {
    sinon le curseur est remis là où il était */
 function renderBlocks(focusId, caretPos, caretKey) {
   const d = doc(); if (!d) return;
+  if (cropCtx) cancelCrop();   // 1.57.0 : un nouveau rendu (Ctrl+Z, mise à jour reçue…) remplace la figure : le cadre ouvert ne lui survit pas
   if (!d.blocks.length) d.blocks.push({ id: uid(), type: 'p', text: '' });
   const restore = focusId === undefined ? caretSnapshot() : null;
   /* 1.51 — sécurité : un bloc que le rendu ne sait pas lire (document reçu, importé ou collé contenant une valeur inattendue)
@@ -5277,7 +5339,24 @@ function normalizeDom() {
         else { el.remove(); changed = true; continue; }
       } else if (stray.length) { stray.forEach(n => { if (hasContent(n)) f.appendChild(n); else n.remove(); }); changed = true; }
       // un <div> créé par le navigateur à l'intérieur du texte → simple saut de ligne
-      f.querySelectorAll(':scope > div:not(.corr-notes):not(.lnk-print):not(.ai-sug):not(.nb)').forEach(dv => { const br = document.createElement('br'); dv.replaceWith(br, ...dv.childNodes); changed = true; });
+      f.querySelectorAll(':scope > div:not(.corr-notes):not(.lnk-print):not(.ai-sug):not(.nb)').forEach(dv => {
+        /* 1.57.0 : le curseur pris dans ce <div> reste à sa place (il retombait plus haut dans le champ : une Entrée
+           suivante coupait la mauvaise ligne) */
+        const sel = getSelection(); let keep = null;
+        if (sel.rangeCount && sel.isCollapsed && dv.contains(sel.getRangeAt(0).startContainer)) {
+          const r = sel.getRangeAt(0);
+          keep = r.startContainer === dv ? { kid: dv.childNodes[r.startOffset] || null } : { node: r.startContainer, off: r.startOffset };
+        }
+        const kids = [...dv.childNodes];
+        const br = document.createElement('br'); dv.replaceWith(br, ...kids); changed = true;
+        if (keep) {
+          try {
+            const r = document.createRange();
+            if (keep.node) r.setStart(keep.node, keep.off); else if (keep.kid) r.setStartBefore(keep.kid); else r.setStartAfter(kids.length ? kids[kids.length - 1] : br);
+            r.collapse(true); sel.removeAllRanges(); sel.addRange(r);
+          } catch { /* nœud disparu : le navigateur garde sa position */ }
+        }
+      });
     } else if (type === 'juris' || type === 'fiche') {
       const def = ficheDef(type === 'fiche' ? { type, fk: el.dataset.fk } : { type });
       if (!el.querySelector('.jref')) { const h = el.querySelector('.juris-head'); if (h) h.insertAdjacentHTML('beforeend', '<div class="jref" data-f="ref"></div>'); }
@@ -6360,12 +6439,104 @@ function copySimpleField(e, f) {
   return true;
 }
 
+/* 1.57.0 : sélection à cheval sur plusieurs blocs, supprimée sur le modèle avant un collage (comme Suppr) : le début du
+   premier bloc et la fin du dernier se rejoignent, les blocs entre les deux disparaissent, le curseur se pose à la jonction.
+   Avant, le collage partait du premier bloc sans rien effacer (texte ajouté en dessous de la sélection), ou laissait le
+   navigateur fusionner les blocs avec des <span style> parasites. Pas d'entrée d'historique ici : celle du collage qui suit
+   couvre les deux (un seul Ctrl+Z). Renvoie true si la sélection a été supprimée. */
+/* blocs touchés par une sélection à cheval sur au moins deux blocs, sinon null (dans un seul bloc : le collage remplace déjà la sélection) */
+function crossBlockSelectionEls() {
+  const sel = getSelection(); if (!sel.rangeCount || sel.isCollapsed) return null;
+  const r = sel.getRangeAt(0);
+  if (!blocksEl.contains(r.commonAncestorContainer) && r.commonAncestorContainer !== blocksEl) return null;
+  const els = [...blocksEl.children].filter(el => el.classList.contains('block') && r.intersectsNode(el));
+  return els.length < 2 ? null : els;
+}
+function deleteCrossBlockSelection() {
+  const d = doc(); if (!d || readOnly) return false;
+  const els = crossBlockSelectionEls(); if (!els) return false;
+  const r = getSelection().getRangeAt(0);
+  const textLen = h => { const t = document.createElement('template'); t.innerHTML = h; return t.content.textContent.length; };
+  const part = (f, fromCaret) => { const x = document.createRange(); x.selectNodeContents(f); if (fromCaret) x.setStart(r.endContainer, r.endOffset); else x.setEnd(r.startContainer, r.startOffset); return cleanHTML(fragHTML(x.cloneContents())); };
+  const A = getBlock(els[0].dataset.id), Z = getBlock(els[els.length - 1].dataset.id);
+  if (!A || !Z) return false;
+  /* bord de début : texte avant la sélection (gardé), autre champ (fiche, case, carte : bloc gardé intact) ou bloc entier */
+  const fs = fieldOfNode(r.startContainer), fe = fieldOfNode(r.endContainer);
+  let head = null, keepA = false, tail = null, keepZ = false;
+  if (fs && fs.classList.contains('btxt') && isTextBlock(A) && els[0].contains(fs)) head = part(fs, false);
+  else if (fs && els[0].contains(fs)) keepA = true;
+  if (fe && fe.classList.contains('btxt') && isTextBlock(Z) && els[els.length - 1].contains(fe)) {
+    const pre = document.createRange(); pre.selectNodeContents(fe); pre.setEnd(r.endContainer, r.endOffset);
+    if (!pre.toString().replace(/\u200B/g, '') && !pre.cloneContents().querySelector('img, ' + ATOM_SEL)) keepZ = true;   // fin au tout début du bloc (triple-clic) : il n'est pas touché
+    else tail = part(fe, true);
+  } else if (fe && els[els.length - 1].contains(fe)) keepZ = true;
+  const ids = els.map(el => el.dataset.id);
+  const gone = new Set(ids.slice(1, -1));
+  let focus = null, caret = 0;
+  if (head !== null) {
+    A.text = head + (tail !== null ? tail : ''); focus = A.id; caret = textLen(head);
+    if (!keepZ) gone.add(Z.id);
+  } else {
+    if (!keepA) gone.add(A.id);
+    if (tail !== null) { Z.text = tail; focus = Z.id; caret = 0; } else if (!keepZ) gone.add(Z.id);
+  }
+  const at = d.blocks.findIndex(b => gone.has(b.id));
+  d.blocks = d.blocks.filter(b => !gone.has(b.id));
+  if (!focus) {   // rien de texte autour de la sélection : un paragraphe vide à sa place
+    const nb = { id: uid(), type: 'p', text: '' };
+    d.blocks.splice(at < 0 ? d.blocks.length : Math.min(at, d.blocks.length), 0, nb); focus = nb.id;
+  }
+  clearObjSel();
+  renderBlocks(focus, caret);
+  return true;
+}
+/* 1.57.0 : insertHTML de Chrome fige la police de l'interface (Geist, -apple-system…) sur ce qu'il insère quand elle diffère
+   de celle du cours : ce style, qui ne vient pas du presse-papiers, est retiré du champ */
+function stripUiFontStyles(field) {
+  if (!field) return;
+  const ui = famKey(getComputedStyle(document.documentElement).getPropertyValue('--font-ui'));
+  if (!ui) return;
+  field.querySelectorAll('[style*="font-family"]').forEach(el => {
+    if (famKey(el.style.fontFamily) !== ui) return;
+    el.style.removeProperty('font-family');
+    if (!el.getAttribute('style').trim()) el.removeAttribute('style');
+    if (el.tagName === 'SPAN' && !el.attributes.length) el.replaceWith(...el.childNodes);
+  });
+}
+/* lignes collées (HTML assaini ou texte brut), une par paragraphe */
+function pasteLines(html, text, styles) {
+  let lines = html ? htmlToLines(html, { styles }) : null;
+  if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
+  return lines;
+}
+function insertPastedHTML(field, html) {
+  document.execCommand('insertHTML', false, html);
+  const f = field && field.isConnected ? field : activeField();
+  if (f && f.querySelector('[style*="font-family"]')) {
+    stripUiFontStyles(f);
+    const bl = f.closest('#blocks > .block'); const b = bl && getBlock(bl.dataset.id);
+    if (b && f.classList.contains('btxt') && isTextBlock(b)) { b.text = cleanHTML(f.innerHTML); touch({ typing: true, blockId: b.id }); }
+  }
+}
+
 blocksEl.addEventListener('paste', e => {
   const cd = e.clipboardData; if (!cd) return;
+  /* 1.57.0 : une sélection à cheval sur plusieurs blocs est remplacée, pas complétée — mais supprimée seulement juste avant
+     une insertion réelle (replaceCross), jamais quand le collage s'arrête avant (rien d'utilisable, trop volumineux, lien, champ
+     de saisie). La suppression n'a pas d'entrée d'historique : celle de l'insertion couvre les deux (un seul Ctrl+Z) ; si
+     l'insertion n'aboutit pas après coup, settle() enregistre la suppression seule. */
+  const d0 = doc(), h0 = hist.baseline;
+  let cut = false;
+  const replaceCross = () => { if (!cut && !readOnly) cut = deleteCrossBlockSelection(); return cut; };
+  const settle = () => { if (cut && doc() === d0 && hist.baseline === h0) touch(); };   // aucune insertion enregistrée depuis
   // image copiée (capture d'écran, photo) → bloc image
   const files = [...(cd.files || [])].filter(f => f.type && f.type.startsWith('image/'));
-  if (files.length) { e.preventDefault(); addImageFiles(files); return; }
-  const field = activeField();
+  if (files.length) {
+    e.preventDefault();
+    if (replaceCross()) addImageFiles(files).then(settle, settle); else addImageFiles(files);
+    return;
+  }
+  let field = activeField();
   const alx = cd.getData('text/x-alixo');
   const html = cd.getData('text/html'), text = cd.getData('text/plain');
   if (!alx && !html && !text) return;
@@ -6389,47 +6560,61 @@ blocksEl.addEventListener('paste', e => {
   }
   if (!field || field.tagName === 'INPUT') return;
   e.preventDefault();
-  if (window.AlixoNest && AlixoNest.handlePaste(field, { alx, html, text })) return;
   const url = (text || '').trim();
-  if (field.classList.contains('btxt') && !alx && isWebUrl(url) && (!html || stripTags(html).trim() === url)) { openLinkPopover({ url }); return; }
-  // champs simples (fiche, case, légende) : texte seul — 1.51 : mise en forme conservée (assainie) quand la source est Alixo
-  if (!field.classList.contains('btxt')) {
-    let lines = html ? htmlToLines(html, { styles: fromAlixo }) : null;
-    if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
-    if (!lines.length) return;
-    if (fromAlixo && (lines.length === 1 || field.classList.contains('tcell'))) document.execCommand('insertHTML', false, lines.map(l => AlixoSanitize.inline(l)).join('<br>'));
-    else if (lines.length === 1 && field.classList.contains('tcell')) document.execCommand('insertHTML', false, lines[0]);
-    else document.execCommand('insertText', false, lines.map(l => stripTags(l)).join('\n'));
-    return;
+  const asLink = !alx && isWebUrl(url) && (!html || stripTags(html).trim() === url);
+  let alxArr;   // blocs Alixo déjà lus (undefined : pas encore)
+  if (!readOnly && crossBlockSelectionEls()) {
+    /* sélection sur plusieurs blocs : on vérifie d'abord qu'il y a quelque chose à coller, puis on la supprime */
+    if (asLink && field.classList.contains('btxt')) {   // adresse web → fenêtre de lien, sans rien supprimer ; la sélection
+      const sel = getSelection(); sel.collapseToStart();   // multi-blocs est réduite à son début (le lien ne remplace pas plusieurs blocs)
+      openLinkPopover({ url }); return;
+    }
+    if (alx) { alxArr = clipBlocks(alx); if (alxArr === false) return; }   // trop volumineux : abandon (message déjà affiché)
+    if (!(Array.isArray(alxArr) && alxArr.length) && !pasteLines(html, text, fromAlixo).length) return;   // rien d'utilisable
+    if (replaceCross()) { field = activeField(); if (!field) { settle(); return; } }
   }
-  // blocs copiés depuis Alixo (objets compris) — 1.51 : toujours assainis (clipBlocks), jamais injectés tels quels
-  if (alx) {
-    const arr = clipBlocks(alx);
-    if (arr === false) return;   // trop volumineux : abandon (message déjà affiché)
-    if (Array.isArray(arr) && arr.length) {
-      if (arr.length === 1 && isTextBlock(arr[0])) {
-        const bl0 = field.closest('#blocks > .block'); adoptPastedAlign(field, bl0, bl0 && getBlock(bl0.dataset.id), arr[0].al);   // 1.52
-        document.execCommand('insertHTML', false, arr[0].text || ''); return;
-      }
-      insertBlocksAtCaret(arr);
+  /* insertion proprement dite ; settle() ensuite : si elle s'est arrêtée sans rien enregistrer, la suppression l'est seule */
+  const insert = () => {
+    if (window.AlixoNest && AlixoNest.handlePaste(field, { alx, html, text })) return;
+    if (field.classList.contains('btxt') && asLink) { openLinkPopover({ url }); return; }
+    // champs simples (fiche, case, légende) : texte seul — 1.51 : mise en forme conservée (assainie) quand la source est Alixo
+    if (!field.classList.contains('btxt')) {
+      const lines = pasteLines(html, text, fromAlixo);
+      if (!lines.length) return;
+      if (fromAlixo && (lines.length === 1 || field.classList.contains('tcell'))) insertPastedHTML(field, lines.map(l => AlixoSanitize.inline(l)).join('<br>'));
+      else if (lines.length === 1 && field.classList.contains('tcell')) insertPastedHTML(field, lines[0]);
+      else document.execCommand('insertText', false, lines.map(l => stripTags(l)).join('\n'));
       return;
     }
-  }
-  const bl = field.closest('#blocks > .block'); const b = getBlock(bl.dataset.id); if (!b) return;
-  let lines = html ? htmlToLines(html, { styles: fromAlixo }) : null;
-  if (!lines || !lines.length) lines = (text || '').split(/\r?\n/).map(l => esc(l.replace(/\s+$/, ''))).filter(l => l.trim());
-  if (!lines.length) return;
-  if (lines.length === 1 || !isTextBlock(b) || b.type !== 'p') {
-    if (lines.length === 1) { adoptPastedAlign(field, bl, b, lineAlign(lines, 0)); document.execCommand('insertHTML', false, lines[0]); }   // 1.52 : bloc vide → alignement collé
-    else document.execCommand('insertText', false, lines.map(l => stripTags(l)).join('\n'));
-    return;   // l'événement input met le modèle à jour
-  }
-  // plusieurs lignes : une ligne = un paragraphe (titres, listes reconnus) — 1.52 : avec l'alignement de chaque ligne (source Alixo)
-  const i = blockIndex(b.id);
-  let prev = i > 0 ? doc().blocks[i - 1] : null;
-  const blocks = lines.map((l, k) => { const nb = Object.assign({ type: 'p' }, patternFromLine(l, prev)); delete nb.cut; const a = lineAlign(lines, k); if (a) nb.al = a; prev = nb; return nb; });
-  insertBlocksAtCaret(blocks);
-  toast(`${lines.length} lignes collées`);
+    // blocs copiés depuis Alixo (objets compris) — 1.51 : toujours assainis (clipBlocks), jamais injectés tels quels
+    if (alx) {
+      const arr = alxArr !== undefined ? alxArr : clipBlocks(alx);
+      if (arr === false) return;   // trop volumineux : abandon (message déjà affiché)
+      if (Array.isArray(arr) && arr.length) {
+        if (arr.length === 1 && isTextBlock(arr[0])) {
+          const bl0 = field.closest('#blocks > .block'); adoptPastedAlign(field, bl0, bl0 && getBlock(bl0.dataset.id), arr[0].al);   // 1.52
+          insertPastedHTML(field, arr[0].text || ''); return;
+        }
+        insertBlocksAtCaret(arr);
+        return;
+      }
+    }
+    const bl = field.closest('#blocks > .block'); const b = getBlock(bl.dataset.id); if (!b) return;
+    const lines = pasteLines(html, text, fromAlixo);
+    if (!lines.length) return;
+    if (lines.length === 1 || !isTextBlock(b) || b.type !== 'p') {
+      if (lines.length === 1) { adoptPastedAlign(field, bl, b, lineAlign(lines, 0)); insertPastedHTML(field, lines[0]); }   // 1.52 : bloc vide → alignement collé
+      else document.execCommand('insertText', false, lines.map(l => stripTags(l)).join('\n'));
+      return;   // l'événement input met le modèle à jour
+    }
+    // plusieurs lignes : une ligne = un paragraphe (titres, listes reconnus) — 1.52 : avec l'alignement de chaque ligne (source Alixo)
+    const i = blockIndex(b.id);
+    let prev = i > 0 ? doc().blocks[i - 1] : null;
+    const blocks = lines.map((l, k) => { const nb = Object.assign({ type: 'p' }, patternFromLine(l, prev)); delete nb.cut; const a = lineAlign(lines, k); if (a) nb.al = a; prev = nb; return nb; });
+    insertBlocksAtCaret(blocks);
+    toast(`${lines.length} lignes collées`);
+  };
+  insert(); settle();
 });
 
 /* copier / couper : les objets (images, graphiques, tableaux…) voyagent avec le texte */
@@ -6509,7 +6694,7 @@ blocksEl.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey;
   const t = e.target;
 
-  if (cropCtx) { if (e.key === 'Enter') { e.preventDefault(); applyCrop(); } else if (e.key === 'Escape') { e.preventDefault(); cancelCrop(); } return; }
+  if (cropCtx) return;   // 1.57.0 : clavier du recadrage géré en capture (voir « clavier pendant le recadrage ») ; Entrée / Espace sur un bouton de la barre l'activent
 
   /* --- saisie de formule --- */
   if (t.classList && t.classList.contains('fsrc')) {
@@ -6650,7 +6835,7 @@ blocksEl.addEventListener('keydown', e => {
     if (e.key === 'Enter' && !e.shiftKey && !mod) {
       e.preventDefault();
       if (f.classList.contains('cd-t')) { const x = f.parentElement.querySelector('.cd-x'); if (x) focusField(x, 'end'); return; }
-      if (/(<br\s*\/?>\s*){2}$/i.test(f.innerHTML)) { f.innerHTML = f.innerHTML.replace(/(<br\s*\/?>\s*)+$/i, ''); syncAllFromDom(); touch(); if (!focusFieldNearBlock(b.id, 1)) insertAfter(b.id, { id: uid(), type: 'p', text: '' }); return; }
+      if (caretAtEnd(f) && emptyLastLineAtCaret(f)) { trimTrailingEmptyLines(f); syncAllFromDom();   /* 1.57.0 : même détection que les encadrés */ touch(); if (!focusFieldNearBlock(b.id, 1)) insertAfter(b.id, { id: uid(), type: 'p', text: '' }); return; }
       document.execCommand('insertLineBreak');
       return;
     }
@@ -6775,8 +6960,10 @@ function handleEnter(b, el) {
   const hasText = !!stripTags(el.innerHTML).replace(/\u200B/g, '').trim() || !!el.querySelector(ATOM_SEL + ', img');
   if (MULTILINE_TYPES.includes(b.type)) {
     // une ligne vide en fin d'encadré + Entrée → on sort de l'encadré
-    if (atEnd && /(<br\s*\/?>\s*){2}$/i.test(el.innerHTML)) {
-      el.innerHTML = el.innerHTML.replace(/(<br\s*\/?>\s*)+$/i, '');
+    /* 1.57.0 : détection sur le DOM (emptyLastLineAtCaret) et non plus sur la fin de innerHTML : les <br> pris dans
+       un <b> / <span> (Entrée après du gras), les lignes en <div>, le <br> final que Chrome ajoute empêchaient la sortie */
+    if (atEnd && emptyLastLineAtCaret(el)) {
+      trimTrailingEmptyLines(el);
       b.text = cleanHTML(el.innerHTML); touch();
       insertAfter(b.id, { id: uid(), type: 'p', text: '' });
       return;
@@ -6810,6 +6997,91 @@ function handleEnter(b, el) {
   if (b.type === 'li') { nb.lt = b.lt; nb.ind = b.ind; }
   d.blocks.splice(blockIndex(b.id) + 1, 0, nb);
   touch(); renderBlocks(nb.id, 'start');
+}
+
+/* 1.57.0 — lignes d'un champ multi-ligne (encadré, citation, texte d'une carte), lues sur le DOM.
+   Une ligne se termine par un <br> ou par le bord d'un bloc (<div>, <p>…) ; le dernier <br> d'un bloc (rien de visible
+   après lui, même au travers d'un <b> ou d'un <span>) ne crée pas de ligne : c'est le <br> « de remplissage » de Chrome. */
+const LINE_BLOCK_RE = /^(DIV|P|LI|UL|OL|BLOCKQUOTE|H[1-6]|PRE|SECTION|ARTICLE)$/;
+const isLineBlock = n => !!n && n.nodeType === 1 && LINE_BLOCK_RE.test(n.tagName);
+const isVoidText = n => n.nodeType === 3 && /^[ \t\n\r]*$/.test(n.data);   // blanc replié par le navigateur : rien à l'écran
+const LINE_OBJ_SEL = 'img, svg, canvas, input, [contenteditable="false"], ' + ATOM_SEL;   // objet en ligne : compte comme du contenu
+/* nœud suivant dans l'ordre du document, sans sortir de root */
+function nextInRoot(n, root) {
+  if (n.firstChild) return n.firstChild;
+  while (n && n !== root) { if (n.nextSibling) return n.nextSibling; n = n.parentNode; }
+  return null;
+}
+/* <br> sans rien de visible après lui jusqu'à la fin de son bloc (ou du champ) */
+function isTrailingBr(br, field) {
+  let blk = br.parentNode;
+  while (blk && blk !== field && !isLineBlock(blk)) blk = blk.parentNode;
+  const root = blk || field;
+  let n = br;
+  for (;;) {
+    while (n && n !== root && !n.nextSibling) n = n.parentNode;   // pas de descente dans le <br> lui-même
+    if (!n || n === root) return true;
+    n = n.nextSibling;
+    // parcours du sous-arbre de n et des suivants
+    for (let m = n; m && m !== root; m = nextInRoot(m, root)) {
+      if (m.nodeType === 3) { if (!isVoidText(m)) return false; continue; }
+      if (m.nodeType !== 1) continue;
+      if (isLineBlock(m)) return true;   // un bloc commence : la ligne finit de toute façon, le <br> n'en ajoute pas
+      if (m.tagName === 'BR' || m.matches(LINE_OBJ_SEL)) return false;
+    }
+    return true;
+  }
+}
+/* texte du champ jusqu'au curseur : « \n » à chaque fin de ligne, « \uFFFC » pour une image ou un atome */
+function textToCaret(field, node, offset) {
+  let out = '', done = false, endBrk = false;   // endBrk : le dernier « \n » vient de la fin d'un bloc
+  const add = t => { if (t) { out += t; endBrk = false; } };
+  const brk = () => { if (out && !out.endsWith('\n')) out += '\n'; };
+  const walk = n => {
+    if (done) return;
+    if (n.nodeType === 3) { if (n === node) { add(n.data.slice(0, offset)); done = true; } else add(n.data); return; }
+    if (n.nodeType !== 1) return;
+    if (n.tagName === 'BR') { if (!isTrailingBr(n, field)) add('\n'); return; }
+    if (n.matches(LINE_OBJ_SEL)) { add('\uFFFC'); return; }
+    const blk = isLineBlock(n);
+    if (blk) { brk(); endBrk = false; }
+    const kids = [...n.childNodes], lim = n === node ? Math.min(offset, kids.length) : kids.length;
+    for (let i = 0; i < lim && !done; i++) walk(kids[i]);
+    if (n === node) { done = true; return; }
+    if (blk && !done) { const had = out.endsWith('\n'); brk(); if (!had && out.endsWith('\n')) endBrk = true; }
+  };
+  const kids = [...field.childNodes], lim = field === node ? Math.min(offset, kids.length) : kids.length;
+  for (let i = 0; i < lim && !done; i++) walk(kids[i]);
+  /* curseur juste après un bloc (<div>ligne</div>|) : le navigateur l'affiche au bout de cette ligne, pas sur une nouvelle */
+  return endBrk ? out.slice(0, -1) : out;
+}
+/* le curseur est sur une ligne vide qui n'est pas la première du champ (Entrée vient d'y créer une ligne) ;
+   à combiner avec caretAtEnd (rien de visible après le curseur) pour « dernière ligne vide » */
+function emptyLastLineAtCaret(field) {
+  const sel = getSelection(); if (!sel.rangeCount || !sel.isCollapsed) return false;
+  const r = sel.getRangeAt(0);
+  if (!field.contains(r.startContainer)) return false;
+  const before = textToCaret(field, r.startContainer, r.startOffset);
+  const nl = before.lastIndexOf('\n'); if (nl < 0) return false;
+  return !before.slice(nl + 1).replace(/[\u200B\uFEFF]/g, '').trim();
+}
+/* retire les lignes vides en fin de champ (<br>, blancs, ​, &nbsp;, éléments vides — au travers du gras, des
+   <span>, des <div>) : la sortie d'un encadré ne laisse pas de ligne vide derrière elle */
+function trimTrailingEmptyLines(field) {
+  const blankEl = n => !n.matches(LINE_OBJ_SEL) && !n.querySelector(LINE_OBJ_SEL) && !n.textContent.replace(/[\u200B\uFEFF]/g, '').trim();
+  let host = field;
+  for (let guard = 0; guard < 500; guard++) {
+    const n = host.lastChild;
+    if (!n) { if (host === field) break; const up = host.parentNode; host.remove(); host = up; continue; }
+    if (n.nodeType === 3) {
+      if (n.data.replace(/[\u200B\uFEFF]/g, '').trim()) break;   // texte de la ligne précédente : gardé tel quel
+      n.remove(); continue;
+    }
+    if (n.nodeType !== 1) { n.remove(); continue; }
+    if (n.tagName === 'BR' || blankEl(n)) { n.remove(); continue; }
+    if (n.matches(LINE_OBJ_SEL)) break;
+    host = n;   // élément avec du contenu (gras, <div> de la ligne précédente…) : on descend dans sa fin
+  }
 }
 
 /* Retour arrière en début de bloc */
@@ -8128,48 +8400,73 @@ document.addEventListener('pointerup', () => {
   b.w = Math.round(w * 10) / 10; touch(); updateImgBar();
 });
 
-/* recadrage : rectangle déplaçable / redimensionnable sur l'image entière ; non destructif */
-let cropCtx = null;   // { id, fig, box, rect, c: {x,y,w,h}, drag }
+/* recadrage : rectangle déplaçable / redimensionnable sur l'image entière ; non destructif
+   1.57.0 : refonte de l'affichage. Avant, une seconde copie nette de l'image était posée dans le cadre et dimensionnée en px
+   d'après getBoundingClientRect() : sous le zoom CSS de la feuille (#doc { zoom }, Paramètres › Taille du texte, Ctrl + / −)
+   ces px étaient zoomés une seconde fois — copie plus grande que l'image grisée, décalée, cadre et poignées qui ne
+   correspondaient plus à rien ; la bordure du cadre la décalait encore d'un pixel ; l'ombre « 9999px » assombrissait toute
+   la page jusqu'aux boutons ; la barre, ajoutée DANS la figure sélectionnée (selectObj sélectionne le nœud entier),
+   apparaissait surlignée. Désormais : une seule image (entière, nette) ; un voile (.crop-dim, rogné à l'image) assombrit ce
+   qui sera retiré ; cadre et trou du voile sont placés en % de l'image → justes quel que soit le zoom ; barre non
+   sélectionnable. Valider ne re-rend plus toute la séance (un clic ailleurs garde sa cible) : seules les variables CSS changent. */
+let cropCtx = null;   // { id, fig, box, rect, hole, c: {x,y,w,h}, c0, drag }
+let lastInputKbd = false;   // dernière action : clavier (true) ou pointeur (false)
+document.addEventListener('keydown', e => { if (!['Shift', 'Control', 'Alt', 'Meta'].includes(e.key)) lastInputKbd = true; }, true);
+document.addEventListener('pointerdown', () => { lastInputKbd = false; }, true);
 function startCrop(id) {
+  if (readOnly) return;
   const fig = $(`#blocks > .block.img[data-id="${id}"]`); const b = getBlock(id); if (!fig || !b) return;
-  const src = AlixoImages.cache.get(b.iid); if (!src) { toast('Image pas encore chargée'); return; }
-  if (cropCtx) cancelCrop();
-  fig.classList.add('cropping');
   const box = fig.querySelector('.imgbox');
-  const rect = document.createElement('div'); rect.className = 'crop-rect';
-  rect.innerHTML = `<div class="cimg"><img src="${src}" alt=""></div>` + ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(k => `<span class="ch ${k}" data-ch="${k}"></span>`).join('');
-  box.appendChild(rect);
-  const bar = document.createElement('div'); bar.className = 'crop-bar';
+  if (!box || !box.querySelector(':scope > img')) { toast('Image pas encore chargée'); return; }
+  if (cropCtx) cancelCrop();
+  closeImgMenu();
+  fig.classList.add('cropping');
+  const dim = document.createElement('div'); dim.className = 'crop-dim'; dim.innerHTML = '<i></i>';
+  const rect = document.createElement('div'); rect.className = 'crop-rect'; rect.setAttribute('aria-hidden', 'true');
+  rect.title = 'Flèches : déplacer · Maj + flèches : redimensionner · Alt : pas fin';
+  rect.innerHTML = ['nw', 'n', 'ne', 'e', 'se', 's', 'sw', 'w'].map(k => `<span class="ch ${k}" data-ch="${k}"></span>`).join('');
+  box.append(dim, rect);
+  const bar = document.createElement('div'); bar.className = 'crop-bar'; bar.contentEditable = 'false';
+  bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Recadrage de l’image');
   bar.innerHTML = `<button class="ok" data-crop="ok" type="button">Appliquer</button><button data-crop="reset" type="button">Image entière</button><button data-crop="cancel" type="button">Annuler</button>`;
-  fig.appendChild(bar);
-  cropCtx = { id, fig, box, rect, c: imgCrop(b), drag: null };
+  box.after(bar);   // sous l'image, avant la légende
+  const c = imgCrop(b);
+  cropCtx = { id, fig, box, rect, hole: dim.firstChild, c: Object.assign({}, c), c0: c, drag: null };
   layoutCrop();
   updateImgBar();
-  toast('Recadrage — déplacez ou étirez le cadre, Entrée pour appliquer, Échap pour annuler');
+  toast('Faites glisser le cadre ou ses poignées. Entrée ou clic ailleurs : appliquer · Échap : annuler');
+  // lancé au clavier (barre, menu) : le focus ne reste pas sur un bouton masqué → « Appliquer » ; à la souris, le focus reste
+  // dans la feuille (raccourcis actifs) — un focus forcé y afficherait un anneau parasite (#blocks, éditable, le propage)
+  if (lastInputKbd || !blocksEl.contains(document.activeElement)) bar.querySelector('.ok').focus({ preventScroll: true });
 }
 function layoutCrop() {
-  const { rect, c, box } = cropCtx;
-  rect.style.left = (c.x * 100) + '%'; rect.style.top = (c.y * 100) + '%';
-  rect.style.width = (c.w * 100) + '%'; rect.style.height = (c.h * 100) + '%';
-  const bw = box.getBoundingClientRect().width, bh = box.getBoundingClientRect().height;
-  const im = rect.querySelector('.cimg img');
-  im.style.width = bw + 'px'; im.style.height = bh + 'px';
-  im.style.left = (-c.x * bw) + 'px'; im.style.top = (-c.y * bh) + 'px';
+  const { rect, hole, c } = cropCtx;
+  for (const el of [rect, hole]) {
+    el.style.left = (c.x * 100) + '%'; el.style.top = (c.y * 100) + '%';
+    el.style.width = (c.w * 100) + '%'; el.style.height = (c.h * 100) + '%';
+  }
 }
-function applyCrop() {
+/* outside : validé par un clic hors de l'image — on ne reprend pas la sélection (le clic place le curseur où il veut) */
+function applyCrop(outside) {
   if (!cropCtx) return;
-  const { id, c } = cropCtx; const b = getBlock(id);
+  const { id, c, c0, fig } = cropCtx; const b = getBlock(id);
   cancelCrop();
   if (!b) return;
   const rnd = v => Math.round(v * 10000) / 10000;
-  if (c.x < 0.002 && c.y < 0.002 && c.w > 0.998 && c.h > 0.998) delete b.crop;
-  else b.crop = { x: rnd(c.x), y: rnd(c.y), w: rnd(c.w), h: rnd(c.h) };
-  touch(); renderBlocks('__none'); selectObj(id);
+  const full = c.x < 0.002 && c.y < 0.002 && c.w > 0.998 && c.h > 0.998;
+  const same = ['x', 'y', 'w', 'h'].every(k => Math.abs(c[k] - c0[k]) < 0.0001);
+  if (!same) {
+    if (full) delete b.crop;
+    else b.crop = { x: rnd(c.x), y: rnd(c.y), w: rnd(c.w), h: rnd(c.h) };
+    touch();
+    if (fig.isConnected) fig.setAttribute('style', imgStyle(b)); else renderBlocks('__none');
+  }
+  if (!outside) selectObj(id);
 }
 function cancelCrop() {
   if (!cropCtx) return;
-  const { id, fig, rect } = cropCtx; cropCtx = null;
-  rect.remove(); fig.querySelector('.crop-bar')?.remove(); fig.classList.remove('cropping');
+  const { id, fig, box } = cropCtx; cropCtx = null;
+  box.querySelectorAll('.crop-rect, .crop-dim').forEach(x => x.remove()); fig.querySelector('.crop-bar')?.remove(); fig.classList.remove('cropping');
   updateImgBar();
   if (objSel === id) applyObjSel();
 }
@@ -8177,23 +8474,23 @@ blocksEl.addEventListener('click', e => {
   const b = e.target.closest('[data-crop]'); if (!b || !cropCtx) return;
   e.preventDefault();
   if (b.dataset.crop === 'ok') applyCrop();
-  else if (b.dataset.crop === 'cancel') cancelCrop();
+  else if (b.dataset.crop === 'cancel') { const id = cropCtx.id; cancelCrop(); selectObj(id); }
   else { cropCtx.c = { x: 0, y: 0, w: 1, h: 1 }; layoutCrop(); }
 });
 blocksEl.addEventListener('pointerdown', e => {
   if (!cropCtx) return;
   if (e.target.closest('.crop-bar')) { e.preventDefault(); return; }
   const rect = e.target.closest('.crop-rect');
-  if (!rect || rect !== cropCtx.rect) return;
+  if (!rect || rect !== cropCtx.rect) { if (e.target.closest('.imgbox') === cropCtx.box) e.preventDefault(); return; }   // l'image grisée hors du cadre : sans effet (ni sélection de texte)
+  if (e.button !== 0) return;
   e.preventDefault(); e.stopPropagation();
   const h = e.target.closest('.ch');
-  const br = cropCtx.box.getBoundingClientRect();
-  cropCtx.drag = { k: h ? h.dataset.ch : 'move', x: e.clientX, y: e.clientY, c0: Object.assign({}, cropCtx.c), bw: br.width, bh: br.height };
+  const br = cropCtx.box.getBoundingClientRect();   // px d'écran, comme clientX / clientY : juste aussi sous le zoom de la feuille
+  cropCtx.drag = { k: h ? h.dataset.ch : 'move', x: e.clientX, y: e.clientY, c0: Object.assign({}, cropCtx.c), bw: br.width || 1, bh: br.height || 1 };
+  try { rect.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }   // relâché hors de la fenêtre : le pointerup arrive quand même
 }, true);
-document.addEventListener('pointermove', e => {
-  if (!cropCtx || !cropCtx.drag) return;
-  const { k, x, y, c0, bw, bh } = cropCtx.drag;
-  const dx = (e.clientX - x) / bw, dy = (e.clientY - y) / bh;
+/* déplace (k = 'move') ou étire (k = poignée : n, s, e, w, ne…) le cadre de (dx, dy), en fractions de l'image */
+function cropMove(c0, k, dx, dy) {
   const c = Object.assign({}, c0);
   const min = 0.05;
   if (k === 'move') { c.x = Math.max(0, Math.min(1 - c.w, c0.x + dx)); c.y = Math.max(0, Math.min(1 - c.h, c0.y + dy)); }
@@ -8205,9 +8502,47 @@ document.addEventListener('pointermove', e => {
     if (k.includes('s')) y1 = Math.min(1, Math.max(y0 + min, y1 + dy));
     c.x = x0; c.y = y0; c.w = x1 - x0; c.h = y1 - y0;
   }
-  cropCtx.c = c; layoutCrop();
+  return c;
+}
+document.addEventListener('pointermove', e => {
+  if (!cropCtx || !cropCtx.drag) return;
+  if (e.buttons === 0) { cropCtx.drag = null; return; }   // bouton relâché sans pointerup reçu : le cadre ne reste pas « collé »
+  const { k, x, y, c0, bw, bh } = cropCtx.drag;
+  cropCtx.c = cropMove(c0, k, (e.clientX - x) / bw, (e.clientY - y) / bh); layoutCrop();
 });
 document.addEventListener('pointerup', () => { if (cropCtx && cropCtx.drag) cropCtx.drag = null; });
+/* clic hors de l'image en cours de recadrage : le cadre est validé (comme Word / Docs). Validé APRÈS le clic : la figure
+   rapetisse (barre retirée, proportions recadrées) et décalerait sinon le texte sous le pointeur avant que le curseur s'y pose */
+document.addEventListener('pointerdown', e => {
+  if (!cropCtx || cropCtx.drag) return;
+  if (e.target.closest && e.target.closest('.block.img.cropping .imgbox, .crop-bar, #ctxmenu, .dlgov, #toasts, .toast')) return;
+  cropCtx.outside = true;
+}, true);
+document.addEventListener('pointerup', () => {
+  if (!cropCtx || !cropCtx.outside) return;
+  const ctx = cropCtx;
+  setTimeout(() => { if (cropCtx !== ctx) return; const id = ctx.id; applyCrop(true); if (objSel === id) clearObjSel(); });
+});
+/* clavier pendant le recadrage (capture : avant l'éditeur, qui supprimerait la figure sélectionnée à la frappe) :
+   Entrée valide, Échap / Ctrl+Z annulent (le recadrage en cours, pas la modification précédente), flèches : déplacer,
+   Maj + flèches : redimensionner (bord droit / bas) ; le reste est neutralisé tant que le cadre est ouvert */
+document.addEventListener('keydown', e => {
+  if (!cropCtx) return;
+  const t = e.target;
+  if (t !== document.body && t !== document.documentElement && !blocksEl.contains(t)) return;   // champ d'un dialogue, d'un menu : pas concerné
+  const mod = e.ctrlKey || e.metaKey;
+  if ((e.key === 'Enter' || e.key === ' ') && t.closest && t.closest('.crop-bar button')) { e.stopPropagation(); return; }   // le bouton agit lui-même (Annuler, Image entière…)
+  if (e.key === 'Tab' && !t.closest?.('.crop-bar')) { e.preventDefault(); e.stopPropagation(); const bs = cropCtx.fig.querySelectorAll('.crop-bar button'); bs[e.shiftKey ? bs.length - 1 : 0].focus(); return; }   // depuis la feuille : Tab entre dans la barre (sinon l'éditeur l'interprète)
+  const arrows = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+  if (e.key === 'Enter' && !mod) { e.preventDefault(); e.stopPropagation(); applyCrop(); }
+  else if (e.key === 'Escape' || (mod && !e.altKey && e.key.toLowerCase() === 'z')) { e.preventDefault(); e.stopPropagation(); const id = cropCtx.id; cancelCrop(); selectObj(id); }
+  else if (arrows[e.key] && !mod) {
+    e.preventDefault(); e.stopPropagation();
+    const [ax, ay] = arrows[e.key], st = e.altKey ? 0.002 : 0.01;
+    cropCtx.c = cropMove(cropCtx.c, e.shiftKey ? (ax ? 'e' : 's') : 'move', ax * st, ay * st); layoutCrop();
+  }
+  else if (!mod && !['Shift', 'Control', 'Alt', 'Meta', 'Tab'].includes(e.key)) { e.preventDefault(); e.stopPropagation(); }
+}, true);
 
 /* ============================================================
    Volet plan
@@ -11514,7 +11849,7 @@ function paginate(force) {
   if (rects.length) blocksEl.style.paddingBottom = Math.max(0, (lastEnd - lastBottom) / s) + 'px';
   const num = (y, k) => `<div class="pg-num" style="top:${((padTop + y + padBottom / 2) / s - 7).toFixed(1)}px">${k} / ${n}</div>`;
   layer.innerHTML = ends.map(e => `<div class="pg-gap" style="top:${((padTop + e.y + padBottom) / s).toFixed(1)}px;height:${(PG_BAND * zf / s).toFixed(1)}px"></div>` + num(e.y, e.k)).join('')
-    + cuts.map(c => `<div class="pg-cut" style="top:${((padTop + c.y) / s).toFixed(1)}px"><span>${c.k} / ${n} · suite page ${c.k + 1} ↓</span></div>`).join('')
+    + cuts.map(c => `<div class="pg-cut" style="top:${((padTop + c.y) / s).toFixed(1)}px"></div>`).join('')   // 1.57.0 : plus d'étiquette « k / n · suite page k+1 ↓ », le trait pointillé suffit
     + num(lastEnd, n);
   if (caretEl) {   // le bloc du curseur a bougé (une page s'est ouverte ou fermée au-dessus) : on suit
     const dy = caretEl.getBoundingClientRect().top - caretTop;
@@ -11527,10 +11862,13 @@ let pdfBusy = false;
    version web → boîte d'impression du navigateur */
 async function exportPDF() {
   const d = doc(); if (!d || pdfBusy) return;
-  if (isSlidesDoc(d)) { if (window.AlixoSlides) AlixoSlides.exportPDF(); return; }
-  if (isSheetDoc(d)) { if (window.AlixoSheets) AlixoSheets.exportPDF(); return; }
-  if (isBoardDoc(d)) { if (window.AlixoBoard) AlixoBoard.exportPDF(); return; }
-  if (isQuizDoc(d)) { if (window.AlixoQuiz) AlixoQuiz.exportPDF(); return; }
+  await ensureEmbedFonts();   // 1.57.0 : Geist / Geist Mono prêtes avant l'impression (aussi présentations, tableurs…)
+  if (doc() !== d) return;    // document changé entre-temps
+  /* 1.57.0 : attendus (withDocOpen revient à l'écran de départ une fois l'export terminé) */
+  if (isSlidesDoc(d)) { if (window.AlixoSlides) await AlixoSlides.exportPDF(); return; }
+  if (isSheetDoc(d)) { if (window.AlixoSheets) await AlixoSheets.exportPDF(); return; }
+  if (isBoardDoc(d)) { if (window.AlixoBoard) await AlixoBoard.exportPDF(); return; }
+  if (isQuizDoc(d)) { if (window.AlixoQuiz) await AlixoQuiz.exportPDF(); return; }
   const numMap = computeNumbers(d.blocks);
   const hs = d.blocks.filter(b => b.type === 'h');
   // sommaire uniquement pour les cours longs (sinon il ajoutait une page inutile)
@@ -11582,16 +11920,20 @@ const EXPORT_FORMAT_ICONS = {
   alx: k => `<img src="img/fileicons/${k || 'docs'}.png" alt="" class="po-ico po-ico-img po-ico-file" onerror="this.remove()">`,
   csv: '<svg viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M8.5 12h7M8.5 15h7M8.5 18h7M12 12v6"/></svg>'
 };
-function openExportMenu(btn) {
-  const d = doc(); if (!d) return;
+/* 1.57.0 : did (facultatif) = document visé sans être ouvert (clic droit › Télécharger… dans la bibliothèque, l'arbre,
+   un onglet) ; btn peut aussi être un rectangle { left, right, top, bottom } (position du clic) */
+function openExportMenu(btn, did) {
+  const d = did ? findDoc(did) : doc(); if (!d) return;
   const special = isSpecialDoc(d);
   // 1.40 : ordre fixe — Fichier Alixo, PDF, Word, page web ; un tableur propose aussi la feuille en CSV
   const formats = Object.entries(EXPORT_FORMATS).filter(([k]) => !special || k === 'pdf' || k === 'alx');
   if (isSheetDoc(d) && window.AlixoSheets && AlixoSheets.exportCSV) formats.push(['csv', { label: 'Feuille en CSV (.csv)' }]);
-  const r = btn.getBoundingClientRect();
+  const r = btn && btn.getBoundingClientRect ? btn.getBoundingClientRect() : btn;
   /* 1.54 : les vidéos importées depuis l'ordinateur ne sont pas incluses dans le fichier Alixo (seule leur affiche voyage) */
   const localVideo = Array.isArray(d.slides) && d.slides.some(s => (s.els || []).some(e => e && e.t === 'video' && e.vk === 'file'));
-  const hint = { pdf: 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque' + (localVideo ? ' — sans les vidéos importées depuis l’ordinateur' : ''), csv: 'La feuille affichée, pour Excel ou un autre tableur' };
+  /* 1.57.0 : version web — le PDF passe par la boîte d'impression du navigateur */
+  const webPdf = !(window.alixoDesktop && window.alixoDesktop.printToPDF && window.alixoDesktop.saveFile);
+  const hint = { pdf: webPdf ? 'Ouvre l’impression : choisissez « Enregistrer au format PDF »' : 'Pour lire et imprimer', docx: 'À retravailler dans Word', html: 'S’ouvre dans un navigateur', alx: 'Se rouvre dans Alixo, indépendant de la bibliothèque' + (localVideo ? ' — sans les vidéos importées depuis l’ordinateur' : ''), csv: 'La feuille affichée, pour Excel ou un autre tableur' };
   const alxKind = window.AlixoAlx && AlixoAlx.kindOfDoc ? AlixoAlx.kindOfDoc(d) : 'docs';
   const icon = k => k === 'alx' ? EXPORT_FORMAT_ICONS.alx(alxKind) : (EXPORT_FORMAT_ICONS[k] || EXPORT_FORMAT_ICONS.csv).replace('<svg', '<svg class="po-ico"');
   showPopover(`<h4>Télécharger « ${esc(d.titre || 'Sans titre')} »</h4><div class="po-list po-export">
@@ -11600,16 +11942,42 @@ function openExportMenu(btn) {
     { left: r.right - 320, top: r.top, bottom: r.bottom }, pop => pop.querySelector('.po-list').addEventListener('click', ev => {
       const b = ev.target.closest('[data-fmt]'); if (!b) return;
       hidePopover();
-      if (b.dataset.fmt === 'csv') { AlixoSheets.exportCSV(); return; }
+      if (b.dataset.fmt === 'csv') { withDocOpen(d.id, () => AlixoSheets.exportCSV(), 'le fichier CSV'); return; }   // 1.57.0 : la feuille affichée → le tableur s'ouvre d'abord
       state.settings.exportFormat = b.dataset.fmt; save();
-      exportDoc(b.dataset.fmt);
+      exportDoc(b.dataset.fmt, d.id);
     }));
 }
-async function exportDoc(fmtWanted) {
-  const d = doc(); if (!d) return;
+/* 1.57.0 : exécute fn une fois le document did affiché — le PDF (impression de la feuille, rendu des présentations,
+   tableurs, planches et quiz par leur module) part de la vue ouverte : le document est ouvert s'il ne l'est pas déjà,
+   puis, l'export lancé, on revient à l'écran de départ (bibliothèque ou autre document) et l'onglet ouvert pour
+   l'occasion est refermé. Version web : le retour attend la fin de l'impression (afterprint). what = « le PDF »… */
+async function withDocOpen(did, fn, what = 'le PDF') {
+  if (currentDocId === did) { fn(); return; }
+  const d = findDoc(did); if (!d) return;
+  const prev = currentDocId, hadTab = openTabs.includes(did);
+  toast(`Ouverture de « ${d.titre || 'Sans titre'} » pour créer ${what}…`, { duration: 3000 });
+  let printing = false, printed = false, onPrinted = null;
+  const before = () => { printing = true; }, after = () => { printed = true; if (onPrinted) onPrinted(); };
+  addEventListener('beforeprint', before); addEventListener('afterprint', after);
+  try {
+    openDoc(did);
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));   // rendu de l'éditeur (ou du module)
+    await new Promise(r => setTimeout(r, 80));
+    if (currentDocId !== did) return;   // ouverture refusée ou module indisponible (message déjà affiché)
+    try { await fn(); } catch (e) { console.error(e); }
+    /* impression du navigateur encore ouverte (navigateur où print() ne bloque pas) : on attend qu'elle se ferme */
+    if (printing && !printed) await new Promise(r => { onPrinted = r; setTimeout(r, 10 * 60000); });
+  } finally { removeEventListener('beforeprint', before); removeEventListener('afterprint', after); }
+  if (currentDocId !== did) return;   // l'utilisateur est allé ailleurs entre-temps : on ne le déplace pas
+  if (!hadTab) { const i = openTabs.indexOf(did); if (i >= 0) { openTabs.splice(i, 1); forgetScroll(did); } }
+  if (prev && (isVTabId(prev) ? openTabs.includes(prev) : findDoc(prev))) openDoc(prev); else showLibrary();
+}
+/* 1.57.0 : did (facultatif) = document à exporter ; Word, page web et .alx se génèrent sans l'ouvrir */
+async function exportDoc(fmtWanted, did) {
+  const d = did ? findDoc(did) : doc(); if (!d) return;
   const fmt = EXPORT_FORMATS[fmtWanted] ? fmtWanted : (EXPORT_FORMATS[state.settings.exportFormat] ? state.settings.exportFormat : 'pdf');
   if (fmt === 'alx' && window.AlixoAlx) { AlixoAlx.exportDoc(d.id); return; }   // 1.35 : fichier Alixo, pour tout type de document
-  if (fmt === 'pdf' || isSpecialDoc(d)) { exportPDF(); return; }
+  if (fmt === 'pdf' || isSpecialDoc(d)) { withDocOpen(d.id, exportPDF); return; }
   toast(`Préparation du fichier ${EXPORT_FORMATS[fmt].label}…`, { duration: 3000 });
   let css = '';
   if (fmt === 'html') css = await exportCssText();
@@ -11619,7 +11987,12 @@ async function exportDoc(fmtWanted) {
   const desk = window.alixoDesktop;
   if (desk && desk.saveFile) {
     const r = await desk.saveFile({ name, data, filters: [{ name: EXPORT_FORMATS[fmt].label, extensions: [EXPORT_FORMATS[fmt].ext.slice(1)] }] });
-    if (r && r.ok) toast(`Fichier enregistré : ${r.path.split(/[\\/]/).pop()}`, { action: 'Ouvrir', onAction: () => desk.openPath && desk.openPath(r.path) });
+    if (r && r.ok) {
+      // 1.57.0 : « Ouvrir » seulement si le type est reconnu (une page web .html n'est pas ouverte par le processus principal)
+      const saved = r.path.split(/[\\/]/).pop();
+      const canOpen = desk.openPath && window.AlixoFiles && typeof AlixoFiles.knownExt === 'function' && AlixoFiles.knownExt(saved);
+      toast(`Fichier enregistré : ${saved}`, canOpen ? { action: 'Ouvrir', onAction: () => desk.openPath(r.path) } : undefined);
+    }
     else if (r && r.error) toast('Enregistrement impossible : ' + r.error);
     return;
   }
@@ -11835,6 +12208,8 @@ blocksEl.addEventListener('click', e => {
   touch(); refreshChart(bl, b); selectObj(b.id);
 });
 blocksEl.addEventListener('dblclick', e => {
+  const fimg = e.target.closest('#blocks > .block.img .imgbox');   // 1.57.0 : double-clic sur une image → recadrer
+  if (fimg && !readOnly && !cropCtx) { e.preventDefault(); const id = fimg.closest('.block').dataset.id; selectObj(id); startCrop(id); return; }
   const ra = e.target.closest('a.refart:not(.item)');   // 1.40 : double-clic sur une référence d'article → la modifier
   if (ra && !readOnly) { e.preventDefault(); const bl = ra.closest('.block'); openArticlePopover(bl ? bl.dataset.id : null, ra); return; }
   const bl = e.target.closest('#blocks > .block.chart .cwrap'); if (!bl) return;
@@ -13713,7 +14088,7 @@ setTimeout(() => {
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
       if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Vos PDF s’ouvrent et s’annotent dans Alixo (avec AlixoAI), un bloc pour scanner une feuille depuis le téléphone, une co-édition à plusieurs enfin fiable et la connexion de Claude ou Cursor à votre bibliothèque.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le scan détecte et redresse la feuille tout seul, « Télécharger » au clic droit sur une séance ou un fichier, la police Geist pour vos cours, et des corrections : encadrés, collage sur une sélection, recadrage des images.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

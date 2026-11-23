@@ -1561,13 +1561,14 @@ window.AlixoShare = (() => {
     e.preventDefault();
     const id = dbtn.dataset.shdoc; const d = docById(id); if (!d) return;
     const menu = $('#ctxmenu');
-    menu.innerHTML = `<div class="cm-title">${esc(d.titre || 'Sans titre')}</div><button data-shcm="open">${CM_ICO.open}Ouvrir</button><button data-shcm="copy">${CM_ICO.dup}Copier dans mes cours</button>`;
+    menu.innerHTML = `<div class="cm-title">${esc(d.titre || 'Sans titre')}</div><button data-shcm="open">${CM_ICO.open}Ouvrir</button><button data-shcm="copy">${CM_ICO.dup}Copier dans mes cours</button>${window.AlixoApp && AlixoApp.openExportMenu ? `<button data-shcm="dl">${CM_ICO.zip}Télécharger…</button>` : ''}`;   // 1.57.0 : + Télécharger… (comme le bouton ⤓ d'une séance partagée ouverte)
     menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.shdoc = id;
     placeCtxMenu(menu, e.clientX, e.clientY);
   });
   $('#ctxmenu').addEventListener('click', e => {
     const b = e.target.closest('[data-shcm]'); if (!b) return;
     const id = $('#ctxmenu').dataset.shdoc; $('#ctxmenu').dataset.shdoc = ''; closeCtxMenu();
+    if (b.dataset.shcm === 'dl') { const m = $('#ctxmenu'), x = parseFloat(m.style.left) || e.clientX, y = parseFloat(m.style.top) || e.clientY; if (docById(id)) AlixoApp.openExportMenu({ left: x, right: x + 320, top: y, bottom: y }, id); return; }   // 1.57.0
     if (b.dataset.shcm === 'open') openDoc(id); else copyToLibrary(id);
   });
 

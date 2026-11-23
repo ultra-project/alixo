@@ -11,9 +11,29 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.55.2 (ou nouveautes.html?v=1.55.2 en page seule).
+   Aperçu : index.html?nouveautes=1.57.0 (ou nouveautes.html?v=1.57.0 en page seule).
    ============================================================ */
 'use strict';
+
+/* 1.57 : scan qui détecte la feuille, Télécharger au clic droit, police Geist, encadrés et collage corrigés */
+AlixoWhatsNew.register('1.57.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Un scan <em>plus malin</em>,<br>et des corrections', text: 'Trois nouveautés et des corrections, en moins d’une minute.', dur: 5000 },
+    { title: 'Le scan <em>trouve</em> la feuille', text: 'Photographiez la page : Alixo repère ses quatre coins, la redresse et enlève la table autour.',
+      bullets: ['<b>Automatique</b> : la feuille est détectée et remise d’équerre', '<b>Vérifiez</b> le cadrage et déplacez les coins au doigt', '<b>Envoyer sans recadrer</b> ou <b>reprendre</b> la photo'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8.5 7.5 16 8.5 15 16.5 7.5 15.5Z"/></svg>' }, accent: '#2e8b6a', accent2: '#33658a', dur: 8000 },
+    { title: '<em>Télécharger</em> d’un clic droit', text: 'Clic droit sur une séance ou un fichier de la bibliothèque, sans l’ouvrir.',
+      bullets: ['<b>Séance</b> : PDF, Word, page web ou fichier Alixo', '<b>PDF et fichiers</b> : enregistrés tels quels sur l’ordinateur', '<b>Partout</b> : liste, arbre, onglets, séances partagées'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>' }, accent: '#3d6bb5', accent2: '#b3762a', dur: 7000 },
+    { title: 'La police <em>Geist</em>', text: 'La police de l’interface d’Alixo, maintenant pour vos cours aussi.',
+      bullets: ['<b>Geist</b> et <b>Geist Mono</b> dans le choix des polices', '<b>Gratuite</b>, pour un passage ou tout le document', '<b>Fidèle</b> dans les PDF et les pages web exportés'],
+      art: 'text', accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7000 },
+    { kicker: 'Corrections', title: 'Des <em>corrections</em>', text: 'L’écriture au quotidien, plus fluide.',
+      bullets: ['<b>Encadrés</b> : deux fois Entrée en fin d’encadré pour en sortir, à chaque fois', '<b>Coller</b> sur une sélection la remplace, au lieu d’ajouter dessous', '<b>Recadrer</b> une image : le cadre tombe juste, plus de doublon'],
+      art: 'list', accent: '#b3762a', accent2: '#c04343', dur: 7500 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 /* 1.56 : PDF dans Alixo (annotations, pages, AlixoAI), bloc Scan, co-édition refaite, intégrations MCP */
 AlixoWhatsNew.register('1.56.0', {
@@ -67,25 +87,3 @@ AlixoWhatsNew.register('1.55.2', SCENES_155);   // 1.55.1 et 1.55.2 : correctifs
 AlixoWhatsNew.register('1.55.1', SCENES_155);
 AlixoWhatsNew.register('1.55.0', SCENES_155);
 
-/* 1.54 : présentations — animations et transitions, vidéos et quiz, thèmes signature, banque d'images, mode présentation et vue présentateur */
-AlixoWhatsNew.register('1.54.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Les <em>présentations</em><br>font peau neuve', text: 'Cinq nouveautés, en moins d’une minute.', dur: 5500 },
-    { title: 'Des <em>animations</em> et des transitions', text: 'Bouton Animation : chaque bloc apparaît à son tour ; sans sélection, il devient Transition.',
-      bullets: ['<b>Dix effets</b> : fondu, zoom, rebond, machine à écrire…', '<b>Ordre d’apparition</b> : un clic révèle le groupe suivant', '<b>Transitions</b> : Aperçu, puis « Appliquer à toutes les diapositives »'],
-      art: 'text', accent: '#3d6bb5', accent2: '#b3762a', dur: 8000 },
-    { title: 'Des <em>vidéos</em> et un quiz lié', text: 'Un fichier de l’ordinateur, YouTube, Vimeo ou Dailymotion ; un de vos quiz en un clic.',
-      bullets: ['<b>Rien ne se charge</b> avant votre clic sur « Lire la vidéo »', '<b>Lancer le quiz</b> depuis la diapositive, puis revenir où vous étiez'],
-      art: 'quiz', accent: '#c04343', accent2: '#3d6bb5', dur: 7500 },
-    { title: 'Douze <em>thèmes</em> signature', text: 'Motif de fond et forme signature : Aurore, Granit, Lagon, Kraft, Bauhaus… avec Alixo+.',
-      bullets: ['<b>Huit dispositions</b> de plus : citation, comparaison, trois colonnes…', '<b>Une présentation reçue</b> garde son thème, quel que soit votre compte'],
-      art: 'palette', accent: '#8a4b9c', accent2: '#2e8b6a', dur: 7000 },
-    { title: 'Une <em>banque d’images</em> libres', text: 'Double-clic sur une image, puis « Banque d’images libres » : des photos de Wikimedia Commons.',
-      bullets: ['<b>Licences filtrées</b> : domaine public, CC0, CC BY et CC BY-SA seulement', '<b>Crédit</b> de l’auteur ajouté sous l’image, jusque dans le PDF', '<b>Transparence</b> : la recherche part chez Wikimedia, Alixo ne la garde pas'],
-      art: 'cards', accent: '#2e8b6a', accent2: '#b3762a', dur: 8000 },
-    { title: 'Une <em>vue présentateur</em> complète', text: 'Alt+F5 : notes, suite et chrono pour vous ; la diapositive seule sur le second écran.',
-      bullets: ['<b>Laser, encre, spot</b> : montrer sans rien modifier', '<b>Chrono</b>, écran noir, grille des diapositives, aide', '<b>Répétition chronométrée</b> : la durée de chaque diapositive'],
-      art: { svg: '<svg viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="12.5" rx="2"/><path d="M8 20.5h8M12 16.5v4"/><path d="M7 8h10M7 11h7"/></svg>' }, accent: '#33658a', accent2: '#c04343', dur: 8500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});

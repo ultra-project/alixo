@@ -6,7 +6,7 @@
    Classes : fx-rad (coins), fx-bd (bordure), fx-sh (ombre). Bordure et ombre vivent à l'écran, à l'impression et dans
    la page web exportée ; le PDF vectoriel et Word reçoivent l'image « cuite » sans elles.
    ============================================================ */
-.block.img .imgbox img, .crop-rect .cimg img { filter: var(--fx, none); }
+.block.img .imgbox img { filter: var(--fx, none); }
 /* une image chargée ne garde pas le fond gris d'attente : une image détourée (ou aux coins arrondis) laisse voir la feuille */
 .block.img .imgbox:not(.loading):not(.missing) { background: transparent; }
 .block.img.fx-rad .imgbox { border-radius: var(--rad, 4px); }
@@ -18,7 +18,7 @@ html[data-theme="dark"] .block.img.fx-sh .imgbox { filter: drop-shadow(0 5px 14p
 /* coins arrondis : les poignées d'angle seraient rognées par l'arrondi — celles des côtés suffisent (proportions conservées) */
 .block.img.fx-rad .rz.nw, .block.img.fx-rad .rz.ne, .block.img.fx-rad .rz.sw, .block.img.fx-rad .rz.se { display: none; }
 /* pendant le recadrage : image entière, sans arrondi ni ombre */
-.block.img.cropping .imgbox { border-radius: 4px; box-shadow: none; filter: none; }
+.block.img.cropping .imgbox { border-radius: 4px !important; box-shadow: none !important; filter: none !important; }   /* 1.57.0 : !important — .fx-bd.objsel (plus spécifique) gardait bordure et anneau autour de l’image entière */
 @media print {
   .block.img.fx-bd .imgbox, .block.img.fx-sh .imgbox { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .block.img.fx-bd.objsel .imgbox { box-shadow: 0 0 0 var(--bdw, 1px) var(--bdc, #5f6368); }

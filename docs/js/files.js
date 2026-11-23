@@ -272,7 +272,9 @@ window.AlixoFiles = (() => {
     const buf = await h.data(); if (!buf) { toast('Contenu indisponible sur cet appareil (hors ligne ?)'); return; }
     if (window.alixoDesktop && window.alixoDesktop.saveFile) {
       const r = await window.alixoDesktop.saveFile({ name: f.name, data: new Uint8Array(buf) });
-      if (r && r.ok) toast('Copie enregistrée', { action: 'Ouvrir', onAction: () => window.alixoDesktop.openPath(r.path) });
+      // 1.57.0 : « Ouvrir » seulement pour un type de la liste blanche (le processus principal refuse les autres) ; nom réel choisi dans la boîte
+      const saved = r && r.ok ? r.path.split(/[\\/]/).pop() : '';
+      if (r && r.ok) toast(`Fichier enregistré : ${saved}`, knownExt(saved) && window.alixoDesktop.openPath ? { action: 'Ouvrir', onAction: () => window.alixoDesktop.openPath(r.path) } : undefined);
       else if (r && r.error) toast('Enregistrement impossible : ' + r.error);
       return;
     }
@@ -525,6 +527,7 @@ window.AlixoFiles = (() => {
   const count = fid => inFolder(fid).length;
   const subtreeCount = fid => { const ids = new Set(descendantIds(fid)); return files().filter(f => ids.has(f.folderId)).length; };
 
+  /* 1.57.0 : « Enregistrer une copie… » devient « Télécharger » : le fichier d'origine, tel quel, sur l'ordinateur */
   function openMenu(x, y, id) {
     const f = byId(id); if (!f) return;
     const desk = !!(window.alixoDesktop && window.alixoDesktop.openData);
@@ -536,7 +539,7 @@ window.AlixoFiles = (() => {
       ${window.AlixoShare && AlixoShare.enabled ? `<button data-fcm="share">${CM_ICO.share}Partager…</button>` : ''}
       <button data-fcm="rename">${CM_ICO.pen}Renommer…</button>
       <button data-fcm="move">${CM_ICO.move}Déplacer vers…</button>
-      <button data-fcm="save">${CM_ICO.zip}Enregistrer une copie…</button>
+      <button data-fcm="save" title="Enregistrer le fichier d’origine sur l’ordinateur">${CM_ICO.zip}Télécharger</button>
       <button data-fcm="delete" class="danger">${CM_ICO.trash}Supprimer</button>`;
     menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.file = id;
     placeCtxMenu(menu, x, y);
@@ -560,7 +563,7 @@ window.AlixoFiles = (() => {
       ${desk ? `<button data-shfcm="ext">${CM_ICO.share}Ouvrir avec l’application associée</button>` : ''}
       ${currentDocId ? `<button data-shfcm="side">${CM_ICO.dup}Afficher à côté du cours</button>` : ''}
       <button data-shfcm="copy">${CM_ICO.dup}Copier dans mes fichiers</button>
-      <button data-shfcm="save">${CM_ICO.zip}Enregistrer une copie…</button>`;
+      <button data-shfcm="save" title="Enregistrer le fichier sur l’ordinateur">${CM_ICO.zip}Télécharger</button>`;   // 1.57.0 : « Télécharger » (était « Enregistrer une copie… »)
     menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.file = '';
     menu.dataset.shfile = sid + '|' + id;
     placeCtxMenu(menu, x, y);
@@ -726,5 +729,5 @@ window.AlixoFiles = (() => {
   // la bibliothèque a pu être dessinée avant le chargement de ce module
   setTimeout(() => { try { refreshLibrary(); } catch { /* pas encore prête */ } }, 0);
 
-  return { aux, open, openShared, openSharedMenu, pick, pickPhone, openImportChoice, riskyExt, knownExt, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
+  return { aux, open, openShared, openSharedMenu, download: saveCopy, pick, pickPhone, openImportChoice, riskyExt, knownExt, addFiles, replaceData, remove, rename, move, openMove, openMenu, getData, rowItems, rowHTML, sharedRowItems, sharedRowHTML, sideTreeHTML, libTreeHTML, count, subtreeCount, detachFolders, inFolder, byId, iconHTML, fmtSize, kindOf, render, showBeside, syncStatus: () => Cloud.status(), cloudEnabled: Cloud.enabled };
 })();
