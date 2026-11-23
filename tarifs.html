@@ -12,27 +12,28 @@
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://alixoapp.com/tarifs.html">
 <link rel="canonical" href="https://alixoapp.com/tarifs.html">
-<meta name="theme-color" content="#f7f8fa">
-<link rel="stylesheet" href="/fonts/fonts.css">
-<link rel="preload" href="/fonts/bricolage-grotesque-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/site.css?v=20261116">
-<link rel="stylesheet" href="tarifs.css?v=20261116">
+<meta name="theme-color" content="#ffffff">
+<link rel="stylesheet" href="/fonts/fonts.css?v=20261122">
+<link rel="preload" href="/fonts/inter-tight-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/fonts/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/site.css?v=20261122">
+<link rel="stylesheet" href="tarifs.css?v=20261122">
 <link rel="icon" href="/favicon.ico" sizes="48x48">
 <link rel="icon" type="image/png" sizes="192x192" href="/img/favicon-192.png">
 <link rel="apple-touch-icon" href="img/logo.png">
 <meta property="og:image" content="https://alixoapp.com/img/shot-seance-light.jpg">
 <script defer src="/protection.js"></script>
-<script defer src="/site.js?v=20261116"></script>
-<script defer src="tarifs.js?v=20261116"></script>
+<script defer src="/site.js?v=20261122"></script>
+<script defer src="tarifs.js?v=20261122"></script>
 </head>
-<body class="tarifs-page">
+<body>
 
 <a class="skip" href="#contenu">Aller au contenu</a>
 
 <header class="nav" id="nav">
-  <div class="nav-pill">
+  <div class="nav-in">
     <a class="nav-logo" href="/index.html?site" aria-label="Alixo — accueil">
-      <img src="/img/logo-96.png" alt="" width="28" height="28"><span>Alixo</span>
+      <img src="/img/logo.png" alt="" width="34" height="34"><span>Alixo</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="/index.html?site#fonctions">Fonctionnalités</a>
@@ -44,11 +45,11 @@
     </nav>
     <div class="nav-actions">
       <a class="nav-login" href="https://alixoapp.com/docs/?login" title="Ouvrir Alixo dans le navigateur et se connecter (ou créer un compte)">Se connecter</a>
-      <a class="btn btn-ink btn-s" href="/index.html?site#telecharger">
-        <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M4 19h16"/></svg>
-        Télécharger
-      </a>
-      <button class="nav-burger" id="nav-burger" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-sheet"><span></span><span></span><span></span></button>
+      <a class="btn btn-ink btn-s" href="https://alixoapp.com/docs/">Ouvrir Alixo</a>
+      <button class="nav-burger" id="nav-burger" type="button" aria-label="Ouvrir le menu" aria-expanded="false" aria-controls="nav-sheet">
+        <svg class="ico-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        <svg class="ico-close" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18"/></svg>
+      </button>
     </div>
   </div>
   <nav class="nav-sheet" id="nav-sheet" aria-label="Menu mobile">
@@ -74,11 +75,11 @@
     <!-- Bascule mensuel / annuel : pilote le prix d'Alixo+ et la grille mise en avant plus bas -->
     <div class="tf-switch reveal d3" role="radiogroup" aria-label="Rythme de paiement d'Alixo+">
       <button type="button" class="tf-switch-opt is-on" role="radio" aria-checked="true" data-billing="monthly">Mensuel</button>
-      <button type="button" class="tf-switch-opt" role="radio" aria-checked="false" tabindex="-1" data-billing="annual">Annuel <span class="tf-save">−9&nbsp;% la 1<sup>re</sup>&nbsp;année</span><span class="coco-sr">, 14,89 € de moins qu'au mensuel la première année</span></button>
+      <button type="button" class="tf-switch-opt" role="radio" aria-checked="false" tabindex="-1" data-billing="annual">Annuel <span class="tf-save">−9&nbsp;% la 1<sup>re</sup>&nbsp;année</span><span class="sr-only">, 14,89 € de moins qu'au mensuel la première année</span></button>
     </div>
   </div>
 
-  <div class="tf-plans plans">
+  <div class="tf-plans">
     <div class="plan plan-free">
       <div class="plan-head"><img src="img/logo-96.png" alt="" width="40" height="40"><div><h2 class="tf-plan-name">Gratuit</h2><span>Pour toujours, sans carte</span></div></div>
       <div class="plan-price">0 €<small>sans limite de temps</small></div>
@@ -93,23 +94,8 @@
       <a class="btn btn-line btn-full" href="index.html?site#telecharger">Commencer gratuitement</a>
     </div>
 
-    <div class="plan plus tf-plus" id="tf-plus">
-      <!-- Coco, assis sur le bord haut de la carte : ses jambes passent devant la bordure.
-           Au survol de la carte (ou focus clavier, ou tap) il sursaute et parle dans une bulle terminal. -->
-      <div class="tf-coco" id="tf-coco">
-        <div class="tf-coco-body">
-          <picture>
-            <source srcset="img/coco-assis.webp" type="image/webp">
-            <img class="tf-coco-img" src="img/coco-assis.png" alt="" width="320" height="419" decoding="async" draggable="false">
-          </picture>
-          <span class="tf-coco-hit" aria-hidden="true"></span>
-        </div>
-        <div class="coco-bubble tf-bubble" aria-hidden="true">
-          <div class="coco-term-bar"><i></i><i></i><i></i><span>coco@alixo:~</span></div>
-          <p class="coco-term-body"><span class="coco-term-ghost"><b>$</b> Alixo+ n'attend plus que toi 😝</span><span class="coco-term-live"><b>$</b> <span class="coco-typed"></span><span class="coco-caret"></span></span></p>
-        </div>
-        <p class="coco-sr" id="tf-coco-live" aria-live="polite"></p>
-      </div>
+    <div class="plan tf-plus on-dark" id="tf-plus">
+      <span class="tf-plus-glow" aria-hidden="true"></span>
 
       <div class="plan-head"><img src="img/logo-plus-96.png" alt="" width="40" height="40"><div><h2 class="tf-plan-name">Alixo+</h2><span>Tout le compte gratuit, plus&nbsp;:</span></div></div>
       <!-- Les deux prix occupent la même case : la carte ne change pas de hauteur quand on bascule -->
@@ -123,7 +109,7 @@
           <p class="tf-price-sub">Soit 12,50&nbsp;€&nbsp;/&nbsp;mois. Puis de moins en moins cher&nbsp;: <strong>jusqu'à 99,99&nbsp;€&nbsp;/&nbsp;an</strong>.</p>
         </div>
       </div>
-      <p class="coco-sr" id="tf-price-live" aria-live="polite"></p>
+      <p class="sr-only" id="tf-price-live" aria-live="polite"></p>
       <ul class="plan-list">
         <li><strong>AlixoAI</strong>&nbsp;: relecture approfondie, mise en forme, Quiz IA, fiches de révision, sans limite, dans l'application PC</li>
         <li><strong>Tâches à faire</strong>&nbsp;: catégories, échéances, priorités, rappel du matin</li>
@@ -131,7 +117,7 @@
         <li><strong>Toutes les polices</strong>&nbsp;: Georgia, Garamond, Cambria, Calibri, Verdana…</li>
         <li><strong>Stockage au-delà de 3 Go</strong></li>
       </ul>
-      <a class="btn btn-white btn-full tf-cta" href="https://alixoapp.com/docs/?login">Passer à Alixo+ <span id="tf-cta-billing">mensuel</span></a>
+      <a class="btn btn-violet btn-full tf-cta" href="https://alixoapp.com/docs/?login">Passer à Alixo+ <span id="tf-cta-billing">mensuel</span></a>
       <div class="plan-note">Abonnement mensuel sans engagement ou annuel reconduit tacitement, résiliable à tout moment en ligne (effet à la fin de la période payée). Paiement sécurisé par Stripe. Droit de rétractation de 14&nbsp;jours&nbsp;: voir les <a href="cgv.html">CGV</a>.</div>
     </div>
   </div>
@@ -155,12 +141,12 @@
       </header>
       <p class="tf-ladder-sub">Ton prix par mois, selon ton ancienneté.</p>
       <ol class="tf-bars">
-        <li style="--r: 1; --i: 0"><span class="tf-bar-price">14,99&nbsp;€<span class="coco-sr"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 1&nbsp;à&nbsp;3</span></li>
-        <li style="--r: .933; --i: 1"><span class="tf-bar-price">13,99&nbsp;€<span class="coco-sr"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 4&nbsp;à&nbsp;6</span></li>
-        <li style="--r: .867; --i: 2"><span class="tf-bar-price">12,99&nbsp;€<span class="coco-sr"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 7&nbsp;à&nbsp;12</span></li>
-        <li style="--r: .8; --i: 3"><span class="tf-bar-price">11,99&nbsp;€<span class="coco-sr"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 13&nbsp;à&nbsp;18</span></li>
-        <li style="--r: .733; --i: 4"><span class="tf-bar-price">10,99&nbsp;€<span class="coco-sr"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 19&nbsp;à&nbsp;24</span></li>
-        <li class="is-floor" style="--r: .666; --i: 5"><span class="tf-bar-price">9,99&nbsp;€<span class="coco-sr"> par mois, prix plancher, soit 33 % de moins</span></span><span class="tf-bar-fill" aria-hidden="true"><b>−33&nbsp;%</b></span><span class="tf-bar-label">Mois 25&nbsp;et&nbsp;+</span></li>
+        <li style="--r: 1; --i: 0"><span class="tf-bar-price">14,99&nbsp;€<span class="sr-only"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 1&nbsp;à&nbsp;3</span></li>
+        <li style="--r: .933; --i: 1"><span class="tf-bar-price">13,99&nbsp;€<span class="sr-only"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 4&nbsp;à&nbsp;6</span></li>
+        <li style="--r: .867; --i: 2"><span class="tf-bar-price">12,99&nbsp;€<span class="sr-only"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 7&nbsp;à&nbsp;12</span></li>
+        <li style="--r: .8; --i: 3"><span class="tf-bar-price">11,99&nbsp;€<span class="sr-only"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 13&nbsp;à&nbsp;18</span></li>
+        <li style="--r: .733; --i: 4"><span class="tf-bar-price">10,99&nbsp;€<span class="sr-only"> par mois</span></span><span class="tf-bar-fill" aria-hidden="true"></span><span class="tf-bar-label">Mois 19&nbsp;à&nbsp;24</span></li>
+        <li class="is-floor" style="--r: .666; --i: 5"><span class="tf-bar-price">9,99&nbsp;€<span class="sr-only"> par mois, prix plancher, soit 33 % de moins</span></span><span class="tf-bar-fill" aria-hidden="true"><b>−33&nbsp;%</b></span><span class="tf-bar-label">Mois 25&nbsp;et&nbsp;+</span></li>
       </ol>
     </article>
 
@@ -273,10 +259,10 @@
 </main>
 
 <footer class="foot">
-  <div class="wrap foot-in">
+  <div class="foot-in">
     <div class="foot-brand">
-      <img src="/img/logo-96.png" alt="" width="34" height="34" loading="lazy">
-      <div><p class="foot-name">Alixo</p><p class="foot-tag">Le cockpit d'amphi des étudiants.</p></div>
+      <p class="foot-name"><img src="/img/logo.png" alt="" width="30" height="30" loading="lazy">Alixo</p>
+      <p class="foot-tag">Le cockpit d'amphi des étudiants.</p>
     </div>
     <nav class="foot-cols" aria-label="Pied de page">
       <div class="foot-col">
@@ -292,7 +278,7 @@
       </div>
       <div class="foot-col">
         <h2>Utiliser</h2>
-        <a href="https://alixoapp.com/docs/" target="_blank" rel="noopener">Application web<span class="sr-only"> (nouvel onglet)</span></a>
+        <a href="https://alixoapp.com/docs/">Application web</a>
         <a href="https://alixoapp.com/docs/?login">Se connecter</a>
         <a href="/quiz/">Rejoindre un quiz</a>
         <a href="/index.html?site#faq">Questions fréquentes</a>
@@ -306,8 +292,8 @@
         <a href="/mentions-legales.html">Mentions légales</a>
       </div>
     </nav>
-    <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
   </div>
+  <p class="foot-copy"><span>© 2026 Alixo · Windows, macOS et web.</span><span>Fait pour les amphis.</span></p>
 </footer>
 
 </body>

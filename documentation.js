@@ -14,12 +14,12 @@ function reveal(a) {
   if (r.top < s.top + 8) side.scrollTop += r.top - s.top - 48;
   else if (r.bottom > s.bottom - 8) side.scrollTop += r.bottom - s.bottom + 48;
 }
-/* La barre de navigation est fixe (pilule flottante) : la zone d'observation commence dessous, juste après la ligne
-   où s'arrête une section visée par une ancre (scroll-padding-top 96 px + scroll-margin-top 8 px = 104 px).
+/* La barre de navigation est dans le flux (elle défile avec la page) : la zone d'observation commence juste après la ligne
+   où s'arrête une section visée par une ancre (scroll-padding-top 24 px + scroll-margin-top 8 px = 32 px, un peu de marge).
    Section courante = la première, dans l'ordre de la page, qui traverse cette zone. */
-/* Sur téléphone, le sommaire replié reste collé sous la barre : la zone commence sous lui (voir doc.css, scroll-padding-top).
+/* Sur téléphone, le sommaire replié reste collé en haut : la zone commence sous lui (voir doc.css, scroll-padding-top 88 px).
    La zone est recalculée quand la fenêtre change de taille (passage bureau ↔ téléphone). */
-const spyTop = () => matchMedia('(max-width: 900px)').matches ? 172 : 112;
+const spyTop = () => matchMedia('(max-width: 900px)').matches ? 104 : 40;
 const seen = new Set();
 let spy = null, spyTopNow = -1;
 function paint() {

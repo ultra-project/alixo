@@ -1,11 +1,12 @@
 /* ============================================================
    Alixo — Page d'accueil. Vanilla, sans dépendance.
    1. Téléchargement : version et poids live (/releases-latest.json, repli /releases.json), téléchargement direct
-      avec toast, macOS détecté (bouton et carte Mac mis en avant), mobile détecté (le bouton principal ouvre l'application).
+      avec toast, macOS détecté (bouton principal et carte Mac mis en avant), mobile détecté (le bouton principal ouvre l'application).
       Les pages ne nomment jamais l'hébergement des fichiers (seul ce script le connaît, pour valider les adresses) :
       les pages /telecharger/… s'en chargent en arrière-plan, et tous les liens y mènent sans ce script.
-   2. Décor : apparitions au défilement, menu mobile, onglets des captures, démos vivantes.
-   3. Coco, le compagnon : pend sous la navigation, descend en rappel au survol, au focus ou au tap.
+   2. Décor : apparitions au défilement (.reveal), démarrage de la scène du héros (classe « on » sur .rig).
+   3. Quiz interactif de la section Fonctionnalités : minuteur, réponse, pourcentages, « Rejouer ».
+   Le menu mobile (#nav-burger / #nav-sheet) est géré par /site.js, chargé par toutes les pages.
    Sans ce script (ou s'il échoue), la page reste entièrement lisible.
    Mode clair seul : ce script ne lit ni n'écrit aucune préférence de thème.
    ============================================================ */
@@ -45,60 +46,38 @@
     var isMobile = /Android|iPhone|iPad|iPod/i.test(ua) || isIPad || (touch && window.innerWidth < 900);
     var isMac = /Macintosh/.test(ua) && !isIPad;
 
-    var heroWin = $('#hero-win'), heroMac = $('#hero-mac');
-    var endDl = $('#end-dl'), endAlt = $('#end-alt'), endWeb = $('#end-web');   /* bandeau final : même logique que le héros */
-    var ARROW = ' <span aria-hidden="true">→</span>';
-    var OPEN_APP = '<svg class="os" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17 17 7M8 7h9v9"/></svg>' +
-      '<span class="btn-dl-txt">Ouvrir Alixo sur ton téléphone<small>Rien à installer · avec ou sans compte</small></span>';
-    var macBtns = [heroMac, $('#btn-mac')];        /* boutons qui téléchargent le fichier Mac */
+    var heroWin = $('#hero-win'), heroWeb = $('#hero-web');
+    var endDl = $('#end-dl'), endWeb = $('#end-web');   /* bandeau final : même logique que le héros */
+    var OPEN_APP = 'Ouvrir Alixo sur ton téléphone';
+    var macBtns = [$('#btn-mac')];                      /* boutons qui téléchargent le fichier Mac */
 
-    /* ---------- macOS : le bouton Mac devient le bouton principal (encre plein) et passe en premier dans le héros ;
-       la carte Mac prend la place et l'habillage de la carte mise en avant ; le bandeau final propose macOS ---------- */
+    /* ---------- macOS : le bouton principal du héros et celui du bandeau final téléchargent le fichier Mac ;
+       la carte Mac passe en premier dans la section Télécharger ---------- */
     if (isMac) {
-      if (endDl && heroMac) {
-        var apple = $('svg', heroMac);
-        endDl.removeAttribute('data-download');
-        endDl.href = DL_PAGE.mac;
-        endDl.innerHTML = (apple ? apple.outerHTML : '') +
-          '<span class="btn-dl-txt">Télécharger pour macOS<small><span class="js-version">Dernière version</span><span class="js-mac-size"></span></small></span>';
-        macBtns.push(endDl);
-        if (endAlt) { endAlt.href = DL_PAGE.setup; endAlt.innerHTML = 'Aussi pour Windows' + ARROW; }
-      }
-      if (heroWin && heroMac) {
-        heroWin.classList.remove('btn-ink'); heroWin.classList.add('btn-line');
-        heroMac.classList.remove('btn-line'); heroMac.classList.add('btn-ink');
-        heroWin.parentNode.insertBefore(heroMac, heroWin);
-      }
+      [heroWin, endDl].forEach(function (el) {
+        if (!el) return;
+        el.removeAttribute('data-download');
+        el.href = DL_PAGE.mac;
+        macBtns.push(el);
+      });
       var cardWin = $('#dl-card-win'), cardMac = $('#dl-card-mac');
-      if (cardWin && cardMac) {
-        var btnWin = $('.btn', cardWin), btnMac = $('.btn', cardMac);
-        cardWin.classList.remove('dl-win'); cardMac.classList.add('dl-win');
-        if (btnWin) { btnWin.classList.remove('btn-white'); btnWin.classList.add('btn-ink'); }
-        if (btnMac) { btnMac.classList.remove('btn-ink'); btnMac.classList.add('btn-white'); }
-        /* l'ordre d'apparition suit la nouvelle place */
-        var iWin = cardWin.style.getPropertyValue('--i'), iMac = cardMac.style.getPropertyValue('--i');
-        cardWin.style.setProperty('--i', iMac || '0'); cardMac.style.setProperty('--i', iWin || '0');
-        cardWin.parentNode.insertBefore(cardMac, cardWin);
-      }
+      if (cardWin && cardMac) cardWin.parentNode.insertBefore(cardMac, cardWin);
     }
 
-    /* ---------- Mobile : pas de fichier à télécharger, le bouton principal ouvre l'application ---------- */
+    /* ---------- Mobile : pas de fichier à télécharger, le bouton principal ouvre l'application
+       (même habillage violet) et le second bouton, qui menait au même endroit, est masqué ---------- */
     if (isMobile) {
-      if (heroWin) {
-        heroWin.removeAttribute('data-download');
-        heroWin.href = APP_URL;
-        heroWin.innerHTML = OPEN_APP;
-      }
-      if (heroMac) heroMac.hidden = true;
-      var heroWeb = $('.hero-web');                 /* même destination que le bouton principal : inutile en double */
-      if (heroWin && heroWeb) heroWeb.hidden = true;
-      if (endDl) {
-        endDl.removeAttribute('data-download');
-        endDl.href = APP_URL;
-        endDl.innerHTML = OPEN_APP;
-        if (endAlt) endAlt.hidden = true;
-        if (endWeb) endWeb.hidden = true;
-      }
+      [[heroWin, heroWeb], [endDl, endWeb]].forEach(function (pair) {
+        var main = pair[0], alt = pair[1];
+        if (!main) return;
+        main.removeAttribute('data-download');
+        main.href = APP_URL;
+        var ico = $('svg', main);
+        main.textContent = '';
+        if (ico) { ico.innerHTML = '<path d="M7 17 17 7M8 7h9v9"/>'; main.appendChild(ico); }
+        main.appendChild(document.createTextNode(OPEN_APP));
+        if (alt) alt.hidden = true;
+      });
     }
 
     /* ---------- Téléchargement direct + toast ----------
@@ -168,14 +147,14 @@
     };
     /* [data-download] ne vit que sur les boutons explicitement Windows (héros, carte Windows, bandeau final) */
     $$('[data-download]').forEach(function (el) { el.addEventListener('click', startDownload); });
-    /* Boutons Mac (héros, carte, bandeau final sur un Mac) : téléchargement direct dès que l'adresse du fichier est connue */
+    /* Boutons Mac (carte, héros et bandeau final sur un Mac) : téléchargement direct dès que l'adresse du fichier est connue */
     macBtns.forEach(function (el) { if (el) el.addEventListener('click', startMacDownload); });
 
     /* ---------- Version et poids (/releases-latest.json, repli sur /releases.json) ----------
        releases-latest.json ne contient que version, date et installateurs (quelques centaines d'octets) ;
        releases.json, bien plus lourd (notes et historique), reste le repli si le petit fichier manque.
        Les valeurs écrites dans la page (« Dernière version », « 85 Mo ») restent affichées si rien ne répond. */
-    var toMo = function (bytes) { return (bytes / 1048576).toFixed(bytes > 104857600 ? 0 : 1).replace('.', ',') + ' Mo'; };   /* espace insécable */
+    var toMo = function (bytes) { return (bytes / 1048576).toFixed(bytes > 104857600 ? 0 : 1).replace('.', ',') + ' Mo'; };   /* espace insécable */
     var getJson = function (url) {
       return fetch(url, { cache: 'no-cache' }).then(function (r) { return r.ok ? r.json() : Promise.reject(new Error(String(r.status))); });
     };
@@ -190,13 +169,15 @@
             $$('.js-version').forEach(function (el) { el.textContent = v; });
           }
           var setup = assets.setup;
-          if (setup && setup.url) exeUrl = safeUrl(setup.url);
+          /* Sur téléphone ou tablette, pas de téléchargement direct : les cartes Windows et Mac mènent
+             aux pages /telecharger/… au lieu de lancer un installateur. */
+          if (setup && setup.url && !isMobile) exeUrl = safeUrl(setup.url);
           if (setup && setup.size) {
             var mo = toMo(setup.size);
             $$('.js-size').forEach(function (el) { el.textContent = mo; });
           }
           var mac = assets.mac;
-          if (mac && mac.url) macUrl = safeUrl(mac.url);
+          if (mac && mac.url && !isMobile) macUrl = safeUrl(mac.url);
           if (mac && mac.size) {
             /* le séparateur vit dans le span : rien ne traîne tant que le poids n'est pas connu */
             var macMo = ' · ' + toMo(mac.size);
@@ -215,11 +196,19 @@
      ============================================================ */
   function showAll() { $$('.reveal').forEach(function (el) { el.classList.add('in'); }); }
 
+  /* Ne lance « start » que lorsque l'élément est à l'écran, « stop » quand il en sort */
+  function whenVisible(el, start, stop) {
+    if (!el || !('IntersectionObserver' in window)) { start(); return; }
+    new IntersectionObserver(function (es) {
+      es.forEach(function (e) { if (e.isIntersecting) start(); else stop(); });
+    }, { threshold: 0.25 }).observe(el);
+  }
+
   try {
     /* ---------- Apparitions au scroll ----------
        Filet de sécurité : si l'observateur n'existe pas ou n'a rien signalé au bout de 2,5 s,
        tout est affiché. Un élément déjà dépassé (ancre, rechargement en milieu de page) est
-       affiché d'emblée. */
+       affiché d'emblée ; le défilement et l'événement « load » rattrapent ceux que l'observateur aurait manqués. */
     var reveals = $$('.reveal');
     var ioAlive = false;
     if (!('IntersectionObserver' in window) || still) {
@@ -236,171 +225,54 @@
       }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
       reveals.forEach(function (el) { ro.observe(el); });
       setTimeout(function () { if (!ioAlive) showAll(); }, 2500);
+
+      /* Second filet, indépendant de l'observateur : au défilement (écouteur passif, une lecture par image)
+         et au chargement complet, tout élément dont le haut est passé au-dessus du bas de la fenêtre est affiché. */
+      var pending = reveals.slice(), rafId = 0;
+      var sweep = function () {
+        rafId = 0;
+        var vh = window.innerHeight || root.clientHeight;
+        pending = pending.filter(function (el) {
+          if (el.classList.contains('in')) return false;
+          if (el.getBoundingClientRect().top < vh) { el.classList.add('in'); return false; }
+          return true;
+        });
+        if (!pending.length) window.removeEventListener('scroll', onRevealScroll);
+      };
+      var onRevealScroll = function () { if (!rafId) rafId = requestAnimationFrame(sweep); };
+      window.addEventListener('scroll', onRevealScroll, { passive: true });
+      if (document.readyState === 'complete') sweep(); else window.addEventListener('load', sweep);
     }
 
-    /* ---------- Navigation mobile ---------- */
-    var nav = $('#nav'), burger = $('#nav-burger');
-    function setNav(open) {
-      nav.classList.toggle('open', open);
-      burger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    }
-    if (nav && burger) {
-      burger.addEventListener('click', function () { setNav(!nav.classList.contains('open')); });
-      $$('#nav-sheet a').forEach(function (a) { a.addEventListener('click', function () { setNav(false); }); });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && nav.classList.contains('open')) { setNav(false); burger.focus(); }
-      });
-      document.addEventListener('click', function (e) { if (nav.classList.contains('open') && !nav.contains(e.target)) setNav(false); });
+    /* ---------- Héros : la scène démarre (classe « on ») au premier des deux événements, un défilement de plus
+       de 8 px ou ~900 ms après le chargement ; tout de suite en mouvement réduit ou sur appareil faible ---------- */
+    var rigs = $$('.rig');
+    var started = false;
+    var startRig = function () {
+      if (started) return;
+      started = true;
+      rigs.forEach(function (r) { r.classList.add('on'); });
+      window.removeEventListener('scroll', onRigScroll);
+    };
+    var onRigScroll = function () { if ((window.scrollY || 0) > 8) startRig(); };
+    if (still) {
+      startRig();
+    } else {
+      window.addEventListener('scroll', onRigScroll, { passive: true });
+      onRigScroll();
+      var armRig = function () { setTimeout(startRig, 900); };
+      if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', armRig); else armRig();
     }
 
-    /* ---------- Onglets des captures (role=tablist) ---------- */
-    var tabs = $$('.tab'), panel = $('#shot-panel'), title = $('#shot-title');
-    function selectTab(tab, focus) {
-      tabs.forEach(function (t) {
-        var on = t === tab;
-        t.setAttribute('aria-selected', on ? 'true' : 'false');
-        t.tabIndex = on ? 0 : -1;
-      });
-      $$('.shot', panel).forEach(function (img) {
-        var on = img.dataset.shot === tab.dataset.shot;
-        if (on && img.dataset.src) {              /* chargée à la demande */
-          img.srcset = img.dataset.srcset; img.src = img.dataset.src;
-          delete img.dataset.src; delete img.dataset.srcset;
-        }
-        /* une capture masquée est en display:none : on force sa mise en page pour que le fondu parte bien de 0 */
-        if (on && img.hidden) { img.hidden = false; void img.offsetWidth; }
-        /* laisse le navigateur prendre en compte l'affichage avant le fondu */
-        requestAnimationFrame(function () { img.classList.toggle('on', on); });
-        if (!on) setTimeout(function () { if (!img.classList.contains('on')) img.hidden = true; }, 380);
-      });
-      panel.setAttribute('aria-labelledby', tab.id);
-      if (title && tab.dataset.title) title.textContent = tab.dataset.title;
-      if (focus) tab.focus();
-    }
-    tabs.forEach(function (tab, i) {
-      tab.addEventListener('click', function () { selectTab(tab, false); });
-      tab.addEventListener('keydown', function (e) {
-        var j = i;
-        if (e.key === 'ArrowRight') j = (i + 1) % tabs.length;
-        else if (e.key === 'ArrowLeft') j = (i - 1 + tabs.length) % tabs.length;
-        else if (e.key === 'Home') j = 0;
-        else if (e.key === 'End') j = tabs.length - 1;
-        else return;
-        e.preventDefault();
-        selectTab(tabs[j], true);
-      });
-    });
-
-    /* ---------- Comparatif : la région n'est focalisable (défilement au clavier) que si elle défile vraiment ;
-       l'indication « Fais glisser… » suit le même critère ---------- */
-    var cmp = $('#cmp'), cmpHint = $('#cmp-hint');
+    /* ---------- Comparatif : la région n'est focalisable (défilement au clavier) que si elle défile vraiment ---------- */
+    var cmp = $('#cmp');
     if (cmp) {
       var cmpSync = function () {
-        var scrolls = cmp.scrollWidth > cmp.clientWidth + 1;
-        if (scrolls) cmp.setAttribute('tabindex', '0'); else cmp.removeAttribute('tabindex');
-        if (cmpHint) { cmpHint.hidden = !scrolls; cmpHint.style.display = scrolls ? 'block' : ''; }
+        if (cmp.scrollWidth > cmp.clientWidth + 1) cmp.setAttribute('tabindex', '0'); else cmp.removeAttribute('tabindex');
       };
       cmpSync();
       window.addEventListener('resize', cmpSync);
       window.addEventListener('load', cmpSync);
-    }
-
-    /* ---------- Héros : la capture se redresse au scroll ---------- */
-    var win = $('#shot-win');
-    var ticking = false;
-    function onScroll() {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(function () {
-        ticking = false;
-        var y = window.scrollY || 0;
-        if (win) win.style.setProperty('--tilt', Math.max(0, 1 - y / 420).toFixed(3));
-      });
-    }
-    if (!still) {
-      window.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
-    }
-
-    /* ---------- Démos vivantes : ne tournent que lorsqu'elles sont à l'écran ---------- */
-    function whenVisible(el, start, stop) {
-      if (!el || !('IntersectionObserver' in window)) return;
-      new IntersectionObserver(function (es) {
-        es.forEach(function (e) { if (e.isIntersecting) start(); else stop(); });
-      }, { threshold: 0.25 }).observe(el);
-    }
-
-    /* Les démos sont bornées (WCAG 2.2.2) : rien ne bouge indéfiniment. Les démos CSS (formule, correction,
-       curseur de recherche, fragments du héros) portent leur nombre d'itérations dans accueil.css. */
-
-    /* Tuile A — le plan se tape tout seul, ligne par ligne : 2 passages, puis le plan complet reste affiché */
-    var planBox = $('#plan-demo');
-    if (planBox && !still) {
-      var lines = $$('.pl', planBox).map(function (el) {
-        var t = $('.pl-t', el);
-        return { el: el, t: t, full: t.textContent };
-      });
-      var hint = $('.pl-hint', planBox);
-      var caret = document.createElement('span');
-      caret.className = 'caret';
-      var timer = 0, running = false, li = 0, ci = 0, passes = 0, MAX_PASSES = 2;
-      var reset = function () {
-        lines.forEach(function (l) { l.t.textContent = ''; l.el.classList.add('off'); });
-        hint.classList.add('off'); li = 0; ci = 0;
-      };
-      var restore = function () {
-        lines.forEach(function (l) { l.t.textContent = l.full; l.el.classList.remove('off'); });
-        hint.classList.remove('off'); if (caret.parentNode) caret.parentNode.removeChild(caret);
-      };
-      var step = function () {
-        if (!running) return;
-        if (li >= lines.length) {                     /* fin : on laisse lire, puis on recommence une fois */
-          hint.classList.remove('off');
-          if (passes >= MAX_PASSES) { running = false; restore(); return; }   /* terminé : plan complet, curseur retiré */
-          timer = setTimeout(function () { passes++; reset(); step(); }, 3200);
-          return;
-        }
-        var l = lines[li];
-        if (ci === 0) { l.el.classList.remove('off'); l.el.appendChild(caret); }
-        if (ci < l.full.length) {
-          ci++; l.t.textContent = l.full.slice(0, ci);
-          timer = setTimeout(step, 34 + Math.random() * 46);
-        } else {
-          li++; ci = 0;
-          timer = setTimeout(step, li >= lines.length ? 500 : 380);
-        }
-      };
-      whenVisible(planBox, function () {
-        if (running || passes >= MAX_PASSES) return;
-        running = true; passes++; reset(); timer = setTimeout(step, 500);
-      }, function () {
-        running = false; clearTimeout(timer); restore();
-      });
-    }
-
-    /* Tuile E — la demande se déplace, l'équilibre suit le long de la courbe d'offre :
-       un aller-retour complet (12 s environ, temps à l'écran), puis arrêt sur l'équilibre de départ */
-    var graph = $('#graph');
-    if (graph && !still) {
-      var gD = $('#g-demand'), gPt = $('#g-pt'), gDash = $('#g-dash'), gP = $('#g-p'), gQ = $('#g-q');
-      var gRun = false, gRaf = 0, gLast = 0, gElapsed = 0, gDone = false;
-      var G_MS = 2 * Math.PI * 1900;                  /* une période complète du mouvement */
-      var SLOPE = 74 / 160;                           /* pente (en valeur absolue) des deux droites */
-      var frame = function (now) {
-        if (!gRun) return;
-        if (gLast) gElapsed += now - gLast;
-        gLast = now;
-        if (gElapsed >= G_MS) { gDone = true; gRun = false; }
-        var dx = gDone ? 0 : 22 * Math.sin(gElapsed / 1900);
-        var x = 110 + dx / 2, y = 59 - SLOPE * dx / 2;
-        gD.setAttribute('transform', 'translate(' + dx.toFixed(2) + ' 0)');
-        gPt.setAttribute('cx', x.toFixed(2)); gPt.setAttribute('cy', y.toFixed(2));
-        gDash.setAttribute('d', 'M20 ' + y.toFixed(2) + 'H' + x.toFixed(2) + 'V104');
-        gP.setAttribute('y', (y + 4).toFixed(2)); gQ.setAttribute('x', (x - 7).toFixed(2));
-        if (!gDone) gRaf = requestAnimationFrame(frame);
-      };
-      whenVisible(graph, function () { if (!gRun && !gDone) { gRun = true; gLast = 0; gRaf = requestAnimationFrame(frame); } },
-        function () { gRun = false; cancelAnimationFrame(gRaf); });
     }
   } catch (err) {
     /* En cas d'erreur, on retire la classe « js » : plus rien n'est masqué. */
@@ -409,112 +281,86 @@
   }
 
   /* ============================================================
-     Coco, le compagnon
-     Au repos, Coco pend sous la nav (seuls ses pieds dépassent). Survol à la souris, focus au clavier ou tap :
-     il descend en rappel ; une fois en bas, il dit bonjour dans une bulle terminal tapée caractère par caractère.
-     Plusieurs raisons peuvent le garder en bas (survol, focus, tap) : il remonte quand il n'en reste aucune.
+     Quiz interactif (section Fonctionnalités)
+     Les boutons ne sont jamais « disabled » (ils restent lisibles et atteignables au clavier) : une fois la réponse
+     donnée, ils passent en aria-disabled et le script ignore les clics. Le minuteur (20 s) ne tourne que lorsque le
+     quiz est à l'écran et au plus trois tours (WCAG 2.2.2), et reste figé sur 00:20 en mouvement réduit ; il n'est pas annoncé (pas d'aria-live).
      ============================================================ */
   try {
-    var coco = $('#coco');
-    if (coco) {
-      var cocoBtn = $('.coco-btn', coco), cocoRig = $('.coco-rig', coco), cocoTyped = $('.coco-typed', coco);
-      var cocoLive = $('#coco-live');
-      var COCO_MSG = "Salut moi c'est coco, ton compagnon pour tes cours !";
-      var cocoCalm = window.matchMedia('(prefers-reduced-motion: reduce)');
-      var cocoLite = root.classList.contains('lite');
-      var reasons = {};
-      var hasReason = function () { return Object.keys(reasons).length > 0; };
-      var clearReasons = function () { reasons = {}; };
-      var arriveTimer, enterTimer, leaveTimer, typeTimer, autoUpTimer, lastPointer = '';
-      var cocoUpdate;
-
-      /* durée de la descente, lue dans le CSS (nulle en mouvement réduit) */
-      var descentMs = function () {
-        var d = (getComputedStyle(cocoRig).transitionDuration || '0s').split(',')[0].trim();
-        return parseFloat(d) * (/ms$/.test(d) ? 1 : 1000) || 0;
+    var quiz = $('#quiz');
+    if (quiz) {
+      var opts = $$('.quiz-opt', quiz), timerEl = $('#quiz-timer'), msgEl = $('#quiz-msg'), countEl = $('#quiz-count'), replay = $('#quiz-replay');
+      var MSG_IDLE = 'Choisis une réponse, comme dans l’amphi.';
+      var MSG_OK = 'Bonne réponse\u00a0! Ass. plén., 9 mai 1984\u00a0: faute retenue sans discernement.';
+      var MSG_KO = 'Raté\u00a0: c’était Derguini (Ass. plén., 9 mai 1984).';
+      var MAX_LOOPS = still ? 0 : 3, left = 20, loops = 0, tick = 0, visible = false, revealed = false;
+      var pad = function (n) { return '00:' + (n < 10 ? '0' : '') + n; };
+      var stopTimer = function () { clearInterval(tick); tick = 0; };
+      var runTimer = function () {
+        if (tick || revealed || !visible || loops >= MAX_LOOPS) return;
+        tick = setInterval(function () {
+          left -= 1;
+          if (left <= 0) {
+            loops += 1; left = 20;
+            if (loops >= MAX_LOOPS) { stopTimer(); }     /* trois tours : le minuteur se pose sur 00:20 */
+          }
+          timerEl.textContent = pad(left);
+        }, 1000);
       };
-      /* En tactile, rien ne « quitte » Coco : il remonte de lui-même 5 s après avoir fini sa phrase */
-      var cocoTypedDone = function () {
-        clearTimeout(autoUpTimer);
-        if (reasons.tap) autoUpTimer = setTimeout(function () { delete reasons.tap; cocoUpdate(); }, 5000);
+      var reveal = function (picked) {
+        if (revealed) return;
+        revealed = true;
+        stopTimer();
+        quiz.classList.add('is-revealed');
+        var ok = picked.hasAttribute('data-ok');
+        opts.forEach(function (b) {
+          var isOk = b.hasAttribute('data-ok'), isPicked = b === picked;
+          b.classList.toggle('is-ok', isOk);
+          b.classList.toggle('is-picked', isPicked);
+          b.setAttribute('aria-pressed', isPicked ? 'true' : 'false');
+          b.setAttribute('aria-disabled', 'true');
+          var label = $('.quiz-label', b);
+          label.textContent = label.getAttribute('data-label');
+          if (isOk) {
+            /* la coche est décorative ; « bonne réponse » est dit aux lecteurs d'écran */
+            var check = document.createElement('span'); check.setAttribute('aria-hidden', 'true'); check.textContent = ' ✓';
+            var said = document.createElement('span'); said.className = 'sr-only'; said.textContent = ', bonne réponse';
+            label.appendChild(check); label.appendChild(said);
+          }
+          if (isPicked && !isOk) label.appendChild(document.createTextNode(' — ta réponse'));
+          $('.quiz-pct', b).textContent = b.getAttribute('data-pct') + ' %';
+        });
+        timerEl.textContent = 'Terminé';
+        countEl.textContent = '29 réponses';
+        msgEl.textContent = ok ? MSG_OK : MSG_KO;
+        replay.hidden = false;
       };
-      var typeFrom = function (i) {
-        cocoTyped.textContent = COCO_MSG.slice(0, i);
-        if (i >= COCO_MSG.length) { cocoTypedDone(); return; }
-        typeTimer = setTimeout(function () { typeFrom(i + 1); }, COCO_MSG.charAt(i - 1) === ',' ? 220 : 34);   /* petite pause après la virgule */
+      var reset = function () {
+        revealed = false; left = 20; loops = 0;
+        quiz.classList.remove('is-revealed');
+        opts.forEach(function (b) {
+          b.classList.remove('is-ok', 'is-picked');
+          b.setAttribute('aria-pressed', 'false');
+          b.removeAttribute('aria-disabled');
+          $('.quiz-label', b).textContent = $('.quiz-label', b).getAttribute('data-label');
+          $('.quiz-pct', b).textContent = '';
+        });
+        timerEl.textContent = pad(left);
+        countEl.textContent = '28 réponses';
+        msgEl.textContent = MSG_IDLE;
+        replay.hidden = true;
+        runTimer();
+        opts[0].focus();                                /* « Rejouer » rend le focus à la première réponse */
       };
-      var cocoArrive = function () {
-        if (!coco.classList.contains('is-down')) return;
-        coco.classList.add('is-arrived');
-        cocoLive.textContent = COCO_MSG;                   /* annoncé une seule fois, en entier */
-        clearTimeout(typeTimer); clearTimeout(autoUpTimer);
-        if (cocoCalm.matches || cocoLite) { cocoTyped.textContent = COCO_MSG; cocoTypedDone(); return; }
-        cocoTyped.textContent = '';
-        typeTimer = setTimeout(function () { typeFrom(1); }, 220);
-      };
-      cocoUpdate = function () {
-        var down = hasReason();
-        if (down === coco.classList.contains('is-down')) return;
-        clearTimeout(arriveTimer); clearTimeout(autoUpTimer);
-        if (down) {
-          coco.classList.add('is-down');
-          arriveTimer = setTimeout(cocoArrive, descentMs() + 40);
-        } else {
-          clearTimeout(typeTimer);                         /* la bulle s'efface avec le texte figé ; remis à zéro à la prochaine arrivée */
-          coco.classList.remove('is-down', 'is-arrived');
-          cocoLive.textContent = '';
-        }
-      };
-      var cocoToggle = function (why) { if (reasons[why]) delete reasons[why]; else reasons[why] = true; cocoUpdate(); };
-      /* Déjà en bas : il redit bonjour (la phrase est retapée et annoncée à nouveau) */
-      var cocoReplay = function () {
-        if (!coco.classList.contains('is-arrived')) return;
-        cocoArrive();
-        cocoLive.textContent = '';                         /* vidée puis remplie : la région live annonce de nouveau */
-        setTimeout(function () { if (coco.classList.contains('is-arrived')) cocoLive.textContent = COCO_MSG; }, 60);
-      };
-
-      /* Souris : petit délai d'intention avant de descendre (on ne fait que passer en quittant la nav),
-         la zone sensible (pieds, puis corps et corde) suit Coco, délai de grâce en sortant */
-      cocoRig.addEventListener('pointerenter', function (e) {
-        if (e.pointerType !== 'mouse') return;
-        clearTimeout(leaveTimer); clearTimeout(enterTimer);
-        if (coco.classList.contains('is-down')) { reasons.hover = true; cocoUpdate(); return; }
-        enterTimer = setTimeout(function () { reasons.hover = true; cocoUpdate(); }, 200);
+      opts.forEach(function (b) {
+        $('.quiz-label', b).setAttribute('data-label', $('.quiz-label', b).textContent);
+        b.addEventListener('click', function () { if (!revealed) reveal(b); });
       });
-      cocoRig.addEventListener('pointerleave', function (e) {
-        if (e.pointerType !== 'mouse') return;
-        clearTimeout(leaveTimer); clearTimeout(enterTimer);
-        leaveTimer = setTimeout(function () { delete reasons.hover; cocoUpdate(); }, 400);
-      });
-      cocoRig.addEventListener('pointerdown', function (e) { lastPointer = e.pointerType; });
-
-      /* Tactile : un tap le fait descendre, un autre (sur lui, sa bulle ou ailleurs) le fait remonter.
-         Clavier (Entrée / Espace) et clic souris : le fait descendre, ou lui fait redire bonjour s'il est déjà en bas.
-         Échap le fait remonter. */
-      cocoBtn.addEventListener('click', function (e) {
-        if (lastPointer === 'touch' || lastPointer === 'pen') cocoToggle('tap');
-        else if (coco.classList.contains('is-down')) cocoReplay();
-        else { reasons[e.detail === 0 ? 'focus' : 'hover'] = true; cocoUpdate(); }
-        lastPointer = '';
-      });
-      document.addEventListener('pointerdown', function (e) {
-        if (reasons.tap && !cocoBtn.contains(e.target)) { delete reasons.tap; cocoUpdate(); }
-      });
-      cocoBtn.addEventListener('focus', function () {
-        var kb = true; try { kb = cocoBtn.matches(':focus-visible'); } catch (err) {}   /* focus clavier seulement */
-        if (kb) { reasons.focus = true; cocoUpdate(); }
-      });
-      cocoBtn.addEventListener('blur', function () { delete reasons.focus; cocoUpdate(); });
-      document.addEventListener('keydown', function (e) {
-        if (e.key === 'Escape' && hasReason()) { clearReasons(); cocoUpdate(); }
-      });
-      /* Le menu mobile passe devant : Coco remonte (et le CSS le masque tant que le menu est ouvert) */
-      var cocoBurger = $('#nav-burger');
-      if (cocoBurger) cocoBurger.addEventListener('click', function () { clearReasons(); cocoUpdate(); });
+      replay.addEventListener('click', reset);
+      whenVisible(quiz, function () { visible = true; runTimer(); }, function () { visible = false; stopTimer(); });
     }
   } catch (err) {
-    /* Coco n'est qu'un décor : sans lui, la page reste entière. */
+    /* Le quiz n'est qu'une démonstration : sans lui, la section reste lisible. */
     if (window.console) console.error(err);
   }
 })();
