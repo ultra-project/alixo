@@ -169,13 +169,15 @@
             $$('.js-version').forEach(function (el) { el.textContent = v; });
           }
           var setup = assets.setup;
-          if (setup && setup.url) exeUrl = safeUrl(setup.url);
+          /* Sur téléphone ou tablette, pas de téléchargement direct : les cartes Windows et Mac mènent
+             aux pages /telecharger/… au lieu de lancer un installateur. */
+          if (setup && setup.url && !isMobile) exeUrl = safeUrl(setup.url);
           if (setup && setup.size) {
             var mo = toMo(setup.size);
             $$('.js-size').forEach(function (el) { el.textContent = mo; });
           }
           var mac = assets.mac;
-          if (mac && mac.url) macUrl = safeUrl(mac.url);
+          if (mac && mac.url && !isMobile) macUrl = safeUrl(mac.url);
           if (mac && mac.size) {
             /* le séparateur vit dans le span : rien ne traîne tant que le poids n'est pas connu */
             var macMo = ' · ' + toMo(mac.size);
@@ -206,7 +208,7 @@
     /* ---------- Apparitions au scroll ----------
        Filet de sécurité : si l'observateur n'existe pas ou n'a rien signalé au bout de 2,5 s,
        tout est affiché. Un élément déjà dépassé (ancre, rechargement en milieu de page) est
-       affiché d'emblée. */
+       affiché d'emblée ; le défilement et l'événement « load » rattrapent ceux que l'observateur aurait manqués. */
     var reveals = $$('.reveal');
     var ioAlive = false;
     if (!('IntersectionObserver' in window) || still) {
@@ -223,6 +225,23 @@
       }, { rootMargin: '0px 0px -8% 0px', threshold: 0.08 });
       reveals.forEach(function (el) { ro.observe(el); });
       setTimeout(function () { if (!ioAlive) showAll(); }, 2500);
+
+      /* Second filet, indépendant de l'observateur : au défilement (écouteur passif, une lecture par image)
+         et au chargement complet, tout élément dont le haut est passé au-dessus du bas de la fenêtre est affiché. */
+      var pending = reveals.slice(), rafId = 0;
+      var sweep = function () {
+        rafId = 0;
+        var vh = window.innerHeight || root.clientHeight;
+        pending = pending.filter(function (el) {
+          if (el.classList.contains('in')) return false;
+          if (el.getBoundingClientRect().top < vh) { el.classList.add('in'); return false; }
+          return true;
+        });
+        if (!pending.length) window.removeEventListener('scroll', onRevealScroll);
+      };
+      var onRevealScroll = function () { if (!rafId) rafId = requestAnimationFrame(sweep); };
+      window.addEventListener('scroll', onRevealScroll, { passive: true });
+      if (document.readyState === 'complete') sweep(); else window.addEventListener('load', sweep);
     }
 
     /* ---------- Héros : la scène démarre (classe « on ») au premier des deux événements, un défilement de plus
@@ -265,16 +284,16 @@
      Quiz interactif (section Fonctionnalités)
      Les boutons ne sont jamais « disabled » (ils restent lisibles et atteignables au clavier) : une fois la réponse
      donnée, ils passent en aria-disabled et le script ignore les clics. Le minuteur (20 s) ne tourne que lorsque le
-     quiz est à l'écran et au plus trois tours (WCAG 2.2.2) ; il n'est pas annoncé (pas d'aria-live).
+     quiz est à l'écran et au plus trois tours (WCAG 2.2.2), et reste figé sur 00:20 en mouvement réduit ; il n'est pas annoncé (pas d'aria-live).
      ============================================================ */
   try {
     var quiz = $('#quiz');
     if (quiz) {
       var opts = $$('.quiz-opt', quiz), timerEl = $('#quiz-timer'), msgEl = $('#quiz-msg'), countEl = $('#quiz-count'), replay = $('#quiz-replay');
       var MSG_IDLE = 'Choisis une réponse, comme dans l’amphi.';
-      var MSG_OK = 'Bonne réponse ! Ass. plén., 9 mai 1984 : faute retenue sans discernement.';
-      var MSG_KO = 'Raté : c’était Derguini (Ass. plén., 9 mai 1984).';
-      var MAX_LOOPS = 3, left = 20, loops = 0, tick = 0, visible = false, revealed = false;
+      var MSG_OK = 'Bonne réponse\u00a0! Ass. plén., 9 mai 1984\u00a0: faute retenue sans discernement.';
+      var MSG_KO = 'Raté\u00a0: c’était Derguini (Ass. plén., 9 mai 1984).';
+      var MAX_LOOPS = still ? 0 : 3, left = 20, loops = 0, tick = 0, visible = false, revealed = false;
       var pad = function (n) { return '00:' + (n < 10 ? '0' : '') + n; };
       var stopTimer = function () { clearInterval(tick); tick = 0; };
       var runTimer = function () {
@@ -301,7 +320,14 @@
           b.setAttribute('aria-pressed', isPicked ? 'true' : 'false');
           b.setAttribute('aria-disabled', 'true');
           var label = $('.quiz-label', b);
-          label.textContent = label.getAttribute('data-label') + (isOk ? ' ✓' : '') + (isPicked && !isOk ? ' — ta réponse' : '');
+          label.textContent = label.getAttribute('data-label');
+          if (isOk) {
+            /* la coche est décorative ; « bonne réponse » est dit aux lecteurs d'écran */
+            var check = document.createElement('span'); check.setAttribute('aria-hidden', 'true'); check.textContent = ' ✓';
+            var said = document.createElement('span'); said.className = 'sr-only'; said.textContent = ', bonne réponse';
+            label.appendChild(check); label.appendChild(said);
+          }
+          if (isPicked && !isOk) label.appendChild(document.createTextNode(' — ta réponse'));
           $('.quiz-pct', b).textContent = b.getAttribute('data-pct') + ' %';
         });
         timerEl.textContent = 'Terminé';

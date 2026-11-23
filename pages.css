@@ -9,7 +9,7 @@
    ============================================================ */
 
 :root {
-  --page-w: 1240px;                     /* largeur de la colonne de contenu ; réduite par les classes de <body> ci-dessous */
+  --page-w: 1200px;                     /* largeur de la colonne de contenu (celle de la barre et du pied) ; réduite par les classes de <body> ci-dessous */
   --ink-3: #52525b;                     /* texte secondaire discret (7:1 sur blanc) */
   --line-strong: #d4d4d8;
   --fill: #f2f2f5;                      /* fond gris des codes, en-têtes de tableau, cartes grises */
@@ -22,7 +22,7 @@
   --tint: #7c3aed; --tint-ink: #6d28d9; --tint-soft: var(--tile-lilac);
   --bg-alt: var(--fill); --border-strong: var(--line-strong); --hover: var(--tile-lilac);
   --c-ret: var(--warn); --c-demand: var(--down); --c-supply: var(--ok);
-  --r: var(--r-m); --r-lg: var(--r-l); --max: 1240px; --nav-h: 86px;   /* barre dans le flux : aucune compensation à prévoir */
+  --r: var(--r-m); --r-lg: var(--r-l); --max: 1200px; --nav-h: 86px;   /* barre dans le flux : aucune compensation à prévoir */
   --shadow: none; --shadow-sm: none;
 }
 .sys-page { --page-w: 760px; }

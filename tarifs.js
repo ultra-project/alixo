@@ -1,7 +1,6 @@
 /* ============================================================
    Alixo — Page Tarifs
-   Apparition au défilement, bascule mensuel / annuel, et Coco assis sur la carte Alixo+
-   qui parle au survol. Mode clair seul ; le menu mobile est dans /site.js.
+   Apparition au défilement et bascule mensuel / annuel. Mode clair seul ; le menu mobile est dans /site.js.
    Chaque bloc vérifie ses éléments : la page reste utilisable si l'un manque.
    ============================================================ */
 (function () {
@@ -80,85 +79,4 @@
     });
   }
 
-  /* ---------- Coco, assis sur la carte Alixo+ ----------
-     Survol de la carte à la souris, focus clavier dans la carte, ou tap : Coco sursaute et tape sa phrase
-     dans une bulle terminal (styles dans tarifs.css). Plusieurs raisons peuvent le faire
-     parler (survol, focus, tap) : il se tait quand il n'en reste aucune, après un petit délai de grâce. */
-  const coco = document.getElementById('tf-coco');
-  const card = document.getElementById('tf-plus');
-  if (coco && card) {
-    const typedEl = coco.querySelector('.coco-typed');
-    const live = document.getElementById('tf-coco-live');
-    const MSG = "Alixo+ n'attend plus que toi 😝";
-    const MSG_SR = "Alixo+ n'attend plus que toi";   /* version annoncée : le texte seul, sans l'emoji */
-    /* découpe en graphèmes : l'emoji s'affiche entier, jamais à moitié */
-    const CHARS = (typeof Intl !== 'undefined' && Intl.Segmenter)
-      ? Array.from(new Intl.Segmenter('fr', { granularity: 'grapheme' }).segment(MSG), s => s.segment)
-      : Array.from(MSG);
-    const calm = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const reasons = new Set();
-    let typeTimer, autoTimer, hoverTimer, focusTimer, announced = false, typing = false;
-
-    /* En tactile, rien ne « quitte » la carte : Coco se tait de lui-même 5 s après avoir fini sa phrase */
-    const typed = () => {
-      typing = false;
-      clearTimeout(autoTimer);
-      if (reasons.has('tap')) autoTimer = setTimeout(() => { reasons.delete('tap'); update(); }, 5000);
-    };
-    const typeFrom = (i) => {
-      if (typedEl) typedEl.textContent = CHARS.slice(0, i).join('');
-      if (i >= CHARS.length) { typed(); return; }
-      typeTimer = setTimeout(() => typeFrom(i + 1), 42);
-    };
-    const start = () => {
-      coco.classList.add('is-talking');
-      if (live && !announced) { live.textContent = MSG_SR; announced = true; }   /* annoncé une seule fois, en entier */
-      clearTimeout(typeTimer); clearTimeout(autoTimer);
-      if (calm.matches) { if (typedEl) typedEl.textContent = MSG; typed(); return; }
-      typing = true;
-      if (typedEl) typedEl.textContent = '';
-      typeTimer = setTimeout(() => typeFrom(1), 260);
-    };
-    const stop = () => {
-      clearTimeout(typeTimer); clearTimeout(autoTimer);
-      typing = false;
-      coco.classList.remove('is-talking');               /* la bulle s'efface avec le texte figé ; remis à zéro au prochain survol */
-    };
-    const update = () => {
-      const on = reasons.size > 0;
-      if (on === coco.classList.contains('is-talking')) return;
-      if (on) start(); else stop();
-    };
-
-    /* Souris : entrée immédiate, délai de grâce de 300 ms en sortant */
-    card.addEventListener('pointerenter', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      clearTimeout(hoverTimer);
-      reasons.add('hover'); update();
-    });
-    card.addEventListener('pointerleave', (e) => {
-      if (e.pointerType !== 'mouse') return;
-      clearTimeout(hoverTimer);
-      hoverTimer = setTimeout(() => { reasons.delete('hover'); update(); }, 300);
-    });
-    /* Clavier : tant que le focus est dans la carte (bouton, lien des CGV) */
-    card.addEventListener('focusin', () => { clearTimeout(focusTimer); reasons.add('focus'); update(); });
-    card.addEventListener('focusout', (e) => {
-      if (e.relatedTarget && card.contains(e.relatedTarget)) return;
-      clearTimeout(focusTimer);
-      focusTimer = setTimeout(() => { reasons.delete('focus'); update(); }, 300);
-    });
-    /* Tactile : un tap sur la carte le fait parler ; un tap ailleurs le fait taire */
-    card.addEventListener('pointerdown', (e) => {
-      if (e.pointerType !== 'touch' && e.pointerType !== 'pen') return;
-      if (reasons.has('tap') && !typing) { typed(); return; }   /* déjà dit : il reste encore 5 s */
-      reasons.add('tap'); update();
-    });
-    document.addEventListener('pointerdown', (e) => {
-      if (reasons.has('tap') && !card.contains(e.target)) { reasons.delete('tap'); update(); }
-    });
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && reasons.size) { reasons.clear(); update(); }
-    });
-  }
 })();

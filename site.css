@@ -59,7 +59,7 @@ h1 { font-size: clamp(40px, 6vw, 74px); letter-spacing: -.035em; line-height: 1.
 h2 { font-size: clamp(34px, 4.4vw, 54px); letter-spacing: -.035em; line-height: 1.05; }
 h3 { font-size: 22px; letter-spacing: -.02em; line-height: 1.15; }
 
-.wrap { width: 100%; max-width: 1200px; margin-inline: auto; padding-inline: var(--pad); }   /* 1200 px bords compris : 1152 px de contenu sur grand écran, comme la maquette */
+.wrap { width: 100%; max-width: calc(1200px + 2 * var(--pad)); margin-inline: auto; padding-inline: var(--pad); }   /* 1200 px de contenu + la marge latérale de chaque côté, comme la maquette */
 .nw { white-space: nowrap; }
 .sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
@@ -100,9 +100,9 @@ kbd {
    Dans le flux, fond blanc, sur les pages intérieures ; variante .nav-dark posée en absolu sur le héros sombre de l'accueil. */
 .nav { position: relative; z-index: 60; background: #fff; }
 .nav-dark { position: absolute; top: 0; left: 0; right: 0; background: none; color: #fff; }
-.nav-in, .nav-pill {
+.nav-in {
   display: flex; align-items: center; justify-content: space-between; gap: 24px;
-  max-width: 1200px; margin-inline: auto; padding: 26px var(--pad);
+  max-width: calc(1200px + 2 * var(--pad)); margin-inline: auto; padding: 26px var(--pad);
 }
 .nav-logo { display: inline-flex; align-items: center; gap: 10px; text-decoration: none; font-family: var(--font-display); font-weight: 700; font-size: 23px; letter-spacing: -.02em; line-height: 1; color: inherit; }
 .nav-logo img { width: 34px; height: 34px; }
@@ -116,7 +116,8 @@ kbd {
 .nav-login:hover { color: var(--ink); }
 .nav-dark .nav-login { color: var(--ink-4); }
 .nav-dark .nav-login:hover { color: #fff; }
-.nav-actions .btn-s { padding: 12px 20px; min-height: 0; }
+.nav-actions .btn-s { position: relative; padding: 12px 20px; min-height: 0; }
+.nav-actions .btn-s::before { content: ""; position: absolute; inset: -5px; }   /* zone tactile agrandie (≥ 44 px), rendu inchangé */
 .nav-burger { display: none; width: 44px; height: 44px; padding: 0; border-radius: 50%; border: 1px solid var(--border); background: var(--surface); cursor: pointer; align-items: center; justify-content: center; }
 .nav-burger svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .nav-dark .nav-burger { border-color: rgba(255,255,255,.18); background: rgba(255,255,255,.06); color: #fff; }
@@ -142,7 +143,7 @@ kbd {
 .foot-col a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: 4px; text-decoration-color: var(--violet-900); }
 
 /* ---------- Pied de page ---------- */
-.foot { max-width: 1200px; margin-inline: auto; padding: 72px var(--pad) 48px; }
+.foot { max-width: calc(1200px + 2 * var(--pad)); margin-inline: auto; padding: 72px var(--pad) 48px; }
 .foot-in { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 40px; }
 .foot-brand { max-width: 300px; }
 .foot-name { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 700; font-size: 21px; line-height: 1.2; }
@@ -151,7 +152,7 @@ kbd {
 .foot-cols { display: flex; flex-wrap: wrap; gap: 64px; font-size: 14px; }
 .foot-col { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; }
 .foot-col h2 { font-family: var(--font-ui); font-size: 14px; font-weight: 600; letter-spacing: 0; line-height: 1.6; }
-.foot-col a { color: var(--ink-2); text-decoration: none; transition: color .15s; }
+.foot-col a { padding: 4px 0; margin: -4px 0; color: var(--ink-2); text-decoration: none; transition: color .15s; }   /* cible tactile plus haute, espacement inchangé */
 .foot-col a:hover { color: var(--violet-900); }
 .foot-copy { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; margin-top: 48px; padding-top: 24px; border-top: 1px solid var(--border); font-size: 13px; color: var(--ink-2); }
 
@@ -176,7 +177,7 @@ html.js .reveal:not(.in) { opacity: 0; translate: 0 40px; }
   :root { --pad: 20px; --sec: 72px; --r-l: 26px; --r-xl: 28px; }
   h1 { font-size: 38px; line-height: 1.06; }
   h2 { font-size: 32px; }
-  .nav-in, .nav-pill { padding-block: 18px; gap: 8px; }
+  .nav-in { padding-block: 18px; gap: 8px; }
   .nav-logo { font-size: 21px; }
   .nav-actions { gap: 8px; }
   .nav-actions .btn-s { padding: 10px 16px; font-size: 13px; }
