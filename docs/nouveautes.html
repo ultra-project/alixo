@@ -31,7 +31,9 @@
   const video = p.get('video') === '1';
   if (video) document.body.classList.add('wn-video');
   const all = AlixoWhatsNew.versions();
-  const v = p.get('v') || all[0];
+  let v = p.get('v') || all[0];
+  /* 1.57.1 : un correctif sans présentation propre joue celle de sa version de fonctionnalités (x.y.0) */
+  if (!AlixoWhatsNew.has(v) && /^\d+\.\d+\.\d+$/.test(v) && AlixoWhatsNew.has(v.replace(/\.\d+$/, '.0'))) v = v.replace(/\.\d+$/, '.0');
   if (!AlixoWhatsNew.has(v)) {
     document.body.insertAdjacentHTML('beforeend', `<div id="wn-empty">Aucune présentation pour la version ${v ? v.replace(/[<>&]/g, '') : '(inconnue)'} — versions disponibles : ${all.join(', ') || 'aucune'}.</div>`);
     document.body.dataset.done = '1';

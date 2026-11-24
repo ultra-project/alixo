@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.57.0';
+const ALIXO_VERSION = '1.57.1';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -4156,7 +4156,7 @@ function settingsSectionHTML(k) {
       <div class="po-row" style="gap:8px; flex-wrap:wrap"><button class="cta ghost small" id="set-aiforget" type="button" title="Oublie les mots appris des corrections et les mots que vous avez demandé à ne plus corriger">Oublier les mots appris et ignorés</button><button class="cta ghost small" id="set-aicache" type="button" title="Les phrases déjà relues par AlixoAI le seront à nouveau à la prochaine demande">Vider la mémoire des phrases</button></div></div>`; }
   if (k === 'apropos') return `<div class="set-sect"><div class="set-about"><span class="logo-mark"><img class="app-logo-img" src="${appLogoSrc()}" alt=""></span><div><div class="set-abname">${appName()} <span>${ALIXO_VERSION}</span></div><div class="po-hint" style="margin:0">Cockpit d’amphi : Droit, Économie, Commerce, Médecine et santé, STAPS.${desk && desk.versions ? ` Version PC · Electron ${esc(desk.versions.electron)} · Chromium ${esc(desk.versions.chrome)}` : ' Version web (navigateur).'}</div></div></div>
       <div class="po-row" style="gap:8px; margin-top:12px; flex-wrap:wrap">
-        <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION) ? '<button id="set-wn" class="cta ghost small" type="button">Revoir la présentation</button>' : ''}
+        <button id="set-news" class="cta ghost small" type="button">Nouveautés de cette version</button>${window.AlixoWhatsNew && AlixoWhatsNew.has(whatsNewVersion()) ? '<button id="set-wn" class="cta ghost small" type="button">Revoir la présentation</button>' : ''}
         ${desk && desk.checkUpdates ? '<button id="set-upd" class="cta ghost small" type="button">Rechercher les mises à jour</button>' : ''}
         <button id="set-other" class="cta ghost small" type="button">${IS_DESKTOP ? 'Ouvrir la version web' : (IS_MAC_BROWSER ? 'Télécharger pour Mac' : 'Télécharger pour Windows')}</button>
         ${IS_DESKTOP ? '' : `<button id="set-other2" class="cta ghost small" type="button">${IS_MAC_BROWSER ? 'Télécharger pour Windows' : 'Télécharger pour Mac'}</button>`}
@@ -4311,7 +4311,7 @@ function bindSettingsSection(k, root) {
     const news = root.querySelector('#set-news');
     if (news) news.addEventListener('click', () => { const url = ALIXO_VERSIONS_URL; if (window.alixoDesktop && alixoDesktop.openExternal) alixoDesktop.openExternal(url); else window.open(url, '_blank'); });
     const wn = root.querySelector('#set-wn');
-    if (wn) wn.addEventListener('click', () => AlixoWhatsNew.open(ALIXO_VERSION));
+    if (wn) wn.addEventListener('click', () => AlixoWhatsNew.open(whatsNewVersion()));
     const upd = root.querySelector('#set-upd');
     if (upd) upd.addEventListener('click', () => { alixoDesktop.checkUpdates(); toast('Recherche des mises à jour…'); });
     const other = root.querySelector('#set-other');
@@ -5304,6 +5304,8 @@ function normalizeDom() {
   /* 1.50 : un calque de dessin (.fl-layer) n'a sa place qu'à la racine de son bloc ; déplacé par une opération native
      (fusion de blocs, collage), il est retiré avant toute lecture du texte — le modèle le redessine (AlixoDraw.syncLayers) */
   root.querySelectorAll('.fl-layer').forEach(l => { const p = l.parentElement; if (!(p && p.parentElement === root && p.classList.contains('block'))) l.remove(); });
+  /* 1.57.1 : coupure de paragraphe posée le temps d'une impression (pgPrintBreaks) : jamais lue dans le texte du cours */
+  root.querySelectorAll('.pg-brk-t').forEach(w => { const p = w.parentNode; w.replaceWith(...w.childNodes); if (p) p.normalize(); });
   if (window.AlixoNest) AlixoNest.normalize(root);   // blocs imbriqués : grille complète, ligne libre après
   let run = [];
   const flushRun = before => {
@@ -11692,7 +11694,9 @@ function prepareForPrint() {
     blocksEl.insertAdjacentHTML('afterbegin', `<div class="print-pgtitle" contenteditable="false">${esc(curPage(dd).titre || '')}</div>`);
     for (const p of docPages(dd)) {
       if (p.id === dd.page) continue;
-      blocksEl.insertAdjacentHTML('beforeend', `<div class="print-pgtitle print-pgbreak" contenteditable="false">${esc(p.titre || '')}</div>` + (p.blocks || []).map(b => blockHTML(b, numMapAll)).join(''));
+      // 1.57.1 : titre dans un .ph-tab, la même boîte que l'en-tête #pg-head de l'onglet en vue par pages ; blockOuterHTML :
+      // avec les QR codes des liens, comme dans l'onglet ouvert
+      blocksEl.insertAdjacentHTML('beforeend', `<div class="print-pgtitle print-pgbreak" contenteditable="false"><div class="ph-tab">${esc(p.titre || '')}</div></div>` + (p.blocks || []).map(b => blockOuterHTML(b, numMapAll)).join(''));
     }
   }
   const root = document.documentElement, theme = root.dataset.theme;
@@ -11714,7 +11718,13 @@ function prepareForPrint() {
   const active = document.activeElement; if (active && active.blur) active.blur();
   if (cropCtx) cancelCrop();
   clearBlockSel(); hideCalcGhost(); clearTsel();
-  return () => { changed.forEach(([el, p, v]) => el.style.setProperty(p, v)); root.dataset.theme = theme; setWindowBg(); if (dd && docPages(dd).length > 1) renderBlocks('__none'); };
+  // 1.57.1 : sauts recalculés sur l'état imprimé (curseur et sélections retirés, onglets suivants ajoutés, chacun depuis une page neuve)
+  if (pagesActive()) paginate(true, true);
+  return () => {
+    const cut = pgClearPrintBreaks();   // 1.57.1 : texte coupé pour l'impression → rendu propre depuis le modèle
+    changed.forEach(([el, p, v]) => el.style.setProperty(p, v)); root.dataset.theme = theme; setWindowBg();
+    if (cut || (dd && docPages(dd).length > 1)) renderBlocks('__none');
+  };
 }
 /* fond de la fenêtre Electron : suit le thème (sinon un éclair clair au démarrage en mode sombre) */
 function setWindowBg(color) {
@@ -11743,18 +11753,31 @@ function preparePrintHead() {
 }
 /* ============================================================
    1.23 — Vue par pages : la feuille est découpée en pages A4 identiques à celles du PDF.
-   La zone utile d'une page (largeur, hauteur) est celle de printToPDF (main.js › pdfOptions) et de
-   @page : 673 × 983 px à 96 dpi ; les marges sont le padding de #doc (styles.css › body.pages-mode).
+   La zone utile d'une page (largeur, hauteur) est celle de @page (styles.css : A4, marges 18 / 16 mm), qui l'emporte aussi sur
+   les marges de printToPDF (main.js) : 673 × 986 px à 96 dpi, version web comme version PC ; les marges à l'écran sont le
+   padding de #doc (styles.css › body.pages-mode).
    Les blocs ne sont jamais déplacés dans le DOM : le bloc qui ouvre une page reçoit la classe
    .pg-first et une marge haute (--pg-mt) qui le pousse au début de la page suivante ; un calque
    #pg-layer dessine la bande grise entre les pages et les numéros. À l'impression, .pg-first force
    un saut de page (break-before) : le PDF reproduit exactement les pages de l'écran.
    Bloc « Saut de page » (/saut, type 'pb') : ce qui suit commence sur une nouvelle page.
    Réglage : Paramètres › Écriture › « Feuille découpée en pages A4 » (state.settings.pageView).
+   1.57.1 — l'écran et le PDF ne coïncidaient pas toujours (un paragraphe de la page 1 passait en page 2 du PDF, suivi d'un
+   grand vide) : des blocs sont plus hauts à l'impression qu'à l'écran (QR codes des liens, frise horizontale imprimée à la
+   verticale…), et le moteur d'impression ajoutait ses propres sauts (titre jamais en bas de page, orphelines / veuves).
+   Désormais : 1) les sauts se décident sur la mise en page imprimée — body.pg-probe applique, le temps d'une mesure, les
+   règles d'impression qui changent la hauteur des blocs (styles.css, timeline.css) ; 2) l'écran simule ce que faisait le
+   moteur d'impression (un titre suit le bloc qui le suit sur la page suivante ; un bloc plus haut qu'une page se coupe à la
+   ligne, au rang de tableau ou à l'image près) ; 3) à l'impression, seuls les sauts de l'écran existent (styles.css ›
+   @media print, body.pages-mode). Contrôle : scripts/v1571-pagination-test.js.
    ============================================================ */
-const PG_H = 983;      // hauteur utile d'une page imprimée (px rendus)
-const PG_SAFE = 14;    // la page écran est un peu plus courte : jamais de débordement dans le PDF (arrondis, polices)
+const PG_H = 986;      // hauteur utile d'une page imprimée (px CSS) : A4 297 mm − marges @page 2 × 18 mm (styles.css)
+const PG_SAFE = 8;     // la page écran est un peu plus courte : jamais de débordement dans le PDF (arrondis, polices)
 const PG_BAND = 26;    // bande grise entre deux pages (px rendus)
+/* règles d'impression qui changent la hauteur d'un bloc : sans aucun de ces éléments, la mesure à l'écran suffit */
+const PG_PROBE_SEL = '.lnk-print, .block.quote > .qcite.is-blank, .block.timeline, .block.li.cl';
+/* éléments insécables quand un bloc plus haut qu'une page se coupe (en plus des lignes de texte) */
+const PG_UNIT_SEL = 'tr, img, svg, canvas, video, iframe, hr, .card-item, .tml-ev, .graph-card, .katex-display';
 let pgSig = '', pgRaf = 0, pgObs = null, pgMut = null;
 const pagesActive = () => document.body.classList.contains('pages-mode');
 /* active ou coupe la vue par pages selon le document ouvert et le réglage */
@@ -11794,8 +11817,82 @@ function renderPgHead(d) {
   h.classList.toggle('ph-empty', !html);
   return h;
 }
-/* calcule les sauts de page ; force : recalcul même si rien n'a changé (après un rendu complet) */
-function paginate(force) {
+/* éléments paginés : les blocs ; pendant l'impression d'une séance à plusieurs onglets (prepareForPrint), aussi le titre de
+   chaque onglet suivant, qui ouvre une page */
+const pgKids = () => [...blocksEl.children].filter(el => el.classList.contains('block') || el.classList.contains('print-pgbreak'));
+/* 1.57.1 : position dans un bloc plus haut qu'une page où la page se coupe, pour une fin de page à limit (coordonnées de la
+   mesure) : le haut du premier rang de tableau, de la première image, du premier événement de frise… ou de la première ligne
+   de texte qui ne tient plus entière avant limit (une ligne compte avec son interligne : la coupure tombe au plus tôt).
+   Renvoie { y, mark } : mark = l'élément ou la ligne (nœud texte) qui ouvre la page suivante — à l'impression, un saut forcé
+   y est posé (pgPrintBreaks), pour que le PDF se coupe exactement là où l'écran trace le pointillé */
+const PG_SKIP_SEL = '.lnk-print, .corr-notes, .ai-sug, .fl-layer, .mv-handle';
+function pgBreakIn(el, limit, top0) {
+  let cut = Infinity, mark = null;
+  const take = (t, b, m) => { if (b > limit && t < cut) { cut = t; mark = m; } };
+  el.querySelectorAll(PG_UNIT_SEL).forEach(u => { if (u.closest(PG_SKIP_SEL)) return; const r = u.getBoundingClientRect(); if (r.height > 0) take(r.top - top0, r.bottom - top0, { el: u }); });
+  const rg = document.createRange();
+  const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n; (n = tw.nextNode());) {
+    if (!n.data.trim()) continue;
+    const pe = n.parentElement;
+    if (!pe || pe.closest(PG_SKIP_SEL) || (pe.closest(PG_UNIT_SEL) && el.contains(pe.closest(PG_UNIT_SEL)))) continue;   // dans un élément insécable : compté avec lui
+    rg.selectNodeContents(n);
+    for (const r of rg.getClientRects()) if (r.height > 0) { const m = r.height * 0.35; take(r.top - top0 - m, r.bottom - top0 + m, { node: n, top: r.top, h: r.height }); }
+  }
+  return cut < limit ? { y: cut, mark } : { y: limit, mark: null };
+}
+/* point de coupure d'une ligne de texte : premier caractère du bloc (ordre du document) dont le haut est sur la ligne marquée */
+function pgTextPoint(el, mark) {
+  const thr = mark.top - mark.h * 0.4;
+  const rg = document.createRange();
+  const topAt = (n, k) => { rg.setStart(n, k); rg.setEnd(n, k + 1); const r = rg.getClientRects()[0]; return r ? r.top : -Infinity; };
+  const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  for (let n; (n = tw.nextNode());) {
+    const pe = n.parentElement;
+    if (!n.data.length || !pe || pe.closest(PG_SKIP_SEL)) continue;
+    if (topAt(n, n.data.length - 1) < thr) continue;
+    let lo = 0, hi = n.data.length - 1;
+    while (lo < hi) { const mid = (lo + hi) >> 1; if (topAt(n, mid) >= thr) hi = mid; else lo = mid + 1; }
+    return { node: n, offset: lo };
+  }
+  return null;
+}
+/* sauts forcés à l'impression, aux coupures de l'écran (prepareForPrint) ; pgClearPrintBreaks les retire */
+let pgPrintMarks = [];
+function pgPrintBreaks(marks) {
+  pgClearPrintBreaks();
+  const inline = x => /^inline|^contents/.test(getComputedStyle(x).display);
+  for (const { el, mark } of marks) {
+    if (!mark || !el.isConnected) continue;
+    let node, offset;
+    if (mark.el) {
+      if (!mark.el.isConnected) continue;
+      if (!inline(mark.el)) { mark.el.classList.add('pg-brk'); continue; }   // rang de tableau, événement de frise… : saut avant lui
+      node = mark.el.parentNode; offset = [...node.childNodes].indexOf(mark.el);
+    } else {
+      const pt = pgTextPoint(el, mark); if (!pt) continue;
+      node = pt.node; offset = pt.offset;
+    }
+    // la suite du paragraphe (jusqu'à la fin de son bloc de texte) passe dans un <span class="pg-brk pg-brk-t"> — un bloc à
+    // l'impression, avec saut de page avant ; coupé au début d'une ligne, le texte se recompose à l'identique
+    let box = node.nodeType === 1 ? node : node.parentElement;
+    while (box && box !== el && inline(box)) box = box.parentElement;
+    if (!box || box === el || !el.contains(box)) continue;
+    const r = document.createRange(); r.setStart(node, offset); r.setEnd(box, box.childNodes.length);
+    const w = document.createElement('span'); w.className = 'pg-brk pg-brk-t';
+    w.appendChild(r.extractContents()); box.appendChild(w);
+    pgPrintMarks.push(w);
+  }
+}
+function pgClearPrintBreaks() {
+  blocksEl.querySelectorAll('.pg-brk-t').forEach(w => { const p = w.parentNode; w.replaceWith(...w.childNodes); if (p) p.normalize(); });
+  blocksEl.querySelectorAll('.pg-brk').forEach(x => x.classList.remove('pg-brk'));
+  const had = pgPrintMarks.length; pgPrintMarks = [];
+  return had;
+}
+/* calcule les sauts de page ; force : recalcul même si rien n'a changé (après un rendu complet) ;
+   print (prepareForPrint) : pose aussi les sauts forcés à l'intérieur des blocs plus hauts qu'une page */
+function paginate(force, print) {
   if (!pagesActive()) return;
   const d = doc(); if (!d) return;
   const docEl = $('#doc');
@@ -11803,9 +11900,9 @@ function paginate(force) {
   let layer = $('#pg-layer');
   if (!layer) { layer = document.createElement('div'); layer.id = 'pg-layer'; layer.contentEditable = 'false'; docEl.appendChild(layer); }
   const s = parseFloat(getComputedStyle(docEl).zoom) || 1;    // Paramètres › Écriture › Taille
-  const kids = [...blocksEl.children].filter(el => el.classList.contains('block'));
+  const kids = pgKids();
   const heights = kids.map(el => el.getBoundingClientRect().height);
-  const sig = s + '|' + head.offsetHeight + '|' + kids.map((el, i) => el.dataset.id + ':' + Math.round(heights[i]) + (el.classList.contains('pb') || el.classList.contains('scan') ? '!' : '')).join(',');   // 1.56.0 : un document scanné force aussi les sauts
+  const sig = s + '|' + head.offsetHeight + '|' + kids.map((el, i) => (el.dataset.id || 'T') + ':' + Math.round(heights[i]) + (el.classList.contains('pb') || el.classList.contains('scan') ? '!' : '')).join(',');   // 1.56.0 : un document scanné force aussi les sauts
   if (!force && sig === pgSig) return;    // les hauteurs n'ont pas bougé : les sauts restent valables
   pgSig = sig;
   // bloc sous le curseur : mesuré AVANT la remise à plat, pour qu'il reste au même endroit de l'écran après le recalcul
@@ -11818,38 +11915,90 @@ function paginate(force) {
   const padTop = parseFloat(cs.paddingTop) * s, padBottom = parseFloat(cs.paddingBottom) * s;
   const top0 = docEl.getBoundingClientRect().top + padTop;      // haut de la zone utile de la page 1
   const zf = window.AlixoZoom ? AlixoZoom.get('doc') : 1;          // 1.34.1 : zoom de la feuille (les pages grandissent avec)
-  const H = (PG_H - PG_SAFE) * zf, GAPT = padBottom + PG_BAND * zf + padTop;  // hauteur utile ; espace entre deux zones utiles
-  const rects = kids.map(el => { const r = el.getBoundingClientRect(); return { el, top: r.top - top0, bottom: r.bottom - top0, pb: el.classList.contains('pb'), scan: el.classList.contains('scan') }; });   // 1.56.0 : scan = page entière
-  let shift = 0, pageBase = 0, forced = false, pages = 1;
+  const Hs = (PG_H - PG_SAFE) * zf, GAPT = padBottom + PG_BAND * zf + padTop;  // hauteur utile à l'écran ; espace entre deux zones utiles
+  const H = PG_H - PG_SAFE;   // hauteur utile dans la mesure (sans le zoom de la feuille, comme à l'impression)
+  const measure = t0 => kids.map(el => { const r = el.getBoundingClientRect(); return { top: r.top - t0, bottom: r.bottom - t0 }; });
+
+  /* 1) les sauts, décidés sur la mise en page imprimée (body.pg-probe : QR codes des liens, frise verticale…, et la feuille sans
+        son zoom — à une autre taille, le texte ne se coupe pas exactement aux mêmes mots), sans marge ajoutée : chaque page commence
+        à un saut forcé, son contenu se mesure depuis le haut de son premier élément */
+  const probe = (zf !== 1 || !!blocksEl.querySelector(PG_PROBE_SEL)) && !document.body.classList.contains('pg-probe');
+  const wrap = $('#docwrap'), scroll = probe && wrap ? [wrap.scrollTop, wrap.scrollLeft] : null;
+  if (probe) document.body.classList.add('pg-probe');
+  const sp = probe ? parseFloat(getComputedStyle(docEl).zoom) || 1 : s;   // zoom pendant la mesure (= taille du texte seule)
+  const top0P = probe ? docEl.getBoundingClientRect().top + parseFloat(getComputedStyle(docEl).paddingTop) * sp : top0;
+  const P = measure(top0P);
+  // onglet suivant, à l'impression : sa page 1 est comptée comme dans sa propre vue, où l'en-tête #pg-head ne commence pas tout en
+  // haut de la page (le champ Professeur, #doc-meta, est au-dessus à l'écran)
+  const tabOff = head.offsetHeight ? Math.max(0, head.getBoundingClientRect().top - top0P) : 0;
+  const info = kids.map(el => ({ pb: el.classList.contains('pb'), scan: el.classList.contains('scan'), tab: el.classList.contains('print-pgbreak'), h: el.classList.contains('h') }));
+  const breaks = new Set(), cuts = new Map();   // cuts : indice du bloc → positions (mesure) où le PDF le coupe
+  const marks = [];   // coupures à forcer à l'impression : { el (bloc), mark }
+  let pageStart = 0, startIdx = 0, forced = false, pages = 1;
+  for (let i = 0; i < kids.length; i++) {
+    const r = P[i], o = info[i];
+    // 1.56.0 : un document scanné occupe une page à lui seul — saut avant lui s'il n'est pas déjà en tête de page, et après lui ;
+    // un bloc plus haut qu'une page entière ne gagne rien à changer de page : il reste à sa place et se coupe comme dans le PDF
+    const must = forced || o.tab || (o.scan && r.top > pageStart + 1);
+    let brk = i > 0 && !o.pb && (must || (r.bottom - pageStart > H && r.top > pageStart + 1 && r.bottom - r.top <= H));
+    forced = o.pb || o.scan;
+    if (brk) {
+      let k = i;
+      // 1.57.1 : un titre ne reste pas seul en bas de page — il passe sur la page suivante avec le bloc qui le suit
+      // (ce que faisait « page-break-after: avoid » à l'impression, désormais décidé ici pour que l'écran le montre)
+      if (!must) while (k - 1 > startIdx && info[k - 1].h && P[k - 1].top > pageStart + 1 && r.bottom - P[k - 1].top <= H) k--;
+      breaks.add(k); pageStart = P[k].top - (info[k].tab ? tabOff : 0); startIdx = k; pages++;
+    }
+    // bloc plus haut que ce qui reste de la page : il continue sur la page suivante (pas de page blanche), coupé à la ligne près
+    // (le bloc « Saut de page » n'a pas de hauteur à l'impression : jamais coupé)
+    let guard = 0;
+    while (!o.pb && r.bottom - pageStart > H && guard++ < 500) {
+      const at = pgBreakIn(kids[i], pageStart + H, top0P);
+      let c = at.y;
+      if (c <= r.top + 1 && i > 0 && !breaks.has(i) && r.top > pageStart + 1) {   // pas même sa première ligne : le bloc entier change de page
+        breaks.add(i); pageStart = r.top; startIdx = i; pages++; continue;
+      }
+      if (c <= Math.max(pageStart, r.top) + 1) c = pageStart + H;   // rien d'insécable ne tient : coupe à la fin de la page
+      else marks.push({ el: kids[i], mark: at.mark });
+      (cuts.get(i) || cuts.set(i, []).get(i)).push(c);
+      pageStart = c; startIdx = i; pages++;
+    }
+  }
+  if (print) pgPrintBreaks(marks);   // sur la mise en page imprimée (lignes, rangs) : avant de retirer la sonde
+  if (probe) {
+    document.body.classList.remove('pg-probe');
+    if (scroll) { wrap.scrollTop = scroll[0]; wrap.scrollLeft = scroll[1]; }   // la feuille a changé de hauteur un instant : même défilement
+  }
+
+  /* 2) l'écran : marges qui poussent chaque début de page sous la bande grise, traits pointillés des coupures */
+  const S = probe ? measure(top0) : P;
+  let shift = 0, pageBase = 0;
   const ends = [];   // fin de chaque page terminée par une bande grise (coordonnées finales, depuis top0) et son numéro
-  const cuts = [];   // fin de page à l'intérieur d'un bloc plus haut qu'une page (ligne pointillée : le PDF se coupe là)
-  rects.forEach((r, i) => {
-    const ft = r.top + shift, fb = r.bottom + shift;
-    // le bloc précédent dépasse la page (plus haut qu'une page, ou presque) : il continue sur la page suivante,
-    // comme dans le PDF où le texte se coupe tout seul — pas de page blanche, on avance simplement de page
-    while (ft > pageBase + H) { cuts.push({ y: pageBase + H, k: pages }); pageBase += H; pages++; }
-    // un bloc plus haut qu'une page entière ne gagne rien à changer de page (il déborderait de toute façon) :
-    // il reste à sa place et se coupe comme dans le PDF, au lieu de laisser une page presque vide derrière lui
-    // 1.56.0 : un document scanné occupe une page à lui seul — saut avant lui s'il n'est pas déjà en tête de page, et après lui
-    const brk = i > 0 && !r.pb && (forced || (r.scan && ft > pageBase + 1) || (fb - pageBase > H && ft > pageBase + 1 && fb - ft <= H));
-    forced = r.pb || r.scan;
-    if (!brk) return;
-    const pageEnd = pageBase + H;
-    const extra = pageEnd + GAPT - ft;
-    r.el.classList.add('pg-first');
-    r.el.style.setProperty('--pg-mt', ((r.top - rects[i - 1].bottom + extra) / s) + 'px');
-    ends.push({ y: pageEnd, k: pages });
-    shift += extra;
-    pageBase = pageEnd + GAPT; pages++;
+  const cutY = [];   // fin de page à l'intérieur d'un bloc plus haut qu'une page (ligne pointillée : le PDF se coupe là)
+  let k = 1;
+  kids.forEach((el, i) => {
+    if (breaks.has(i)) {
+      // un bloc plus haut à l'écran qu'à l'impression (frise horizontale…) allonge la page affichée plutôt que de passer sous la bande
+      const pageEnd = Math.max(pageBase + Hs, S[i - 1].bottom + shift);
+      const extra = pageEnd + GAPT - (S[i].top + shift);
+      el.classList.add('pg-first');
+      el.style.setProperty('--pg-mt', ((S[i].top - S[i - 1].bottom + extra) / s) + 'px');
+      ends.push({ y: pageEnd, k });
+      shift += extra;
+      pageBase = pageEnd + GAPT; k++;
+    }
+    for (const c of cuts.get(i) || []) {
+      const y = Math.min(S[i].bottom, S[i].top + (c - P[i].top) * (s / sp)) + shift;
+      cutY.push({ y, k }); pageBase = y; k++;
+    }
   });
-  const lastBottom = rects.length ? rects[rects.length - 1].bottom + shift : 0;
-  const lastEnd = pageBase + H * Math.max(1, Math.ceil((lastBottom - pageBase) / H));
-  const n = pages + Math.max(0, Math.ceil((lastBottom - pageBase) / H) - 1);
-  for (let y = pageBase + H, k = pages; y < lastBottom; y += H, k++) cuts.push({ y, k });   // dernier bloc étalé sur plusieurs pages
-  if (rects.length) blocksEl.style.paddingBottom = Math.max(0, (lastEnd - lastBottom) / s) + 'px';
+  const lastBottom = S.length ? S[S.length - 1].bottom + shift : 0;
+  const lastEnd = Math.max(pageBase + Hs, lastBottom);
+  const n = pages;
+  if (S.length) blocksEl.style.paddingBottom = Math.max(0, (lastEnd - lastBottom) / s) + 'px';
   const num = (y, k) => `<div class="pg-num" style="top:${((padTop + y + padBottom / 2) / s - 7).toFixed(1)}px">${k} / ${n}</div>`;
   layer.innerHTML = ends.map(e => `<div class="pg-gap" style="top:${((padTop + e.y + padBottom) / s).toFixed(1)}px;height:${(PG_BAND * zf / s).toFixed(1)}px"></div>` + num(e.y, e.k)).join('')
-    + cuts.map(c => `<div class="pg-cut" style="top:${((padTop + c.y) / s).toFixed(1)}px"></div>`).join('')   // 1.57.0 : plus d'étiquette « k / n · suite page k+1 ↓ », le trait pointillé suffit
+    + cutY.map(c => `<div class="pg-cut" style="top:${((padTop + c.y) / s).toFixed(1)}px"></div>`).join('')   // 1.57.0 : plus d'étiquette « k / n · suite page k+1 ↓ », le trait pointillé suffit
     + num(lastEnd, n);
   if (caretEl) {   // le bloc du curseur a bougé (une page s'est ouverte ou fermée au-dessus) : on suit
     const dy = caretEl.getBoundingClientRect().top - caretTop;
@@ -14059,6 +14208,14 @@ setTimeout(() => { if (!ALIXO_AUX && (!window.AlixoSync || !window.AlixoSync.ena
 /* 1.26 : présentation animée des nouveautés (js/whatsnew.js + js/whatsnew-scenes.js), jouée une fois au premier
    lancement après une mise à jour — jamais par-dessus la connexion, le questionnaire de bienvenue ou un compte suspendu.
    Aperçu à tout moment : index.html?nouveautes=1 (version courante) ou ?nouveautes=1.25.0. */
+/* 1.57.1 : présentation à jouer pour cette version — la sienne, sinon celle de la version de fonctionnalités (x.y.0) dont elle
+   est un correctif */
+function whatsNewVersion() {
+  const W = window.AlixoWhatsNew; if (!W) return ALIXO_VERSION;
+  if (W.has(ALIXO_VERSION)) return ALIXO_VERSION;
+  const base = ALIXO_VERSION.split('.').slice(0, 2).join('.') + '.0';
+  return W.has(base) ? base : ALIXO_VERSION;
+}
 function showWhatsNew(version, tries) {
   if (!window.AlixoWhatsNew || !AlixoWhatsNew.has(version)) return false;
   const authov = $('#authov');
@@ -14073,7 +14230,7 @@ setTimeout(() => {
   if (ALIXO_AUX) return;   // un volet de l'écran partagé ou une fenêtre de document : la fenêtre principale s'en charge
   try {
     const wn = new URLSearchParams(location.search).get('nouveautes');
-    if (wn) showWhatsNew(wn === '1' ? ALIXO_VERSION : wn);
+    if (wn) showWhatsNew(wn === '1' ? whatsNewVersion() : wn);
     /* lien « gérer / résilier » de l'e-mail de rappel avant reconduction (serveur de paiement) : …/docs/?plus */
     if (new URLSearchParams(location.search).has('plus')) { settingsCat = 'plus'; openSettings(); }
     /* bouton « Voir l'invitation » de l'e-mail de partage (serveur de paiement) : …/docs/?partages → Bibliothèque › Partagés avec moi */
@@ -14087,8 +14244,13 @@ setTimeout(() => {
     const prev = state.settings.lastVersion;
     if (prev !== ALIXO_VERSION) {
       state.settings.lastVersion = ALIXO_VERSION; save();
-      if (prev && !wn) showWhatsNew(ALIXO_VERSION);
-      if (prev && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le scan détecte et redresse la feuille tout seul, « Télécharger » au clic droit sur une séance ou un fichier, la police Geist pour vos cours, et des corrections : encadrés, collage sur une sélection, recadrage des images.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(ALIXO_VERSION)) ? { type: 'whatsnew', version: ALIXO_VERSION } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      /* 1.57.1 : un correctif (x.y.z → x.y.z') s'installe en silence : ni présentation ni notification. Depuis une version
+         plus ancienne, on présente la version de fonctionnalités (x.y.0) quand le correctif n'a pas sa propre présentation. */
+      const minor = v => String(v || '').split('.').slice(0, 2).join('.');
+      const silent = !!prev && minor(prev) === minor(ALIXO_VERSION);
+      const wnVer = whatsNewVersion();
+      if (prev && !silent && !wn) showWhatsNew(wnVer);
+      if (prev && !silent && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le scan détecte et redresse la feuille tout seul, « Télécharger » au clic droit sur une séance ou un fichier, la police Geist pour vos cours, et des corrections : encadrés, collage sur une sélection, recadrage des images.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(wnVer)) ? { type: 'whatsnew', version: wnVer } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

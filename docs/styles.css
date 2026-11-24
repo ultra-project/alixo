@@ -30,7 +30,8 @@
 
 :root {
   --font-ui-legacy: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
-  --font-ui: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  --font-ui-app: "Geist", -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;   /* 1.57.1 : copie de --font-ui, que l'impression remplace (refonte.css) */
+  --font-ui: var(--font-ui-app);
   --font-serif: "Iowan Old Style", Palatino, Georgia, "Times New Roman", serif;
   --font-math: "STIX Two Math", "Cambria Math", "Latin Modern Math", Georgia, serif;
   --font-mono: "Geist Mono", "SF Mono", ui-monospace, Consolas, monospace;
@@ -923,6 +924,9 @@ body.mode-editor .tbtn.only-editor { display: grid; }
 ::-webkit-scrollbar { width: 9px; height: 9px; }
 ::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--ink-3) 35%, transparent); border-radius: 5px; border: 2px solid transparent; background-clip: content-box; }
 ::-webkit-scrollbar-track { background: transparent; }
+/* 1.57.1 : jamais de barre de défilement à l'impression — la barre personnalisée (9 px) restait réservée sur la page imprimée
+   (Chromium avec barres classiques : version PC, navigateur) : texte 9 px plus étroit que l'écran, plus de lignes, pages décalées */
+@media print { html, body, #docwrap { scrollbar-width: none; } ::-webkit-scrollbar { display: none; width: 0; height: 0; } }
 
 /* Réductions demandées par le système */
 @media (prefers-reduced-motion: reduce) {
@@ -948,6 +952,8 @@ body.mode-editor .tbtn.only-editor { display: grid; }
   html[data-theme="dark"] .block.callout[data-ct="exemple"]     { --cc: var(--cc-exemple, #2e8b6a); }
   /* imprimer les fonds et couleurs (encadrés, surlignages, graphiques) */
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* 1.57.1 : LA géométrie de page — zone utile 673 × 986 px, version web et version PC (elle l'emporte sur les marges de printToPDF,
+     main.js) ; la vue par pages en dépend (app.js › PG_H, styles.css › body.pages-mode #doc) : les changer ensemble */
   @page { size: A4; margin: 18mm 16mm; }
   html, body { height: auto; background: #fff; overflow: visible; }
   #topbar, #planpanel, #pp-pill, #toolbar, #mathpanel, #searchov, #slashmenu, #popover, #ctxmenu, #toast, #calc-ghost, #view-library { display: none !important; }
@@ -1345,6 +1351,14 @@ body.has-tabs { --tabbar-h: 36px; }
 .lnk:hover { filter: brightness(1.12); }
 .lnk::selection { background: color-mix(in srgb, #fff 35%, transparent); }
 .lnk-print { display: none; }
+/* 1.57.1 : mise en page des liens imprimés (QR) hors de @media print — la vue par pages les mesure aussi (body.pg-probe,
+   app.js › paginate) pour couper les pages là où le PDF les coupe */
+.lnk-print { flex-wrap: wrap; gap: 10px 22px; margin: 6px 0 4px; }
+.lnk-print .lq { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 10.5px; color: #46494e; max-width: 46%; }
+.lnk-print .lq svg { width: 58px; height: 58px; flex: none; }
+.lnk-print .lq b { display: block; color: #1a1a1a; font-size: 11px; }
+.lnk-print .lq span { word-break: break-all; }
+body.pg-probe .lnk-print { display: flex !important; }
 :is(#popover, .po-scope) .po-link input { width: 100%; }
 :is(#popover, .po-scope) .po-link .po-row + .po-row { margin-top: 6px; }
 
@@ -1518,11 +1532,7 @@ body.tbl-resizing, body.tbl-resizing * { cursor: col-resize !important; user-sel
 
 @media print {
   .lnk { background: #e8eef3 !important; color: #2a4a63 !important; border-color: #c5d2dc !important; }
-  .lnk-print { display: flex !important; flex-wrap: wrap; gap: 10px 22px; margin: 6px 0 4px; }
-  .lnk-print .lq { display: flex; align-items: center; gap: 8px; font-family: var(--font-ui); font-size: 10.5px; color: #46494e; max-width: 46%; }
-  .lnk-print .lq svg { width: 58px; height: 58px; flex: none; }
-  .lnk-print .lq b { display: block; color: #1a1a1a; font-size: 11px; }
-  .lnk-print .lq span { word-break: break-all; }
+  .lnk-print { display: flex !important; }
   #dictpanel, #calpanel, #viewpanel, #cocopanel, .cal-now, .tbl-rz { display: none !important; }
   #view-editor.view-open #docwrap, #view-editor.coco-open #docwrap { padding: 0; }
   /* textes d'aide (« Écrivez, ou tapez / », « Titre… », champs de fiche…) : jamais dans le PDF */
@@ -1573,7 +1583,7 @@ body.readonly #blocks .block :is(.cards-tools, .tml-tools, .tree-tools, .chart-t
 .cards-tools button { font-family: var(--font-ui); font-size: 11.5px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: var(--surface); color: var(--ink-2); }
 .cards-tools button:hover { background: var(--hover); color: var(--ink); }
 .cards-tools button.danger:hover { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 40%, var(--border)); }
-@media (max-width: 700px) { .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media screen and (max-width: 700px) { body:not(.pages-mode) .cards-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }   /* 1.57.1 : « screen » — la zone imprimée (673 px) passait sous les 700 px : 2 colonnes dans le PDF, 3 à l'écran ; la feuille A4 (vue par pages) a toujours sa largeur : 3 colonnes même dans une fenêtre étroite */
 @media print {
   .cards-tools { display: none !important; }
   .card-item { break-inside: avoid; border-color: #c9ccd1; }
@@ -1909,6 +1919,11 @@ body.mobile #imgbar .ib-size { width: auto; }
   .block.img .rz, .mv-handle, #imgbar, #drag-ghost, .crop-bar, .block.li.cl .cbox { display: none !important; }
   .block.li.cl::before { content: "☐"; width: 24px; }
   .block.li.cl.done::before { content: "☑"; }
+}
+/* 1.57.1 : mesure de la vue par pages (app.js › paginate) — la case telle qu'elle sera imprimée */
+body.pg-probe .block.li.cl .cbox { display: none !important; }
+body.pg-probe .block.li.cl::before { content: "☐"; width: 24px; }
+@media print {
   .block.objsel { outline: none; }
   .block.cards.objsel, .block.timeline.objsel { box-shadow: none; }
   .block.objsel .imgbox { box-shadow: none; }
@@ -2197,7 +2212,8 @@ body.mobile #scanbar [data-sb="line"] { display: none; }   /* 1.56.0 : une rang�
 .block.quote .qcite.is-blank::before { content: attr(data-ph); position: absolute; left: 18px; top: 0; color: var(--ink-3); opacity: 0; pointer-events: none; white-space: nowrap; transition: opacity .15s; max-width: calc(100% - 160px); overflow: hidden; text-overflow: ellipsis; }   /* 1.51 : jamais sous le bouton « Auteur / source… » */
 .block.quote.cur .qcite.is-blank::before, .block.quote:hover .qcite.is-blank::before { opacity: .55; }
 .block.quote .qcite:not(.is-blank) { color: var(--ink-2); }
-body.printing .block.quote .qcite.is-blank { display: none; }
+body.printing .block.quote .qcite.is-blank, body.pg-probe .block.quote .qcite.is-blank { display: none; }
+@media print { .block.quote .qcite.is-blank { display: none; } }   /* 1.57.1 : aussi dans le PDF de la version web (ligne vide en trop) */
 /* 1.43 : ligne de l'auteur vide → bouton « Auteur / source… » (survol, curseur dans la citation, clavier ; au doigt dès que la citation est active) */
 .block.quote { position: relative; }
 .block.quote .q-src { display: none; position: absolute; right: 6px; bottom: 2px; padding: 2px 9px; border-radius: 6px; font: 600 12px var(--font-ui); color: var(--ink-2); background: var(--bg); border: 1px solid var(--border); cursor: pointer; }
@@ -3228,6 +3244,7 @@ html[data-skin="amber"] input[type="range"], html[data-skin="candy"] input[type=
 body.doc-zoomed #doc { width: 794px; max-width: none; }
 body.doc-zoomed #docwrap { overflow-x: auto; }
 @media print { #doc { zoom: var(--doc-scale, 1) !important; } body.doc-zoomed #doc { width: auto; } }
+body.pg-probe #doc { zoom: var(--doc-scale, 1) !important; }   /* 1.57.1 : mesure de la vue par pages (app.js › paginate) à la taille imprimée */
 #doc .block.h .btxt, #doc .block.h .hnum { font-family: var(--doc-font-head, var(--font-serif)); }
 #print-head, #print-summary { --font-serif: var(--doc-font, var(--font-serif-base)); }
 
@@ -3884,23 +3901,33 @@ body.printing-sheet #toast, body.printing-sheet #print-summary, body.printing-sh
    1.23 — Vue par pages (app.js › paginate) : feuille découpée en pages A4 identiques au PDF,
    bloc « Saut de page » (.block.pb)
    ============================================================ */
-/* la zone utile (673 × 983 px) est celle de printToPDF : largeur 794 px, marges 67 / 60,5 / 72 px — en px « non zoomés »,
-   (796 px avec la bordure de 1 px) — d’où la division par --doc-scale (Paramètres › Écriture › Taille) pour que le texte se coupe comme dans le PDF */
+/* la zone utile d'une page imprimée (673 × 986 px) est fixée par @page (A4, marges 18 / 16 mm, plus haut) — elle l'emporte aussi
+   sur les marges de printToPDF (main.js), version web et version PC ont donc la même ; 1.57.1 : PG_H (app.js) en découle.
+   Largeur 794 px, marges 60,5 px — en px « non zoomés » (796 px avec la bordure de 1 px) — d’où la division par --doc-scale
+   (Paramètres › Écriture › Taille) pour que le texte se coupe comme dans le PDF */
 body.pages-mode #doc { position: relative; width: calc(796px / var(--doc-scale, 1)); max-width: none; min-height: 0; padding: calc(67px / var(--doc-scale, 1)) calc(60.5px / var(--doc-scale, 1)) calc(72px / var(--doc-scale, 1)); }
+/* 1.57.1 : à l'écran, le texte est « calé » sur les pixels (largeurs de lettres arrondies, sous Windows et Linux) ; à l'impression il
+   ne l'est pas : les lignes ne se coupaient pas au même mot, un paragraphe gagnait une ligne dans le PDF et la page débordait.
+   geometricPrecision donne à l'écran les largeurs exactes de l'impression : mêmes lignes, mêmes pages */
+body.pages-mode #doc { text-rendering: geometricPrecision; }
 body.pages-mode #docwrap { overflow-x: auto; }
 body.pages-mode #blocks { min-height: 0; }
 #pg-head { display: none; }
-body.pages-mode #pg-head { display: block; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--border); user-select: none; }
+body.pages-mode #pg-head, body.pages-mode #blocks > .print-pgtitle.print-pgbreak { display: block; margin: 0 0 18px; padding: 0 0 14px; border-bottom: 1px solid var(--border); user-select: none; }
+/* 1.57.1 : séance à plusieurs onglets, à l'impression — chaque onglet suivant commence sur une page avec le même en-tête que dans
+   sa propre vue par pages (même boîte que #pg-head), pour que ses pages soient celles de l'écran */
+body.pages-mode #blocks > .print-pgtitle:first-child { display: none !important; }
 #pg-head .ph-title { font-family: var(--font-serif); font-size: 26px; font-weight: 700; letter-spacing: -.01em; color: var(--ink); line-height: 1.2; }
 #pg-head .ph-sub { font-family: var(--font-ui); font-size: 11.5px; color: var(--ink-2); margin-top: 6px; }
 body.pages-mode #pg-head.ph-empty { display: none; }   /* 1.38 : plus de titre ni de date en tête de page */
-#pg-head .ph-tab { font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-top: 12px; }
+#pg-head .ph-tab, .print-pgtitle .ph-tab { font-family: var(--font-ui); font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); margin-top: 12px; line-height: 1.5; }
+body:not(.pages-mode) .print-pgtitle .ph-tab { margin: 0; color: inherit; }
 #pg-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
 #pg-layer .pg-gap { position: absolute; left: -1px; right: -1px; background: var(--bg); border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 #pg-layer .pg-num { position: absolute; left: 0; right: 0; text-align: center; font-family: var(--font-ui); font-size: 10.5px; line-height: 14px; color: var(--ink-3); }
 /* fin de page à l'intérieur d'un bloc plus haut qu'une page : le PDF se coupe là, le bloc continue sur la page suivante */
 #pg-layer .pg-cut { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--ink-3); opacity: .55; }
-.block.pg-first { margin-top: var(--pg-mt) !important; }
+#blocks > .pg-first { margin-top: var(--pg-mt) !important; }
 /* bloc « Saut de page » */
 .block.pb { margin: 10px 0; padding: 6px 0; cursor: pointer; }
 .block.pb .pb-line { display: flex; align-items: center; gap: 10px; color: var(--ink-3); font-family: var(--font-ui); font-size: 10.5px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; }
@@ -3911,13 +3938,31 @@ body.pages-mode #pg-head.ph-empty { display: none; }   /* 1.38 : plus de titre n
 body.pages-mode .block.pb { margin: 0; padding: 2px 0; opacity: .75; }
 @media print {
   body.pages-mode #doc { width: auto; padding: 0; }
-  body.pages-mode .block.pg-first { break-before: page; page-break-before: always; margin-top: 0 !important; }
-  /* un bloc plus haut qu'une page se coupe comme à l'écran (sans « page-break-inside: avoid », qui le renverrait entier à la page suivante) */
-  body.pages-mode #blocks > .block { break-inside: auto; page-break-inside: auto; }
-  body.pages-mode #pg-layer, body.pages-mode #print-head, body.pages-mode #blocks > .print-pgtitle:first-child { display: none !important; }
+  body.pages-mode #blocks > .pg-first { break-before: page; page-break-before: always; margin-top: 0 !important; }
+  /* un bloc plus haut qu'une page se coupe comme à l'écran (sans « page-break-inside: avoid », qui le renverrait entier à la page suivante) ;
+     1.57.1 : les sauts sont ceux de l'écran et eux seuls — plus de « page-break-after: avoid » sous les titres (l'écran garde déjà
+     un titre avec le bloc qui le suit), ni d'orphelines / veuves : la coupure d'un bloc plus haut qu'une page tombe à la ligne près */
+  body.pages-mode #blocks .block { break-inside: auto; page-break-inside: auto; }
+  body.pages-mode #blocks > .block { orphans: 1; widows: 1; }
+  body.pages-mode #blocks > .block:not(.pb):not(.scan) { break-after: auto; page-break-after: auto; }
+  body.pages-mode #blocks > .print-pgbreak { padding-top: 0; }
+  /* bloc plus haut qu'une page : la page se coupe exactement au pointillé de l'écran (rang de tableau, événement de frise, ou suite
+     d'un paragraphe isolée dans un <span class="pg-brk pg-brk-t"> le temps de l'impression — app.js › pgPrintBreaks) */
+  body.pages-mode #blocks .pg-brk { break-before: page; page-break-before: always; }
+  body.pages-mode #blocks .pg-brk-t { display: block; }
+  /* le sommaire imprimé (exportPDF, ≥ 6 titres) n'existe pas à l'écran : en vue par pages, le PDF n'a que les pages de l'écran
+     (la table des matières se pose dans le cours avec /table des matières) */
+  body.pages-mode #print-summary { display: none !important; }
+  body.pages-mode #pg-layer, body.pages-mode #print-head { display: none !important; }
   body.pages-mode #blocks { padding-bottom: 0 !important; }
-  body.pages-mode #pg-head { border-bottom-color: #c9ccd1; }
+  /* 1.57.1 : l'impression passe l'interface à l'ancienne police (refonte.css) ; dans la feuille découpée en pages, le texte des
+     encadrés, cartes, frises, tableaux… garde celle de l'écran (Geist) : sinon ses lignes se coupaient autrement et les pages du PDF
+     s'allongeaient (cartes, frises : jusqu'à +20 px chacune) */
+  body.pages-mode #doc { --font-ui: var(--font-ui-app); font-family: var(--font-ui-app); }   /* font-family : ce que #doc hérite de body à l'écran */
+  body.pages-mode #pg-head, body.pages-mode #blocks > .print-pgtitle.print-pgbreak { border-bottom-color: #c9ccd1; }
+  body.pages-mode .print-pgtitle .ph-tab { color: #46494e; }
   .block.pb { break-after: page; page-break-after: always; height: 0; margin: 0; padding: 0; overflow: hidden; visibility: hidden; }
+  #blocks > .block.pb:last-child { break-after: auto; page-break-after: auto; }   /* 1.57.1 : saut de page en fin de cours : pas de page blanche à la fin du PDF */
 }
 
 /* ============================================================

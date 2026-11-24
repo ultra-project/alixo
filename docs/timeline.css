@@ -51,21 +51,24 @@ html[data-theme="dark"] .tml-d { color: var(--tcd, color-mix(in srgb, var(--tc) 
 .block.timeline.objsel:not(:focus-within) ::selection { background: transparent; }
 @media (max-width: 600px) { .tml-tools [data-tml="dir"] { display: none; } }   /* toujours verticale sur un petit écran */
 
-/* ---------- affichage horizontal (écran large uniquement) ---------- */
+/* ---------- affichage horizontal (écran large uniquement ; jamais à l'impression ni pendant la mesure des pages, 1.57.1 : :not(.pg-probe)) ---------- */
 @media screen and (min-width: 601px) {
-  body:not(.printing) .block.timeline.tml-h .tml-scroll { overflow-x: auto; padding: 6px 0 0; scrollbar-width: thin; }
-  body:not(.printing) .block.timeline.tml-h .tml-list { display: flex; align-items: flex-start; min-width: min-content; }
-  body:not(.printing) .block.timeline.tml-h .tml-ev { flex: 1 0 180px; max-width: 280px; padding: 24px 20px 4px 0; }
-  body:not(.printing) .block.timeline.tml-h .tml-ev::before { display: block; left: 0; right: 0; top: 10px; bottom: auto; width: auto; height: 2px; }
-  body:not(.printing) .block.timeline.tml-h .tml-ev:last-child::before { right: 20px; background: linear-gradient(to right, var(--tml-rail), transparent); }
-  body:not(.printing) .block.timeline.tml-h .tml-dot { top: 6px; background: var(--tc); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px color-mix(in srgb, var(--tc) 30%, transparent); }
-  body:not(.printing) .block.timeline.tml-h .tml-evtools { top: 22px; right: 20px; }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-scroll { overflow-x: auto; padding: 6px 0 0; scrollbar-width: thin; }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-list { display: flex; align-items: flex-start; min-width: min-content; }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-ev { flex: 1 0 180px; max-width: 280px; padding: 24px 20px 4px 0; }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-ev::before { display: block; left: 0; right: 0; top: 10px; bottom: auto; width: auto; height: 2px; }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-ev:last-child::before { right: 20px; background: linear-gradient(to right, var(--tml-rail), transparent); }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-dot { top: 6px; background: var(--tc); box-shadow: 0 0 0 3px var(--paper), 0 0 0 4px color-mix(in srgb, var(--tc) 30%, transparent); }
+  body:not(.printing):not(.pg-probe) .block.timeline.tml-h .tml-evtools { top: 22px; right: 20px; }
 }
 
 /* ---------- lecture seule, impression, page web exportée : ni outils ni champs vides ---------- */
 body.readonly .block.timeline .is-blank, body.printing .block.timeline .is-blank, .exp-title + #blocks .block.timeline .is-blank { display: none !important; }
 body.printing .tml-tools, body.printing .tml-evtools, .bd-bbody .tml-tools, .bd-bbody .tml-evtools { display: none !important; }
 body.printing .block.timeline .tml-scroll { overflow: visible; }
+/* 1.57.1 : body.pg-probe = mesure de la vue par pages (app.js › paginate) — la frise telle qu'elle sera imprimée (verticale, sans champs vides) */
+body.pg-probe .block.timeline .is-blank, body.pg-probe .tml-tools, body.pg-probe .tml-evtools { display: none !important; }
+body.pg-probe .block.timeline .tml-scroll { overflow: visible; }
 @media print {
   .tml-tools, .tml-evtools, .block.timeline .is-blank { display: none !important; }
   .block.timeline .tml-scroll { overflow: visible; }
