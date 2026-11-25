@@ -292,6 +292,15 @@ window.QuizCore = (() => {
     return { n, ok: 0 };
   }
 
+  /* chronomètre en pastille (écran du test, du présentateur et des participants) : icône horloge, secondes restantes,
+     .low sous 5 s ; sans limite de temps : « ∞ ». --f (part restante) reste posé pour les thèmes qui voudraient l'animer. */
+  const ICO_CLOCK = '<svg class="qp-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>';
+  function timerHTML(left, total) {
+    if (!total) return `<span class="qp-timer none" title="Sans limite de temps">${ICO_CLOCK}<b>∞</b></span>`;
+    const f = Math.max(0, Math.min(1, left / total));
+    return `<span class="qp-timer${left <= 5 ? ' low' : ''}" style="--f:${f.toFixed(3)}">${ICO_CLOCK}<b>${Math.ceil(Math.max(0, left))}<span class="qp-tu">s</span></b></span>`;
+  }
+
   /* ---------------- écran du participant : la question et les boutons de réponse ----------------
      o = { done (déjà répondu), v (réponse donnée), reveal (bonne réponse affichée : q complète), big (écran présentateur) } */
   const letter = i => LETTERS[i % LETTERS.length];
@@ -541,6 +550,6 @@ window.QuizCore = (() => {
     if (q.t === 'cloze') root.querySelectorAll('select[data-hole]').forEach(sl => sl.addEventListener('change', () => { sl.classList.toggle('filled', !!sl.value); }));
   }
 
-  return { COLORS, SHAPES, LETTERS, PAL_LIGHT, PAL_DARK, TYPES, GROUPS, THEMES, FONTS, FONT_NAMES, VOTE_COLORS, HEMI_MAX, esc, uid, norm, shuffle, isScored, isPage, isChoice, resolveTheme, themeStyle, themeFx, newQuestion, publicQuestion, sendable, check, fraction, points, answerText, correctText, stats, widgetHTML, readAnswer, bindWidget, letter,
+  return { COLORS, SHAPES, LETTERS, PAL_LIGHT, PAL_DARK, TYPES, GROUPS, THEMES, FONTS, FONT_NAMES, VOTE_COLORS, HEMI_MAX, esc, uid, norm, shuffle, isScored, isPage, isChoice, resolveTheme, themeStyle, themeFx, timerHTML, newQuestion, publicQuestion, sendable, check, fraction, points, answerText, correctText, stats, widgetHTML, readAnswer, bindWidget, letter,
     clozeParse, syncHoles, clozeHoles, clozePlain, holeOk, holeMode, decoysOf, voteColor, hemiData, hemicycleHTML, hemiUpdate };
 })();

@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.57.1';
+const ALIXO_VERSION = '1.58.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -14250,7 +14250,7 @@ setTimeout(() => {
       const silent = !!prev && minor(prev) === minor(ALIXO_VERSION);
       const wnVer = whatsNewVersion();
       if (prev && !silent && !wn) showWhatsNew(wnVer);
-      if (prev && !silent && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Le scan détecte et redresse la feuille tout seul, « Télécharger » au clic droit sur une séance ou un fichier, la police Geist pour vos cours, et des corrections : encadrés, collage sur une sélection, recadrage des images.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(wnVer)) ? { type: 'whatsnew', version: wnVer } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && !silent && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'L’éditeur de quiz est refait (déroulé en cartes, case « Bonne réponse », aperçu masquable), la fenêtre Apparence montre les 14 thèmes en grille, les Résultats s’affichent en cartes, et les écrans de jeu sont plus lisibles, jusque sur un petit téléphone.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(wnVer)) ? { type: 'whatsnew', version: wnVer } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

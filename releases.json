@@ -1,5 +1,5 @@
 {
- "generatedAt": "2026-11-24T00:30:44.153Z",
+ "generatedAt": "2026-11-25T14:00:44.342Z",
  "version": "1.57.1",
  "date": "2026-11-24T00:30:21Z",
  "notes": "Nouveautés 1.57.1 — Correctif : le PDF a les mêmes pages que le document\n\n\n- **Le PDF suit enfin la vue par pages.** Un paragraphe affiché sur la page 1 de la séance se retrouvait parfois sur la page 2 du PDF, avec des espaces en trop : chaque bloc tombe maintenant sur la même page à l’écran et dans le PDF, sur la version web comme sur la version PC, quelle que soit la taille du texte ou le zoom. Un titre en bas de page passe avec son paragraphe sur la page suivante, comme dans le PDF, et un long tableau ou un long paragraphe se coupe au même endroit.\n- Côté technique : la barre de défilement réservée à l’impression, la police de l’interface remplacée à l’impression, les QR codes des liens et la frise verticale imprimés, les cartes sur deux colonnes, les sauts « avoid » et orphelines/veuves, et la hauteur utile de la page (986 px) faussaient la pagination ; l’écran mesure désormais la mise en page imprimée et l’impression n’applique que ses sauts. Correctif installé sans présentation ni notification. Test `scripts/v1571-pagination-test.js`.",

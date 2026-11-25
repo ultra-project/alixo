@@ -11,9 +11,32 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.57.0 (ou nouveautes.html?v=1.57.0 en page seule).
+   Aperçu : index.html?nouveautes=1.58.0 (ou nouveautes.html?v=1.58.0 en page seule).
    ============================================================ */
 'use strict';
+
+/* 1.58 : interface du quiz refaite — éditeur, Apparence en grille, Résultats en cartes, écrans de jeu et page des participants */
+AlixoWhatsNew.register('1.58.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Le <em>quiz</em> fait<br>peau neuve', text: 'Éditeur, apparence, résultats et écrans de jeu redessinés — vos quiz ne changent pas.', dur: 5000 },
+    { title: 'Un éditeur <em>refait</em>', text: 'Déroulé en cartes à gauche, question au centre, palette des types à droite.',
+      bullets: ['<b>Bonne réponse</b> : une case à cocher sur chaque proposition', '<b>Déroulé</b> : type, temps et points sous chaque question', '<b>Aperçu</b> des participants, à masquer d’un bouton'],
+      art: 'quiz', accent: '#33658a', accent2: '#2e8b6a', dur: 7500 },
+    { title: 'Les 14 <em>thèmes</em> en grille', text: 'Bouton Apparence : tous les thèmes d’un coup d’œil, le vôtre coché.',
+      bullets: ['<b>Vignette</b>, nom et description sur chaque tuile', '<b>Animé</b> : l’étiquette des six thèmes à fond animé', '<b>Musique</b> : une case déploie les réglages du son'],
+      art: 'palette', accent: '#8a4b9c', accent2: '#b3762a', dur: 7000 },
+    { title: 'Des <em>résultats</em> en cartes', text: 'Bouton Résultats : une carte par partie, Excel et CSV à portée de main.',
+      bullets: ['<b>Par question</b> : la réussite en barres', '<b>Classement</b> : dix premiers, puis « Afficher les autres »', '<b>Annuler</b> une suppression depuis le message'],
+      art: 'chart', accent: '#2e8b6a', accent2: '#3d6bb5', dur: 7000 },
+    { title: 'Jouer, <em>plus lisible</em>', text: 'En test, en direct et sur le téléphone des participants.',
+      bullets: ['<b>Bandeau</b> : question, type, chrono en pastille, score', '<b>Salle d’attente</b> : code et QR d’un côté, participants de l’autre', '<b>Réponses</b> du groupe en barres, la bonne mise en avant', '<b>Téléphone</b> : lisible même sur un petit écran'],
+      art: { svg: '<svg viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="2.5"/><path d="M10.5 5.5h3M11 18.5h2"/><path d="M9 9.5h6M9 12.5h6"/></svg>' }, accent: '#3d6bb5', accent2: '#c04343', dur: 8000 },
+    { kicker: 'Accessibilité', title: 'Pour <em>tout le monde</em>', text: 'Clavier, lecteur d’écran et contraste ont été soignés.',
+      bullets: ['<b>Clavier</b> : le déroulé se parcourt avec Tab et Entrée', '<b>Boutons</b> de 44 px, chaque icône a son libellé', '<b>Contraste</b> des lettres garanti sur les 14 thèmes'],
+      art: 'list', accent: '#b3762a', accent2: '#2e8b6a', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 /* 1.57 : scan qui détecte la feuille, Télécharger au clic droit, police Geist, encadrés et collage corrigés */
 AlixoWhatsNew.register('1.57.0', {
@@ -57,33 +80,3 @@ AlixoWhatsNew.register('1.56.0', {
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });
-
-/* 1.55 : Coco crée vos documents, Artéfacts, bannières de dossiers, explorateur, Workspace repensé, fenêtres floutées, polices multiples */
-const SCENES_155 = {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Coco crée,<br>vos cours s’habillent', text: 'Huit nouveautés pour créer plus vite et vous retrouver plus facilement.' },
-    { title: 'Coco <em>crée</em> vos documents', text: 'Le bouton « IA », à droite de « Nouveau », ouvre une barre au centre de l’écran.',
-      bullets: ['<b>Décrivez</b> ce que vous voulez, en une phrase', '<b>Choisissez</b> : séance, présentation, tableur, planche, quiz ou fiche', '<b>Ctrl+Z</b> annule ce que Coco a écrit'],
-      art: { image: 'nouveautes/1.55.0-ia.jpg', alt: 'La barre « Créer avec Coco » ouverte au centre de l’écran' }, accent: '#6d5bd0', accent2: '#3d6bb5', dur: 7500 },
-    { title: 'L’onglet <em>Artéfacts</em>', text: 'Tout ce que Coco a créé pour vous, rangé au même endroit.',
-      bullets: ['<b>Quiz et fiches</b> enregistrés automatiquement', '<b>Filtres</b> par type, recherche et tri', '<b>Provenance</b> : la séance ou la demande d’origine'],
-      art: 'cards', accent: '#8a4b9c', accent2: '#b3762a', dur: 7000 },
-    { title: 'Des <em>bannières</em> pour vos cours', text: 'Clic droit sur un dossier › Modifier : une fenêtre entièrement repensée.',
-      bullets: ['<b>Couleur</b> ou <b>motif</b> en haut de la carte', '<b>Image perso</b> avec Alixo+', '<b>Icônes</b> à rechercher, rangées par matière'],
-      art: { image: 'nouveautes/1.55.0-bannieres.jpg', alt: 'Cartes de cours avec bannières couleur, motif et image' }, accent: '#c04343', accent2: '#2e8b6a', dur: 7000 },
-    { title: 'Un vrai <em>explorateur</em>', text: 'Dossiers, sous-dossiers, fil d’Ariane : on ne se perd plus pour choisir une séance.',
-      bullets: ['<b>Partout</b> : agenda, dépôt au Workspace, déplacer', '<b>Recherche</b> dans tout l’arbre', '<b>Clavier</b> : flèches, Entrée, Retour arrière'],
-      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 7000 },
-    { title: 'Le Workspace, une <em>boutique</em>', text: 'Nouvelle icône caddie, nouvelle vitrine des cours partagés par les membres.',
-      bullets: ['<b>Recherche</b> et filtres par matière et niveau', '<b>Mes dépôts</b> dans un onglet à part', '<b>Déposer</b> une séance en trois étapes'],
-      art: 'cards', accent: '#2e8b6a', accent2: '#33658a', dur: 7000 },
-    { title: 'Plus <em>confortable</em> au quotidien', text: 'Plein de petites choses qui changent tout.',
-      bullets: ['<b>Fenêtres</b> sur fond flouté : l’arrière ne bouge plus', '<b>Clic droit</b> : l’élément reste sélectionné', '<b>Polices</b> : plusieurs dans une même séance', '<b>Planche</b> : un clic dans le vide désélectionne'],
-      art: 'text', accent: '#b3762a', accent2: '#c04343', dur: 8000 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'À vous de créer.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-};
-AlixoWhatsNew.register('1.55.2', SCENES_155);   // 1.55.1 et 1.55.2 : correctifs — même présentation que la 1.55.0
-AlixoWhatsNew.register('1.55.1', SCENES_155);
-AlixoWhatsNew.register('1.55.0', SCENES_155);
-

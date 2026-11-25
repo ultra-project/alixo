@@ -39,16 +39,18 @@
   }
 
   /* ---------------- écrans ---------------- */
-  function screenJoin(err) {
+  /* err : message affiché (role="alert") ; field : 'code' | 'name', champ fautif marqué aria-invalid et refocalisé */
+  function screenJoin(err, field) {
     me.innerHTML = '';
-    main.innerHTML = `<div class="qp-card"><h1>Rejoindre un quiz</h1><p>Entrez le code affiché à l’écran du présentateur, puis un pseudo.</p>
-      <form id="qp-form">
-        <label class="qp-field"><span>Code de la partie</span><input class="code" id="qp-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" value="${esc(code)}" autocomplete="off" required></label>
-        <label class="qp-field"><span>Votre pseudo</span><input id="qp-name" maxlength="24" placeholder="Prénom ou surnom" value="${esc(name)}" autocomplete="nickname" required></label>
-        ${err ? `<div class="qp-err">${esc(err)}</div>` : ''}
+    const inv = f => (err && field === f ? ' aria-invalid="true" aria-describedby="qp-err"' : '');
+    main.innerHTML = `<div class="qp-joinpage"><h1>Rejoindre un quiz</h1><p>Entrez le code affiché à l’écran du présentateur, puis un pseudo.</p>
+      <form id="qp-form" novalidate>
+        <label class="qp-field"><span>Code de la partie</span><input class="code" id="qp-code" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="000000" value="${esc(code)}" autocomplete="one-time-code" required${inv('code')}></label>
+        <label class="qp-field"><span>Votre pseudo</span><input id="qp-name" maxlength="24" placeholder="Prénom ou surnom" value="${esc(name)}" autocomplete="nickname" required${inv('name')}></label>
+        ${err ? `<div class="qp-err" id="qp-err" role="alert">${esc(err)}</div>` : ''}
         <button type="submit" class="qp-next">Rejoindre →</button>
       </form></div>`;
-    (code ? $('#qp-name') : $('#qp-code')).focus();
+    (err && field === 'code' ? $('#qp-code') : err && field === 'name' ? $('#qp-name') : code ? $('#qp-name') : $('#qp-code')).focus();
     $('#qp-form').addEventListener('submit', e => { e.preventDefault(); join($('#qp-code').value, $('#qp-name').value); });
   }
   function screenWait(text, sub) {
@@ -66,16 +68,16 @@
   /* ---------------- rejoindre ---------------- */
   async function join(c, n) {
     code = String(c || '').replace(/\D/g, '').slice(0, 6); name = String(n || '').trim().slice(0, 24);
-    if (code.length !== 6) { screenJoin('Le code comporte 6 chiffres.'); return; }
-    if (!name) { screenJoin('Choisissez un pseudo.'); return; }
+    if (code.length !== 6) { screenJoin('Le code comporte 6 chiffres.', 'code'); return; }
+    if (!name) { screenJoin('Choisissez un pseudo.', 'name'); return; }
     if (!db) { screenJoin('Service indisponible : réessayez dans un instant.'); return; }
     try { localStorage.setItem('alixo.quiz.name', name); } catch { /* */ }
     screenWait('Connexion à la partie');
     let snap;
     try { snap = await db.collection('live').doc(code).get(); }
     catch (e) { console.error(e); screenJoin('Connexion impossible : vérifiez votre accès à Internet.'); return; }
-    if (!snap.exists || ['closed'].includes((snap.data() || {}).state)) { screenJoin('Aucune partie en cours avec ce code.'); return; }
-    if ((snap.data() || {}).state === 'end') { screenJoin('Cette partie est terminée.'); return; }
+    if (!snap.exists || ['closed'].includes((snap.data() || {}).state)) { screenJoin('Aucune partie en cours avec ce code.', 'code'); return; }
+    if ((snap.data() || {}).state === 'end') { screenJoin('Cette partie est terminée.', 'code'); return; }
     applyTheme((snap.data() || {}).theme);
     pid = pidFor(code);
     const ref = db.collection('live').doc(code).collection('players').doc(pid);
@@ -100,26 +102,24 @@
     if (game.state === 'end') { clearInterval(timer); renderFinal(); return; }
     if (game.state === 'closed') screenEnd('La partie a été fermée');
   }
-  function timerHTML(left, total) {
-    if (!total) return '<span class="qp-timer none">∞</span>';
-    const f = Math.max(0, Math.min(1, left / total));
-    return `<span class="qp-timer${left <= 5 ? ' low' : ''}" style="--f:${f.toFixed(3)}"><b>${Math.ceil(Math.max(0, left))}</b></span>`;
-  }
+  const timerHTML = C.timerHTML;
+  /* fil de position sous la ligne « Question i / n » */
+  const progressHTML = () => `<div class="qp-progress"><i style="--p:${game && game.n ? Math.round(((game.qi || 0) + 1) / game.n * 100) : 0}%"></i></div>`;
   const imgHTML = q => (q.img ? `<img class="qp-qimg" src="${esc(q.img)}" alt="">` : '');
   function renderQuestion() {
     const q = game.q; shownQ = q.id; shownAt = Date.now(); answered = !!(mine && mine.answers && mine.answers[q.id]);
     clearInterval(timer);
     const label = C.TYPES[q.t] ? C.TYPES[q.t].name : '';
     if (q.t === 'info') {
-      main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Page ${(game.qi || 0) + 1} / ${game.n || '?'}</span></div>
+      main.innerHTML = `<div class="qp-top qp-qtop"><span class="qp-prog">Page ${(game.qi || 0) + 1} / ${game.n || '?'}</span></div>${progressHTML()}
         <div class="qp-page-wrap">${imgHTML(q)}<div class="qp-q">${esc(q.text || '')}</div>${C.widgetHTML(q)}</div>
         <div class="qp-foot">Regardez l’écran du présentateur : la suite arrive.</div>`;
       return;
     }
     const left0 = game.qEnd ? (game.qEnd - Date.now()) / 1000 : 0;
-    main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'}</span><span class="qp-ptype">${esc(label)}</span><span id="qp-timer" style="margin-left:auto">${timerHTML(left0, q.time)}</span></div>
+    main.innerHTML = `<div class="qp-top qp-qtop"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'}</span><span class="qp-ptype">${esc(label)}</span><div class="qp-tr"><span id="qp-timer" role="timer">${timerHTML(left0, q.time)}</span></div></div>${progressHTML()}
       ${imgHTML(q)}<div class="qp-q">${esc(q.text || (q.t === 'cloze' ? 'Complétez le texte' : ''))}</div>
-      <div class="qp-widget" id="qp-widget">${answered ? sentHTML() : C.widgetHTML(q)}</div>`;
+      <div class="qp-widget" id="qp-widget" aria-live="polite">${answered ? sentHTML() : C.widgetHTML(q)}</div>`;
     if (!answered) C.bindWidget(q, $('#qp-widget'), v => sendAnswer(q, v));
     if (q.time) timer = setInterval(() => { const left = (game.qEnd - Date.now()) / 1000; const t = $('#qp-timer'); if (t) t.innerHTML = timerHTML(left, q.time); if (left <= 0) { clearInterval(timer); if (!answered) { answered = true; const w = $('#qp-widget'); if (w) w.innerHTML = `<div class="qp-sent"><div class="qp-big">⏱</div><h2>Temps écoulé</h2><p>La réponse arrive sur l’écran du présentateur…</p></div>`; } } }, 250);
   }
@@ -147,15 +147,17 @@
     const nh = q.t === 'cloze' ? (full.ansHoles || []).length : 0;
     const wid = q.t === 'vote' ? (st.counts ? C.hemicycleHTML(q, st.counts, { final: true, mine: myV }) : C.widgetHTML(full, { reveal: true, v: myV, done: true }))
       : unscored && !C.isChoice(q) ? `<div class="qp-good">Votre réponse : <b>${esc(C.answerText(full, myV))}</b></div>` : C.widgetHTML(full, { reveal: true, v: myV, done: true });
-    main.innerHTML = `<div class="qp-top" style="min-height:0;padding:0 0 6px"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'} · ${unscored ? 'résultat' : 'réponse'}</span></div>
+    main.innerHTML = `<div class="qp-top qp-qtop"><span class="qp-prog">Question ${(game.qi || 0) + 1} / ${game.n || '?'} · ${unscored ? 'résultat' : 'réponse'}</span></div>${progressHTML()}
       <div class="qp-q">${esc(q.text || (q.t === 'cloze' ? 'Complétez le texte' : ''))}</div>
       <div class="qp-widget">${wid}</div>
       ${fb ? `<div class="qp-fb ${unscored ? 'poll' : fb.ok ? 'ok' : part ? 'part' : fb.answered ? 'ko' : 'late'}"><div class="qp-fbt">${unscored ? 'Merci pour votre réponse' : fb.ok ? 'Bonne réponse !' : part ? 'Presque !' : fb.answered ? 'Mauvaise réponse' : 'Pas de réponse'}</div>${unscored ? '' : `<div class="qp-fbp">${fb.ok ? '+ ' + fmtPts(fb.pts) + ' pts' : part ? `${Math.round((fb.fr || 0) * nh)} trou${Math.round((fb.fr || 0) * nh) > 1 ? 's' : ''} juste${Math.round((fb.fr || 0) * nh) > 1 ? 's' : ''} sur ${nh} · + ${fmtPts(fb.pts)} pts` : q.t === 'cloze' ? 'Les bonnes réponses sont dans le texte' : 'Bonne réponse : <b>' + esc(C.correctText(full)) + '</b>'}</div>`}<div class="qp-fbr">Total : <b>${fmtPts(mine.score)}</b> pts${mine.rank ? ` · ${mine.rank}<sup>${mine.rank === 1 ? 'er' : 'e'}</sup> sur ${Math.max(mine.rank, (game.top || []).length)}` : ''}</div></div>` : '<div class="qp-wait" style="padding:14px 0 0;font-size:15px">Calcul des points<span class="qp-dots"></span></div>'}`;
   }
   function renderFinal() {
     const top = game.top || [];
+    const myTop = top.find(p => p.pid === pid);
     const myRank = mine && mine.rank ? mine.rank : (top.findIndex(p => p.pid === pid) + 1 || null);
-    main.innerHTML = `<div class="qp-end"><div class="qp-endscore">${fmtPts(mine ? mine.score : 0)}<small>points</small></div>
+    const myScore = mine && mine.score != null ? mine.score : myTop && myTop.score != null ? myTop.score : 0;   // repli : le classement publié si notre fiche n'a pas encore le score
+    main.innerHTML = `<div class="qp-end"><div class="qp-endscore">${fmtPts(myScore)}<small>points</small></div>
       ${myRank ? `<div class="qp-rank">${myRank}<sup>${myRank === 1 ? 'er' : 'e'}</sup> sur ${Math.max(myRank, top.length)}<small>${myRank === 1 ? 'Bravo, vous avez gagné !' : myRank <= 3 ? 'Sur le podium !' : 'Merci d’avoir joué'}</small></div>` : ''}
       <div class="qp-endlist">${top.slice(0, 10).map(p => `<div class="qp-endrow${p.pid === pid ? ' ok' : ''}"><span>${p.rank || ''}</span><span class="qp-endq">${esc(p.name)}</span><span class="qp-endp">${fmtPts(p.score)}</span></div>`).join('')}</div>
       <button type="button" class="qp-next ghost" id="qp-again" style="margin-top:18px">Rejoindre une autre partie</button></div>`;

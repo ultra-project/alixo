@@ -32,27 +32,58 @@ window.AlixoQuiz = (() => {
   const POINTS = [[0, '0 point'], [500, '500 points'], [1000, '1 000 points'], [2000, '2 000 points']];
 
   const I = {
-    undo: '<svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
-    redo: '<svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>',
-    play: '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8Z"/></svg>',
-    cast: '<svg viewBox="0 0 24 24"><path d="M3 17a9 9 0 0 1 9 9M3 12a14 14 0 0 1 14 14"/><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 20h.01"/></svg>',
-    chart: '<svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
-    look: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.3" fill="currentColor"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="10" r="1.3" fill="currentColor"/><path d="M12 21c-1.5-2-1-4 .5-4.5 2-.5 3.5-2 2.5-4"/></svg>',
-    trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
-    dup: '<svg viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
-    x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
-    image: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 9"/></svg>',
-    sound: '<svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>',
-    mute: '<svg viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>',
-    xls: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18M9 4v16"/></svg>',
-    csv: '<svg viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>'
+    undo: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg>',
+    redo: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg>',
+    play: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 4v16l13-8Z"/></svg>',
+    chart: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+    look: '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="8.5" cy="10" r="1.3" fill="currentColor"/><circle cx="12" cy="7.5" r="1.3" fill="currentColor"/><circle cx="15.5" cy="10" r="1.3" fill="currentColor"/><path d="M12 21c-1.5-2-1-4 .5-4.5 2-.5 3.5-2 2.5-4"/></svg>',
+    trash: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>',
+    dup: '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></svg>',
+    x: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
+    image: '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 9"/></svg>',
+    sound: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/></svg>',
+    mute: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 10v4h4l5 4V6L8 10Z"/><path d="m16 9 5 6M21 9l-5 6"/></svg>',
+    xls: '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9.5h18M3 14.5h18M9 4v16"/></svg>',
+    csv: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3v11"/><path d="m7.5 10 4.5 4.5L16.5 10"/><path d="M4 20h16"/></svg>',
+    present: '<svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 21h8M12 16v5"/></svg>',
+    plus: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
+    download: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg>',
+    info: '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg>',
+    chevDown: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>',
+    chevRight: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>',
+    arrow: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 12h16M14 6l6 6-6 6"/></svg>',
+    check: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+    star: '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8z"/></svg>',
+    users: '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.6a3.5 3.5 0 0 1 0 6.8M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>'
   };
-  /* icônes des nouveaux types (palette, en-tête de l'éditeur) */
+  /* icônes des types de questions (palette, déroulé, en-tête de la carte) ; TYPES.ico (quizcore.js) reste le repli texte */
+  const tsvg = inner => `<svg class="qz-tico" viewBox="0 0 24 24" aria-hidden="true">${inner}</svg>`;
+  const ttxt = t => tsvg(`<text x="12" y="16.5" text-anchor="middle" font-size="12" font-weight="800">${t}</text>`);
   const TICO = {
-    vote: '<svg class="qz-tico" viewBox="0 0 24 24"><g fill="currentColor" stroke="none"><circle cx="3.6" cy="18" r="1.7"/><circle cx="4.8" cy="13.4" r="1.7"/><circle cx="8" cy="10.2" r="1.7"/><circle cx="12" cy="9.2" r="1.7"/><circle cx="16" cy="10.2" r="1.7"/><circle cx="19.2" cy="13.4" r="1.7"/><circle cx="20.4" cy="18" r="1.7"/><circle cx="8.2" cy="18" r="1.5"/><circle cx="9.6" cy="14.4" r="1.5"/><circle cx="14.4" cy="14.4" r="1.5"/><circle cx="15.8" cy="18" r="1.5"/></g></svg>',
-    cloze: '<svg class="qz-tico" viewBox="0 0 24 24"><path d="M3 7.5h4M3 16.5h9M17 16.5h4"/><rect x="9.5" y="4.5" width="11.5" height="6" rx="2" fill="currentColor" fill-opacity=".25"/></svg>'
+    mcq: tsvg('<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12.5l3 3 5-6"/>'),
+    tf: tsvg('<path d="M5 12.5l4.5 4.5L19 7.5"/>'),
+    numeric: ttxt('12'),
+    slider: tsvg('<path d="M4 12h16M8 8l-4 4 4 4M16 8l4 4-4 4"/>'),
+    text: ttxt('Aa'),
+    order: tsvg('<path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/>'),
+    match: tsvg('<path d="M4 8h14M14 4l4 4-4 4M20 16H6M10 12l-4 4 4 4"/>'),
+    cloze: tsvg('<path d="M3 7.5h4M3 16.5h9M17 16.5h4"/><rect x="9.5" y="4.5" width="11.5" height="6" rx="2" fill="currentColor" fill-opacity=".25"/>'),
+    poll: tsvg('<circle cx="12" cy="12" r="9"/><path d="M12 3v9l7 5"/>'),
+    vote: tsvg('<path d="M3 18a9 9 0 0 1 18 0"/><path d="M7.5 18a4.5 4.5 0 0 1 9 0"/>'),
+    scale: tsvg('<path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 16.9 6.6 19.8l1.1-6.1L3.2 9.4l6.1-.8z"/>'),
+    open: tsvg('<path d="M7 18a4 4 0 0 1-.5-8A5.5 5.5 0 0 1 17 8.5 4.5 4.5 0 0 1 17 18z"/>'),
+    info: tsvg('<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h10M7 14h6"/>')
   };
   const tico = k => TICO[k] || (C.TYPES[k] ? C.TYPES[k].ico : '?');
+  /* libellés des réglages (déroulé, en-tête) : « 20 s », « 1 000 points » */
+  const timeLabel = v => { const t = TIMES.find(([x]) => x === +v); return t ? t[1] : `${+v || 0} s`; };
+  const pointsLabel = v => { const p = POINTS.find(([x]) => x === +v); return p ? p[1] : `${fmtPts(+v || 0)} points`; };
+  /* ligne « Type · 20 s · 1 000 points » d'une question (page : « Page » ; avis du public : « Sondage · 30 s ») */
+  function metaLine(q) {
+    const t = C.TYPES[q.t]; const parts = [t ? t.name : q.t];
+    if (!C.isPage(q)) { parts.push(timeLabel(q.time)); if (C.isScored(q)) parts.push(pointsLabel(q.points)); }
+    return parts.join(' · ');
+  }
 
   /* ---------------- état ---------------- */
   const d = () => (typeof doc === 'function' ? doc() : null);
@@ -173,55 +204,98 @@ window.AlixoQuiz = (() => {
     const n = qsOf(dd).length, nr = resOf(dd).length;
     const th = C.resolveTheme(themeOf(dd));
     const info = readOnly && window.AlixoShare && AlixoShare.infoFor ? AlixoShare.infoFor(dd.id) : null;
-    bar.innerHTML = `<div class="bd-barl">
-      ${readOnly ? `<span class="bd-barlabel">Quiz</span><span class="bd-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>` : `
-      <button data-qz="undo" title="Annuler (Ctrl+Z)" ${hist.undo.length ? '' : 'disabled'}>${I.undo}</button>
-      <button data-qz="redo" title="Rétablir (Ctrl+Y)" ${hist.redo.length ? '' : 'disabled'}>${I.redo}</button>
+    bar.innerHTML = `<div class="bd-barl">${barLeftHTML(n, info)}</div><div class="bd-barr">${barRightHTML(th, nr)}</div>`;
+  }
+  /* gauche : Annuler, Rétablir, « Quiz », compteur (lecture seule : mention du partage) */
+  function barLeftHTML(n, info) {
+    if (readOnly) return `<span class="bd-barlabel">Quiz</span><span class="bd-ro">Partagé par <b>${esc(info ? info.owner : 'un membre')}</b> · lecture seule</span>`;
+    return `<button data-qz="undo" class="qz-ibtn" title="Annuler (Ctrl+Z)" aria-label="Annuler" ${hist.undo.length ? '' : 'disabled'}>${I.undo}</button>
+      <button data-qz="redo" class="qz-ibtn" title="Rétablir (Ctrl+Y)" aria-label="Rétablir" ${hist.redo.length ? '' : 'disabled'}>${I.redo}</button>
       <span class="bd-sep"></span>
-      <span class="bd-barlabel">Quiz</span><span class="qz-count">${n} élément${n > 1 ? 's' : ''}</span>`}
-    </div>
-    <div class="bd-barr">
-      ${readOnly ? '' : `<button data-qz="look" title="Apparence : thème ou couleurs personnalisées, musique de fond, sons"><span class="qz-swatch" style="background:${th.bg};border-color:${th.accent}"><i style="background:${th.accent}"></i></span><span class="bd-lbl">Apparence</span></button><span class="bd-sep"></span>`}
-      <button data-qz="test" class="qz-primary" title="Jouer le quiz sur cet appareil (F5) : chronomètre, points, résultat enregistré">${I.play}<span class="bd-lbl">Tester</span></button>
-      <button data-qz="live" class="qz-live" title="Présenter en direct : code et QR code à l'écran, les participants répondent sur leur téléphone (alixoapp.com/quiz)">${I.cast}<span class="bd-lbl">Présenter en direct</span></button>
-      <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV">${I.chart}<span class="bd-lbl">Résultats${nr ? ` (${nr})` : ''}</span></button>
-      ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-qz="quizia"', 'qz-aiquiz') : ''}
+      <span class="bd-barlabel">Quiz</span><span class="qz-count">${n} élément${n > 1 ? 's' : ''}</span>`;
+  }
+  /* droite : actions discrètes (Apparence, Résultats, Alixo AI, Télécharger), puis Tester (contour) et Présenter en direct (plein) */
+  function barRightHTML(th, nr) {
+    return `${readOnly ? '' : `<button data-qz="look" title="Apparence : thème ou couleurs personnalisées, musique de fond, sons" aria-label="Apparence"><span class="qz-swatch" style="background:${th.bg};border-color:${th.accent}"><i style="background:${th.accent}"></i></span><span class="bd-lbl">Apparence</span></button>`}
+      <button data-qz="results" title="Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV" aria-label="Résultats${nr ? ` (${nr})` : ''}">${I.chart}<span class="bd-lbl">Résultats</span>${nr ? `<span class="qz-badge">${nr}</span>` : ''}</button>
+      ${window.AlixoCoco ? AlixoCoco.buttonHTML('data-qz="quizia" aria-label="Alixo AI"', 'qz-aiquiz') : ''}
+      <button data-qz="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (questions et réponses) (Ctrl+P : PDF)" aria-label="Télécharger">${I.download}<span class="bd-lbl">Télécharger</span></button>
       <span class="bd-sep"></span>
-      <button data-qz="dl" class="dl-btn" title="Télécharger : fichier Alixo, PDF (questions et réponses) (Ctrl+P : PDF)"><svg viewBox="0 0 24 24"><path d="M12 4v11M7 10.5l5 5 5-5M5 19.5h14"/></svg><span class="bd-lbl">Télécharger</span></button>
-    </div>`;
+      <button data-qz="test" class="qz-outline" title="Jouer le quiz sur cet appareil (F5) : chronomètre, points, résultat enregistré" aria-label="Tester">${I.play}<span class="bd-lbl">Tester</span></button>
+      <button data-qz="live" class="qz-primary" title="Présenter en direct : code et QR code à l'écran, les participants répondent sur leur téléphone (alixoapp.com/quiz)" aria-label="Présenter en direct">${I.present}<span class="bd-lbl">Présenter en direct</span></button>`;
   }
   function renderPalette() {
     const el = $('#qz-palette'); if (!el) return;
     if (readOnly) { el.innerHTML = ''; el.hidden = true; return; }
     el.hidden = false;
     el.innerHTML = `<div class="qz-ptitle">Ajouter</div><div class="qz-phint">Glissez un type dans la liste, ou cliquez : il s’ajoute après l’élément ouvert.</div>
-      ${C.GROUPS.map(([g, name]) => `<div class="qz-pgroup">${esc(name)}</div>` + Object.entries(C.TYPES).filter(([, t]) => t.grp === g).map(([k, t]) => `<div class="qz-ptype${k === 'cloze' || k === 'vote' ? ' new' : ''}" draggable="true" data-type="${k}" data-grp="${t.grp}" title="${esc(t.sub)}"><span class="qz-pico">${tico(k)}</span><span><b>${esc(t.name)}</b><small>${esc(t.sub)}</small></span></div>`).join('')).join('')}`;
+      ${C.GROUPS.map(([g, name]) => `<div class="qz-pgroup">${esc(name)}</div>` + Object.entries(C.TYPES).filter(([, t]) => t.grp === g).map(([k, t]) => paletteRow(k, t)).join('')).join('')}`;
   }
+  /* une rangée de la palette : icône, nom, description sur une ligne, « + » */
+  const paletteRow = (k, t) => `<button type="button" class="qz-ptype" draggable="true" data-type="${k}" data-grp="${t.grp}" title="${esc(t.sub)}"><span class="qz-pico">${tico(k)}</span><span class="qz-pbody"><b>${esc(t.name)}</b><small>${esc(t.sub)}</small></span><span class="qz-padd">${I.plus}</span></button>`;
   function renderList() {
     const el = $('#qz-list'); const dd = d(); if (!el || !dd) return;
     const qs = qsOf(dd);
     let qi = 0;
-    el.innerHTML = `<div class="qz-ltitle">Déroulé</div>` + (qs.length ? qs.map((q) => { const page = q.t === 'info'; if (!page) qi++; return `<div class="qz-card${q.id === cur ? ' cur' : ''}${page ? ' page' : ''}" data-q="${q.id}" ${readOnly ? '' : 'draggable="true"'}>
-        <span class="qz-cnum" data-grp="${C.TYPES[q.t] ? C.TYPES[q.t].grp : 'q'}">${page ? '▭' : qi}</span>
-        <span class="qz-cbody"><span class="qz-ctype">${C.TYPES[q.t] ? C.TYPES[q.t].ico + ' ' + C.TYPES[q.t].name : q.t}${q.img ? ' · 🖼' : ''}</span><span class="qz-ctext">${esc(qText(q))}</span></span>
-        ${readOnly ? '' : `<span class="qz-cact"><button type="button" data-cdup title="Dupliquer">${I.dup}</button><button type="button" data-cdel title="Supprimer">${I.trash}</button></span>`}
-      </div>`; }).join('') : `<div class="qz-lempty">Aucune question. ${readOnly ? '' : 'Glissez un type depuis la palette, ou cliquez dessus.'}</div>`)
+    el.innerHTML = `<div class="qz-ltitle">Déroulé</div>` + (qs.length ? qs.map((q) => { const page = q.t === 'info'; if (!page) qi++; return listCard(q, page ? 0 : qi); }).join('') : `<div class="qz-lempty">Aucune question. ${readOnly ? '' : 'Glissez un type depuis la palette, ou cliquez dessus.'}</div>`)
       + (readOnly ? '' : `<div class="qz-ldrop" data-drop-end>${qs.length ? 'Déposer ici pour ajouter à la fin' : ''}</div>`);
+  }
+  /* carte du déroulé : numéro (icône pour une page), texte, ligne « Type · 20 s · 1 000 points » ; sous la carte ouverte, Dupliquer / Supprimer */
+  function listCard(q, num) {
+    const isCur = q.id === cur, page = q.t === 'info';
+    return `<div class="qz-card${isCur ? ' cur' : ''}${page ? ' page' : ''}" data-q="${esc(q.id)}" role="button" tabindex="0" ${isCur ? 'aria-current="true"' : ''} ${readOnly ? '' : 'draggable="true"'}>
+        <span class="qz-cnum">${page ? tico('info') : num}</span>
+        <span class="qz-cbody"><span class="qz-ctext" title="${esc(qText(q))}">${esc(qText(q))}</span><span class="qz-cmeta">${esc(metaLine(q))}</span></span>${q.img ? `<span class="qz-cimg" role="img" aria-label="Avec une image" title="Avec une image">${I.image}</span>` : ''}
+      </div>${isCur && !readOnly ? `<div class="qz-cact" data-cact="${esc(q.id)}"><button type="button" data-cdup>${I.dup}Dupliquer</button><button type="button" data-cdel>${I.trash}Supprimer</button></div>` : ''}`;
   }
   function optRow(q, op, i) {
     const col = q.t === 'vote' ? C.voteColor(op, i) : `var(--qp-c${i % 6})`, sh = C.letter(i);
     const isAns = q.t === 'mcq' && Array.isArray(q.ans) && q.ans.includes(op.id);
+    const dis = readOnly ? 'disabled' : '';
+    const what = q.t === 'order' ? `l’élément ${i + 1}` : q.t === 'vote' ? `le groupe ${sh}` : `la proposition ${sh}`;
     return `<div class="qz-opt${isAns ? ' ok' : ''}${q.t === 'vote' ? ' qz-vopt' : ''}" data-opt="${op.id}" style="--oc:${esc(col)}">
-      ${q.t === 'order' ? `<span class="qz-onum">${i + 1}</span>` : q.t === 'vote' ? `<label class="qz-ocolor" title="Couleur de ce groupe dans l’hémicycle"><span class="qz-oshape">${sh}</span><input type="color" data-ocolor value="${esc(col)}" ${readOnly ? 'disabled' : ''}></label>` : `<span class="qz-oshape">${sh}</span>`}
-      <input class="qz-otext" value="${esc(op.text)}" placeholder="${q.t === 'order' ? `Élément ${i + 1}` : q.t === 'vote' ? `Groupe ${sh} (ex. Pour, Contre…)` : `Proposition ${sh}`}" maxlength="120" ${readOnly ? 'disabled' : ''}>
-      ${q.t === 'mcq' ? `<button type="button" class="qz-ook" data-ook title="${isAns ? 'Bonne réponse (cliquer pour retirer)' : 'Marquer comme bonne réponse'}" ${readOnly ? 'disabled' : ''}>✓</button>` : ''}
-      ${q.t === 'order' ? `<span class="qz-omv"><button type="button" data-omv="-1" title="Monter" ${i === 0 || readOnly ? 'disabled' : ''}>▲</button><button type="button" data-omv="1" title="Descendre" ${i === q.opts.length - 1 || readOnly ? 'disabled' : ''}>▼</button></span>` : ''}
-      <button type="button" class="qz-odel" data-odel title="Retirer" ${q.opts.length <= 2 || readOnly ? 'disabled' : ''}>${I.x}</button>
+      ${q.t === 'order' ? `<span class="qz-onum">${i + 1}</span>` : q.t === 'vote' ? `<label class="qz-ocolor" title="Couleur de ce groupe dans l’hémicycle"><input type="color" data-ocolor value="${esc(col)}" aria-label="Couleur du groupe ${sh}" ${dis}></label>` : `<span class="qz-oshape">${sh}</span>`}
+      <input class="qz-otext" value="${esc(op.text)}" placeholder="${q.t === 'order' ? `Élément ${i + 1}` : q.t === 'vote' ? `Groupe ${sh} (ex. Pour, Contre…)` : `Proposition ${sh}`}" maxlength="120" aria-label="${esc(what.charAt(0).toUpperCase() + what.slice(1))}" ${dis}>
+      ${q.t === 'mcq' ? `<label class="qz-ook"><input type="checkbox" data-ook aria-label="Bonne réponse : proposition ${sh}" ${isAns ? 'checked' : ''} ${dis}>Bonne réponse</label>` : ''}
+      ${q.t === 'order' ? `<span class="qz-omv"><button type="button" data-omv="-1" title="Monter" aria-label="Monter ${esc(what)}" ${i === 0 || readOnly ? 'disabled' : ''}>▲</button><button type="button" data-omv="1" title="Descendre" aria-label="Descendre ${esc(what)}" ${i === q.opts.length - 1 || readOnly ? 'disabled' : ''}>▼</button></span>` : ''}
+      <button type="button" class="qz-odel" data-odel title="Retirer" aria-label="Retirer ${esc(what)}" ${q.opts.length <= 2 || readOnly ? 'disabled' : ''}>${I.x}</button>
     </div>`;
   }
+  /* en-tête d'une section de propositions : libellé à gauche, compteur « 4 sur 6 · 1 bonne réponse » à droite */
+  function optsHead(q, label) {
+    const nOk = q.t === 'mcq' ? (Array.isArray(q.ans) ? q.ans.filter(id => (q.opts || []).some(o => o.id === id)).length : 0) : null;
+    const okTxt = nOk === null ? '' : ` · ${nOk === 0 ? 'aucune bonne réponse' : nOk === 1 ? '1 bonne réponse' : `${nOk} bonnes réponses`}`;
+    return `<div class="qz-shead"><span class="qz-label">${label}</span><span class="qz-scount">${q.opts.length} sur ${MAX_OPTS}${okTxt}</span></div>`;
+  }
+  /* bouton « + Élément », « + Paire », « + Variante acceptée », « + Groupe »… en tirets, 44 px */
+  const addBtn = (attr, label, off) => `<button type="button" class="qz-oadd" ${attr} ${off ? 'disabled' : ''}>${I.plus}${label}</button>`;
+  /* encadré d'information sous les champs (icône « i », texte inchangé) */
+  const infoBox = html => `<p class="qz-info"><span class="qz-iico">${I.info}</span><span>${html}</span></p>`;
   function imgBox(q) {
     if (readOnly && !q.img) return '';
-    return `<div class="qz-img${q.img ? ' has' : ''}" id="qz-img">${q.img ? `<img alt="" data-iid="${esc(q.img)}">` : ''}${readOnly ? '' : `<span class="qz-imgbtns"><button type="button" class="cta ghost small" data-img>${I.image} ${q.img ? 'Changer l’image' : 'Ajouter une image'}</button>${q.img ? `<button type="button" class="cta ghost small" data-imgdel>Retirer</button>` : ''}</span>`}</div>`;
+    return `<div class="qz-img${q.img ? ' has' : ''}" id="qz-img">${q.img ? `<img alt="" data-iid="${esc(q.img)}">` : ''}${readOnly ? '' : `<span class="qz-imgbtns"><button type="button" class="cta ghost small qz-imgbtn" data-img>${I.image} ${q.img ? 'Changer l’image' : 'Ajouter une image'}</button>${q.img ? `<button type="button" class="cta ghost small" data-imgdel>Retirer</button>` : ''}</span>`}</div>`;
+  }
+  /* choix multiple, sondage, ordre : en-tête avec compteur, rangées, « + Proposition », option « Plusieurs bonnes réponses » */
+  function optsBody(q) {
+    const dis = readOnly ? 'disabled' : '';
+    return `${optsHead(q, q.t === 'order' ? 'Éléments dans le bon ordre' : 'Propositions')}
+        <div class="qz-opts" id="qz-opts">${q.opts.map((op, i) => optRow(q, op, i)).join('')}</div>
+        <div class="qz-orow">
+          ${addBtn('data-oadd', q.t === 'order' ? 'Élément' : 'Proposition', q.opts.length >= MAX_OPTS || readOnly)}
+          ${q.t === 'mcq' ? `<label class="qz-multi"><input type="checkbox" data-multi ${q.multi ? 'checked' : ''} ${dis}>Plusieurs bonnes réponses (le participant valide une sélection)</label>` : ''}
+        </div>${q.t === 'mcq' && !(q.ans || []).length ? '<div class="qz-warn">Aucune bonne réponse cochée : la question ne rapportera aucun point.</div>' : ''}`;
+  }
+  /* en-tête de la carte : chip du type, puis Temps / Points (selon le type) */
+  function editHead(q, t) {
+    const dis = readOnly ? 'disabled' : '';
+    const sel = (f, list, v) => `<select data-f="${f}" ${dis}>${list.map(([x, l]) => `<option value="${x}" ${+v === x ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    return `<div class="qz-ehead">
+        <span class="qz-etype" title="${esc(t.sub || '')}">${tico(q.t)}${esc(t.name)}</span>
+        <div class="qz-eset">
+          ${C.isPage(q) ? '' : `<label class="qz-eopt">Temps ${sel('time', TIMES, q.time)}</label>`}
+          ${C.isScored(q) ? `<label class="qz-eopt">Points ${sel('points', POINTS, q.points)}</label>` : ''}
+        </div>
+      </div>`;
   }
   function renderEdit() {
     const el = $('#qz-edit'); const dd = d(); if (!el || !dd) return;
@@ -231,82 +305,74 @@ window.AlixoQuiz = (() => {
     const dis = readOnly ? 'disabled' : '';
     let body = '';
     if (q.t === 'mcq' || q.t === 'poll' || q.t === 'order') {
-      body = `<div class="qz-label">${q.t === 'order' ? 'Éléments, dans le bon ordre (les participants les reçoivent mélangés)' : q.t === 'poll' ? 'Propositions' : 'Propositions — cochez la ou les bonnes réponses'}</div>
-        <div class="qz-opts" id="qz-opts">${q.opts.map((op, i) => optRow(q, op, i)).join('')}</div>
-        <div class="po-row" style="gap:10px; margin-top:8px; flex-wrap:wrap; align-items:center">
-          <button type="button" class="cta ghost small" data-oadd ${q.opts.length >= MAX_OPTS || readOnly ? 'disabled' : ''}>＋ ${q.t === 'order' ? 'Élément' : 'Proposition'}</button>
-          ${q.t === 'mcq' ? `<label class="set-inline"><input type="checkbox" data-multi ${q.multi ? 'checked' : ''} ${dis}> Plusieurs bonnes réponses (le participant valide une sélection)</label>` : ''}
-        </div>${q.t === 'mcq' && !(q.ans || []).length ? '<div class="qz-warn">Aucune bonne réponse cochée : la question ne rapportera aucun point.</div>' : ''}`;
+      body = optsBody(q);
     } else if (q.t === 'match') {
       const pairs = Array.isArray(q.pairs) ? q.pairs : (q.pairs = []);
-      body = `<div class="qz-label">Paires à relier (les correspondances de droite sont mélangées chez les participants)</div>
-        <div class="qz-opts" id="qz-opts">${pairs.map((p, i) => `<div class="qz-opt qz-pair" data-pair="${p.id}" style="--oc:var(--qp-c${i % 6})"><span class="qz-oshape">${C.letter(i)}</span><input class="qz-otext" data-pf="l" value="${esc(p.l || '')}" placeholder="Élément ${C.letter(i)}" maxlength="80" ${dis}><span class="qz-marr">→</span><input class="qz-otext" data-pf="r" value="${esc(p.r || '')}" placeholder="Correspondance" maxlength="80" ${dis}><button type="button" class="qz-odel" data-pdel title="Retirer" ${pairs.length <= 2 || readOnly ? 'disabled' : ''}>${I.x}</button></div>`).join('')}</div>
-        <div class="po-row" style="margin-top:8px"><button type="button" class="cta ghost small" data-padd ${pairs.length >= MAX_OPTS || readOnly ? 'disabled' : ''}>＋ Paire</button></div>`;
+      body = `<div class="qz-shead"><span class="qz-label">Paires à relier (les correspondances de droite sont mélangées chez les participants)</span><span class="qz-scount">${pairs.length} sur ${MAX_OPTS}</span></div>
+        <div class="qz-opts" id="qz-opts">${pairs.map((p, i) => `<div class="qz-opt qz-pair" data-pair="${p.id}"><input class="qz-otext" data-pf="l" value="${esc(p.l || '')}" placeholder="Élément ${C.letter(i)}" aria-label="Élément ${C.letter(i)}" maxlength="80" ${dis}><span class="qz-marr" aria-hidden="true">${I.arrow}</span><input class="qz-otext" data-pf="r" value="${esc(p.r || '')}" placeholder="Correspondance" aria-label="Correspondance de l’élément ${C.letter(i)}" maxlength="80" ${dis}><button type="button" class="qz-odel" data-pdel title="Retirer" aria-label="Retirer la paire ${C.letter(i)}" ${pairs.length <= 2 || readOnly ? 'disabled' : ''}>${I.x}</button></div>`).join('')}</div>
+        <div class="qz-orow">${addBtn('data-padd', 'Paire', pairs.length >= MAX_OPTS || readOnly)}</div>`;
     } else if (q.t === 'tf') {
       body = `<div class="qz-label">Bonne réponse</div><div class="qz-tf">
-        <button type="button" class="qz-tfbtn${q.ans ? ' on' : ''}" data-tf="1" style="--oc:var(--qp-c2)" ${dis}>✓ Vrai</button>
-        <button type="button" class="qz-tfbtn${!q.ans ? ' on' : ''}" data-tf="0" style="--oc:var(--qp-c1)" ${dis}>✗ Faux</button></div>`;
+        <button type="button" class="qz-tfbtn${q.ans ? ' on' : ''}" data-tf="1" aria-pressed="${!!q.ans}" ${dis}>✓ Vrai</button>
+        <button type="button" class="qz-tfbtn${!q.ans ? ' on' : ''}" data-tf="0" aria-pressed="${!q.ans}" ${dis}>✗ Faux</button></div>`;
     } else if (q.t === 'numeric') {
       body = `<div class="qz-label">Bonne réponse</div><div class="qz-grid">
         <label>Nombre attendu <input type="number" data-f="ans" value="${esc(q.ans)}" step="any" ${dis}></label>
         <label>Tolérance ± <input type="number" data-f="tol" value="${esc(q.tol || 0)}" min="0" step="any" ${dis}></label>
         <label>Unité (affichée) <input type="text" data-f="unit" value="${esc(q.unit || '')}" placeholder="€, %, ans…" maxlength="12" ${dis}></label></div>
-        <div class="qz-hint">Les participants tapent un nombre ; la virgule et le point sont acceptés.</div>`;
+        ${infoBox('Les participants tapent un nombre ; la virgule et le point sont acceptés.')}`;
     } else if (q.t === 'slider') {
       body = `<div class="qz-label">Échelle et bonne réponse</div><div class="qz-grid">
         <label>Minimum <input type="number" data-f="min" value="${esc(q.min)}" ${dis}></label>
         <label>Maximum <input type="number" data-f="max" value="${esc(q.max)}" ${dis}></label>
-        <label>Pas <input type="number" data-f="step" value="${esc(q.step)}" min="0.001" step="any" ${dis}></label>
+        <label>Pas <input type="number" data-f="step" value="${esc(q.step)}" min="0.001" step="any" ${dis}></label></div><div class="qz-grid">
         <label>Bonne réponse <input type="number" data-f="ans" value="${esc(q.ans)}" step="any" ${dis}></label>
         <label>Tolérance ± <input type="number" data-f="tol" value="${esc(q.tol || 0)}" min="0" step="any" ${dis}></label></div>
 `;
     } else if (q.t === 'scale') {
       body = `<div class="qz-label">Échelle (sans bonne réponse)</div><div class="qz-grid">
         <label>De <input type="number" data-f="min" value="${esc(q.min)}" min="0" max="9" ${dis}></label>
-        <label>À <input type="number" data-f="max" value="${esc(q.max)}" min="2" max="10" ${dis}></label>
+        <label>À <input type="number" data-f="max" value="${esc(q.max)}" min="2" max="10" ${dis}></label></div><div class="qz-grid">
         <label>Libellé à gauche <input type="text" data-f="lo" value="${esc(q.lo || '')}" placeholder="Pas du tout" maxlength="30" ${dis}></label>
         <label>Libellé à droite <input type="text" data-f="hi" value="${esc(q.hi || '')}" placeholder="Tout à fait" maxlength="30" ${dis}></label></div>
 `;
     } else if (q.t === 'text') {
       const list = Array.isArray(q.ans) ? q.ans : [];
       body = `<div class="qz-label">Réponses acceptées (majuscules, accents et espaces sont ignorés)</div>
-        <div class="qz-opts" id="qz-opts">${(list.length ? list : ['']).map((a, i) => `<div class="qz-opt ok" data-ans="${i}" style="--oc:var(--ok)"><span class="qz-oshape">✓</span><input class="qz-otext" value="${esc(a)}" placeholder="Réponse ${i + 1}" maxlength="80" ${dis}><button type="button" class="qz-odel" data-adel title="Retirer" ${list.length <= 1 || readOnly ? 'disabled' : ''}>${I.x}</button></div>`).join('')}</div>
-        <div class="po-row" style="margin-top:8px"><button type="button" class="cta ghost small" data-aadd ${list.length >= 8 || readOnly ? 'disabled' : ''}>＋ Variante acceptée</button></div>`;
+        <div class="qz-opts" id="qz-opts">${(list.length ? list : ['']).map((a, i) => `<div class="qz-opt ok" data-ans="${i}" style="--oc:var(--ok)"><span class="qz-oshape">✓</span><input class="qz-otext" value="${esc(a)}" placeholder="Réponse ${i + 1}" aria-label="Réponse ${i + 1}" maxlength="80" ${dis}><button type="button" class="qz-odel" data-adel title="Retirer" aria-label="Retirer la réponse ${i + 1}" ${list.length <= 1 || readOnly ? 'disabled' : ''}>${I.x}</button></div>`).join('')}</div>
+        <div class="qz-orow">${addBtn('data-aadd', 'Variante acceptée', list.length >= 8 || readOnly)}</div>`;
     } else if (q.t === 'vote') {
       body = `<div class="qz-label">Groupes, de gauche à droite dans l’hémicycle — la pastille règle la couleur</div>
         <div class="qz-opts" id="qz-opts">${q.opts.map((op, i) => optRow(q, op, i)).join('')}</div>
-        <div class="qz-vrow">
-          <button type="button" class="cta ghost small" data-oadd ${q.opts.length >= MAX_OPTS || readOnly ? 'disabled' : ''}>＋ Groupe</button>
+        <div class="qz-orow qz-vrow">
+          ${addBtn('data-oadd', 'Groupe', q.opts.length >= MAX_OPTS || readOnly)}
           <span class="qz-vpal"><span>Couleurs</span>${VOTE_PRESETS.map(([k, name, cols]) => `<button type="button" class="qz-vpreset" data-vpreset="${k}" title="Appliquer les couleurs « ${esc(name)} »" ${dis}><span>${cols.slice(0, 5).map(c => `<i style="background:${c}"></i>`).join('')}</span>${esc(name)}</button>`).join('')}</span>
         </div>
-        <div class="qz-hint">Sans bonne réponse ni points. À l’écran du présentateur, chaque vote ajoute un siège à l’hémicycle ; le repère central marque la majorité absolue et le groupe en tête ressort à la révélation.</div>`;
+        ${infoBox('Sans bonne réponse ni points. À l’écran du présentateur, chaque vote ajoute un siège à l’hémicycle ; le repère central marque la majorité absolue et le groupe en tête ressort à la révélation.')}`;
     } else if (q.t === 'cloze') {
       const holes = C.syncHoles(q.src, q.holes);
       body = `<div class="qz-label">Texte à compléter</div>
         <div class="qz-ctools">
-          <button type="button" class="cta small qz-mkhole" data-mkhole ${dis}><span class="qz-mkico">[…]</span> Faire un trou</button>
-          <button type="button" class="cta ghost small" data-unhole ${dis}>Retirer le trou</button>
+          <button type="button" class="qz-mkhole" data-mkhole ${dis}><span class="qz-mkico">[…]</span> Faire un trou</button>
+          <button type="button" class="qz-unhole" data-unhole ${dis}>Retirer le trou</button>
           <span class="qz-ctip">Sélectionnez un mot (ou placez le curseur dessus), puis « Faire un trou ». Vous pouvez aussi taper <code>[[mot]]</code>.</span>
         </div>
         <textarea class="qz-csrc" data-f="src" rows="5" maxlength="3000" spellcheck="true" placeholder="Ex. : La Révolution française commence en [[1789]] avec la prise de la [[Bastille]]." ${dis}>${esc(q.src || '')}</textarea>
         <div class="qz-cprev" id="qz-cprev">${clozePrevHTML(q)}</div>
         <div id="qz-holes">${holesHTML(holes)}</div>`;
     } else if (q.t === 'open') {
-      body = `<div class="qz-hint" style="margin-top:14px">Chaque participant envoie un mot ou une courte idée ; l’écran du présentateur affiche le nuage de mots (les réponses identiques grossissent). Sans points.</div>`;
+      body = infoBox('Chaque participant envoie un mot ou une courte idée ; l’écran du présentateur affiche le nuage de mots (les réponses identiques grossissent). Sans points.');
     } else if (q.t === 'info') {
-      body = `<div class="qz-label">Texte de la page</div><textarea class="qz-body" data-f="body" placeholder="Quelques lignes : consigne, rappel de cours, transition, pause…" rows="6" maxlength="2000" ${dis}>${esc(q.body || '')}</textarea>
-        <div class="qz-hint">Une page ne pose pas de question : elle s’affiche sur l’écran du présentateur (et sur les téléphones) jusqu’à ce que vous passiez à la suite.</div>`;
+      body = `<div class="qz-label">Texte de la page</div><textarea class="qz-body" data-f="body" aria-label="Texte de la page" placeholder="Quelques lignes : consigne, rappel de cours, transition, pause…" rows="6" maxlength="2000" ${dis}>${esc(q.body || '')}</textarea>
+        ${infoBox('Une page ne pose pas de question : elle s’affiche sur l’écran du présentateur (et sur les téléphones) jusqu’à ce que vous passiez à la suite.')}`;
     }
-    el.innerHTML = `<div class="qz-ecard" data-grp="${t.grp || 'q'}"><div class="qz-ehead">
-        <span class="qz-etype" title="${esc(t.sub || '')}"><i>${tico(q.t)}</i> ${esc(t.name)}</span>
-        <span class="qz-espacer"></span>
-        ${q.t === 'info' ? '' : `<label class="set-inline">Temps <select data-f="time" ${dis}>${TIMES.map(([v, l]) => `<option value="${v}" ${+q.time === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`}
-        ${C.isScored(q) ? `<label class="set-inline">Points <select data-f="points" ${dis}>${POINTS.map(([v, l]) => `<option value="${v}" ${+q.points === v ? 'selected' : ''}>${l}</option>`).join('')}</select></label>` : ''}
-      </div>
-      <textarea class="qz-qtext" data-f="text" placeholder="${q.t === 'tf' ? 'Affirmation à juger…' : q.t === 'info' ? 'Titre de la page…' : q.t === 'cloze' ? 'Consigne (facultative) : « Complétez le texte »…' : q.t === 'vote' ? 'Motion soumise au vote…' : q.t === 'poll' || q.t === 'scale' || q.t === 'open' ? 'Question posée au public…' : 'Question…'}" rows="2" maxlength="400" ${dis}>${esc(q.text || '')}</textarea>
+    el.innerHTML = `<div class="qz-ecard" data-grp="${t.grp || 'q'}">${editHead(q, t)}
+      <label class="qz-label" for="qz-qtext">${C.isPage(q) ? 'Titre' : 'Question'}</label>
+      <textarea class="qz-qtext" id="qz-qtext" data-f="text" placeholder="${q.t === 'tf' ? 'Affirmation à juger…' : q.t === 'info' ? 'Titre de la page…' : q.t === 'cloze' ? 'Consigne (facultative) : « Complétez le texte »…' : q.t === 'vote' ? 'Motion soumise au vote…' : q.t === 'poll' || q.t === 'scale' || q.t === 'open' ? 'Question posée au public…' : 'Question…'}" rows="2" maxlength="400" ${dis}>${esc(q.text || '')}</textarea>
       ${imgBox(q)}
       ${body}
-      ${C.isScored(q) ? `<div class="qz-hint">${q.t === 'cloze' ? 'Points au prorata des trous justes (3 trous sur 4 = 75 % des points) ; ' : 'Points : '}la moitié pour la bonne réponse, l’autre moitié fond avec le temps écoulé (réponse immédiate = tous les points).</div>` : ''}
+      ${q.t === 'order' ? infoBox('Les participants les reçoivent mélangés.') : ''}
+      ${C.isScored(q) ? infoBox(`${q.t === 'cloze' ? 'Points au prorata des trous justes (3 trous sur 4 = 75 % des points) ; ' : 'Points : '}la moitié pour la bonne réponse, l’autre moitié fond avec le temps écoulé (réponse immédiate = tous les points).`) : ''}
       </div>${pvBoxHTML()}`;
     const im = el.querySelector('#qz-img img');
     if (im) AlixoImages.get(im.dataset.iid).then(v => { if (v && im.isConnected) im.src = v; });
@@ -322,16 +388,16 @@ window.AlixoQuiz = (() => {
   function holesHTML(holes) {
     if (!holes.length) return '';
     const dis = readOnly ? 'disabled' : '';
-    const item = (k, f, x, i, ph) => `<span class="qz-hitem ${f === 'decoys' ? 'ko' : 'ok'}"><input data-hk="${k}" data-hf="${f}" data-hi="${i}" value="${esc(x)}" placeholder="${ph}" maxlength="60" ${dis}><button type="button" data-hidel title="Retirer" ${dis}>${I.x}</button></span>`;
+    const item = (k, f, x, i, ph) => `<span class="qz-hitem ${f === 'decoys' ? 'ko' : 'ok'}"><input data-hk="${k}" data-hf="${f}" data-hi="${i}" value="${esc(x)}" placeholder="${ph}" aria-label="${ph}" maxlength="60" ${dis}><button type="button" data-hidel title="Retirer" aria-label="Retirer ${ph.toLowerCase()}" ${dis}>${I.x}</button></span>`;
     return `<div class="qz-label">Trous (${holes.length}) — choisissez pour chacun un menu déroulant ou une saisie libre</div><div class="qz-holes">${holes.map((h, k) => {
       const sel = h.mode === 'select';
       const list = sel ? h.decoys : h.alts;
       return `<div class="qz-holecard${sel ? ' sel' : ''}" data-hcard="${k}">
         <div class="qz-hhead"><span class="qz-hnum">${k + 1}</span><b class="qz-hans" title="Réponse attendue">${esc(h.ans)}</b>
-          <button type="button" class="qz-odel" data-hdel title="Supprimer ce trou (le mot reste dans le texte)" ${dis}>${I.x}</button></div>
-        <span class="qz-seg" role="group" aria-label="Type de trou"><button type="button" data-hmode="select" class="${sel ? 'on' : ''}" ${dis}>▾ Menu déroulant</button><button type="button" data-hmode="free" class="${sel ? '' : 'on'}" ${dis}>⌨ Saisie libre</button></span>
+          <button type="button" class="qz-odel" data-hdel title="Supprimer ce trou (le mot reste dans le texte)" aria-label="Supprimer le trou ${k + 1} (le mot reste dans le texte)" ${dis}>${I.x}</button></div>
+        <span class="qz-seg" role="group" aria-label="Type de trou"><button type="button" data-hmode="select" class="${sel ? 'on' : ''}" aria-pressed="${sel}" ${dis}>▾ Menu déroulant</button><button type="button" data-hmode="free" class="${sel ? '' : 'on'}" aria-pressed="${!sel}" ${dis}>⌨ Saisie libre</button></span>
         <div class="qz-hsub">${sel ? `Le menu propose <b>${esc(h.ans)}</b> et les leurres ci-dessous, mélangés.` : `Réponse attendue : <b>${esc(h.ans)}</b>. Variantes acceptées en plus (majuscules, accents et espaces sont ignorés) :`}</div>
-        <div class="qz-hlist"><span class="qz-hitem good"><span>✓ ${esc(h.ans)}</span></span>${(sel && !list.length ? [''] : list).map((x, i) => item(k, sel ? 'decoys' : 'alts', x, i, sel ? `Leurre ${i + 1}` : `Variante ${i + 1}`)).join('')}<button type="button" class="qz-hadd" data-hadd="${sel ? 'decoys' : 'alts'}" ${(list.length >= 8 || readOnly) ? 'disabled' : ''}>＋ ${sel ? 'Leurre' : 'Variante'}</button></div>
+        <div class="qz-hlist"><span class="qz-hitem good"><span>✓ ${esc(h.ans)}</span></span>${(sel && !list.length ? [''] : list).map((x, i) => item(k, sel ? 'decoys' : 'alts', x, i, sel ? `Leurre ${i + 1}` : `Variante ${i + 1}`)).join('')}<button type="button" class="qz-hadd" data-hadd="${sel ? 'decoys' : 'alts'}" ${(list.length >= 8 || readOnly) ? 'disabled' : ''}>${I.plus}${sel ? 'Leurre' : 'Variante'}</button></div>
         ${sel && !C.decoysOf(h).length ? '<div class="qz-warn">Sans leurre, ce trou sera proposé en saisie libre.</div>' : ''}
       </div>`; }).join('')}</div>`;
   }
@@ -381,7 +447,9 @@ window.AlixoQuiz = (() => {
   /* ---------------- aperçu de la question, dans le thème du quiz (on peut y répondre pour essayer) ---------------- */
   let pvOpen = (() => { try { return localStorage.getItem('alixo.quiz.preview') !== '0'; } catch { return true; } })();
   let pvTm = null;
-  const pvBoxHTML = () => `<div class="qz-pvwrap${pvOpen ? ' open' : ''}" id="qz-pvwrap"><button type="button" class="qz-pvhead" data-pvtoggle><span class="qz-pvdot"></span>Aperçu sur l’écran des participants<small id="qz-pvtheme"></small><span class="qz-pvchev">▾</span></button><div class="qz-pv qz-play-scope" id="qz-pv"></div></div>`;
+  const pvToggleHTML = () => pvOpen ? `Masquer${I.chevDown}` : `Afficher${I.chevRight}`;
+  const pvToggleLabel = () => pvOpen ? 'Masquer l’aperçu' : 'Afficher l’aperçu';
+  const pvBoxHTML = () => `<div class="qz-pvwrap${pvOpen ? ' open' : ''}" id="qz-pvwrap"><div class="qz-pvhead"><span class="qz-pvtitle">Aperçu sur l’écran des participants</span><small id="qz-pvtheme"></small><button type="button" class="qz-pvtoggle" data-pvtoggle aria-expanded="${pvOpen}" aria-controls="qz-pv" aria-label="${pvToggleLabel()}">${pvToggleHTML()}</button></div><div class="qz-pv qz-play-scope" id="qz-pv"></div></div>`;
   function sampleCounts(q) { const w = [11, 4, 7, 3, 8, 2]; const c = {}; (q.opts || []).forEach((o, i) => { c[o.id] = w[i % w.length] * 5; }); return c; }
   function renderPreview() {
     clearTimeout(pvTm); pvTm = null;
@@ -423,6 +491,7 @@ window.AlixoQuiz = (() => {
     pushHist(); qs.splice(i, 1);
     if (cur === id) cur = (qs[i] || qs[i - 1] || {}).id || null;
     commit(); renderAll();
+    toast('Question supprimée', { action: 'Annuler', onAction: undo });
   }
   function duplicateQuestion(id) {
     const dd = d(); if (!dd || readOnly) return;
@@ -472,12 +541,12 @@ window.AlixoQuiz = (() => {
     const custom = Object.assign({ bg: '#f6f7f9', surface: '#ffffff', ink: '#202124', accent: '#33658a' }, th.k === 'custom' ? th : {});
     /* vignette : un vrai petit écran de jeu dans le thème (fond animé, typographie, couleurs des réponses) */
     const mini = tk => `<span class="qz-tprev qz-play-scope" data-qth="${C.themeFx(tk)}" style="${C.themeStyle(tk)}"><span class="qz-tq">Question ?</span><span class="qz-tans">${[0, 1, 2, 3].map(i => `<span class="qz-ta" style="--oc:var(--qp-c${i})"><span class="qz-tl">${C.letter(i)}</span><span class="qz-tbar"></span></span>`).join('')}</span></span>`;
-    const tile = (k, t) => `<button type="button" class="set-tile qz-tile ${th.k === k ? 'on' : ''}" data-theme="${k}">${mini({ k })}<b>${esc(t.name)}${t.fx ? '<small class="qz-tnew">signature</small>' : ''}</b><span>${esc(t.sub)}</span></button>`;
-    const entries = Object.entries(C.THEMES);
-    const tiles = `<div class="qz-tgroup">Thèmes signature : fonds animés, typographies et couleurs propres</div><div class="set-tiles qz-tiles">${entries.filter(([, t]) => t.fx).map(([k, t]) => tile(k, t)).join('')}</div>
-      <div class="qz-tgroup">Thèmes unis</div><div class="set-tiles qz-tiles">${entries.filter(([, t]) => !t.fx).map(([k, t]) => tile(k, t)).join('')}`
-      + `<button type="button" class="set-tile qz-tile ${th.k === 'custom' ? 'on' : ''}" data-theme="custom"><span id="qz-custprev">${mini(Object.assign({}, custom, { k: 'custom' }))}</span><b>Personnalisé</b><span>Vos couleurs</span></button></div>`;
+    /* une tuile par thème, dans l'ordre de C.THEMES : vignette, nom, badge « Animé » (fx), description, coche sur la tuile active */
+    const tile = (k, t) => `<button type="button" class="set-tile qz-tile${th.k === k ? ' on' : ''}" data-theme="${k}" aria-pressed="${th.k === k}">${mini({ k })}<b>${esc(t.name)}${t.fx ? '<small class="qz-tfx">Animé</small>' : ''}<span class="qz-tcheck">${I.check}</span></b><span>${esc(t.sub)}</span></button>`;
+    const tiles = `<div class="set-tiles qz-tiles">${Object.entries(C.THEMES).map(([k, t]) => tile(k, t)).join('')}`
+      + `<button type="button" class="set-tile qz-tile qz-tcustom${th.k === 'custom' ? ' on' : ''}" data-theme="custom" aria-pressed="${th.k === 'custom'}">${I.look}<b>Couleurs personnalisées<span class="qz-tcheck">${I.check}</span></b></button></div>`;
     const fontSel = th.font || '';
+    const musicOn = mu.k !== 'none';
     const body = `<div class="qz-look">
       <div class="set-sect"><h3>Thème</h3>${tiles}
         <div class="qz-custom" id="qz-custom" ${th.k === 'custom' ? '' : 'hidden'}>
@@ -486,24 +555,26 @@ window.AlixoQuiz = (() => {
           <label>Texte <input type="color" data-c="ink" value="${esc(custom.ink)}"></label>
           <label>Accent <input type="color" data-c="accent" value="${esc(custom.accent)}"></label>
         </div>
-        <label class="set-inline" style="margin-top:10px">Police <select id="qz-font"><option value="" ${fontSel ? '' : 'selected'}>Celle du thème</option>${Object.entries(C.FONT_NAMES).map(([k, n]) => `<option value="${k}" ${fontSel === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
-        <div class="qz-lprev qz-play-scope" id="qz-lprev" data-qth="${C.themeFx(th)}" style="${C.themeStyle(th)}"><div class="qp-q" style="font-size:20px;margin:6px 0 10px">Aperçu : quelle est la capitale de l’Australie ?</div>${C.widgetHTML({ t: 'mcq', opts: [{ id: 'a', text: 'Sydney' }, { id: 'b', text: 'Canberra' }, { id: 'c', text: 'Melbourne' }, { id: 'd', text: 'Perth' }], ans: ['b'] }, { reveal: true, v: ['a'], done: true })}</div>
+        <label class="set-inline qz-font">Police <select id="qz-font"><option value="" ${fontSel ? '' : 'selected'}>Celle du thème</option>${Object.entries(C.FONT_NAMES).map(([k, n]) => `<option value="${k}" ${fontSel === k ? 'selected' : ''}>${esc(n)}</option>`).join('')}</select></label>
       </div>
-      <div class="set-sect"><h3>Musique de fond</h3><p class="set-help">Jouée sur l’écran du présentateur (et pendant un test), pas sur les téléphones. Les musiques de base sont générées par Alixo : rien à télécharger.</p>
-        <div class="qz-tracks">${Object.entries(fx ? fx.TRACKS : {}).map(([k, t]) => `<label class="qz-track ${mu.k === k ? 'on' : ''}"><input type="radio" name="qz-music" value="${k}" ${mu.k === k ? 'checked' : ''}><span class="qz-trk"><b>${esc(t.name)}</b><small>${esc(t.sub)}</small></span>${k !== 'none' && k !== 'file' ? `<button type="button" class="qz-tplay" data-prev="${k}" title="Écouter quelques secondes">▶</button>` : ''}${k === 'file' ? `<span class="qz-tfile"><input type="file" id="qz-mfile" accept="audio/*" hidden><button type="button" class="cta ghost small" data-mfile>Choisir…</button><small id="qz-mname">${esc(mu.name || 'Aucun fichier')}</small></span>` : ''}</label>`).join('')}</div>
-        <label class="set-inline" style="margin-top:10px">Volume <input type="range" id="qz-vol" min="0" max="1" step="0.05" value="${esc(mu.vol == null ? 0.5 : mu.vol)}" style="width:160px"></label>
-        <label class="set-inline" style="margin-top:6px"><input type="checkbox" id="qz-sfx" ${mu.sfx === false ? '' : 'checked'}> Sons : dernières secondes, révélation, bonne / mauvaise réponse, arrivée d’un participant</label>
+      <div class="set-sect qz-sound"><h3>Son</h3>
+        <label class="qz-check"><input type="checkbox" id="qz-mon" ${musicOn ? 'checked' : ''}> Musique de fond</label>
+        <div class="qz-music" id="qz-music" ${musicOn ? '' : 'hidden'}>
+          <p class="set-help">Jouée sur l’écran du présentateur (et pendant un test), pas sur les téléphones. Les musiques de base sont générées par Alixo : rien à télécharger.</p>
+          <div class="qz-tracks">${Object.entries(fx ? fx.TRACKS : {}).filter(([k]) => k !== 'none').map(([k, t]) => `<label class="qz-track ${mu.k === k ? 'on' : ''}"><input type="radio" name="qz-music" value="${k}" ${mu.k === k ? 'checked' : ''}><span class="qz-trk"><b>${esc(t.name)}</b><small>${esc(t.sub)}</small></span>${k !== 'file' ? `<button type="button" class="qz-tplay" data-prev="${k}" title="Écouter quelques secondes" aria-label="Écouter « ${esc(t.name)} » quelques secondes">${I.play}</button>` : ''}${k === 'file' ? `<span class="qz-tfile"><input type="file" id="qz-mfile" accept="audio/*" hidden><button type="button" class="qz-tchoose" data-mfile>Choisir…</button><small id="qz-mname">${esc(mu.name || 'Aucun fichier')}</small></span>` : ''}</label>`).join('')}</div>
+          <label class="set-inline qz-vol">Volume <input type="range" id="qz-vol" min="0" max="1" step="0.05" value="${esc(mu.vol == null ? 0.5 : mu.vol)}"></label>
+        </div>
+        <label class="qz-check"><input type="checkbox" id="qz-sfx" ${mu.sfx === false ? '' : 'checked'}> Sons : dernières secondes, révélation, bonne / mauvaise réponse, arrivée d’un participant</label>
       </div></div>`;
     openDialog({ id: 'qz-look', cls: 'wide', eyebrow: 'Quiz', title: 'Apparence', sub: 'Le thème s’applique à l’écran du présentateur, au test et aux téléphones des participants.', body, onClose: () => { if (fx) fx.stop(); }, onMount: card => {
-      const prev = card.querySelector('#qz-lprev');
-      const saveTheme = () => { commit(); renderBar(); prev.style.cssText = C.themeStyle(themeOf(dd)); prev.dataset.qth = C.themeFx(themeOf(dd)); renderPreview(); };
+      const saveTheme = () => { commit(); renderBar(); renderPreview(); };
       card.addEventListener('click', e => {
         /* 1.28.1 : vignettes seulement — `[data-theme]` seul remontait jusqu'à <html data-theme="…"> : tout clic dans la
            fenêtre (bouton « Choisir… » du fichier audio, aperçu ▶ des musiques) était pris pour un choix de thème */
         const t = e.target.closest('.qz-tile[data-theme]');
         if (t && card.contains(t)) {
           const k = t.dataset.theme;
-          card.querySelectorAll('.qz-tile[data-theme]').forEach(b => b.classList.toggle('on', b === t));
+          card.querySelectorAll('.qz-tile[data-theme]').forEach(b => { const on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
           card.querySelector('#qz-custom').hidden = k !== 'custom';
           /* chaque thème arrive avec sa typographie : la police revient à « celle du thème » */
           const fs = card.querySelector('#qz-font'); if (k !== 'custom') fs.value = '';
@@ -514,9 +585,19 @@ window.AlixoQuiz = (() => {
         const p = e.target.closest('[data-prev]'); if (p && fx) { fx.setVolume(+card.querySelector('#qz-vol').value); fx.preview(p.dataset.prev, dd.id); return; }
         if (e.target.closest('[data-mfile]')) { card.querySelector('#qz-mfile').click(); }
       });
-      card.querySelectorAll('[data-c]').forEach(inp => inp.addEventListener('input', () => { custom[inp.dataset.c] = inp.value; const font = card.querySelector('#qz-font').value; dd.theme = Object.assign({}, custom, { k: 'custom' }, font ? { font } : {}); const cp = card.querySelector('#qz-custprev'); if (cp) cp.innerHTML = mini(Object.assign({}, custom, { k: 'custom' })); saveTheme(); }));
+      card.querySelectorAll('[data-c]').forEach(inp => inp.addEventListener('input', () => { custom[inp.dataset.c] = inp.value; const font = card.querySelector('#qz-font').value; dd.theme = Object.assign({}, custom, { k: 'custom' }, font ? { font } : {}); saveTheme(); }));
       card.querySelector('#qz-font').addEventListener('change', e => { const t = Object.assign({}, themeOf(dd)); if (e.target.value) t.font = e.target.value; else delete t.font; dd.theme = t; saveTheme(); });
-      card.querySelectorAll('input[name="qz-music"]').forEach(r => r.addEventListener('change', () => { card.querySelectorAll('.qz-track').forEach(l => l.classList.toggle('on', l.querySelector('input').checked)); dd.music = Object.assign({}, musicOf(dd), { k: r.value }); commit(); if (fx) { if (r.value === 'none') fx.stop(); else fx.preview(r.value, dd.id); } }));
+      /* musique : la case déploie la liste et retient la piste par défaut sans la jouer (l'écoute reste sur ▶ et sur le
+         changement de piste) ; décochée = aucune musique (k 'none') et arrêt de l'écoute */
+      const radios = [...card.querySelectorAll('input[name="qz-music"]')];
+      const setMusic = (k, o) => { dd.music = Object.assign({}, musicOf(dd), { k }); commit(); card.querySelectorAll('.qz-track').forEach(l => l.classList.toggle('on', l.querySelector('input').checked)); if (fx) { if (k === 'none') fx.stop(); else if (!(o && o.silent)) fx.preview(k, dd.id); } };
+      radios.forEach(r => r.addEventListener('change', () => setMusic(r.value)));
+      card.querySelector('#qz-mon').addEventListener('change', e => {
+        card.querySelector('#qz-music').hidden = !e.target.checked;
+        if (!e.target.checked) { radios.forEach(r => { r.checked = false; }); setMusic('none'); return; }
+        const r = radios.find(x => x.checked) || radios.find(x => x.value !== 'file') || radios[0];
+        if (r) { r.checked = true; setMusic(r.value, { silent: true }); }
+      });
       card.querySelector('#qz-vol').addEventListener('input', e => { dd.music = Object.assign({}, musicOf(dd), { vol: +e.target.value }); if (fx) fx.setVolume(+e.target.value); commitSoon(); });
       card.querySelector('#qz-sfx').addEventListener('change', e => { dd.music = Object.assign({}, musicOf(dd), { sfx: e.target.checked }); commit(); if (fx && e.target.checked) fx.sfx('reveal'); });
       const mf = card.querySelector('#qz-mfile');
@@ -550,10 +631,16 @@ window.AlixoQuiz = (() => {
     /* liste : sélection, suppression, duplication, réordonnancement */
     const list = $('#qz-list');
     list.addEventListener('click', e => {
+      const act = e.target.closest('.qz-cact');
+      if (act) { if (e.target.closest('[data-cdel]')) deleteQuestion(act.dataset.cact); else if (e.target.closest('[data-cdup]')) duplicateQuestion(act.dataset.cact); return; }
       const card = e.target.closest('.qz-card'); if (!card) return;
-      if (e.target.closest('[data-cdel]')) { deleteQuestion(card.dataset.q); return; }
-      if (e.target.closest('[data-cdup]')) { duplicateQuestion(card.dataset.q); return; }
       if (cur !== card.dataset.q) { cur = card.dataset.q; renderList(); renderEdit(); }
+    });
+    list.addEventListener('keydown', e => {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      const card = e.target.closest('.qz-card'); if (!card) return;
+      e.preventDefault();
+      if (cur !== card.dataset.q) { cur = card.dataset.q; renderList(); renderEdit(); const c = [...list.querySelectorAll('.qz-card')].find(x => x.dataset.q === cur); if (c) c.focus({ preventScroll: true }); }
     });
     list.addEventListener('dragstart', e => { const card = e.target.closest('.qz-card'); if (!card || readOnly) { e.preventDefault(); return; } dragQ = card.dataset.q; dragType = null; card.classList.add('dragging'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', 'qz:move'); } catch { /* */ } });
     list.addEventListener('dragend', () => { dragQ = null; clearDrop(); });
@@ -602,6 +689,7 @@ window.AlixoQuiz = (() => {
       if (e.target.dataset.hf || e.target.matches('[data-ocolor]')) { pushHist(); return; }
       if (f === 'time' || f === 'points') { patch(q => { q[f] = +e.target.value; }, true); return; }
       if (e.target.matches('[data-multi]')) { patch(q => { q.multi = e.target.checked; if (!q.multi && Array.isArray(q.ans) && q.ans.length > 1) q.ans = q.ans.slice(0, 1); }, true); return; }
+      if (e.target.matches('input[data-ook]')) { const row = e.target.closest('.qz-opt'); if (!row) return; patch(q => { if (!Array.isArray(q.ans)) q.ans = []; const id = row.dataset.opt; if (q.ans.includes(id)) q.ans = q.ans.filter(x => x !== id); else q.ans = q.multi ? [...q.ans, id] : [id]; }, true); return; }
       if (e.target.matches('#qz-imgfile')) { const file = e.target.files && e.target.files[0]; e.target.value = ''; if (file) setImage(file); return; }
       if (f === 'text' || f === 'body' || f === 'src' || e.target.classList.contains('qz-otext') || ['min', 'max', 'step', 'ans', 'tol', 'unit', 'lo', 'hi'].includes(f)) pushHist();   // un point d'annulation par champ modifié
     });
@@ -610,7 +698,8 @@ window.AlixoQuiz = (() => {
     ed.addEventListener('click', e => {
       const pvw = e.target.closest('#qz-pvwrap');
       if (pvw) {
-        if (e.target.closest('[data-pvtoggle]')) { pvOpen = !pvOpen; try { localStorage.setItem('alixo.quiz.preview', pvOpen ? '1' : '0'); } catch { /* */ } pvw.classList.toggle('open', pvOpen); renderPreview(); }
+        const tg = e.target.closest('[data-pvtoggle]');
+        if (tg) { pvOpen = !pvOpen; try { localStorage.setItem('alixo.quiz.preview', pvOpen ? '1' : '0'); } catch { /* */ } pvw.classList.toggle('open', pvOpen); tg.innerHTML = pvToggleHTML(); tg.setAttribute('aria-expanded', String(pvOpen)); tg.setAttribute('aria-label', pvToggleLabel()); renderPreview(); }
         else if (e.target.closest('[data-pvagain]')) renderPreview();
         return;
       }
@@ -641,7 +730,6 @@ window.AlixoQuiz = (() => {
       const tf = e.target.closest('[data-tf]'); if (tf) { patch(q => { q.ans = tf.dataset.tf === '1'; }, true); return; }
       const row = e.target.closest('.qz-opt'); if (!row) return;
       if (e.target.closest('[data-pdel]')) { patch(q => { if ((q.pairs || []).length <= 2) return; q.pairs = q.pairs.filter(p => p.id !== row.dataset.pair); }, true); return; }
-      if (e.target.closest('[data-ook]')) { patch(q => { if (!Array.isArray(q.ans)) q.ans = []; const id = row.dataset.opt; if (q.ans.includes(id)) q.ans = q.ans.filter(x => x !== id); else q.ans = q.multi ? [...q.ans, id] : [id]; }, true); return; }
       if (e.target.closest('[data-odel]')) { patch(q => { if (q.opts.length <= 2) return; q.opts = q.opts.filter(o => o.id !== row.dataset.opt); if (Array.isArray(q.ans) && q.t === 'mcq') q.ans = q.ans.filter(a => a !== row.dataset.opt); }, true); return; }
       if (e.target.closest('[data-adel]')) { patch(q => { if (!Array.isArray(q.ans) || q.ans.length <= 1) return; q.ans.splice(+row.dataset.ans, 1); }, true); return; }
       const mv = e.target.closest('[data-omv]'); if (mv) { patch(q => { const i = q.opts.findIndex(o => o.id === row.dataset.opt); const j = i + (+mv.dataset.omv); if (i < 0 || j < 0 || j >= q.opts.length) return; [q.opts[i], q.opts[j]] = [q.opts[j], q.opts[i]]; }, true); }
@@ -697,12 +785,11 @@ window.AlixoQuiz = (() => {
   const sfxOn = () => { const fx = FX(); return fx && musicOf(d()).sfx !== false ? fx : null; };
   const sfx = name => { const fx = sfxOn(); if (fx) fx.sfx(name); };
   function toggleSound() { const fx = FX(); if (!fx) return; const m = fx.toggleMute(); const b = play().querySelector('.qp-sound'); if (b) { b.classList.toggle('off', m); b.innerHTML = m ? I.mute : I.sound; b.title = m ? 'Son coupé (M)' : 'Couper le son (M)'; } }
-  const soundBtn = () => { const fx = FX(); if (!fx) return ''; const m = fx.isMuted(); return `<button type="button" class="qp-sound${m ? ' off' : ''}" data-sound title="${m ? 'Son coupé (M)' : 'Couper le son (M)'}">${m ? I.mute : I.sound}</button>`; };
-  function timerHTML(left, total) {
-    if (!total) return '<span class="qp-timer none">∞</span>';
-    const f = Math.max(0, Math.min(1, left / total));
-    return `<span class="qp-timer${left <= 5 ? ' low' : ''}" style="--f:${f.toFixed(3)}"><b>${Math.ceil(left)}</b></span>`;
-  }
+  const soundBtn = () => { const fx = FX(); if (!fx) return ''; const m = fx.isMuted(); const t = m ? 'Son coupé (M)' : 'Couper le son (M)'; return `<button type="button" class="qp-sound${m ? ' off' : ''}" data-sound title="${t}" aria-label="${t}">${m ? I.mute : I.sound}</button>`; };
+  /* bouton de sortie du bandeau : icône + « Quitter » (libellé masqué sur les petites largeurs, d'où l'aria-label) */
+  const xBtn = title => `<button type="button" class="qp-x" data-close title="${title}" aria-label="${title}">${I.x}<span class="qp-xl">Quitter</span></button>`;
+  const scoreHTML = pts => `<span class="qp-score">${I.star}<span>${fmtPts(pts)} pts</span></span>`;
+  const timerHTML = C.timerHTML;
   const progressHTML = (i, n) => `<div class="qp-progress"><i style="--p:${n ? Math.round(((i + 1) / n) * 100) : 0}%"></i></div>`;
   /* image de la question : chargée puis insérée (test local) ou déjà en data URL (direct) */
   function imgHTML(q, pub) {
@@ -731,7 +818,7 @@ window.AlixoQuiz = (() => {
     test.answered = false; test.shownAt = Date.now(); test.pub = p; lastTick = -1;
     const nq = test.qs.filter(C.isScored).length;
     if (q.t === 'info') {
-      ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Page ${test.i + 1} / ${test.qs.length}</span><span class="qp-score">${fmtPts(test.score)} pts</span>${soundBtn()}<button type="button" class="qp-x" data-close title="Quitter (Échap)">${I.x}</button></div>${progressHTML(test.i, test.qs.length)}
+      ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Page ${test.i + 1} / ${test.qs.length}</span><div class="qp-tr">${scoreHTML(test.score)}${soundBtn()}${xBtn('Quitter (Échap)')}</div></div>${progressHTML(test.i, test.qs.length)}
         <div class="qp-body qp-page-wrap">${imgHTML(q)}<div class="qp-q">${esc(qText(q))}</div>${C.widgetHTML(p)}</div>
         <div class="qp-ctrl"><button type="button" class="qp-next" data-next>${test.i + 1 < test.qs.length ? 'Continuer →' : 'Voir le résultat'} <kbd>Espace</kbd></button></div>`;
       loadImgs(ov);
@@ -741,7 +828,7 @@ window.AlixoQuiz = (() => {
       sfx('page');
       return;
     }
-    ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Question ${test.i + 1} / ${test.qs.length}</span><span class="qp-ptype">${C.TYPES[q.t] ? esc(C.TYPES[q.t].name) : ''}${C.isScored(q) ? '' : ' · sans points'}</span><span class="qp-score">${fmtPts(test.score)} pts</span><span id="qp-timer">${timerHTML(q.time, q.time)}</span>${soundBtn()}<button type="button" class="qp-x" data-close title="Quitter (Échap)">${I.x}</button></div>${progressHTML(test.i, test.qs.length)}
+    ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Question ${test.i + 1} / ${test.qs.length}</span><span class="qp-ptype">${C.TYPES[q.t] ? esc(C.TYPES[q.t].name) : ''}${C.isScored(q) ? '' : ' · sans points'}</span><div class="qp-tr"><span id="qp-timer" role="timer">${timerHTML(q.time, q.time)}</span>${scoreHTML(test.score)}${soundBtn()}${xBtn('Quitter (Échap)')}</div></div>${progressHTML(test.i, test.qs.length)}
       <div class="qp-body">${imgHTML(q)}<div class="qp-q">${esc(playTitle(q))}</div>
       <div class="qp-widget" id="qp-widget">${C.widgetHTML(p)}</div></div>
       <div class="qp-foot">Test sur cet appareil · ${nq} question${nq > 1 ? 's' : ''} notée${nq > 1 ? 's' : ''}</div>`;
@@ -767,7 +854,7 @@ window.AlixoQuiz = (() => {
     const vs = q.t === 'match' && v && test.pub._key ? Object.fromEntries(Object.entries(v).map(([l, r]) => [l, test.pub._key[r] || r])) : v;   // association : identifiants des paires, lisibles plus tard
     test.answers[q.id] = { v: vs, ok, pts, el };
     if (q.t === 'cloze') test.answers[q.id].fr = Math.round(fr * 1000) / 1000;
-    const sc = play().querySelector('.qp-score'); if (sc) sc.textContent = fmtPts(test.score) + ' pts';
+    const sc = play().querySelector('.qp-score span'); if (sc) sc.textContent = fmtPts(test.score) + ' pts';
     const ov = play();
     const full = fullOf(q, test.pub);
     const unscored = !C.isScored(q);
@@ -795,7 +882,7 @@ window.AlixoQuiz = (() => {
     if (!readOnly) { resOf(dd).push(rec); commit(); renderBar(); }
     const ov = play();
     const pct = scored ? Math.round(test.ok / scored * 100) : 0;
-    ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Résultat</span>${soundBtn()}<button type="button" class="qp-x" data-close title="Fermer (Échap)">${I.x}</button></div>
+    ov.innerHTML = `<div class="qp-top"><span class="qp-prog">Résultat</span><div class="qp-tr">${soundBtn()}${xBtn('Fermer (Échap)')}</div></div>
       <div class="qp-body"><div class="qp-end"><div class="qp-endscore">${fmtPts(test.score)}<small>points</small></div>
       <div class="qp-kpis"><div class="qp-kpi"><b>${test.ok} / ${scored}</b><small>bonnes réponses</small></div><div class="qp-kpi"><b>${pct} %</b><small>de réussite</small></div><div class="qp-kpi"><b>${fmtSec(rec.meanEl)}</b><small>temps moyen</small></div>${n > scored ? `<div class="qp-kpi"><b>${n - scored}</b><small>sans points</small></div>` : ''}</div>
       <div class="qp-endlist">${test.qs.map((q, i) => { const a = test.answers[q.id] || {}; const un = !C.isScored(q); return `<div class="qp-endrow ${un ? '' : a.ok ? 'ok' : a.pts > 0 ? 'part' : 'ko'}" style="--i:${i}"><span>${i + 1}</span><span class="qp-endq">${esc(qText(q))}</span><span class="qp-enda">${q.t === 'info' ? 'page' : esc(C.answerText(Object.assign({}, q, { rkey: null }), a.v))}</span><span class="qp-endp">${un ? '—' : a.pts > 0 ? '+' + fmtPts(a.pts) : '✗'}</span></div>`; }).join('')}</div>
@@ -858,7 +945,7 @@ window.AlixoQuiz = (() => {
     if (live.state === 'lobby') { renderLivePlayers(); return; }
     if (live.state === 'q' && live.pub && live.pub.t !== 'info') {
       const n = live.players.size, a = answeredCount();
-      const c = $('#qp-answered'); if (c) { c.textContent = `${a} / ${n} réponse${a > 1 ? 's' : ''}`; c.classList.toggle('all', n > 0 && a >= n); }
+      const c = $('#qp-answered'); if (c) { c.querySelector('span').textContent = `${a} / ${n} réponse${a > 1 ? 's' : ''}`; c.classList.toggle('all', n > 0 && a >= n); }
       if (live.pub.t === 'vote') C.hemiUpdate($('#qp-hemi-live'), live.pub, liveTally());   // l'hémicycle se remplit à chaque vote
       if (n > 0 && a >= n && !live.allTm) live.allTm = setTimeout(() => { live.allTm = null; if (live && live.state === 'q') liveReveal(); }, live.pub.t === 'vote' ? 2400 : 1200);   // tout le monde a répondu
     }
@@ -974,9 +1061,10 @@ window.AlixoQuiz = (() => {
   /* ---- écran du présentateur ---- */
   function renderLivePlayers() {
     const box = $('#qp-players'); if (!box || !live) return;
-    const names = [...live.players.values()].map(p => p.name || '?').sort((a, b) => a.localeCompare(b));
-    box.innerHTML = `<div class="qp-pcount">${names.length ? names.length + ' participant' + (names.length > 1 ? 's' : '') : 'En attente des premiers participants'}</div><div class="qp-pnames">${names.map(n => `<span>${esc(n)}</span>`).join('')}</div>`;
-    const b = $('#qp-start'); if (b) b.disabled = !names.length;
+    const names = [...live.players.values()].map(p => p.name || '?').sort((a, b) => a.localeCompare(b, 'fr', { numeric: true, sensitivity: 'base' }));
+    box.innerHTML = `<div class="qp-pcount">${I.users}<span>${names.length ? names.length + ' participant' + (names.length > 1 ? 's' : '') : 'En attente des premiers participants'}</span></div><div class="qp-pnames">${names.map(n => `<span>${esc(n)}</span>`).join('')}</div><div class="qp-pnote">Les pseudos et les réponses sont visibles du présentateur et effacés à la fin de la partie.</div>`;
+    const b = $('#qp-start'); if (b) { b.disabled = !names.length; if (names.length) b.removeAttribute('title'); else b.title = 'En attente d’un premier participant'; }
+    const h = play().querySelector('.qp-hints'); if (h) h.hidden = !names.length;   // les raccourcis n'ont de sens qu'une fois la partie prête à commencer
   }
   function statsHTML(q, st) {
     if (!st) return '';
@@ -985,8 +1073,8 @@ window.AlixoQuiz = (() => {
     if (q.t === 'cloze' && st.holes) return clozeStatsHTML(st);
     /* hauteur des barres rapportée à la plus haute (le pourcentage affiché reste celui du total) */
     const hOf = (c, mx) => (st.n && mx ? Math.max(3, Math.round(c / mx * 100)) : 3);
-    if ((q.t === 'mcq' || q.t === 'poll') && st.counts) { const mx = Math.max(1, ...(live.pub.opts || []).map(o => st.counts[o.id] || 0)); return `<div class="qp-bars">${(live.pub.opts || []).map((o, i) => { const c = st.counts[o.id] || 0; const ok = q.t === 'mcq' && (q.ans || []).includes(o.id); return `<div class="qp-bar${ok ? ' ok' : ''}" style="--oc:var(--qp-c${i % 6})"><span class="qp-bfill" style="height:${hOf(c, mx)}%"></span><b>${c}<small>${pct(c)} %</small></b><span class="qp-bsh">${C.letter(i)}</span></div>`; }).join('')}</div>`; }
-    if (q.t === 'tf' && st.counts) { const mx = Math.max(1, st.counts.true || 0, st.counts.false || 0); return `<div class="qp-bars n2">${[['true', 'V', 'var(--qp-c2)'], ['false', 'F', 'var(--qp-c1)']].map(([k, l, c]) => `<div class="qp-bar${String(q.ans) === k ? ' ok' : ''}" style="--oc:${c}"><span class="qp-bfill" style="height:${hOf(st.counts[k] || 0, mx)}%"></span><b>${st.counts[k] || 0}<small>${pct(st.counts[k] || 0)} %</small></b><span class="qp-bsh">${l}</span></div>`).join('')}</div>`; }
+    if ((q.t === 'mcq' || q.t === 'poll') && st.counts) { const mx = Math.max(1, ...(live.pub.opts || []).map(o => st.counts[o.id] || 0)); return `<div class="qp-bars">${(live.pub.opts || []).map((o, i) => barRow({ i, letter: C.letter(i), text: o.text || '…', oc: `var(--qp-c${i % 6})`, c: st.counts[o.id] || 0, w: hOf(st.counts[o.id] || 0, mx), pct: pct(st.counts[o.id] || 0), ok: q.t === 'mcq' && (q.ans || []).includes(o.id) })).join('')}</div>`; }
+    if (q.t === 'tf' && st.counts) { const mx = Math.max(1, st.counts.true || 0, st.counts.false || 0); return `<div class="qp-bars n2">${[['true', 'V', 'Vrai', 'var(--qp-c2)'], ['false', 'F', 'Faux', 'var(--qp-c1)']].map(([k, l, t, c], i) => barRow({ i, letter: l, text: t, oc: c, c: st.counts[k] || 0, w: hOf(st.counts[k] || 0, mx), pct: pct(st.counts[k] || 0), ok: String(q.ans) === k })).join('')}</div>`; }
     if (q.t === 'order' || q.t === 'match') return `<div class="qp-stat">${st.ok || 0} sur ${st.n} ont trouvé<small>${pct(st.ok || 0)} % de réussite</small></div>`;
     if (q.t === 'slider' || q.t === 'numeric' || q.t === 'scale') {
       const entries = Object.entries(st.counts || {}).map(([v, c]) => [+v, c]).sort((a, b) => a[0] - b[0]);
@@ -1003,6 +1091,8 @@ window.AlixoQuiz = (() => {
     if (q.t === 'text' && st.counts) return `<div class="qp-stat">${st.ok || 0} bonne${st.ok > 1 ? 's' : ''} réponse${st.ok > 1 ? 's' : ''} sur ${st.n}<small>${pct(st.ok || 0)} % de réussite</small></div><div class="qp-texts">${Object.entries(st.counts).sort((a, b) => b[1] - a[1]).slice(0, 12).map(([t, c]) => `<span class="${C.check(q, t) ? 'ok' : ''}">${esc(t)} <b>${c}</b></span>`).join('')}</div>`;
     return '';
   }
+  /* une rangée du graphique des réponses : lettre, texte, barre (largeur en % du maximum), compte ; badge sur la bonne réponse */
+  const barRow = r => `<div class="qp-bar${r.ok ? ' ok' : ''}" style="--oc:${r.oc};--i:${r.i}"><span class="qp-shape qp-bsh">${r.letter}</span><div class="qp-bmain"><div class="qp-bhead"><span class="qp-btext">${esc(r.text)}</span>${r.ok ? `<span class="qp-bok">${I.check}Bonne réponse</span>` : ''}</div><div class="qp-btrack"><span class="qp-bfill" style="--w:${r.w}%"></span></div></div><b>${r.c}<small>${r.pct} %</small></b></div>`;
   /* réussite par trou (écran du présentateur, résultats) */
   function clozeStatsHTML(st) {
     const pct = (a, b) => (b ? Math.round(a / b * 100) : 0);
@@ -1012,16 +1102,15 @@ window.AlixoQuiz = (() => {
   function renderLive() {
     const ov = play(); if (!live || ov.hidden) return;
     const dd = d();
-    const top = (title, extra) => `<div class="qp-top"><span class="qp-prog">${title}</span>${extra || ''}<span class="qp-code-sm" title="Code de la partie">${JOIN_HOST} · <b>${live.code}</b></span>${soundBtn()}<button type="button" class="qp-x" data-close title="Arrêter la présentation (Échap)">${I.x}</button></div>`;
+    const top = (title, extra, right) => `<div class="qp-top"><span class="qp-prog">${title}</span>${extra || ''}<div class="qp-tr">${right || ''}<span class="qp-code-sm" title="Code de la partie">${JOIN_HOST} · <b>${live.code}</b></span>${soundBtn()}${xBtn('Arrêter la présentation (Échap)')}</div></div>`;
     const err = live.err ? `<div class="qp-err">${esc(live.err)}</div>` : '';
     const hints = `<div class="qp-hints"><span><kbd>Espace</kbd> ou <kbd>→</kbd> suite</span><span><kbd>M</kbd> son</span><span><kbd>Échap</kbd> arrêter</span></div>`;
     if (live.state === 'lobby') {
       const nq = live.qs.filter(C.isScored).length, np = live.qs.filter(C.isPage).length;
       ov.innerHTML = top('Salle d’attente') + `<div class="qp-body"><div class="qp-lobby-title">${esc((dd && dd.titre) || 'Quiz')}</div><div class="qp-lobby-sub">${nq} question${nq > 1 ? 's' : ''}${np ? ` · ${np} page${np > 1 ? 's' : ''}` : ''}${live.qs.length - nq - np ? ` · ${live.qs.length - nq - np} avis du public` : ''}</div><div class="qp-lobby">
-        <div class="qp-join"><div class="qp-jtitle">Rejoignez le quiz</div><div class="qp-jurl">${JOIN_HOST}</div><div class="qp-jcode">${live.code}</div><div class="qp-jhint">Sur votre téléphone ou ordinateur : ouvrez ${JOIN_HOST}, entrez le code et un pseudo — ou scannez le QR code.</div></div>
-        <div class="qp-qr">${qrSvg(joinUrl(live.code))}</div></div>
-        <div id="qp-players" class="qp-players"></div>${err}</div>
-        <div class="qp-ctrl"><button type="button" class="qp-next" id="qp-start" data-next disabled>Commencer →</button>${hints}</div>`;
+        <div class="qp-join"><div class="qp-jtitle">Rejoignez le quiz</div><div class="qp-jurl">${JOIN_HOST}</div><div class="qp-jcode">${live.code}</div><div class="qp-qr">${qrSvg(joinUrl(live.code))}</div><div class="qp-jhint">Sur votre téléphone ou ordinateur : ouvrez ${JOIN_HOST}, entrez le code et un pseudo — ou scannez le QR code.</div></div>
+        <div id="qp-players" class="qp-players"></div></div>${err}</div>
+        <div class="qp-ctrl"><button type="button" class="qp-next" id="qp-start" data-next disabled title="En attente d’un premier participant">Commencer →</button>${hints}</div>`;
       renderLivePlayers();
     } else if (live.state === 'q') {
       const q = liveQ(), pub = live.pub, n = live.players.size, a = answeredCount();
@@ -1030,7 +1119,7 @@ window.AlixoQuiz = (() => {
           <div class="qp-body qp-page-wrap">${imgHTML(q, pub)}<div class="qp-q">${esc(qText(q))}</div>${C.widgetHTML(pub)}</div>${err}
           <div class="qp-ctrl"><button type="button" class="qp-next" data-next>${live.i + 1 < live.qs.length ? 'Suite →' : 'Terminer : classement final →'}</button>${hints}</div>`;
       } else {
-        ov.innerHTML = top(`Question ${live.i + 1} / ${live.qs.length}`, `<span class="qp-ptype">${C.TYPES[q.t] ? esc(C.TYPES[q.t].name) : ''}</span><span id="qp-timer">${timerHTML(q.time ? (live.qEnd - Date.now()) / 1000 : 0, q.time)}</span><span id="qp-answered" class="qp-answered${n > 0 && a >= n ? ' all' : ''}">${a} / ${n} réponse${a > 1 ? 's' : ''}</span>`) + progressHTML(live.i, live.qs.length) + `
+        ov.innerHTML = top(`Question ${live.i + 1} / ${live.qs.length}`, `<span class="qp-ptype">${C.TYPES[q.t] ? esc(C.TYPES[q.t].name) : ''}</span>`, `<span id="qp-timer" role="timer">${timerHTML(q.time ? (live.qEnd - Date.now()) / 1000 : 0, q.time)}</span><span id="qp-answered" class="qp-answered${n > 0 && a >= n ? ' all' : ''}">${I.users}<span>${a} / ${n} réponse${a > 1 ? 's' : ''}</span></span>`) + progressHTML(live.i, live.qs.length) + `
           <div class="qp-body">${imgHTML(q, pub)}<div class="qp-q big">${esc(playTitle(q))}</div>
           <div class="qp-widget big">${q.t === 'vote' ? `<div class="qp-hemi-wrap" id="qp-hemi-live">${C.hemicycleHTML(pub, liveTally())}</div><div class="qp-device small">Votez sur votre téléphone : chaque vote ajoute un siège.</div>` : q.t === 'text' || q.t === 'open' || q.t === 'numeric' ? `<div class="qp-device">${q.t === 'numeric' ? 'Les participants tapent un nombre sur leur appareil.' : q.t === 'open' ? 'Les participants envoient un mot ou une idée : le nuage se forme à la révélation.' : 'Les participants tapent leur réponse sur leur appareil.'}</div>` : C.widgetHTML(pub, { done: true })}</div></div>${err}
           <div class="qp-ctrl"><button type="button" class="qp-next" data-next>${C.isScored(q) ? 'Révéler la réponse →' : 'Voir les réponses →'}</button>${hints}</div>`;
@@ -1039,9 +1128,10 @@ window.AlixoQuiz = (() => {
       const q = liveQ(), st = live.stats || { n: 0 };
       const full = fullOf(q, live.pub);
       const last = live.i + 1 >= live.qs.length;
-      const showWidget = !(q.t === 'text' || q.t === 'open' || q.t === 'scale' || q.t === 'numeric' || q.t === 'vote');
+      /* choix multiple, sondage, vrai / faux : les rangées de statsHTML montrent déjà propositions et bonne réponse */
+      const showWidget = !(q.t === 'text' || q.t === 'open' || q.t === 'scale' || q.t === 'numeric' || q.t === 'vote' || q.t === 'mcq' || q.t === 'poll' || q.t === 'tf');
       ov.innerHTML = top(`Question ${live.i + 1} / ${live.qs.length} · ${C.isScored(q) ? 'réponse' : 'réponses du public'}`) + progressHTML(live.i, live.qs.length) + `
-        <div class="qp-body"><div class="qp-reveal${q.t === 'vote' ? ' vote' : ''}"><div class="qp-rleft"><div class="qp-q">${esc(playTitle(q))}</div>${showWidget ? `<div class="qp-widget">${C.widgetHTML(full, { reveal: true, done: true })}</div>` : (C.isScored(q) ? `<div class="qp-good" style="text-align:center">Bonne réponse : <b>${esc(C.correctText(full))}</b></div>` : '')}${statsHTML(q, st)}</div>
+        <div class="qp-body"><div class="qp-reveal${q.t === 'vote' ? ' vote' : ''}"><div class="qp-rleft"><div class="qp-q">${esc(playTitle(q))}</div>${showWidget ? `<div class="qp-widget">${C.widgetHTML(full, { reveal: true, done: true })}</div>` : (C.isScored(q) && !C.isChoice(q) && q.t !== 'tf' ? `<div class="qp-good" style="text-align:center">Bonne réponse : <b>${esc(C.correctText(full))}</b></div>` : '')}${statsHTML(q, st)}</div>
         <div class="qp-rright"><div class="qp-ltitle">Classement</div><ol class="qp-lead">${(live.top || []).slice(0, 8).map((p, i) => { const prev = live.prevRank.get(p.pid) || 0; const delta = prev ? prev - (i + 1) : 0; return `<li><span>${esc(p.name)}</span><em class="${delta > 0 ? 'up' : delta < 0 ? 'down' : 'same'}">${delta > 0 ? '▲' + delta : delta < 0 ? '▼' + (-delta) : (prev ? '=' : '')}</em><b>${fmtPts(p.score)}</b></li>`; }).join('') || '<li class="none">Personne n’a encore de points</li>'}</ol>${live.fastest ? `<div class="qp-fastest">Le plus rapide : <b>${esc(live.fastest.name)}</b> en ${fmtSec(live.fastest.el)}</div>` : ''}</div></div>${err}</div>
         <div class="qp-ctrl"><button type="button" class="qp-next" data-next>${last ? 'Terminer : classement final →' : 'Suivant →'}</button>${hints}</div>`;
     } else if (live.state === 'end') {
@@ -1068,6 +1158,7 @@ window.AlixoQuiz = (() => {
      Résultats enregistrés : scores, statistiques par question et par participant, export Excel ou CSV
      ============================================================ */
   const median = arr => { if (!arr.length) return 0; const s = arr.slice().sort((a, b) => a - b); const m = Math.floor(s.length / 2); return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2; };
+  const RANK_SHOWN = 10;   // classement : lignes affichées avant « Afficher les N autres participants »
   function liveResultHTML(dd, r) {
     const players = r.players || [];
     const qst = Array.isArray(r.qstats) ? r.qstats : [];
@@ -1076,21 +1167,26 @@ window.AlixoQuiz = (() => {
     const mean = scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : 0;
     const sumOk = scoredQ.reduce((s, x) => s + (x.ok || 0), 0), sumN = scoredQ.reduce((s, x) => s + (x.n || 0), 0);
     const els = players.map(p => p.meanEl).filter(x => x != null);
-    const maxScore = Math.max(1, ...scores);
-    /* répartition des scores : six tranches */
-    const B = 6; const buckets = new Array(B).fill(0);
-    for (const s of scores) buckets[Math.min(B - 1, Math.floor(s / maxScore * B))]++;
-    const bmax = Math.max(1, ...buckets);
     const kpis = `<div class="qz-kpis"><div class="qz-kpi"><b>${players.length}</b><small>participants</small></div><div class="qz-kpi"><b>${fmtPts(mean)}</b><small>score moyen</small></div><div class="qz-kpi"><b>${fmtPts(Math.round(median(scores)))}</b><small>médiane</small></div><div class="qz-kpi"><b>${sumN ? Math.round(sumOk / sumN * 100) : 0} %</b><small>bonnes réponses</small></div><div class="qz-kpi"><b>${els.length ? fmtSec(Math.round(els.reduce((a, b) => a + b, 0) / els.length)) : '—'}</b><small>temps moyen</small></div></div>`;
-    const dist = scores.length > 1 ? `<div class="qz-rsect"><div class="qz-rtitle">Répartition des scores</div><div class="qz-hist">${buckets.map((c, i) => `<div title="${c} participant${c > 1 ? 's' : ''}"><b>${c || ''}</b><i style="height:${Math.max(2, Math.round(c / bmax * 100))}%"></i><small>${fmtPts(Math.round(i / B * maxScore))}</small></div>`).join('')}</div></div>` : '';
     const detail = s => {
       if (s.t === 'cloze' && Array.isArray(s.holes) && s.holes.length) return `<div class="qz-qdetail">${s.holes.map((h, k) => { const p = h.n ? Math.round(h.ok / h.n * 100) : 0; return `<span class="qz-hrate" style="--p:${p}%" title="Trou ${k + 1} : ${h.ok} / ${h.n}"><i>${k + 1}</i>${esc(h.ans)}<b>${p} %</b></span>`; }).join('')}</div>`;
       if (s.t === 'vote' && s.counts) { const qq = { opts: s.opts || (qsOf(dd).find(x => x.id === s.id) || {}).opts || [] }; return qq.opts.length ? `<div class="qz-qdetail qz-play-scope qz-hmini">${C.hemicycleHTML(qq, s.counts, { final: true, mini: true, anim: false })}</div>` : ''; }
       return '';
     };
-    const perQ = qst.length ? `<div class="qz-rsect"><div class="qz-rtitle">Par question</div><div class="qz-qrows">${qst.map((s, i) => { const scored = C.isScored({ t: s.t }); const pct = s.t === 'cloze' && s.frac != null ? Math.round(s.frac * 100) : s.n ? Math.round((s.ok || 0) / s.n * 100) : 0; const hard = scored && s.n && scoredQ.length > 1 && s === scoredQ.slice().sort((a, b) => (a.n ? a.ok / a.n : 0) - (b.n ? b.ok / b.n : 0))[0]; return `<div class="qz-qrow${hard ? ' hard' : ''}"><span class="qz-qn">${i + 1}</span><span class="qz-qt" title="${esc(s.text)}">${esc(s.text)}${hard ? ' <em>la plus dure</em>' : ''}</span>${scored ? `<span class="qz-qbar"><i style="width:${pct}%"></i></span><span class="qz-qv">${pct} %<small>${s.ok || 0} / ${s.n}</small></span>` : `<span class="qz-qbar muted"></span><span class="qz-qv"><small>${s.t === 'info' ? 'page' : (s.n || 0) + ' réponse' + (s.n > 1 ? 's' : '') + (s.mean != null ? ' · moy. ' + (Math.round(s.mean * 100) / 100).toLocaleString('fr-FR') : '')}</small></span>`}<span class="qz-qel">${fmtSec(s.meanEl)}</span></div>${detail(s)}`; }).join('')}</div></div>` : '';
-    const table = `<div class="qz-rsect"><div class="qz-rtitle">Participants</div><table class="qz-ptable"><thead><tr><th>#</th><th>Pseudo</th><th>Score</th><th>Bonnes</th><th>Temps moyen</th></tr></thead><tbody>${players.map(p => `<tr><td>${p.rank || ''}</td><td>${esc(p.name)}</td><td><b>${fmtPts(p.score)}</b></td><td>${p.ok != null ? `${p.ok} / ${scoredQ.length || r.n || '?'}` : '—'}</td><td>${fmtSec(p.meanEl)}</td></tr>`).join('')}</tbody></table></div>`;
-    return kpis + dist + perQ + table;
+    const hardest = scoredQ.length > 1 ? scoredQ.slice().sort((a, b) => (a.n ? a.ok / a.n : 0) - (b.n ? b.ok / b.n : 0))[0] : null;
+    const qrow = (s, i) => {
+      const scored = C.isScored({ t: s.t });
+      const pct = s.t === 'cloze' && s.frac != null ? Math.round(s.frac * 100) : s.n ? Math.round((s.ok || 0) / s.n * 100) : 0;
+      const hard = scored && s.n && s === hardest;
+      const val = scored ? `${pct} % de bonnes réponses<small>${s.ok || 0} / ${s.n} · ${fmtSec(s.meanEl)}</small>`
+        : `${s.t === 'info' ? 'page' : (s.n || 0) + ' réponse' + (s.n > 1 ? 's' : '') + (s.mean != null ? ' · moy. ' + (Math.round(s.mean * 100) / 100).toLocaleString('fr-FR') : '')}<small>${fmtSec(s.meanEl)}</small>`;
+      return `<div class="qz-qrow${hard ? ' hard' : ''}"><span class="qz-qn">${i + 1}</span><span class="qz-qt" title="${esc(s.text)}">${esc(s.text)}${hard ? ' <em>la plus dure</em>' : ''}</span><span class="qz-qbar${scored ? '' : ' muted'}"><i style="width:${scored ? pct : 0}%"></i></span><span class="qz-qv">${val}</span></div>${detail(s)}`;
+    };
+    const perQ = qst.length ? `<div class="qz-rsect"><div class="qz-rtitle">Par question</div><div class="qz-qrows">${qst.map(qrow).join('')}</div></div>` : '';
+    const nQ = scoredQ.length || r.n || '?';
+    const more = players.length - RANK_SHOWN;
+    const table = `<div class="qz-rsect"><div class="qz-rtitle">Classement</div><table class="qz-ptable"><thead><tr><th>Rang</th><th>Pseudo</th><th>Bonnes réponses</th><th>Points</th></tr></thead><tbody>${players.map((p, i) => `<tr${i >= RANK_SHOWN ? ' class="more"' : ''}><td>${p.rank || ''}</td><td>${esc(p.name)}</td><td>${p.ok != null ? `${p.ok} / ${nQ}` : '—'}</td><td><b>${fmtPts(p.score)}</b></td></tr>`).join('')}</tbody></table>${more > 0 ? `<button type="button" class="qz-rmore" data-rmore data-more="${more}" aria-expanded="false">Afficher les ${more} autres participants</button>` : ''}</div>`;
+    return kpis + perQ + table;
   }
   function testResultHTML(dd, r) {
     const qs = qsOf(dd);
@@ -1190,8 +1286,17 @@ window.AlixoQuiz = (() => {
     const dd = d(); if (!dd) return;
     const rs = resOf(dd).slice().sort((a, b) => b.at - a.at);
     const when = ts => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-    const body = rs.length ? `<div class="qz-results">${rs.map((r, i) => `<div class="qz-res${i === 0 ? ' open' : ''}" data-res="${r.id}"><div class="qz-rhead" data-toggle>${r.mode === 'live' ? `<b>En direct</b> · ${when(r.at)} · ${(r.players || []).length} participant${(r.players || []).length > 1 ? 's' : ''} · ${r.questions || r.n} question${(r.questions || r.n) > 1 ? 's' : ''}` : `<b>Test</b> · ${when(r.at)} · <b>${fmtPts(r.score)} pts</b> · ${r.ok} / ${r.n} bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''}`}<span class="qz-ract"><button type="button" class="qz-rxls" data-rxls title="Télécharger le classeur Excel (.xlsx) mis en forme">${I.xls}Excel</button><button type="button" class="qz-rcsv" data-rcsv title="Télécharger en CSV (texte brut, pour tout tableur)">${I.csv}CSV</button>${readOnly ? '' : `<button type="button" class="qz-rdel" data-rdel title="Supprimer">${I.trash}</button>`}</span></div><div class="qz-rbody">${r.mode === 'live' ? liveResultHTML(dd, r) : testResultHTML(dd, r)}</div></div>`).join('')}</div>`
-      : `<div class="qz-lempty" style="padding:30px 10px; text-align:center">Aucun résultat pour l’instant : <b>Tester</b> joue le quiz sur cet appareil, <b>Présenter en direct</b> le fait jouer à un groupe. Les scores et statistiques s’enregistrent ici.</div>`;
+    const summary = r => r.mode === 'live' ? `${when(r.at)} · ${(r.players || []).length} participant${(r.players || []).length > 1 ? 's' : ''} · ${r.questions || r.n} question${(r.questions || r.n) > 1 ? 's' : ''}`
+      : `${when(r.at)} · <b>${fmtPts(r.score)} pts</b> · ${r.ok} / ${r.n} bonne${r.ok > 1 ? 's' : ''} réponse${r.ok > 1 ? 's' : ''}`;
+    const resCard = (r, i) => `<div class="qz-res${i === 0 ? ' open' : ''}" data-res="${r.id}">
+        <div class="qz-rhead">
+          <button type="button" class="qz-rtoggle" data-toggle aria-expanded="${i === 0}"><span class="qz-rbadge${r.mode === 'live' ? ' live' : ''}">${r.mode === 'live' ? 'En direct' : 'Test'}</span><span class="qz-rsum">${summary(r)}</span>${I.chevDown}</button>
+          <span class="qz-ract"><button type="button" class="qz-rxls" data-rxls title="Télécharger le classeur Excel (.xlsx) mis en forme">${I.xls}Excel</button><button type="button" class="qz-rcsv" data-rcsv title="Télécharger en CSV (texte brut, pour tout tableur)">${I.csv}CSV</button>${readOnly ? '' : `<button type="button" class="qz-rdel" data-rdel title="Supprimer" aria-label="Supprimer ce résultat">${I.trash}</button>`}</span>
+        </div>
+        <div class="qz-rbody">${r.mode === 'live' ? liveResultHTML(dd, r) : testResultHTML(dd, r)}</div>
+      </div>`;
+    const empty = `<div class="qz-lempty qz-rempty">Aucun résultat pour l’instant : <b>Tester</b> joue le quiz sur cet appareil, <b>Présenter en direct</b> le fait jouer à un groupe. Les scores et statistiques s’enregistrent ici.</div>`;
+    const body = `<div class="qz-results">${rs.length ? rs.map(resCard).join('') : empty}</div>`;
     openDialog({ id: 'qz-resdlg', cls: 'wide', eyebrow: 'Quiz', title: 'Résultats', sub: esc(dd.titre || 'Sans titre'), body, onMount: card => {
       card.addEventListener('click', e => {
         const box = e.target.closest('.qz-res'); if (!box) return;
@@ -1201,11 +1306,26 @@ window.AlixoQuiz = (() => {
         if (e.target.closest('[data-rdel]')) {
           if (readOnly) return;
           const i = resOf(dd).indexOf(r); if (i < 0) return;
+          /* suppression annulable : la carte est retirée, le toast « Annuler » la remet à sa place (et l'enregistrement au
+             même rang) ; la fenêtre reste ouverte, avec le message « Aucun résultat » si la liste est vide */
+          const wrap = box.parentElement, next = box.nextElementSibling;
           resOf(dd).splice(i, 1); commit(); renderBar(); box.remove();
-          if (!resOf(dd).length) closeDialog('qz-resdlg');
+          if (!resOf(dd).length && wrap) wrap.insertAdjacentHTML('beforeend', empty);
+          toast('Résultat supprimé', { action: 'Annuler', onAction: () => {
+            const rs2 = resOf(dd); rs2.splice(Math.min(i, rs2.length), 0, r); commit(); renderBar();
+            if (!card.isConnected || !wrap) return;   // fenêtre refermée entre-temps : l'enregistrement est rétabli, la carte reviendra à l'ouverture
+            const em = wrap.querySelector('.qz-rempty'); if (em) em.remove();
+            const tpl = document.createElement('template'); tpl.innerHTML = resCard(r, -1);
+            const el = tpl.content.firstElementChild; el.classList.toggle('open', box.classList.contains('open'));
+            el.querySelector('[data-toggle]').setAttribute('aria-expanded', String(el.classList.contains('open')));
+            if (next && next.isConnected) wrap.insertBefore(el, next); else wrap.appendChild(el);
+          } });
           return;
         }
-        if (e.target.closest('[data-toggle]')) box.classList.toggle('open');
+        const rm = e.target.closest('[data-rmore]');
+        if (rm) { const all = box.classList.toggle('all'); rm.setAttribute('aria-expanded', String(all)); rm.textContent = all ? 'Réduire la liste' : `Afficher les ${rm.dataset.more} autres participants`; return; }
+        const tg = e.target.closest('[data-toggle]');
+        if (tg) { const open = box.classList.toggle('open'); tg.setAttribute('aria-expanded', String(open)); }
       });
     } });
   }
@@ -1218,7 +1338,7 @@ window.AlixoQuiz = (() => {
     let qi = 0;
     return `<h2>${esc(dd.titre || 'Quiz')}</h2><div class="qzp-sub">${qs.filter(q => q.t !== 'info').length} question${qs.length > 1 ? 's' : ''} · les bonnes réponses sont marquées ✓</div>` + qs.map((q) => {
       let ans = '';
-      if (q.t === 'vote') ans = `<ol class="qzp-opts">${(q.opts || []).map((o, k) => `<li><span class="qzp-sh" style="background:${esc(C.voteColor(o, k))};color:#fff">${C.letter(k)}</span>${esc(o.text)}</li>`).join('')}</ol><div class="qzp-ans">Vote d’assemblée : résultat en hémicycle, sans bonne réponse</div>`;
+      if (q.t === 'vote') ans = `<ol class="qzp-opts">${(q.opts || []).map((o, k) => `<li><span class="qzp-sh qzp-vc" style="--oc:${esc(C.voteColor(o, k))}">${C.letter(k)}</span>${esc(o.text)}</li>`).join('')}</ol><div class="qzp-ans">Vote d’assemblée : résultat en hémicycle, sans bonne réponse</div>`;
       else if (q.t === 'cloze') { const { segs } = C.clozeParse(q.src); const H = C.clozeHoles(q); ans = `<div class="qzp-ans qzp-cloze">${segs.map((sg, k) => esc(sg).replace(/\n/g, '<br>') + (k < H.length ? `<u><b>${esc(H[k].ans)}</b></u><sup>${k + 1}</sup>` : '')).join('')}</div>` + (H.some(h => C.holeMode(h) === 'select' || (h.alts || []).some(Boolean)) ? `<ol class="qzp-opts">${H.map((h, k) => C.holeMode(h) === 'select' ? `<li><span class="qzp-sh">${k + 1}</span>Menu : <b>${esc(h.ans)}</b> · ${C.decoysOf(h).map(esc).join(' · ')}</li>` : (h.alts || []).some(Boolean) ? `<li><span class="qzp-sh">${k + 1}</span>Accepté aussi : ${(h.alts || []).filter(Boolean).map(esc).join(' · ')}</li>` : '').join('')}</ol>` : ''); }
       else if (q.t === 'mcq' || q.t === 'poll') ans = `<ol class="qzp-opts">${(q.opts || []).map((o, k) => `<li class="${q.t === 'mcq' && (q.ans || []).includes(o.id) ? 'ok' : ''}"><span class="qzp-sh">${C.letter(k)}</span>${esc(o.text)}</li>`).join('')}</ol>`;
       else if (q.t === 'order') ans = `<ol class="qzp-opts order">${(q.opts || []).map(o => `<li class="ok">${esc(o.text)}</li>`).join('')}</ol>`;
@@ -1263,7 +1383,7 @@ window.AlixoQuiz = (() => {
     const qs = Array.isArray(dd && dd.questions) ? dd.questions : [];
     if (!qs.length) return '<span class="sp-empty">Quiz vide</span>';
     const th = C.resolveTheme(dd.theme);
-    return `<div class="qzprev">${qs.slice(0, 4).map((q, i) => `<div class="qzprev-q"><span class="qzprev-n" style="background:${th.pal[i % 6]};color:#fff">${q.t === 'info' ? '▭' : i + 1}</span><span>${esc((q.text || '').trim() || (q.t === 'cloze' ? C.clozePlain(q.src).trim() : '') || (C.TYPES[q.t] ? C.TYPES[q.t].name : '…'))}</span></div>`).join('')}${qs.length > 4 ? `<div class="qzprev-more">+ ${qs.length - 4} autre${qs.length - 4 > 1 ? 's' : ''}</div>` : ''}</div>`;
+    return `<div class="qzprev">${qs.slice(0, 4).map((q, i) => `<div class="qzprev-q"><span class="qzprev-n" style="background:color-mix(in srgb, ${th.pal[i % 6]} 22%, var(--surface));border:1.5px solid ${th.pal[i % 6]};color:var(--ink)">${q.t === 'info' ? '▭' : i + 1}</span><span>${esc((q.text || '').trim() || (q.t === 'cloze' ? C.clozePlain(q.src).trim() : '') || (C.TYPES[q.t] ? C.TYPES[q.t].name : '…'))}</span></div>`).join('')}${qs.length > 4 ? `<div class="qzprev-more">+ ${qs.length - 4} autre${qs.length - 4 > 1 ? 's' : ''}</div>` : ''}</div>`;
   }
   const count = dd => (Array.isArray(dd && dd.questions) ? dd.questions.length : 0);
   function search(dd, needle, max) {
