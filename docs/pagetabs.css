@@ -1,0 +1,185 @@
+/* ============================================================
+   Alixo 1.59 — onglets d'une séance (d.pages) : pastilles jusqu'à 3 onglets,
+   puis un bouton compact « ▦ Nom  n sur N ⌄ » qui ouvre une fenêtre en grille
+   (ouvrir, glisser pour réordonner, double-clic / F2 pour renommer, menu « … »).
+   Logique : js/pagetabs.js (appelé par renderPageTabs() de js/app.js).
+   Les couleurs reprennent la maquette sombre et se déclinent en clair par les
+   variables de styles.css (--surface, --surface-2, --border, --ink…) ;
+   l'indigo de la maquette est l'accent d'interface (--accent, --accent-soft).
+   ============================================================ */
+
+#page-tabs, .pgt-panel, .pgt-menu, .pgt-drag {
+  --pgt-line: color-mix(in srgb, var(--ink-3) 30%, var(--surface));          /* bordures des pastilles, du panneau, du menu */
+  --pgt-line-hover: color-mix(in srgb, var(--ink-3) 55%, var(--surface));
+  --pgt-sk1: var(--pgt-line);                                                  /* lignes grises simulant le contenu */
+  --pgt-sk2: color-mix(in srgb, var(--ink-3) 16%, var(--surface));
+  --pgt-sk-on: color-mix(in srgb, var(--accent) 70%, var(--surface));
+  --pgt-chip: color-mix(in srgb, var(--ink-3) 24%, var(--surface));           /* fond du bouton « … » */
+  --pgt-danger: var(--danger);
+  --pgt-r: 12px;
+}
+html[data-theme="dark"] #page-tabs, html[data-theme="dark"] .pgt-panel, html[data-theme="dark"] .pgt-menu, html[data-theme="dark"] .pgt-drag {
+  --pgt-line: #3a3d4d; --pgt-line-hover: #5a5e72; --pgt-sk2: #2e3038; --pgt-sk-on: #6f83ea; --pgt-chip: #2e3038; --pgt-danger: #ff9d9d;
+}
+
+/* ---------- barre au-dessus de la page ---------- */
+#page-tabs {
+  position: relative; z-index: 3;
+  display: flex; align-items: center; gap: 12px;
+  width: min(794px, 100%); margin: 0 auto 14px; padding: 0;
+  font-family: var(--font-ui);
+}
+#page-tabs .pg-strip { display: flex; align-items: center; gap: 12px; min-width: 0; overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px; }
+#page-tabs .pg-strip::-webkit-scrollbar { display: none; }
+
+/* pastille « ① Principal » */
+#page-tabs .pg-tab, #page-tabs .pg-cur {
+  flex: none; display: inline-flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 16px 0 12px;
+  border: 1px solid var(--pgt-line); border-radius: var(--pgt-r);
+  background: var(--surface); color: var(--ink-2);
+  font-size: 14px; font-weight: 600; line-height: 1; white-space: nowrap;
+  max-width: 260px; cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+#page-tabs .pg-tab:hover, #page-tabs .pg-cur:hover { border-color: var(--pgt-line-hover); color: var(--ink); }
+#page-tabs .pg-tab:focus-visible, #page-tabs .pg-cur:focus-visible, #page-tabs .pg-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#page-tabs .pg-tab.active, #page-tabs .pg-cur[aria-expanded="true"] { border-color: var(--accent); background: var(--accent-soft); color: var(--ink); font-weight: 700; }
+#page-tabs .pg-name, .pgt-card .pg-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+
+/* numéro dans un carré ; le chiffre est posé par CSS (attribut data-n) pour que le texte de l'onglet reste son seul nom */
+.pg-num {
+  flex: none; display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border-radius: 6px;
+  background: var(--surface-2); color: var(--ink-2);
+  font-size: 11px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums;
+}
+.pg-num::before { content: attr(data-n); }
+#page-tabs .pg-tab.active .pg-num, .pgt-card.active .pg-num { background: var(--accent); color: #fff; }
+
+/* bouton compact (plus de 3 onglets) : « ▦ Onglet 7  7 sur 7  ⌄ » */
+#page-tabs .pg-cur { padding: 0 14px; color: var(--ink); font-weight: 700; }
+#page-tabs .pg-cur .pg-ico { display: flex; color: var(--accent-ink); }
+#page-tabs .pg-cur .pg-ico svg, #page-tabs .pg-cur .pg-chev { width: 18px; height: 18px; stroke-width: 2; }
+#page-tabs .pg-cur .pg-count { font-weight: 500; color: var(--ink-2); }
+#page-tabs .pg-cur .pg-chev { width: 15px; height: 15px; }
+
+/* « + » en pointillé */
+#page-tabs .pg-add {
+  flex: none; display: flex; align-items: center; justify-content: center;
+  width: 48px; height: 48px; padding: 0;
+  border: 1px dashed var(--pgt-line); border-radius: var(--pgt-r);
+  background: transparent; color: var(--ink-2); cursor: pointer;
+  transition: background .12s, border-color .12s, color .12s;
+}
+#page-tabs .pg-add:hover { background: var(--hover); border-color: var(--pgt-line-hover); color: var(--ink); }
+#page-tabs .pg-add svg { width: 18px; height: 18px; stroke-width: 2; }
+
+/* ---------- fenêtre « ONGLETS · N » ---------- */
+.pgt-panel {
+  position: absolute; left: 0; top: calc(100% + 12px); z-index: 5;
+  box-sizing: border-box; width: min(600px, 100%);
+  display: flex; flex-direction: column; gap: 14px; padding: 18px;
+  border: 1px solid var(--pgt-line); border-radius: 16px;
+  background: var(--surface-2); color: var(--ink);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .18);
+  font-family: var(--font-ui);
+}
+.pgt-head { display: flex; align-items: center; justify-content: space-between; }
+.pgt-title { margin: 0; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.pgt-close {
+  display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; margin: -10px -10px -10px 0; padding: 0;
+  border: 0; border-radius: 10px; background: transparent; color: var(--ink-2); cursor: pointer;
+}
+.pgt-close:hover { background: var(--hover); color: var(--ink); }
+.pgt-close svg { width: 16px; height: 16px; stroke-width: 2; }
+.pgt-close:focus-visible, .pgt-card:focus-visible, .pgt-new:focus-visible, .pgt-more:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.pgt-grid { position: relative; display: grid; grid-template-columns: repeat(auto-fill, 128px); gap: 12px; justify-content: space-between; }
+.pgt-cell { position: relative; width: 128px; height: 128px; }
+
+/* carte d'un onglet */
+.pgt-card {
+  box-sizing: border-box; display: flex; flex-direction: column; justify-content: space-between;
+  width: 128px; height: 128px; padding: 10px;
+  border: 1px solid var(--border); border-radius: var(--pgt-r);
+  background: var(--surface); color: var(--ink-2); text-align: left;
+  font-family: inherit; font-size: 13px; cursor: pointer;
+  transition: border-color .12s, background .12s;
+  -webkit-touch-callout: none; user-select: none; touch-action: pan-y;   /* appui long = glisser, pas la loupe ni la sélection */
+}
+.pgt-card:hover, .pgt-cell.menu-open .pgt-card { border-color: var(--pgt-line-hover); }
+.pgt-card.active { border: 2px solid var(--accent); background: var(--accent-soft); color: var(--ink); padding: 9px; }
+.pgt-card.renaming { border: 2px solid var(--accent); padding: 9px; cursor: default; }
+.pgt-card .pg-name { font-size: 13px; font-weight: 600; line-height: 1.2; }
+.pgt-card.active .pg-name { font-weight: 700; }
+.pgt-sk { display: flex; flex-direction: column; gap: 4px; }
+.pgt-sk i { display: block; height: 3px; border-radius: 2px; background: var(--pgt-sk2); }
+.pgt-sk i:first-child { width: 60%; background: var(--pgt-sk1); }
+.pgt-sk i:nth-child(2) { width: 100%; }
+.pgt-sk i:nth-child(3) { width: 80%; }
+.pgt-card.active .pgt-sk i:first-child { background: var(--pgt-sk-on); }
+
+/* champ de renommage dans la carte (C5) */
+.pgt-rename {
+  box-sizing: border-box; width: 100%; height: 30px; padding: 0 6px;
+  border: 1px solid var(--accent); border-radius: 6px;
+  background: var(--bg); color: var(--ink); font: inherit; font-size: 13px; font-weight: 600; outline: none;
+}
+
+/* bouton « … » : visible au survol, au focus, au doigt ou menu ouvert */
+.pgt-more {
+  position: absolute; top: 4px; right: 4px; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 10px; background: transparent; color: var(--ink); cursor: pointer;
+  opacity: 0; transition: opacity .12s;
+}
+.pgt-more span { display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; border-radius: 8px; background: var(--pgt-chip); }
+.pgt-more svg { width: 16px; height: 16px; stroke-width: 2.4; }
+.pgt-cell:hover .pgt-more, .pgt-more:focus-visible, .pgt-cell.menu-open .pgt-more, .pgt-cell:has(.pgt-card:focus-visible) .pgt-more { opacity: 1; }
+@media (pointer: coarse) { .pgt-more { opacity: 1; } }
+
+/* carte « + Nouvel onglet » */
+.pgt-new {
+  box-sizing: border-box; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  width: 128px; height: 128px; padding: 8px;
+  border: 1px dashed var(--pgt-line); border-radius: var(--pgt-r); background: transparent; color: var(--ink-2);
+  font-family: inherit; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.pgt-new:hover { background: var(--hover); border-color: var(--pgt-line-hover); color: var(--ink); }
+.pgt-new svg { width: 18px; height: 18px; stroke-width: 2; }
+
+.pgt-foot { margin: 0; font-size: 12px; color: var(--ink-3); min-height: 1.4em; }
+
+/* ---------- glisser-déposer (C6) ---------- */
+.pgt-cell.drag-src .pgt-card { visibility: hidden; }
+.pgt-cell.drag-src::after { content: ""; position: absolute; inset: 0; border: 1px solid var(--border); border-radius: var(--pgt-r); background: var(--surface); opacity: .5; }
+.pgt-ins { position: absolute; width: 4px; height: 128px; border-radius: 2px; background: var(--accent); pointer-events: none; }
+.pgt-drag { position: fixed; z-index: 500; pointer-events: none; opacity: .92; font-family: var(--font-ui); }
+.pgt-drag .pgt-card { border: 2px solid var(--accent); padding: 9px; background: var(--surface); color: var(--ink-2); box-shadow: 0 10px 28px rgba(0, 0, 0, .3); }
+body.pgt-dragging, body.pgt-dragging * { cursor: grabbing !important; user-select: none; }
+
+/* ---------- menu Renommer / Dupliquer / Supprimer (C4) ---------- */
+.pgt-menu {
+  position: fixed; z-index: 98; box-sizing: border-box; width: 190px; padding: 6px;
+  border: 1px solid var(--pgt-line); border-radius: 12px; background: var(--surface); color: var(--ink);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .22); font-family: var(--font-ui);
+}
+.pgt-menu button {
+  display: flex; align-items: center; gap: 10px; width: 100%; height: 44px; padding: 0 12px;
+  border: 0; border-radius: 8px; background: transparent; color: var(--ink); font: inherit; font-size: 14px; font-weight: 500; text-align: left; cursor: pointer;
+}
+.pgt-menu button:hover, .pgt-menu button:focus-visible { background: var(--hover); outline: none; }
+.pgt-menu button:disabled { opacity: .45; cursor: default; }
+.pgt-menu button svg { width: 16px; height: 16px; stroke-width: 2; flex: none; }
+.pgt-menu button.danger { color: var(--pgt-danger); }
+.pgt-menu .pgt-sep { height: 1px; margin: 6px; background: var(--border); }
+
+/* ---------- lecture seule, petits écrans, impression ---------- */
+body.readonly #page-tabs .pg-add, body.readonly .pgt-new, body.readonly .pgt-more { display: none; }
+@media (max-width: 640px) {
+  #page-tabs .pg-tab, #page-tabs .pg-cur { max-width: 180px; }
+  .pgt-panel { padding: 14px; border-radius: 14px; }
+  .pgt-grid { justify-content: center; }
+  .pgt-foot { padding-left: 52px; }   /* dégage la pastille du plan (coin inférieur gauche) */
+}
+@media print { .pgt-panel, .pgt-menu, .pgt-drag { display: none !important; } }

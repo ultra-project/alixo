@@ -337,8 +337,9 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 
 /* ============================================================
    Quiz IA (1.35, js/aiquiz.js ; 1.49 : dans la fenêtre #cocoquiz du panneau Alixo AI, portée .aq-scope) —
-   paramétrage, génération animée, jeu, résultat. Les écrans d'attente / d'erreur (.aq-empty) servent aussi à la fiche
-   (js/aifiche.js). Les couleurs viennent du thème (clair / sombre) ; le widget de question (QuizCore) reçoit la
+   1.59 : la fenêtre du quiz (réglages, génération, question, correction, résultats) est habillée par aiquiz.css ; ici ne
+   restent que les règles partagées avec la fiche de révision (js/aifiche.js) : boutons, écrans d'attente / d'erreur
+   (.aq-empty), halo et barre de génération (.aq-gen, .aq-orb, .aq-gbar), animations. Les couleurs viennent du thème (clair / sombre) ; le widget de question (QuizCore) reçoit la
    palette du thème via les variables --qp-* . Les variables --ai / --ai2 sont posées par coco.css (.coco-dlg .aq-scope).
    ============================================================ */
 .aq-scope svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
@@ -353,27 +354,6 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 .aq-scope .aq-actions { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
 .aq-scope .aq-actions.wrap { flex-wrap: wrap; }
 .aq-scope .aq-hint { font-size: 13px; color: var(--ink-2); line-height: 1.5; margin: 0; }
-.aq-scope .aq-note { font-size: 11.5px; color: var(--ink-3); line-height: 1.4; max-width: 420px; }
-
-/* ---- paramétrage : pastilles ---- */
-.aq-scope .aq-form { display: flex; flex-direction: column; gap: 22px; animation: aq-in .35s ease-out both; }
-.aq-scope .aq-rows { display: flex; flex-direction: column; gap: 14px; padding: 18px 20px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); }
-.aq-scope .aq-row { display: grid; grid-template-columns: 150px 1fr; align-items: center; gap: 14px; }
-.aq-scope .aq-row > label { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
-.aq-scope .aq-pills { display: flex; flex-wrap: wrap; gap: 8px; }
-.aq-scope .aq-pill { display: inline-flex; align-items: center; gap: 7px; height: 36px; padding: 0 14px; border-radius: 999px; border: 1px solid var(--border); background: var(--bg); color: var(--ink-2); font-size: 13px; font-weight: 600; cursor: pointer; transition: border-color .12s, background .12s, color .12s, transform .08s; }
-.aq-scope .aq-pill:hover { background: var(--hover); color: var(--ink); }
-.aq-scope .aq-pill.on { border-color: var(--tint); background: var(--tint-soft); color: var(--tint); }
-.aq-scope .aq-pill:active { transform: scale(.97); }
-.aq-scope .aq-pill .aq-pico svg { width: 16px; height: 16px; }
-.aq-scope .aq-pills-n .aq-pill { width: 44px; height: 44px; padding: 0; justify-content: center; font-size: 15px; font-weight: 700; }
-.aq-scope .aq-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 25%, transparent); }
-.aq-scope .aq-foot { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; }
-.aq-scope .aq-go { display: inline-flex; align-items: center; gap: 10px; height: 50px; padding: 0 22px 0 18px; border-radius: 14px; border: none; color: #fff; font-size: 15.5px; font-weight: 700; background: linear-gradient(120deg, var(--ai), var(--ai2)); background-size: 200% 100%; box-shadow: 0 12px 28px -12px color-mix(in srgb, var(--ai) 80%, transparent); cursor: pointer; transition: transform .12s, box-shadow .12s, background-position .4s; }
-.aq-scope .aq-go:hover { background-position: 100% 0; transform: translateY(-1px); box-shadow: 0 16px 34px -12px color-mix(in srgb, var(--ai) 85%, transparent); }
-.aq-scope .aq-go:active { transform: translateY(1px); }
-.aq-scope .aq-go svg { width: 20px; height: 20px; }
-.aq-scope .aq-go svg:last-child { opacity: .8; }
 
 /* ---- écrans vides / erreur ---- */
 .aq-scope .aq-empty { max-width: 560px; margin: 50px auto 0; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 0; animation: aq-in .35s ease-out both; }
@@ -399,58 +379,6 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 .aq-scope .aq-gbar { width: min(460px, 100%); height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; position: relative; }
 .aq-scope .aq-gbar i { display: block; height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--ai), var(--ai2)); transition: width .7s cubic-bezier(.2, .8, .2, 1); position: relative; overflow: hidden; }
 .aq-scope .aq-gbar i::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); transform: translateX(-100%); animation: aq-sheen 1.6s ease-in-out infinite; }
-.aq-scope .aq-gcards { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; width: min(640px, 100%); margin-top: 6px; }
-.aq-scope .aq-gcard { position: relative; aspect-ratio: 1 / 0.9; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); padding: 10px; display: flex; flex-direction: column; gap: 7px; opacity: 0; transform: translateY(14px) scale(.94); animation: aq-mat .6s cubic-bezier(.2, .8, .2, 1) forwards; animation-delay: calc(var(--i) * .12s + .2s); transition: border-color .3s, box-shadow .3s; }
-.aq-scope .aq-gnum { position: absolute; top: 7px; right: 9px; font-style: normal; font-size: 10.5px; font-weight: 700; color: var(--ink-3); }
-.aq-scope .aq-gl { display: block; height: 6px; border-radius: 3px; background: linear-gradient(90deg, var(--border) 25%, color-mix(in srgb, var(--border) 40%, var(--surface)) 50%, var(--border) 75%); background-size: 200% 100%; animation: aq-shimmer 1.5s linear infinite; animation-delay: calc(var(--i) * .15s); }
-.aq-scope .aq-gl1 { width: 60%; margin-top: 10px; } .aq-scope .aq-gl2 { width: 90%; } .aq-scope .aq-gl3 { width: 75%; }
-.aq-scope .aq-gok { position: absolute; left: 50%; top: 50%; translate: -50% -50%; width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: #2e8b6a; color: #fff; font-size: 15px; transform: scale(0); transition: transform .35s cubic-bezier(.3, 1.6, .4, 1); }
-.aq-scope .aq-gcard.done { border-color: #2e8b6a; box-shadow: 0 8px 22px -12px #2e8b6a; }
-.aq-scope .aq-gcard.done .aq-gl { animation: none; background: color-mix(in srgb, #2e8b6a 22%, var(--border)); opacity: .5; }
-.aq-scope .aq-gcard.done .aq-gok { transform: scale(1); }
-.aq-scope .aq-gen .aq-btn { margin-top: 10px; }
-
-/* ---- jeu ---- */
-.aq-scope .aq-play { padding: 0; animation: aq-in .3s ease-out both; }
-.aq-scope .aq-phead { display: flex; align-items: center; gap: 12px; font-size: 13px; color: var(--ink-2); }
-.aq-scope .aq-pnum { font-weight: 700; color: var(--ink); font-size: 14px; }
-.aq-scope .aq-ptype { padding: 2px 10px; border-radius: 999px; background: var(--tint-soft); color: var(--tint); font-weight: 650; font-size: 11.5px; }
-.aq-scope .aq-pscore { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 650; }
-.aq-scope .aq-pbar { height: 5px; border-radius: 3px; background: var(--border); margin: 10px 0 18px; overflow: hidden; }
-.aq-scope .aq-pbar i { display: block; height: 100%; background: linear-gradient(90deg, var(--ai), var(--ai2)); transition: width .4s; }
-.aq-scope .aq-qcard { border: 1px solid var(--border); border-radius: 20px; background: var(--surface); padding: 26px 28px 24px; box-shadow: 0 18px 44px -28px rgba(0,0,0,.35); animation: aq-card .4s cubic-bezier(.2, .8, .2, 1) both; }
-.aq-scope .aq-qtext { font-size: clamp(20px, 2.4vw, 27px); font-weight: 750; line-height: 1.3; letter-spacing: -.012em; color: var(--ink); margin: 0 0 20px; overflow-wrap: anywhere; }
-.aq-scope .aq-widget .qp-opt { min-height: 58px; font-size: 16px; }
-.aq-scope .aq-widget .qp-text input, .aq-scope .aq-widget .qp-num input { font-size: 17px; }
-.aq-scope .aq-feedback { margin-top: 14px; padding: 16px 18px; border-radius: 16px; border: 1px solid var(--border); background: var(--surface); animation: aq-in .3s ease-out both; }
-.aq-scope .aq-feedback.ok { border-color: color-mix(in srgb, #2e8b6a 45%, var(--border)); background: color-mix(in srgb, #2e8b6a 8%, var(--surface)); }
-.aq-scope .aq-feedback.ko { border-color: color-mix(in srgb, #c04343 45%, var(--border)); background: color-mix(in srgb, #c04343 7%, var(--surface)); }
-.aq-scope .aq-fbrow { display: flex; gap: 14px; align-items: flex-start; }
-.aq-scope .aq-fbico { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-size: 17px; font-weight: 800; color: #fff; flex: none; background: #2e8b6a; animation: aq-pop .4s cubic-bezier(.3, 1.6, .4, 1) both; }
-.aq-scope .aq-feedback.ko .aq-fbico { background: #c04343; }
-.aq-scope .aq-fbhead { font-weight: 750; font-size: 15px; }
-.aq-scope .aq-feedback.ok .aq-fbhead { color: #2e8b6a; } .aq-scope .aq-feedback.ko .aq-fbhead { color: #c04343; }
-.aq-scope .aq-fbans { margin-top: 4px; font-size: 14px; }
-.aq-scope .aq-fbexpl { margin-top: 6px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
-.aq-scope .aq-feedback .aq-actions { justify-content: flex-end; margin-top: 12px; }
-
-/* ---- résultat ---- */
-.aq-scope .aq-result { padding: 0; animation: aq-in .35s ease-out both; }
-.aq-scope .aq-score { display: flex; align-items: center; gap: 22px; padding: 22px 24px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); }
-.aq-scope .aq-ring { --p: 0; width: 104px; height: 104px; border-radius: 50%; flex: none; display: grid; place-content: center; text-align: center; background: conic-gradient(var(--ai) calc(var(--p) * 1%), var(--border) 0); position: relative; animation: aq-pop .5s cubic-bezier(.3, 1.4, .4, 1) both; }
-.aq-scope .aq-ring::before { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--surface); }
-.aq-scope .aq-ring b, .aq-scope .aq-ring small { position: relative; display: block; line-height: 1; }
-.aq-scope .aq-ring b { font-size: 30px; } .aq-scope .aq-ring small { font-size: 12px; color: var(--ink-2); margin-top: 3px; }
-.aq-scope .aq-verdict { font-size: 19px; font-weight: 750; letter-spacing: -.01em; }
-.aq-scope .aq-score .aq-hint { margin-top: 4px; }
-.aq-scope .aq-missed { margin-top: 16px; border: 1px solid var(--border); border-radius: 16px; padding: 12px 18px; background: var(--surface); max-height: none; overflow: visible; }
-.aq-scope .aq-missed.aq-perfect { color: #2e8b6a; font-weight: 700; text-align: center; font-size: 16px; }
-.aq-scope .aq-mhead { font-weight: 700; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 6px; color: var(--ink-3); }
-.aq-scope .aq-mitem { padding: 10px 0; border-top: 1px solid var(--border); font-size: 14px; }
-.aq-scope .aq-mitem:first-of-type { border-top: none; }
-.aq-scope .aq-mq { font-weight: 650; } .aq-scope .aq-mans { margin-top: 3px; } .aq-scope .aq-mexpl { margin-top: 3px; color: var(--ink-2); line-height: 1.45; }
-
-
 /* ---- animations ---- */
 @keyframes aq-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
 @keyframes aq-card { from { opacity: 0; transform: translateY(16px) scale(.985); } to { opacity: 1; transform: none; } }
@@ -464,24 +392,6 @@ body.qp-page { display: flex; flex-direction: column; min-height: 100vh; min-hei
 @keyframes aq-blink { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
 @keyframes aq-grow { from { transform: scaleX(0); transform-origin: left; } to { transform: scaleX(1); transform-origin: left; } }
 @media (prefers-reduced-motion: reduce) { .aq-scope *, .aq-scope *::before, .aq-scope *::after { animation-duration: .01s !important; animation-iteration-count: 1 !important; transition-duration: .01s !important; } .aq-scope .aq-gcard { opacity: 1; transform: none; } }
-
-/* ---- téléphone et fenêtres étroites ---- */
-@media (max-width: 760px) {
-  .aq-scope .aq-row { grid-template-columns: 1fr; gap: 6px; }
-  .aq-scope .aq-rows { padding: 14px; }
-  .aq-scope .aq-go { width: 100%; justify-content: center; }
-  .aq-scope .aq-gcards { gap: 6px; }
-  .aq-scope .aq-gcard { padding: 6px; border-radius: 8px; } .aq-scope .aq-gnum { display: none; }
-  .aq-scope .aq-qcard { padding: 18px 16px; border-radius: 16px; }
-  .aq-scope .aq-score { flex-direction: column; text-align: center; }
-  .aq-scope .aq-feedback .aq-actions { justify-content: stretch; } .aq-scope .aq-feedback .aq-next { width: 100%; justify-content: center; }
-}
-
-/* 1.37 : l'étudiant a rattrapé AlixoAI — carte d'attente de la question suivante */
-.aq-scope .aq-orb.small { width: 72px; height: 72px; margin: 0 auto 14px; }
-.aq-scope .aq-orb.small em svg { width: 26px; height: 26px; }
-.aq-scope .aq-qwait { text-align: center; padding: 36px 24px; }
-.aq-scope .aq-qwait .aq-qtext { opacity: .75; font-size: 1.05em; }
 
 /* ============================================================
    Écrans de jeu, nouvelle refonte : relief doux, apparitions, typographie des titres (--qp-font-head),

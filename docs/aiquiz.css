@@ -1,0 +1,283 @@
+/* ============================================================
+   Alixo 1.59 — Quiz IA : la fenêtre #cocoquiz (js/aiquiz.js), d'après la maquette « Création de quiz »
+   (cinq écrans : réglages, génération, question, correction, résultats). Chargée après quiz.css et coco.css ;
+   les styles communs à la fiche (.aq-btn, .aq-empty, .aq-orb…) restent dans quiz.css § Quiz IA.
+   Jetons --aqz-* : le thème sombre reproduit la maquette, le thème clair la décline sur la palette d'Alixo.
+   ============================================================ */
+#cocoquiz {
+  --aqz-card: var(--surface); --aqz-panel: #f6f6f8; --aqz-line: #e5e5ea; --aqz-line2: #ececf0;
+  --aqz-chip: #ffffff; --aqz-chip-line: #d6d6dd; --aqz-chip-line2: #c9c9d2; --aqz-letter: #eeeef1;
+  --aqz-ink: #1a1b1f; --aqz-ink2: #4b4c55; --aqz-ink3: #66676f; --aqz-dim: #6e6f78;
+  --aqz-orange: #e6a23c; --aqz-orange-ink: #1a1206; --aqz-orange-text: #96601c;
+  --aqz-rose-bg: #fbe9ef; --aqz-rose-line: #c0607a; --aqz-rose-ink: #8f2f4d; --aqz-rose-btn: #a94a66;
+  --aqz-ok: #1f7a4a; --aqz-ok-bg: #e4f5ea; --aqz-ok-line: #3fa66b; --aqz-ok-box: #edf8f1; --aqz-ok-box-line: #a9dcbd; --aqz-ok-ico: #cdeeda; --aqz-ok-card: #8fd3ad;
+  --aqz-ko: #b03a3a; --aqz-ko-bg: #fcecec; --aqz-ko-line: #d25a5a; --aqz-ko-box: #fdf1f1; --aqz-ko-box-line: #e6b5b5; --aqz-ko-ico: #f5cfcf; --aqz-ko-ico-ink: #a12e2e;
+  --aqz-track: #e5e5ea; --aqz-skel: #e2e2e7; --aqz-cur-card: #e3c27f;
+  --aqz-facile: #3fa66b; --aqz-moyen: #e6a23c; --aqz-difficile: #e0575b;
+}
+html[data-theme="dark"] #cocoquiz {
+  --aqz-card: #17171a; --aqz-panel: #131316; --aqz-line: #26262b; --aqz-line2: #232327;
+  --aqz-chip: #1c1c20; --aqz-chip-line: #2e2e35; --aqz-chip-line2: #3a3a41; --aqz-letter: #26262b;
+  --aqz-ink: #f4f4f5; --aqz-ink2: #c4c4cc; --aqz-ink3: #a1a1aa; --aqz-dim: #a1a1aa;
+  --aqz-orange: #e6a23c; --aqz-orange-ink: #1a1206; --aqz-orange-text: #f0b352;
+  --aqz-rose-bg: #3a1a26; --aqz-rose-line: #c0607a; --aqz-rose-ink: #ffc2d1; --aqz-rose-btn: #a94a66;
+  --aqz-ok: #6fdc9c; --aqz-ok-bg: #12261b; --aqz-ok-line: #3fa66b; --aqz-ok-box: #12261b; --aqz-ok-box-line: #285a3d; --aqz-ok-ico: #173a27; --aqz-ok-card: #285a3d;
+  --aqz-ko: #ff9d9d; --aqz-ko-bg: #2a1416; --aqz-ko-line: #d25a5a; --aqz-ko-box: #241316; --aqz-ko-box-line: #6a2a30; --aqz-ko-ico: #5a1f25; --aqz-ko-ico-ink: #ffb3b3;
+  --aqz-track: #2a2a30; --aqz-skel: #26262b; --aqz-cur-card: #6a4d16;
+}
+
+/* ---- la fenêtre : 1040 px, coins 18 px, en-tête orange, croix 44 px ---- */
+#cocoquiz .dlg-card { width: min(1040px, 94vw); border-radius: 18px; background: var(--aqz-card); border-color: var(--aqz-line); color: var(--aqz-ink); }
+#cocoquiz .set-head { padding: 20px 26px 18px; border-bottom-color: var(--aqz-line); align-items: center; }
+#cocoquiz .dlg-eyebrow { color: var(--aqz-orange-text); }
+#cocoquiz .set-htitle { font-size: 24px; font-weight: 700; color: var(--aqz-ink); }
+#cocoquiz .set-x { width: 44px; height: 44px; border-radius: 10px; color: var(--aqz-ink2); }
+#cocoquiz .set-x:hover { color: var(--aqz-ink); }
+body.mobile #cocoquiz .dlg-card { width: 100vw; border-radius: 0; }   /* mobile.html : plein écran, comme les autres fenêtres */
+#cocoquiz .dlg-body { padding: 0; }
+#cocoquiz .aq-stage { width: 100%; padding: 0; color: var(--aqz-ink); }
+#cocoquiz .aq-stage p, #cocoquiz .aq-stage h4 { margin: 0; }
+#cocoquiz a { color: var(--aqz-orange-text); font-weight: 600; }
+
+/* boutons : 46 px, coins 10 px, 14 px gras ; orange (primary), transparent (ghost), rose / vert (correction), lien (discret) */
+#cocoquiz .aq-btn { height: 46px; padding: 0 20px; border-radius: 10px; font-size: 14px; font-weight: 700; gap: 10px; color: var(--aqz-ink); background: transparent; border: 1px solid var(--aqz-chip-line); }
+#cocoquiz .aq-btn:hover { background: var(--hover); }
+#cocoquiz .aq-btn:disabled { opacity: .45; cursor: default; transform: none; }
+#cocoquiz .aq-btn.primary { background: var(--aqz-orange); color: var(--aqz-orange-ink); border-color: transparent; }
+#cocoquiz .aq-btn.primary:hover { background: var(--aqz-orange); filter: brightness(1.06); }
+#cocoquiz .aq-btn.rose { background: var(--aqz-rose-btn); color: #fff; border-color: transparent; }
+#cocoquiz .aq-btn.green { background: var(--aqz-ok-line); color: #0e2217; border-color: transparent; }
+#cocoquiz .aq-btn.rose:hover, #cocoquiz .aq-btn.green:hover { filter: brightness(1.06); }
+#cocoquiz .aq-btn.link { height: 40px; padding: 0 10px; border-color: transparent; font-size: 13px; font-weight: 600; color: var(--aqz-ink3); }
+#cocoquiz .aq-btn.link:hover { color: var(--aqz-ink); background: var(--hover); }
+#cocoquiz .aq-btn svg { width: 16px; height: 16px; stroke-width: 2.4; }
+#cocoquiz .aq-btn kbd { font: 700 11px var(--font-ui); padding: 2px 7px; border-radius: 5px; border: 1px solid currentColor; color: inherit; margin-left: 0; opacity: .85; }
+#cocoquiz .aq-btn.primary kbd { border-color: rgba(26, 18, 6, .45); }
+#cocoquiz .aq-btn.rose kbd { border-color: #e3a9b9; }
+#cocoquiz .aq-actions { margin-top: 0; }
+#cocoquiz .aq-empty { margin: 50px auto 40px; padding: 0 26px; }
+
+/* ---- 1. réglages ---- */
+#cocoquiz .aq-form { display: flex; flex-direction: column; animation: aq-in .35s ease-out both; }
+#cocoquiz .aq-fbody { padding: 22px 26px; }
+#cocoquiz .aq-rows { padding: 4px 22px; border: 1px solid var(--aqz-line); border-radius: 14px; background: var(--aqz-panel); display: block; gap: 0; }
+#cocoquiz .aq-row { display: flex; align-items: center; gap: 24px; padding: 16px 0; border-bottom: 1px solid var(--aqz-line2); }
+#cocoquiz .aq-row:last-child { border-bottom: 0; }
+#cocoquiz .aq-rlab { flex: none; width: 210px; display: flex; flex-direction: column; gap: 3px; }
+#cocoquiz .aq-rlab label { font-size: 13px; font-weight: 700; color: var(--aqz-ink); text-transform: none; letter-spacing: 0; }
+#cocoquiz .aq-rlab small { font-size: 12px; color: var(--aqz-ink3); line-height: 1.35; }
+#cocoquiz .aq-pills { display: flex; flex-wrap: wrap; gap: 10px; }
+#cocoquiz .aq-pill { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 16px; border-radius: 999px; border: 1px solid var(--aqz-chip-line); background: var(--aqz-chip); color: var(--aqz-ink); font-size: 14px; font-weight: 600; cursor: pointer; transition: border-color .12s, background .12s, color .12s, transform .08s; }
+#cocoquiz .aq-pill:hover { background: var(--hover); color: var(--aqz-ink); }
+#cocoquiz .aq-pill:active { transform: scale(.97); }
+#cocoquiz .aq-pill.on { border-color: var(--aqz-rose-line); background: var(--aqz-rose-bg); color: var(--aqz-rose-ink); }
+#cocoquiz .aq-pill .aq-pchk { display: none; width: 14px; height: 14px; }
+#cocoquiz .aq-pill.on .aq-pchk { display: block; }
+#cocoquiz .aq-pill .aq-pchk svg { width: 14px; height: 14px; stroke-width: 2.6; }
+#cocoquiz .aq-pills-n .aq-pill { width: 48px; padding: 0; justify-content: center; }
+#cocoquiz .aq-pills-n .aq-pill .aq-pchk { display: none; }
+#cocoquiz .aq-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--c); box-shadow: none; flex: none; }
+#cocoquiz .aq-foot { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 18px 26px; border-top: 1px solid var(--aqz-line); background: var(--aqz-panel); flex-wrap: nowrap; }
+#cocoquiz .aq-note { display: flex; align-items: flex-start; gap: 10px; max-width: 520px; font-size: 12px; line-height: 1.5; color: var(--aqz-ink3); }
+#cocoquiz .aq-note .aq-lock { flex: none; margin-top: 1px; }
+#cocoquiz .aq-note .aq-lock svg { width: 15px; height: 15px; stroke-width: 1.8; }
+#cocoquiz .aq-fright { display: flex; align-items: center; gap: 16px; flex: none; }
+#cocoquiz .aq-sum { font-size: 13px; color: var(--aqz-ink2); }
+#cocoquiz .aq-go { display: inline-flex; align-items: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 10px; border: 0; background: var(--aqz-orange); color: var(--aqz-orange-ink); font-size: 14px; font-weight: 700; cursor: pointer; box-shadow: none; transition: filter .12s, transform .08s; white-space: nowrap; }
+#cocoquiz .aq-go:hover { filter: brightness(1.06); transform: none; box-shadow: none; background-position: 0 0; }
+#cocoquiz .aq-go:active { transform: translateY(1px); }
+#cocoquiz .aq-go svg { width: 16px; height: 16px; stroke-width: 2.4; opacity: 1; }
+
+/* ---- 2. génération ---- */
+#cocoquiz .aq-gen { display: flex; flex-direction: column; align-items: center; gap: 22px; padding: 34px 26px 28px; text-align: center; animation: aq-in .35s ease-out both; }
+#cocoquiz .aq-ghead { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+#cocoquiz .aq-ghead h4 { font-size: 20px; font-weight: 700; }
+#cocoquiz .aq-gsub { font-size: 14px; color: var(--aqz-ink2); max-width: none; margin: 0; }
+#cocoquiz .aq-gsteps { display: flex; align-items: center; justify-content: center; gap: 28px; flex-wrap: wrap; }
+#cocoquiz .aq-gstep { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--aqz-ink2); }
+#cocoquiz .aq-gstep i { width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; flex: none; border: 2px solid var(--aqz-chip-line2); box-sizing: border-box; }
+#cocoquiz .aq-gstep i svg { display: none; width: 12px; height: 12px; stroke-width: 3; }
+#cocoquiz .aq-gstep[data-state="done"] i { border: 0; background: var(--aqz-ok-ico); color: var(--aqz-ok); }
+#cocoquiz .aq-gstep[data-state="done"] i svg { display: block; }
+#cocoquiz .aq-gstep[data-state="cur"] { color: var(--aqz-ink); }
+#cocoquiz .aq-gstep[data-state="cur"] i { border: 3px solid var(--aqz-orange); border-right-color: color-mix(in srgb, var(--aqz-orange) 35%, var(--aqz-panel)); animation: aq-spin 1s linear infinite; }
+#cocoquiz .aq-gprog { width: 100%; display: flex; flex-direction: column; gap: 8px; text-align: left; }
+#cocoquiz .aq-gbar { width: 100%; height: 6px; border-radius: 3px; background: var(--aqz-track); overflow: hidden; }
+#cocoquiz .aq-gbar i { display: block; height: 6px; border-radius: 3px; background: var(--aqz-orange); transition: width .6s cubic-bezier(.2, .8, .2, 1); overflow: visible; }
+#cocoquiz .aq-gbar i::after { display: none; }
+#cocoquiz .aq-gcount { font-size: 12px; color: var(--aqz-ink3); }
+#cocoquiz .aq-gcards { width: 100%; display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin: 0; }
+#cocoquiz .aq-gcard { display: flex; flex-direction: column; justify-content: space-between; height: 74px; padding: 10px 12px; border: 1px solid var(--aqz-line); border-radius: 10px; background: var(--aqz-panel); text-align: left; opacity: 1; transform: none; animation: none; aspect-ratio: auto; gap: 0; transition: border-color .3s; }
+#cocoquiz .aq-gcard b { font-size: 12px; font-weight: 700; color: var(--aqz-ink2); }
+#cocoquiz .aq-gcard .aq-gst { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; }
+#cocoquiz .aq-gcard .aq-gst svg { width: 13px; height: 13px; stroke-width: 3; }
+#cocoquiz .aq-gcard .aq-gsk { display: flex; flex-direction: column; gap: 6px; }
+#cocoquiz .aq-gcard .aq-gsk span { display: block; height: 5px; border-radius: 3px; background: var(--aqz-skel); }
+#cocoquiz .aq-gcard .aq-gsk span:first-child { width: 70%; }
+#cocoquiz .aq-gcard .aq-gst, #cocoquiz .aq-gcard .aq-gsk { display: none; }
+#cocoquiz .aq-gcard[data-state="todo"] .aq-gsk { display: flex; }
+#cocoquiz .aq-gcard[data-state="cur"] { border-color: var(--aqz-cur-card); }
+#cocoquiz .aq-gcard[data-state="cur"] .aq-gst.cur { display: flex; color: var(--aqz-orange-text); }
+#cocoquiz .aq-gcard[data-state="done"] { border-color: var(--aqz-ok-card); }
+#cocoquiz .aq-gcard[data-state="done"] .aq-gst.done { display: flex; color: var(--aqz-ok); }
+#cocoquiz .aq-gtip { max-width: 560px; font-size: 13px; line-height: 1.5; color: var(--aqz-ink3); }
+#cocoquiz .aq-gbtns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+#cocoquiz .aq-gen .aq-btn { margin-top: 0; }
+
+/* ---- 3. question ---- */
+#cocoquiz .aq-play { display: flex; flex-direction: column; animation: aq-in .3s ease-out both; }
+#cocoquiz .aq-phead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 26px 0; font-size: 13px; color: var(--aqz-ink2); }
+#cocoquiz .aq-phl { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#cocoquiz .aq-pnum { font-size: 14px; font-weight: 700; color: var(--aqz-ink); white-space: nowrap; }
+#cocoquiz .aq-ptype { padding: 3px 9px; border-radius: 999px; background: var(--aqz-rose-bg); color: var(--aqz-rose-ink); font-size: 11px; font-weight: 700; letter-spacing: .05em; white-space: nowrap; }
+#cocoquiz .aq-ptype:empty { display: none; }
+#cocoquiz .aq-pscore { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--aqz-ink2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#cocoquiz .aq-pbar { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 5px; height: 5px; margin: 12px 26px 0; background: none; border-radius: 0; overflow: visible; }
+#cocoquiz .aq-pbar span { height: 5px; border-radius: 3px; background: var(--aqz-track); transition: background .25s; }
+#cocoquiz .aq-pbar span.cur { background: var(--aqz-orange); }
+#cocoquiz .aq-pbar span.ok { background: var(--aqz-ok-line); }
+#cocoquiz .aq-pbar span.ko { background: var(--aqz-difficile); }
+#cocoquiz .aq-pbody { display: flex; flex-direction: column; gap: 16px; padding: 18px 26px 22px; }
+#cocoquiz .aq-qcard { display: flex; flex-direction: column; gap: 22px; padding: 26px; border: 1px solid var(--aqz-line); border-radius: 14px; background: var(--aqz-panel); box-shadow: none; animation: aq-card .35s cubic-bezier(.2, .8, .2, 1) both; }
+#cocoquiz .aq-qtext { font-size: 24px; font-weight: 700; line-height: 1.3; letter-spacing: 0; color: var(--aqz-ink); margin: 0; overflow-wrap: anywhere; }
+/* le widget de QuizCore, habillé en tuiles A / B / C / D de la maquette */
+#cocoquiz .aq-widget { --qp-bg: var(--aqz-panel); --qp-surface: var(--aqz-chip); --qp-border: var(--aqz-chip-line); --qp-ink: var(--aqz-ink); --qp-ink2: var(--aqz-ink3); --qp-accent: var(--aqz-orange); --qp-accent-ink: var(--aqz-orange-ink); --qp-hover: var(--hover); --qp-ok: var(--aqz-ok-line); --qp-ko: var(--aqz-ko-line); }
+#cocoquiz .aq-widget .qp-opts { gap: 12px; }
+#cocoquiz .aq-widget .qp-opt { min-height: 72px; padding: 12px 16px; gap: 14px; border: 1px solid var(--aqz-chip-line); border-radius: 12px; background: var(--aqz-chip); color: var(--aqz-ink); font-size: 15px; font-weight: 600; line-height: 1.35; box-shadow: none; }
+#cocoquiz .aq-widget .qp-opt:not(:disabled):hover { border-color: var(--aqz-chip-line2); background: var(--hover); transform: none; }
+#cocoquiz .aq-widget .qp-shape { width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--aqz-chip-line2); background: var(--aqz-letter); color: var(--aqz-ink); font-size: 13px; font-weight: 700; letter-spacing: 0; clip-path: none; text-shadow: none; }
+#cocoquiz .aq-widget .qp-opt.sel { border-color: var(--aqz-rose-line); background: var(--aqz-rose-bg); }
+/* correction : la bonne réponse en vert, la réponse donnée en rouge, les autres estompées — étiquettes en ::after */
+#cocoquiz .aq-widget .qp-opt:disabled { opacity: 1; border-color: var(--aqz-line); background: var(--aqz-card); color: var(--aqz-dim); animation: none; }   /* pas de nouvelle apparition à la correction */
+#cocoquiz .aq-widget .qp-opt.ok, #cocoquiz .aq-widget .qp-opt.ok:disabled { border-color: var(--aqz-ok-line); background: var(--aqz-ok-bg); color: var(--aqz-ink); }
+#cocoquiz .aq-widget .qp-opt.ko.sel, #cocoquiz .aq-widget .qp-opt.ko.sel:disabled { border-color: var(--aqz-ko-line); background: var(--aqz-ko-bg); color: var(--aqz-ink); opacity: 1; }
+#cocoquiz .aq-widget .qp-opt.ok::after, #cocoquiz .aq-widget .qp-opt.ko.sel::after { position: static; transform: none; width: auto; height: auto; border-radius: 0; background: none; display: inline; flex: none; margin-left: auto; padding-left: 6px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+#cocoquiz .aq-widget .qp-opt.ok::after { content: "✓ Bonne réponse"; color: var(--aqz-ok); }
+#cocoquiz .aq-widget .qp-opt.ko.sel::after { content: "✕ Votre réponse"; color: var(--aqz-ko); }
+#cocoquiz .aq-widget .qp-opt.ok.sel::after { content: "✓ Votre réponse"; }
+/* réponse courte : champ à gauche, « Valider » orange, bonne réponse révélée sous le champ */
+#cocoquiz .aq-widget .qp-text { max-width: none; margin: 0; text-align: left; display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+#cocoquiz .aq-widget .qp-text input { flex: 1 1 280px; max-width: none; width: auto; min-height: 56px; padding: 12px 16px; border: 1px solid var(--aqz-chip-line); border-radius: 12px; background: var(--aqz-chip); color: var(--aqz-ink); font-size: 16px; font-weight: 600; text-align: left; }
+#cocoquiz .aq-widget .qp-text input:focus { border-color: var(--aqz-orange); }
+#cocoquiz .aq-widget .qp-text input:disabled { color: var(--aqz-dim); }
+#cocoquiz .aq-widget .qp-send { margin: 0; height: 46px; padding: 0 20px; border-radius: 10px; border: 0; background: var(--aqz-orange); color: var(--aqz-orange-ink); font-size: 14px; font-weight: 700; }
+#cocoquiz .aq-widget .qp-good { flex: 1 0 100%; margin: 2px 0 0; font-size: 13px; font-weight: 600; color: var(--aqz-ok); }
+#cocoquiz .aq-widget .qp-good b { color: var(--aqz-ink); font-weight: 700; }
+#cocoquiz .aq-pfoot { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 26px; border-top: 1px solid var(--aqz-line); background: var(--aqz-panel); }
+#cocoquiz .aq-keys { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; font-size: 12px; color: var(--aqz-ink3); }
+#cocoquiz .aq-keys kbd { padding: 2px 7px; border: 1px solid var(--aqz-chip-line2); border-radius: 5px; background: var(--aqz-chip); font: 700 11px var(--font-ui); color: var(--aqz-ink); }
+/* l'étudiant a rattrapé AlixoAI : la question suivante s'écrit */
+#cocoquiz .aq-qwait { align-items: center; text-align: center; padding: 40px 26px; }
+#cocoquiz .aq-qwait .aq-qtext { font-size: 17px; font-weight: 600; color: var(--aqz-ink2); }
+#cocoquiz .aq-spin { width: 28px; height: 28px; border-radius: 50%; border: 3px solid var(--aqz-orange); border-right-color: color-mix(in srgb, var(--aqz-orange) 35%, var(--aqz-panel)); animation: aq-spin 1s linear infinite; }
+
+/* ---- 4. correction ---- */
+#cocoquiz .aq-feedback { display: flex; gap: 16px; margin: 0; padding: 20px 22px; border: 1px solid var(--aqz-line); border-radius: 14px; background: var(--aqz-panel); animation: aq-in .3s ease-out both; }
+#cocoquiz .aq-feedback.ko { border-color: var(--aqz-ko-box-line); background: var(--aqz-ko-box); }
+#cocoquiz .aq-feedback.ok { border-color: var(--aqz-ok-box-line); background: var(--aqz-ok-box); }
+#cocoquiz .aq-fbico { width: 36px; height: 36px; border-radius: 50%; flex: none; display: grid; place-items: center; background: var(--aqz-ok-ico); color: var(--aqz-ok); animation: aq-pop .4s cubic-bezier(.3, 1.6, .4, 1) both; }
+#cocoquiz .aq-feedback.ko .aq-fbico { background: var(--aqz-ko-ico); color: var(--aqz-ko-ico-ink); }
+#cocoquiz .aq-fbico svg { width: 18px; height: 18px; stroke-width: 2.6; }
+#cocoquiz .aq-fbtxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+#cocoquiz .aq-fbhead { font-size: 16px; font-weight: 700; color: var(--aqz-ok); }
+#cocoquiz .aq-feedback.ko .aq-fbhead { color: var(--aqz-ko); }
+#cocoquiz .aq-fbexpl { font-size: 14px; line-height: 1.55; color: var(--aqz-ink); margin: 0; }
+#cocoquiz .aq-fbans { font-size: 14px; color: var(--aqz-ink2); margin: 0; }
+#cocoquiz .aq-fbans b { color: var(--aqz-ink); }
+#cocoquiz .aq-fbrow { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-top: 6px; flex-wrap: wrap; }
+#cocoquiz .aq-fbrow .aq-src { font-size: 13px; font-weight: 600; }
+#cocoquiz .aq-fbrow .aq-next { margin-left: auto; }
+
+/* ---- 5. résultats ---- */
+#cocoquiz .aq-result { display: flex; flex-direction: column; gap: 16px; padding: 22px 26px 26px; animation: aq-in .35s ease-out both; }
+#cocoquiz .aq-score { display: flex; align-items: center; gap: 24px; padding: 24px; border: 1px solid var(--aqz-line); border-radius: 14px; background: var(--aqz-panel); }
+#cocoquiz .aq-ring { position: relative; flex: none; width: 104px; height: 104px; background: none; display: block; animation: aq-pop .5s cubic-bezier(.3, 1.4, .4, 1) both; }
+#cocoquiz .aq-ring::before { display: none; }
+#cocoquiz .aq-ring svg { width: 104px; height: 104px; display: block; stroke-width: 9; }
+#cocoquiz .aq-ring .aq-rtrack { stroke: var(--aqz-track); }
+#cocoquiz .aq-ring .aq-rfill { stroke: var(--aqz-orange); stroke-linecap: round; transition: stroke-dasharray .8s cubic-bezier(.2, .8, .2, 1); }
+#cocoquiz .aq-ringtxt { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+#cocoquiz .aq-ring b { font-size: 30px; font-weight: 700; line-height: 1; color: var(--aqz-ink); }
+#cocoquiz .aq-ring small { font-size: 12px; font-weight: 600; color: var(--aqz-ink2); margin-top: 2px; }
+#cocoquiz .aq-scoretxt { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+#cocoquiz .aq-verdict { font-size: 20px; font-weight: 700; letter-spacing: 0; }
+#cocoquiz .aq-score .aq-hint { margin: 0; font-size: 14px; color: var(--aqz-ink2); }
+#cocoquiz .aq-score .aq-actions { flex-wrap: wrap; gap: 10px; padding-top: 12px; }
+#cocoquiz .aq-more { display: flex; flex-wrap: wrap; gap: 2px; margin: 2px 0 0 -10px; }
+#cocoquiz .aq-missed { margin: 0; padding: 6px 24px 8px; border: 1px solid var(--aqz-line); border-radius: 14px; background: var(--aqz-panel); }
+#cocoquiz .aq-mhead { padding: 16px 0 0; margin: 0; font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--aqz-ink2); }
+#cocoquiz .aq-mitem { display: flex; flex-direction: column; gap: 10px; padding: 18px 0; border-top: 0; border-bottom: 1px solid var(--aqz-line2); font-size: 14px; }
+#cocoquiz .aq-mlist > .aq-mitem:last-child { border-bottom: 0; }
+#cocoquiz .aq-mq { display: flex; align-items: flex-start; gap: 10px; font-weight: 700; }
+#cocoquiz .aq-mtype { flex: none; margin-top: 2px; padding: 3px 9px; border-radius: 999px; background: var(--aqz-letter); font-size: 11px; font-weight: 700; color: var(--aqz-ink2); white-space: nowrap; }
+#cocoquiz .aq-mq p { font-size: 15px; font-weight: 700; line-height: 1.4; }
+#cocoquiz .aq-mline { display: flex; align-items: baseline; gap: 10px; }
+#cocoquiz .aq-mline > span:first-child { flex: none; width: 128px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; }
+#cocoquiz .aq-mline > span:first-child svg { width: 14px; height: 14px; stroke-width: 3; }
+#cocoquiz .aq-mline.ko > span:first-child { color: var(--aqz-ko); }
+#cocoquiz .aq-mline.ok > span:first-child { color: var(--aqz-ok); }
+#cocoquiz .aq-mline > span:last-child { font-size: 14px; font-weight: 600; color: var(--aqz-ink); overflow-wrap: anywhere; }
+#cocoquiz .aq-mexpl { margin: 0; font-size: 13px; line-height: 1.55; color: var(--aqz-ink3); }
+#cocoquiz .aq-mrest[hidden] { display: none; }
+#cocoquiz .aq-mrest > .aq-mitem:first-child { border-top: 1px solid var(--aqz-line2); }
+#cocoquiz .aq-mfoot { display: flex; justify-content: center; padding: 16px 0 14px; border-top: 1px solid var(--aqz-line2); }
+#cocoquiz .aq-perfect { padding: 18px 0; font-size: 15px; font-weight: 600; color: var(--aqz-ok); }
+
+/* ---- téléphone et fenêtres étroites (jusqu'à 360 px) ---- */
+@media (max-width: 760px) {
+  #cocoquiz .set-head { padding: 14px 16px 12px; }
+  #cocoquiz .aq-fbody { padding: 14px 16px; }
+  #cocoquiz .aq-rows { padding: 2px 14px; }
+  #cocoquiz .aq-row { flex-direction: column; align-items: stretch; gap: 10px; padding: 14px 0; }
+  #cocoquiz .aq-rlab { width: auto; }
+  #cocoquiz .aq-pills { gap: 8px; }
+  #cocoquiz .aq-pill { height: 44px; padding: 0 14px; }
+  #cocoquiz .aq-pills-n .aq-pill { width: 48px; height: 48px; }
+  #cocoquiz .aq-foot { flex-direction: column-reverse; align-items: stretch; gap: 14px; padding: 14px 16px; }   /* « Générer le quiz » avant la mention */
+  #cocoquiz .aq-fright { flex-direction: column; align-items: stretch; gap: 10px; }
+  #cocoquiz .aq-sum { text-align: center; }
+  #cocoquiz .aq-go { width: 100%; justify-content: center; }
+  #cocoquiz .aq-gen { padding: 22px 16px 20px; gap: 18px; }
+  #cocoquiz .aq-gsteps { gap: 10px 18px; }
+  #cocoquiz .aq-gcards { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  #cocoquiz .aq-gcard { height: 66px; padding: 8px 10px; }
+  #cocoquiz .aq-gbtns { width: 100%; }
+  #cocoquiz .aq-gbtns .aq-btn { flex: 1; justify-content: center; }
+  #cocoquiz .aq-phead { padding: 12px 16px 0; flex-wrap: wrap; }
+  #cocoquiz .aq-pbar { margin: 10px 16px 0; gap: 3px; }
+  #cocoquiz .aq-pbody { padding: 14px 16px 18px; gap: 12px; }
+  #cocoquiz .aq-qcard { padding: 18px 16px; gap: 16px; border-radius: 12px; }
+  #cocoquiz .aq-qtext { font-size: 20px; }
+  #cocoquiz .aq-widget .qp-opts { grid-template-columns: 1fr; gap: 10px; }
+  #cocoquiz .aq-widget .qp-opt { min-height: 56px; padding: 10px 12px; font-size: 14.5px; flex-wrap: wrap; row-gap: 4px; }   /* la mention « Bonne réponse » passe sous le texte */
+  #cocoquiz .aq-widget .qp-otext { flex: 1 1 calc(100% - 46px); min-width: 0; }
+  #cocoquiz .aq-widget .qp-opt.ok::after, #cocoquiz .aq-widget .qp-opt.ko.sel::after { flex: 1 0 calc(100% - 46px); margin-left: 46px; padding: 0; text-align: left; }   /* 46 px = lettre 32 px + écart 14 px */
+  #cocoquiz .aq-pfoot { flex-direction: column; align-items: stretch; padding: 12px 16px; gap: 10px; }
+  #cocoquiz .aq-keys { justify-content: center; }
+  #cocoquiz .aq-pfoot .aq-btn { justify-content: center; }
+  #cocoquiz .aq-feedback { padding: 16px; gap: 12px; }
+  #cocoquiz .aq-fbrow { flex-direction: column; align-items: stretch; }
+  #cocoquiz .aq-fbrow .aq-next { width: 100%; justify-content: center; margin-left: 0; }
+  #cocoquiz .aq-result { padding: 14px 16px 18px; gap: 12px; }
+  #cocoquiz .aq-score { flex-direction: column; text-align: center; padding: 20px 16px; gap: 14px; }
+  #cocoquiz .aq-scoretxt { align-items: center; }
+  #cocoquiz .aq-score .aq-actions, #cocoquiz .aq-more { justify-content: center; }
+  #cocoquiz .aq-score .aq-actions .aq-btn { width: 100%; justify-content: center; }
+  #cocoquiz .aq-btn.link { min-height: 44px; }
+  #cocoquiz .aq-more { margin-left: 0; }
+  #cocoquiz .aq-missed { padding: 4px 14px 6px; }
+  #cocoquiz .aq-mline { flex-direction: column; gap: 4px; }
+  #cocoquiz .aq-mline > span:first-child { width: auto; }
+  #cocoquiz .aq-mfoot .aq-btn { width: 100%; justify-content: center; }
+}
+@media (max-width: 420px) {
+  #cocoquiz .aq-gcards { grid-template-columns: repeat(2, 1fr); }
+  #cocoquiz .aq-gsteps { flex-direction: column; align-items: flex-start; gap: 8px; }
+  #cocoquiz .aq-next kbd { display: none; }   /* « Question suivante → » tient sur la largeur du bouton */
+}
+@media (hover: none) { #cocoquiz .aq-keys, #cocoquiz .aq-next kbd { display: none; } }   /* raccourcis clavier inutiles au tactile */
+#cocoquiz :is(button, a, input):focus-visible { outline: 2px solid var(--aqz-ink); outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  #cocoquiz .aq-gstep[data-state="cur"] i, #cocoquiz .aq-spin { animation: none; border-right-color: var(--aqz-orange); }
+  #cocoquiz :is(.aq-form, .aq-gen, .aq-play, .aq-qcard, .aq-feedback, .aq-result, .aq-ring, .aq-fbico) { animation: none; transition: none; }
+}

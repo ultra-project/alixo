@@ -24,7 +24,7 @@ const safeTint = c => (HEX_COLOR.test(String(c || '')) ? c : DEFAULT_TINT);
    quand aucun dossier n'est affiché ; DEFAULT_TINT reste la valeur de repli des données */
 function defaultTint() { try { const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim(); if (v) return v; } catch { /* hors navigateur */ } return DEFAULT_TINT; }
 /* version de l'application (tenue à jour avec package.json) — sert aux notifications « nouvelle version installée » */
-const ALIXO_VERSION = '1.58.0';
+const ALIXO_VERSION = '1.59.0';
 /* version web d'Alixo (GitHub Pages) et téléchargement de la version PC */
 const ALIXO_WEB_URL = 'https://alixoapp.com/docs/';
 /* 1.23 : tout passe par le site (pages de téléchargement et de versions) — jamais de lien direct vers l'hébergement des fichiers */
@@ -525,7 +525,9 @@ function inlineRename(el, { value = '', maxLength = 80, placeholder = 'Sans titr
 function renamePageInline(pid, isNew) {
   const d = doc(); if (!d || readOnly) return;
   const pg = docPages(d).find(p => p.id === pid); const el = $(`#page-tabs [data-page="${pid}"]`);
-  if (!pg || !el) { openRenamePagePopover(pid, isNew); return; }
+  if (!pg) return;
+  /* 1.59 : plus de 3 onglets → pas de pastille ; le nom se saisit dans la carte de la fenêtre (js/pagetabs.js) */
+  if (!el) { if (!(window.AlixoPageTabs && AlixoPageTabs.rename(pid, isNew))) openRenamePagePopover(pid, isNew); return; }
   if (isNew) el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   inlineRename(el, { value: pg.titre || '', maxLength: 60, placeholder: 'Nom de l’onglet', onCommit: v => { pg.titre = v; d.updatedAt = Date.now(); save(); renderPageTabs(); if (doc() === d && pagesActive()) renderPgHead(d); },   // 1.43 : + nom en tête de page
     // 1.43 : l'en-tête de la page suit la saisie (sinon il affiche encore l'ancien nom pendant qu'on tape)
@@ -574,38 +576,37 @@ function movePage(pid, dir) {
   if (i < 0 || j < 0 || j >= pages.length) return;
   pages.splice(j, 0, pages.splice(i, 1)[0]); d.updatedAt = Date.now(); save(); renderPageTabs();
 }
+/* 1.59 : dupliquer un onglet — copie des blocs avec de nouveaux identifiants, placée juste après et ouverte */
+function duplicatePage(pid) {
+  const d = doc(); if (!d || readOnly) return;
+  const pages = docPages(d);
+  if (pages.length >= 20) { toast('20 onglets au maximum par séance'); return; }
+  const i = pages.findIndex(p => p.id === pid); if (i < 0) return;
+  const pg = pages[i];
+  if (pg.id === d.page) syncAllFromDom();
+  const src = pg.id === d.page ? d.blocks : pg.blocks;
+  const blocks = JSON.parse(JSON.stringify(src || [])).map(b => { b.id = uid(); delete b.notes; if (Array.isArray(b.fl)) b.fl.forEach(o => { if (o && o.id) o.id = uid(); }); return b; });
+  if (!blocks.length) blocks.push({ id: uid(), type: 'p', text: '', day: todayKey() });
+  const np = { id: uid(), titre: `${pg.titre || 'Sans titre'} (copie)`.slice(0, 60), blocks };
+  pages.splice(i + 1, 0, np);
+  switchPage(np.id);
+  toast(`Onglet « ${pg.titre || 'Sans titre'} » dupliqué`);
+}
+/* 1.59 : l'interface des onglets (pastilles, bouton compact, fenêtre en grille) vit dans js/pagetabs.js ;
+   ici, seulement « afficher ou non la barre » — repli minimal si le module manque */
 function renderPageTabs() {
   const bar = $('#page-tabs'); const d = doc();
   if (!bar) return;
-  if (!d) { bar.hidden = true; return; }
-  const pages = docPages(d);
+  const pages = d ? docPages(d) : [];
   const show = pages.length > 1;
   bar.hidden = !show;
   document.body.classList.toggle('has-pages', show);
+  if (window.AlixoPageTabs) { AlixoPageTabs.render(); return; }
   if (!show) return;
-  bar.innerHTML = `<span class="pg-label" title="Onglets de cette séance">Onglets</span>` + pages.map(p => `<button type="button" class="pg-tab ${p.id === d.page ? 'active' : ''}" data-page="${esc(p.id)}" title="${esc(p.titre)} — double-clic : renommer · clic droit : options">${esc(p.titre || 'Sans titre')}</button>`).join('') +
+  if (!bar.dataset.fallback) { bar.dataset.fallback = '1'; bar.addEventListener('click', e => { if (e.target.closest('[data-pgadd]')) addPage(); else { const t = e.target.closest('[data-page]'); if (t) switchPage(t.dataset.page); } }); }
+  bar.innerHTML = pages.map(p => `<button type="button" class="pg-tab ${p.id === d.page ? 'active' : ''}" data-page="${esc(p.id)}" title="${esc(p.titre)} — double-clic : renommer · clic droit : options"><span class="pg-name">${esc(p.titre || 'Sans titre')}</span></button>`).join('') +
     (readOnly ? '' : `<button type="button" class="pg-add" data-pgadd title="Nouvel onglet dans cette séance">＋</button>`);
 }
-$('#page-tabs').addEventListener('click', e => {
-  if (e.target.closest('[data-pgadd]')) { addPage(); return; }
-  const t = e.target.closest('[data-page]'); if (t) switchPage(t.dataset.page);
-});
-// 1.40 : double-clic → renommer sur place (2e clic d'un double-clic : l'onglet a pu être redessiné par le 1er, d'où e.detail)
-$('#page-tabs').addEventListener('click', e => { if (e.detail !== 2) return; const t = e.target.closest('[data-page]'); if (t && !readOnly) renamePageInline(t.dataset.page); });
-$('#page-tabs').addEventListener('contextmenu', e => {
-  const t = e.target.closest('[data-page]'); if (!t || readOnly) return;
-  e.preventDefault();
-  const d = doc(); const pages = docPages(d); const i = pages.findIndex(p => p.id === t.dataset.page);
-  const menu = $('#ctxmenu');
-  menu.innerHTML = `<div class="cm-title">${esc(pages[i].titre)}</div>
-    <button data-cm="pgrename">${CM_ICO.pen}Renommer</button>
-    <button data-cm="pgleft" ${i === 0 ? 'disabled' : ''}>${CM_ICO.move}Déplacer à gauche</button>
-    <button data-cm="pgright" ${i === pages.length - 1 ? 'disabled' : ''}>${CM_ICO.move}Déplacer à droite</button>
-    <button data-cm="pgadd">${CM_ICO.dup}Nouvel onglet</button>
-    <button data-cm="pgdelete" class="danger">${CM_ICO.trash}Supprimer l’onglet</button>`;
-  menu.dataset.fid = ''; menu.dataset.did = ''; menu.dataset.tbl = ''; menu.dataset.img = ''; menu.dataset.page = t.dataset.page;
-  placeCtxMenu(menu, e.clientX, e.clientY);
-});
 const ppPage = $('#pp-page'); if (ppPage) ppPage.addEventListener('click', addPage);
 
 /* ---------------- onglets : plusieurs séances ouvertes en même temps ---------------- */
@@ -3961,7 +3962,8 @@ const SHORTCUT_GROUPS = [
   { name: 'Bibliothèque', keys: [[[['F2']], 'Renommer la séance sélectionnée']] },
   { name: 'Séances', keys: [
     [[['/']], 'Insérer un bloc (ligne vide)'], [[['F7']], 'Correction par IA'], [[['F8']], 'Alixo AI (Coco, quiz, fiche)'], [[['Ctrl', 'Alt', '1…6']], 'Niveau de titre (selon le plan)'],
-    [[['Ctrl', '~molette']], 'Zoom (aussi présentations, tableurs)'], [[['Ctrl', '+'], ['Ctrl', '−']], 'Zoom avant / arrière'], [[['Ctrl', '0']], 'Zoom à 100 %']] },
+    [[['Ctrl', '~molette']], 'Zoom (aussi présentations, tableurs)'], [[['Ctrl', '+'], ['Ctrl', '−']], 'Zoom avant / arrière'], [[['Ctrl', '0']], 'Zoom à 100 %'],
+    [[['F2']], 'Renommer l’onglet (onglets de la séance)'], [[['Maj', 'F10']], 'Menu de l’onglet'], [[['Alt', 'Maj', '←'], ['Alt', 'Maj', '→']], 'Déplacer l’onglet']] },
   { name: 'Présentations', keys: [[[['F5']], 'Présenter'], [[['Suppr']], 'Supprimer le bloc sélectionné']] },
   { name: 'Tableurs', keys: [[[['F2']], 'Modifier la cellule'], [[['Ctrl', '~flèches']], 'Bord de la zone remplie']] },
   { name: 'Quiz', keys: [[[['F5']], 'Tester le quiz']] },
@@ -5095,7 +5097,9 @@ function renderReadOnlyBanner(info) {
   let b = $('#ro-banner');
   if (!info) { if (b) b.remove(); return; }
   if (!b) { b = document.createElement('div'); b.id = 'ro-banner'; $('#docwrap').insertBefore(b, $('#doc')); }
-  b.innerHTML = `Partagé par <b>${esc(info.owner || 'un membre')}</b> · ${info.role === 'write' ? 'vous pouvez modifier cette séance' : 'lecture seule'}<button type="button" id="ro-info">Détails</button>`;
+  /* 1.59.0 : visiteur sans compte (js/shareview.js) — le bouton mène à la création de compte */
+  if (AlixoShare.guest) b.innerHTML = `Partagé par <b>${esc(info.owner ? '@' + info.owner : 'un membre d’Alixo')}</b> · lecture seule — <span class="ro-guest">créez un compte pour modifier</span> · <a class="ro-privacy" href="https://alixoapp.com/confidentialite.html#lien-sans-compte" target="_blank" rel="noopener">Confidentialité</a><button type="button" id="ro-info">Créer un compte</button>`;
+  else b.innerHTML = `Partagé par <b>${esc(info.owner || 'un membre')}</b> · ${info.role === 'write' ? 'vous pouvez modifier cette séance' : 'lecture seule'}<button type="button" id="ro-info">Détails</button>`;
   b.querySelector('#ro-info').addEventListener('click', () => AlixoShare.openInfo(currentDocId));
 }
 /* met à jour les numéros (titres, listes) sans tout redessiner */
@@ -5196,6 +5200,7 @@ function focusField(target, pos = 'end') {
     const r = document.createRange();
     r.selectNodeContents(target);
     r.collapse(pos === 'start');
+    if (target.childNodes.length === 1 && target.firstChild.nodeName === 'BR') { r.setStart(target, 0); r.collapse(true); }   // 1.59 : champ vide — avant le <br> (voir caretIntoField)
     const s = getSelection(); s.removeAllRanges(); s.addRange(r);
   }
   ensureFieldVisible(target);
@@ -5593,8 +5598,36 @@ let selFromNative = false;   // compatibilité : plus de sélection de blocs « 
 let justDraggedSel = false, justDraggedCurve = false;
 
 /* le curseur change de bloc : mémorisation, aide-mémoire, analyse IA du bloc quitté, barre d'outils */
+/* 1.59 : position du curseur dans l'éditeur, corrigée avant toute frappe (au selectionchange et au keydown) :
+   1. champ vide (un <br> seul) : curseur AVANT le <br>. Placé après lui — ce que donnait « curseur en fin de champ »
+      (focusField, focusBlock, fermeture du menu « / ») —, Chrome interrompt la première composition (IME, touche morte,
+      suggestions de texte de Windows, où chaque touche est composée) sans compositionend : le caractère tapé, « / »
+      compris, restait écrit sans passer par l'éditeur (menu jamais ouvert) et l'aide-mémoire restait affiché ;
+   2. curseur posé sur le bloc lui-même, hors de son texte (clic sur la case à cocher, la puce ou la marge d'un élément de
+      liste) : la frappe partait à côté du champ (« <br>/ » dans le texte) — il est ramené dans le champ voisin. */
+const loneBr = el => el.childNodes.length === 1 && el.firstChild.nodeName === 'BR';
+function caretIntoField() {
+  const sel = getSelection();
+  if (!sel.rangeCount || !sel.isCollapsed) return false;
+  const n = sel.anchorNode, o = sel.anchorOffset;
+  if (!n || n.nodeType !== 1 || !blocksEl.contains(n)) return false;
+  const put = (el, atStart) => {
+    const r = document.createRange();
+    if (loneBr(el)) r.setStart(el, 0); else { r.selectNodeContents(el); r.collapse(atStart); }
+    r.collapse(true); sel.removeAllRanges(); sel.addRange(r); return true;
+  };
+  if (o > 0 && n.isContentEditable && loneBr(n)) return put(n, true);
+  if (objSel || n.parentNode !== blocksEl || !/\b(p|h|li|callout|quote)\b/.test(n.className)) return false;
+  const kids = n.childNodes;
+  const isF = k => !!(k && k.nodeType === 1 && k.matches(FIELD_SEL) && k.isContentEditable);
+  if (isF(kids[o])) return put(kids[o], true);
+  if (isF(kids[o - 1])) return put(kids[o - 1], false);
+  const t = n.querySelector(':scope > .btxt');
+  return t && t.isContentEditable ? put(t, o < kids.length) : false;
+}
 document.addEventListener('selectionchange', () => {
   if (!document.body.classList.contains('mode-editor')) return;
+  if (caretIntoField()) return;   // un nouveau selectionchange suit
   const bl = blockAtSelection();
   if (bl) {
     if (lastBlockId && lastBlockId !== bl.dataset.id) { const prev = getBlock(lastBlockId); if (prev) aiAutoConsider(prev); }
@@ -5632,7 +5665,10 @@ blocksEl.addEventListener('compositionstart', () => {
   if (host) host.classList.remove('is-blank');
 });
 blocksEl.addEventListener('compositionend', e => { composing = false; syncBlankAt(e.target); });
-blocksEl.addEventListener('input', e => { if (!composing && !e.isComposing) syncBlankAt(e.target); }, true);
+/* 1.59 : une saisie hors composition prouve qu'aucune composition n'est en cours — si un compositionend s'est perdu
+   (champ remplacé, fenêtre quittée), « composing » restait vrai et l'aide-mémoire restait affiché par-dessus le texte */
+blocksEl.addEventListener('input', e => { if (!e.isComposing) composing = false; if (!composing) syncBlankAt(e.target); }, true);
+blocksEl.addEventListener('focusout', e => { if (composing && !(e.relatedTarget && blocksEl.contains(e.relatedTarget))) { composing = false; syncBlank(blocksEl); } });
 
 blocksEl.addEventListener('input', e => {
   if (fmtInProgress) return;
@@ -6522,6 +6558,9 @@ function insertPastedHTML(field, html) {
 }
 
 blocksEl.addEventListener('paste', e => {
+  /* 1.59 : collage pendant que le menu « / » est ouvert — le collage est fait ici (preventDefault), beforeinput ne passe pas :
+     le menu se referme, et un « / » resté devant le curseur sur une ligne vide (garde-fou) est retiré */
+  if (slashCtx) { if (!slashCtx.query && !slashCtx.inline) takeBeforeCaret('/'); closeSlash(false); }
   const cd = e.clipboardData; if (!cd) return;
   /* 1.57.0 : une sélection à cheval sur plusieurs blocs est remplacée, pas complétée — mais supprimée seulement juste avant
      une insertion réelle (replaceCross), jamais quand le collage s'arrête avant (rien d'utilisable, trop volumineux, lien, champ
@@ -6693,6 +6732,7 @@ document.addEventListener('cut', e => {
 /* ---------------- clavier ---------------- */
 blocksEl.addEventListener('keydown', e => {
   if (slashCtx) return;                       // le menu « / » gère le clavier
+  caretIntoField();                           // 1.59 : curseur resté sur le bloc (clic sur la case, la puce) → dans le champ
   const mod = e.ctrlKey || e.metaKey;
   const t = e.target;
 
@@ -8772,6 +8812,14 @@ function slashSpecOk(it, q) {
 
 /* inline = { field, range } quand le menu est ouvert au milieu d'un texte */
 function openSlashMenu(blockEl, inline) {
+  /* 1.59 : menu des blocs sur une ligne « vide » — garde-fou : un « / » resté dans le champ (saisie sans touche, ancienne
+     version) en est retiré, et l'aide-mémoire est recalculé (jamais affiché par-dessus du texte) */
+  const bf = !inline && blockEl.querySelector(':scope > .btxt');
+  if (bf && /^[\s\u200B\uFEFF\/]+$/.test(bf.textContent) && bf.textContent.includes('/') && !bf.querySelector('img, .nb, ' + ATOM_SEL)) {
+    bf.innerHTML = '<br>'; const r = document.createRange(); r.setStart(bf, 0); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+    const b = getBlock(blockEl.dataset.id); if (b) { b.text = ''; touch(); }
+  }
+  syncBlank(blockEl);
   slashCtx = { blockId: blockEl.dataset.id, query: '', sel: 0, inline: inline || null, nest: window.AlixoNest ? AlixoNest.nestKindAt(blockEl, inline) : null };
   const r = inline && inline.field ? (caretRect(inline.field) || blockEl.getBoundingClientRect()) : blockEl.getBoundingClientRect();
   const menu = $('#slashmenu');
@@ -8977,31 +9025,104 @@ blocksEl.addEventListener('click', e => {
   }
 });
 
+/* touche — ou caractère reçu sans touche (clavier virtuel, IME) — adressée au menu « / » ouvert ; true = consommée */
+function slashMenuKey(key) {
+  if (!slashCtx) return false;
+  const flatCount = $$('#slashmenu .sm-item').length;
+  if (key === 'Escape') { closeSlash(); return true; }
+  if (key === 'ArrowDown') { slashCtx.sel = Math.min(flatCount - 1, slashCtx.sel + 1); renderSlash(); scrollSlashIntoView(); return true; }
+  if (key === 'ArrowUp') { slashCtx.sel = Math.max(0, slashCtx.sel - 1); renderSlash(); scrollSlashIntoView(); return true; }
+  if (key === 'Enter' || key === 'Tab') {
+    const sel = $$('#slashmenu .sm-item')[slashCtx.sel];
+    if (sel) applySlash(sel.dataset.sid); else closeSlash();
+    return true;
+  }
+  if (key === 'Backspace') {
+    if (!slashCtx.query) { closeSlash(); return true; }
+    slashCtx.query = slashCtx.query.slice(0, -1); renderSlash(); return true;
+  }
+  // Espace juste après « / » : menu refermé ; au milieu d'un texte, « / » est écrit volontairement (avec l'espace)
+  if (key === ' ' && !slashCtx.query) { const inl = slashCtx.inline; closeSlash(); if (inl) document.execCommand('insertText', false, '/ '); return true; }
+  if (key.length === 1) { slashCtx.query += key; slashCtx.sel = 0; renderSlash(); return true; }
+  return false;
+}
 document.addEventListener('keydown', e => {
   if (!slashCtx) return;
   // le menu consomme la touche : l'éditeur ne doit pas la traiter aussi (Entrée créait un bloc en plus)
-  const stop = () => { e.preventDefault(); e.stopPropagation(); };
-  const flatCount = $$('#slashmenu .sm-item').length;
-  if (e.key === 'Escape') { stop(); closeSlash(); return; }
-  if (e.key === 'ArrowDown') { stop(); slashCtx.sel = Math.min(flatCount - 1, slashCtx.sel + 1); renderSlash(); scrollSlashIntoView(); return; }
-  if (e.key === 'ArrowUp') { stop(); slashCtx.sel = Math.max(0, slashCtx.sel - 1); renderSlash(); scrollSlashIntoView(); return; }
-  if (e.key === 'Enter' || e.key === 'Tab') {
-    stop();
-    const sel = $$('#slashmenu .sm-item')[slashCtx.sel];
-    if (sel) applySlash(sel.dataset.sid); else closeSlash();
+  // 1.59 : AltGr (Ctrl+Alt sous Windows) n'est pas un raccourci — « @ », « ~ », « # »… filtrent le menu au lieu d'entrer dans le bloc
+  const altGr = (e.getModifierState && e.getModifierState('AltGraph')) || (e.ctrlKey && e.altKey && !e.metaKey);
+  if ((e.ctrlKey || e.metaKey) && !altGr && e.key.length === 1 && !(e.key === ' ' && !slashCtx.query)) return;
+  if (slashMenuKey(e.key)) { e.preventDefault(); e.stopPropagation(); }
+}, true);
+
+/* 1.59 : « / » qui n'arrive pas par une touche « / » — clavier virtuel ou tactile, IME, suggestions de texte de Windows
+   (keydown « Process », keyCode 229), dictée : le caractère entrait dans le texte sans ouvrir le menu et y restait
+   (« le / qui s'affiche tout seul »). On le rattrape à beforeinput (ou à la fin d'une composition, qui ne s'annule pas)
+   et la décision reste celle de la touche « / » : un keydown « / » rejoué passe par l'éditeur et par les blocs imbriqués
+   (nest.js), avec leurs règles (ligne vide → menu des blocs, après un espace → menu en ligne, sinon « / » ordinaire).
+   Menu ouvert : rien de ce qui arrive par ces voies n'entre dans le bloc ; les lettres filtrent le menu. */
+let lastKeyDown = '';   // dernière touche physique enfoncée (« / » : le keydown a déjà décidé, rien à rejouer)
+document.addEventListener('keydown', e => { if (e.isTrusted) lastKeyDown = e.key; }, true);
+document.addEventListener('keyup', e => { if (e.isTrusted) lastKeyDown = ''; }, true);
+function replaySlashKey() {
+  const a = document.activeElement;
+  const t = a && (a === blocksEl || blocksEl.contains(a)) ? a : blocksEl;
+  const ev = new KeyboardEvent('keydown', { key: '/', code: 'Slash', bubbles: true, cancelable: true });
+  t.dispatchEvent(ev);
+  return ev.defaultPrevented;
+}
+/* ôte `str` juste avant le curseur (texte déjà écrit par une composition) ; renvoie { node, off } ou null */
+function takeBeforeCaret(str) {
+  const sel = getSelection();
+  if (!str || !sel.rangeCount || !sel.isCollapsed) return null;
+  const node = sel.anchorNode, off = sel.anchorOffset;
+  if (!node || node.nodeType !== 3 || !blocksEl.contains(node) || off < str.length || node.data.slice(off - str.length, off) !== str) return null;
+  node.deleteData(off - str.length, str.length);
+  const r = document.createRange(); r.setStart(node, off - str.length); r.collapse(true);
+  sel.removeAllRanges(); sel.addRange(r);
+  return { node, off: off - str.length };
+}
+/* après une retouche directe du DOM : même traitement qu'une frappe (modèle, aide-mémoire, co-édition) */
+function fieldEdited(f) {
+  if (!f || !f.isConnected) return;
+  if (!f.textContent && !f.querySelector('*')) { f.innerHTML = '<br>'; const r = document.createRange(); r.setStart(f, 0); r.collapse(true); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  const host = f.closest('[contenteditable="true"]') || blocksEl;
+  host.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'deleteContentBackward' }));
+}
+blocksEl.addEventListener('beforeinput', e => {
+  const it = e.inputType || '';
+  if (e.isComposing || /Composition/.test(it)) return;   // composition : reprise à compositionend
+  if (slashCtx) {
+    // menu ouvert : la saisie filtre le menu (ou le pilote), elle n'entre pas dans le bloc
+    if (it === 'insertText' || it === 'insertReplacementText') { e.preventDefault(); for (const ch of (e.data || '')) { if (!slashCtx) break; slashMenuKey(ch); } return; }
+    if (it === 'deleteContentBackward') { e.preventDefault(); slashMenuKey('Backspace'); return; }
+    if (it === 'insertParagraph' || it === 'insertLineBreak') { e.preventDefault(); slashMenuKey('Enter'); return; }
+    closeSlash(false);   // collage, dépôt, mise en forme… : le menu se referme, l'action se fait normalement
     return;
   }
-  if (e.key === 'Backspace') {
-    stop();
-    if (!slashCtx.query) { closeSlash(); return; }
-    slashCtx.query = slashCtx.query.slice(0, -1); renderSlash(); return;
-  }
-  if (e.key === ' ' && !slashCtx.query) { stop(); const inl = slashCtx.inline; closeSlash(); if (inl) document.execCommand('insertText', false, '/ '); return; }
-  if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
-    stop();
-    slashCtx.query += e.key; slashCtx.sel = 0; renderSlash();
-  }
+  if (it === 'insertText' && e.data === '/' && lastKeyDown !== '/' && replaySlashKey()) e.preventDefault();
 }, true);
+blocksEl.addEventListener('compositionend', e => {
+  const data = e.data || '';
+  if (!data) return;
+  const f = activeField();
+  if (slashCtx) {
+    // touche morte + lettre, IME… pendant que le menu est ouvert : le texte composé quitte le bloc et filtre le menu
+    const ctx = slashCtx;
+    if (!takeBeforeCaret(data)) return;
+    fieldEdited(f);
+    if (slashCtx !== ctx) return;
+    if (data === '/' && !ctx.query && lastKeyDown === '/') return;   // « / » déjà traité par sa touche, recopié par l'IME
+    for (const ch of data) { if (!slashCtx) break; slashMenuKey(ch); }
+    return;
+  }
+  if (data !== '/') return;
+  const at = takeBeforeCaret('/'); if (!at) return;
+  if (replaySlashKey()) { fieldEdited(f); return; }   // menu ouvert (ou frappe refusée) : le « / » ne reste pas
+  at.node.insertData(at.off, '/');                     // « / » ordinaire (au milieu d'un mot) : remis tel quel
+  const r = document.createRange(); r.setStart(at.node, at.off + 1); r.collapse(true);
+  const s = getSelection(); s.removeAllRanges(); s.addRange(r);
+});
 function scrollSlashIntoView() {
   const sel = $('#slashmenu .sm-item.sel');
   if (sel) sel.scrollIntoView({ block: 'nearest' });
@@ -12173,7 +12294,7 @@ document.addEventListener('keydown', e => {
 
 document.addEventListener('keydown', e => {
   const mod = e.ctrlKey || e.metaKey;
-  if (mod && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); return; }
+  if (mod && !e.shiftKey && e.key.toLowerCase() === 'k') { e.preventDefault(); openSearch(); return; }   // 1.59 : Ctrl+Maj+K reste aux tâches (ci-dessous)
   if (e.key === 'Escape' && !$('#searchov').hidden) { closeSearch(); return; }
   if (document.body.classList.contains('mode-slides')) return;   // présentation : raccourcis dans js/slides.js
   if (document.body.classList.contains('mode-sheet')) return;    // tableur : raccourcis dans js/sheets.js
@@ -12188,7 +12309,7 @@ document.addEventListener('keydown', e => {
   }
   if (!document.body.classList.contains('mode-editor')) {
     if (mod && e.shiftKey && e.key.toLowerCase() === 'a' && $('#authov') && $('#authov').hidden !== false) { e.preventDefault(); if (libMode === 'agenda') { libMode = 'docs'; renderLibrary(); } else openAgendaHome(); }
-    if (mod && e.shiftKey && e.code === 'KeyK' && $('#authov') && $('#authov').hidden !== false) { e.preventDefault(); if (libMode === 'todo') { libMode = 'docs'; renderLibrary(); } else openTodoHome(); }
+    if (mod && e.shiftKey && e.code === 'KeyK' && (!$('#authov') || $('#authov').hidden !== false)) { e.preventDefault(); if (libMode === 'todo') { libMode = 'docs'; renderLibrary(); } else openTodoHome(); }
     return;
   }
   if (slashCtx) return;
@@ -14238,7 +14359,8 @@ setTimeout(() => {
     /* 1.53 : lien de partage …/docs/?join=<code> (ou alixo://join/<code>, traité par share.js) → proposition de rejoindre */
     else if (new URLSearchParams(location.search).get('join')) {
       const code = new URLSearchParams(location.search).get('join');
-      if (window.AlixoShare && AlixoShare.enabled) AlixoShare.joinByCode(code);
+      if (window.AlixoShare && AlixoShare.guest) { /* 1.59.0 : déjà ouvert en lecture par js/shareview.js (sans compte) */ }
+      else if (window.AlixoShare && AlixoShare.enabled) AlixoShare.joinByCode(code);
       else toast('Connectez-vous à votre compte Alixo pour rejoindre ce partage (Paramètres › Compte)', { duration: 8000 });
     }
     const prev = state.settings.lastVersion;
@@ -14250,7 +14372,7 @@ setTimeout(() => {
       const silent = !!prev && minor(prev) === minor(ALIXO_VERSION);
       const wnVer = whatsNewVersion();
       if (prev && !silent && !wn) showWhatsNew(wnVer);
-      if (prev && !silent && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'L’éditeur de quiz est refait (déroulé en cartes, case « Bonne réponse », aperçu masquable), la fenêtre Apparence montre les 14 thèmes en grille, les Résultats s’affichent en cartes, et les écrans de jeu sont plus lisibles, jusque sur un petit téléphone.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(wnVer)) ? { type: 'whatsnew', version: wnVer } : { type: 'url', url: ALIXO_VERSIONS_URL } });
+      if (prev && !silent && window.AlixoNotify) AlixoNotify.push({ id: 'ver_' + ALIXO_VERSION, kind: 'update', title: `Alixo ${ALIXO_VERSION} installé`, text: 'Un lien de partage se consulte maintenant sans compte (lecture seule, un compte pour modifier), le scan trouve la feuille même sur une table claire ou texturée, et le quiz d’Alixo AI, les onglets d’une séance et les tâches ont été redessinés ; le « / » fantôme est corrigé.', action: (window.AlixoWhatsNew && AlixoWhatsNew.has(wnVer)) ? { type: 'whatsnew', version: wnVer } : { type: 'url', url: ALIXO_VERSIONS_URL } });
     }
   } catch { /* stockage indisponible */ }
   if (window.AlixoStats) AlixoStats.maybeOpen();

@@ -225,7 +225,7 @@ window.AlixoWorkspace = (() => {
     const b = root.querySelector('[data-ws="login"]'); if (b) b.addEventListener('click', () => AlixoApp.openSettings('compte'));
   };
   const offToast = () => toast('Connectez-vous pour accéder au Workspace', { duration: 6000, action: 'Se connecter', onAction: () => AlixoApp.openSettings('compte') });
-  const OFF = { enabled: false, view, render: renderOff, publish: async () => null, list: async () => [], download: async () => false, star: async () => false, unstar: async () => false, comment: async () => null, report: async () => false, reportComment: async () => false, remove: async () => false, mine: async () => [], openPublish: offToast, openItem: offToast };
+  const OFF = { enabled: false, hasScan, view, render: renderOff, publish: async () => null, list: async () => [], download: async () => false, star: async () => false, unstar: async () => false, comment: async () => null, report: async () => false, reportComment: async () => false, remove: async () => false, mine: async () => [], openPublish: offToast, openItem: offToast };
   const A = window.AlixoAuth;
   const acc = A && A.isConfigured && A.account();
   if (!acc || !window.firebase || !firebase.firestore || !window.AlixoApp) return OFF;
@@ -825,5 +825,6 @@ window.AlixoWorkspace = (() => {
   }
   setTimeout(() => { watchComments().catch(() => {}); }, 6000);
 
-  return { enabled: true, view, render, publish, list, download, star, unstar, comment, report, reportComment, remove, mine, openPublish, openItem, comments, hideComment, deleteComment };
+  /* 1.59.0 : hasScan partagé avec js/share.js (confirmation du lien public) */
+  return { enabled: true, view, render, publish, list, download, star, unstar, comment, report, reportComment, remove, mine, openPublish, openItem, comments, hideComment, deleteComment, hasScan };
 })();

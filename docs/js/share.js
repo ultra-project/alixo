@@ -14,8 +14,12 @@
                                    inviteRoles: { [uid | email]: read|write } (1.53.0 : rôle accordé, vérifié par les règles à l'acceptation),
                                    link: { code, role } (1.53 : lien d'adhésion, facultatif),
                                    excluded: [ids], folder: { root, folders }, event: {…}, createdAt, updatedAt }
-   - sharelinks/{code}         → { sid, title, ownerPseudo, role, createdAt } — lien « toute personne disposant du lien
-                                   peut rejoindre » (1.53) ; code de 20 caractères aléatoires, lu par tout membre connecté
+   - sharelinks/{code}         → { sid, title, ownerPseudo, role, createdAt, kind } — lien « toute personne disposant du lien
+                                   peut rejoindre » (1.53) ; code de 20 caractères aléatoires, lu par quiconque a le code
+                                   (1.59.0 : y compris un visiteur sans compte, connecté anonymement — js/shareview.js ; kind ajouté)
+   - linktickets/{uid anonyme} → { code, ts } — 1.59.0 : « ticket » déposé par le visiteur sans compte ; les règles n'ouvrent
+                                   les docs, imgs et files du partage que si shares/{sid}.link.code == ce code (jamais la
+                                   fiche shares/{sid} elle-même). Purgé après 7 jours par le Worker billing.
    - shares/{sid}/docs/{docId} → { v, updatedAt, data: JSON de la séance, by, byName } (1.56.0 : v = version, +1 à chaque écriture ;
                                    fusion à trois versions côté client, js/coedit.js)
    - shares/{sid}/log/{id}     → { ts, uid, name, action, docId, title, detail }
@@ -64,7 +68,10 @@ window.AlixoShare = (() => {
     ctx = ctx || {};
     const members = Object.entries(sh.members || {}).filter(([u]) => u !== sh.owner);
     const invites = Array.isArray(sh.invites) ? sh.invites : [];
-    const link = sh.link && typeof sh.link === 'object' && typeof sh.link.code === 'string' && /^[A-Za-z0-9]{20}$/.test(sh.link.code) ? { code: sh.link.code, role: safeRole(sh.link.role) } : null;
+    const link = sh.link && typeof sh.link === 'object' && typeof sh.link.code === 'string' && /^[A-Za-z0-9]{20}$/.test(sh.link.code) ? { code: sh.link.code, role: safeRole(sh.link.role), anon: sh.link.anon === true } : null;
+    /* 1.59.0 : le lien public (consultable sans compte) est réservé aux 15 ans et plus (ctx.u15 : moins de 15 ans ou âge inconnu)
+       et n'existe pas pour un partage d'entreprise (Alixo Business : les règles l'excluent) */
+    const noLink = !link && (ctx.u15 ? 'u15' : sh.org ? 'org' : '');
     const nPeople = members.length + 1;
     /* puce : les invitations en attente comptent (« Privé · vous seul » serait faux avec 2 invitations) */
     const chip = sh.org ? 'Entreprise' : `Privé · ${members.length ? `${nPeople} personnes` : invites.length ? `${invites.length} invitation${invites.length > 1 ? 's' : ''} en attente` : 'vous seul'}${link ? ' · lien actif' : ''}`;
@@ -85,14 +92,73 @@ window.AlixoShare = (() => {
       <div class="ai-keymsg${ctx.pushErr ? ' err' : ''}" id="sh-msg">${ctx.pushErr ? 'Envoi des séances impossible : ' + esc(ctx.pushErr) : ''}</div>
       <div class="po-label">Lien de partage</div>
       <div class="sh-linkbox${link ? ' on' : ''}">
-        <label class="sh-switch"><input type="checkbox" id="sh-link-on"${link ? ' checked' : ''}><span>Toute personne disposant du lien peut rejoindre</span></label>
-        ${link ? `<div class="sh-linkrow"><select id="sh-link-role" title="Droit donné par le lien">${roleOptions(link.role)}</select><code id="sh-link-url" title="Version PC : alixo://join/${esc(link.code)}">${esc(url)}</code><button class="cta small" id="sh-link-copy" type="button">Copier le lien</button></div><div class="po-hint" style="margin-bottom:0">Le lien donne ce droit à qui l’ouvre connecté à Alixo. Le désactiver n’exclut pas les personnes déjà entrées : retirez-les ci-dessus.</div>` : '<div class="po-hint" style="margin-bottom:0">Sans lien, seules les personnes invitées ci-dessus ont accès.</div>'}
+        <label class="sh-switch"><input type="checkbox" id="sh-link-on"${link ? ' checked' : ''}${noLink ? ' disabled' : ''}><span>Toute personne disposant du lien peut consulter</span></label>
+        ${link ? `<div class="sh-linkrow"><select id="sh-link-role" title="Droit donné par le lien">${roleOptions(link.role)}</select><code id="sh-link-url" title="Version PC : alixo://join/${esc(link.code)}">${esc(url)}</code><button class="cta small" id="sh-link-copy" type="button">Copier le lien</button></div>${link.anon
+          ? `<div class="po-hint sh-linklegal" style="margin-bottom:0">Toute personne qui a ce lien peut consulter ${kindThe(sh.kind)}, même sans compte Alixo, et le transmettre à d’autres : vous ne saurez pas qui l’a ouvert. Elle voit le titre et votre pseudo (@${esc(ctx.me || '')}). Ne partagez ainsi que ce que vous avez le droit de diffuser : vos propres notes, pas un polycopié d’enseignant ni une page de manuel scannée sans l’accord de son auteur, ni des informations personnelles sur d’autres personnes. Pour modifier, il faut un compte : le droit ci-dessus s’applique alors à qui rejoint le partage. Désactiver le lien coupe aussitôt l’accès sans compte ; les personnes entrées avec un compte restent : retirez-les ci-dessus. Ce qui a déjà été consulté ou téléchargé ne peut pas être repris.</div>`
+          : `<div class="po-hint sh-linklegal" style="margin-bottom:0">Ce lien a été créé avant la version 1.59 : il ne s’ouvre qu’avec un compte Alixo (le droit ci-dessus s’applique à qui rejoint le partage). Pour permettre la consultation sans compte, désactivez-le puis réactivez-le : un nouveau lien, à confirmer, remplacera celui-ci. Désactiver le lien n’exclut pas les personnes déjà entrées : retirez-les ci-dessus.</div>`}`
+          : noLink === 'u15' ? '<div class="po-hint" style="margin-bottom:0">Le lien public est réservé aux membres de 15 ans et plus. Vous pouvez inviter des personnes par leur pseudo ou leur e-mail.</div>'
+          : noLink === 'org' ? '<div class="po-hint" style="margin-bottom:0">Un partage à l’entreprise n’a pas de lien public : ses membres y accèdent avec leur compte, et vous pouvez inviter d’autres personnes par leur pseudo ou leur e-mail.</div>'
+          : '<div class="po-hint" style="margin-bottom:0">Sans lien, seules les personnes invitées ci-dessus ont accès.</div>'}
       </div>`;
     const foot = `${sh.id && sh.kind === 'folder' ? '<button class="cta ghost" id="sh-content" type="button">Contenu partagé…</button>' : ''}${sh.id ? '<button class="cta ghost" id="sh-log" type="button">Journal…</button><button class="cta ghost ev-danger" id="sh-stop" type="button">Arrêter le partage</button>' : ''}<span class="dlg-spacer"></span>${ctx.canOrg && !sh.org ? '<button class="cta ghost biz-share-btn" id="sh-org" type="button" title="Tous les membres de l’entreprise le voient, en lecture">Partager à l’entreprise</button>' : ''}<button class="cta" type="button" data-dlg-close>Fermer</button>`;
     return { chip, body, foot };
   }
 
-  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openShareDialog() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], syncStatus: () => null, colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {}, joinByCode: async () => false, ensurePseudo: async () => '', randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN } };
+  /* identifiants Alixo (séances, dossiers, images, partages) : jamais une valeur reçue hors de ce format dans un attribut */
+  const SAFE_ID = /^[\w-]{1,64}$/;
+  const safeId = id => typeof id === 'string' && SAFE_ID.test(id);
+  const WHOLE_KINDS = ['slides', 'sheet', 'board', 'quiz'];
+  const kindKey = d => (d && WHOLE_KINDS.includes(d.kind) ? d.kind : '');
+  /* séance reçue du nuage → assainie (js/sanitize.js ; présentations : AlixoSlides.normalize) ; id = identifiant de la fiche
+     Firestore ; trusted = ensemble des blocs (JSON) déjà connus, qui n'ont pas à être réassainis. null si illisible.
+     1.59.0 : avant OFF — js/shareview.js (lecteur sans compte) passe chaque fiche par la même fonction. */
+  function cleanDoc(d, id, trusted) {
+    if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
+    if (kindKey(d)) {
+      if (d.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { d = AlixoSlides.normalize(d) || d; } catch (err) { console.error('Share (normalisation) :', err); return null; } }   // 1.54 : liste blanche des champs d'une présentation (anim, trans, video, quiz, credit)
+      d.id = id; if (!safeId(d.folderId)) d.folderId = null;
+      return d;
+    }
+    const AS = window.AlixoSanitize;
+    if (!AS || typeof AS.doc !== 'function') return null;   // sans assainisseur : rien n'est repris
+    let out = null;
+    try { out = AS.doc(d, { keepIds: true, same: trusted || null }); } catch (err) { console.error('Share (assainissement) :', err); return null; }
+    out.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
+    return out;
+  }
+  /* 1.51 : la référence à l'original d'une image retouchée (b.o, js/imgtools.js) n'est jamais reprise d'une version reçue : un
+     membre pourrait y désigner une autre image (retirée avant toute restauration depuis le document local, keepOriginals) */
+  function stripOriginals(d) {
+    if (!d || typeof d !== 'object') return d;
+    const strip = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (b && typeof b === 'object' && b.type === 'img' && 'o' in b) delete b.o; });
+    strip(d.blocks); (Array.isArray(d.pages) ? d.pages : []).forEach(p => strip(p && p.blocks));
+    return d;
+  }
+  /* 1.54 : une image reçue d'un autre appareil n'est acceptée que sous la forme d'une data URL image/* en base64 (jamais une chaîne
+     arbitraire qui finirait dans un attribut src) */
+  const isImageDataUrl = v => typeof v === 'string' && v.length < 40 * 1024 * 1024 && /^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(v);
+  /* contenu d'un fichier partagé (fiche shares/{sid}/files/{fid} + morceaux chunks/0000…) → ArrayBuffer, null si absent ou
+     incomplet ; ref = référence Firestore de la fiche (fonction pure : partagée avec js/shareview.js) */
+  async function readChunks(ref, onProgress) {
+    const head = await ref.get(); if (!head.exists) return null;
+    const n = head.data().chunks || 0; if (!n || typeof n !== 'number' || n > 30) return null;
+    const parts = []; let total = 0;
+    for (let i = 0; i < n; i++) {
+      const c = await ref.collection('chunks').doc(String(i).padStart(4, '0')).get();
+      if (!c.exists) return null;
+      const blob = c.data().data; if (!blob || typeof blob.toUint8Array !== 'function') return null;
+      const u = blob.toUint8Array(); parts.push(u); total += u.length;
+      if (onProgress) onProgress((i + 1) / n);
+    }
+    const out = new Uint8Array(total); let o = 0; for (const q of parts) { out.set(q, o); o += q.length; }
+    return out.buffer;
+  }
+
+  const OFF = { enabled: false, docById: () => null, sharedDocs: () => [], canWrite: () => false, infoFor: () => null, onLocalSave() {}, invites: () => [], tintFor: () => null, labelFor: () => '', renderSharedHome() {}, openShareFor() {}, openShareDialog() {}, openInfo() {}, setPseudo() {}, pseudo: () => '', pendingCount: () => 0, leaveEvent() {}, fetchImage: async () => null, eventDeleted() {}, accessFor: () => null, sharedFolders: () => [], sharedFolderView: () => null, setPresence() {}, peersFor: () => [], syncStatus: () => null, colorFor: () => '#33658a', sharedFilesIn: () => [], sharedFileById: () => null, shareMeta: () => null, fetchFile: async () => null, openSharedFile() {}, ensurePseudo: async () => '', randomPseudo, shareDialogHTML, PSEUDO_WORDS: { adj: PSEUDO_ADJ, noun: PSEUDO_NOUN },
+    /* 1.59.0 : sans compte, un lien ?join=<code> ou alixo://join/<code> s'ouvre en lecture par js/shareview.js (connexion anonyme) */
+    joinByCode: async code => (window.AlixoShareView && AlixoShareView.available() ? AlixoShareView.open(code) : false),
+    /* 1.59.0 : fonctions pures partagées avec js/shareview.js */
+    cleanDoc, stripOriginals, isImageDataUrl, readChunks, safeId };
   if (!acc || !window.firebase || !firebase.firestore || !window.AlixoApp) return OFF;
 
   const uid = acc.uid;
@@ -114,8 +180,6 @@ window.AlixoShare = (() => {
   const now = () => Date.now();
   const norm2 = s => String(s || '').trim().toLowerCase();
   const isOwner = sh => sh && sh.owner === uid;
-  const SAFE_ID = /^[\w-]{1,64}$/;
-  const safeId = id => typeof id === 'string' && SAFE_ID.test(id);
   const safeColor = c => (/^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : DEFAULT_TINT);
   const myRole = sh => { const m = sh && sh.members && sh.members[uid]; if (m) return safeRole(m.role); return isOrgShare(sh) ? 'read' : ''; };
   /* 1.32 : un partage « à l'entreprise » (sh.org) est lu par tous les membres de l'entreprise (Alixo Business) */
@@ -127,8 +191,10 @@ window.AlixoShare = (() => {
   const invitedByUid = sh => !!(sh && Array.isArray(sh.inviteUids) && sh.inviteUids.includes(uid));
   const isInvited = sh => invitedByEmail(sh) || invitedByUid(sh);
   const fmtWhen = ts => new Date(ts).toLocaleString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  /* 1.53 : nom affiché aux autres membres — le pseudo, jamais le vrai nom ni l'e-mail (prénom en secours tant que le pseudo n'existe pas) */
-  const displayName = () => profile.pseudo || me.name;
+  /* 1.53 : nom affiché aux autres membres — le pseudo, jamais le vrai nom ni l'e-mail. 1.59.0 : plus de repli sur le prénom du
+     compte (il pouvait être écrit dans un partage lisible par un lien public) : vide tant que le pseudo n'existe pas — les
+     écritures (createShare, setLink, joinByCode, invitations) appellent ensurePseudo() d'abord */
+  const displayName = () => profile.pseudo || '';
   /* propriétaire d'un partage tel qu'il s'affiche : son pseudo (ownerName) ; pour un partage antérieur à 1.53 sans
      pseudo, la partie locale de l'adresse — l'adresse complète n'est plus jamais montrée */
   const ownerLabel = sh => (sh && (sh.ownerName || (sh.ownerEmail ? String(sh.ownerEmail).split('@')[0] : ''))) || '';
@@ -296,8 +362,7 @@ window.AlixoShare = (() => {
     if (!remote) return;
     /* sécurité : un b.o présent dans la version reçue n'est jamais repris (il n'est pas censé être publié — un membre
        pourrait y désigner une autre image) : il est retiré avant toute restauration depuis le document local */
-    const strip = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (b && typeof b === 'object' && b.type === 'img' && 'o' in b) delete b.o; });
-    strip(remote.blocks); (Array.isArray(remote.pages) ? remote.pages : []).forEach(p => strip(p && p.blocks));
+    stripOriginals(remote);
     if (!local) return;
     const from = new Map();
     const collect = bl => (Array.isArray(bl) ? bl : []).forEach(b => { if (b && b.type === 'img' && b.o && typeof b.o === 'object' && b.id) from.set(b.id, b); });
@@ -521,26 +586,10 @@ window.AlixoShare = (() => {
      simple) ; présentations : AlixoSlides.normalize. Tableurs, planches et quiz : pas encore d'assainisseur dédié (leurs
      modules échappent leurs champs au rendu). → séance sûre, ou null (ignorée). `trusted` : Set de JSON de blocs déjà
      sûrs (base assainie, ou ma propre version) repris sans nouvel examen. */
-  const WHOLE_KINDS = ['slides', 'sheet', 'board', 'quiz'];
-  const kindKey = d => (d && WHOLE_KINDS.includes(d.kind) ? d.kind : '');
   function blockJsonSet(...docs) {
     const out = new Set();
     const add = bl => (Array.isArray(bl) ? bl : []).forEach(b => { try { out.add(JSON.stringify(b)); } catch { /* bloc illisible */ } });
     for (const d of docs) { if (!d || typeof d !== 'object') continue; add(d.blocks); (Array.isArray(d.pages) ? d.pages : []).forEach(p => add(p && p.blocks)); }
-    return out;
-  }
-  function cleanDoc(d, id, trusted) {
-    if (!d || typeof d !== 'object' || Array.isArray(d)) return null;
-    if (kindKey(d)) {
-      if (d.kind === 'slides' && window.AlixoSlides && AlixoSlides.normalize) { try { d = AlixoSlides.normalize(d) || d; } catch (err) { console.error('Share (normalisation) :', err); return null; } }   // 1.54 : liste blanche des champs d'une présentation (anim, trans, video, quiz, credit)
-      d.id = id; if (!safeId(d.folderId)) d.folderId = null;
-      return d;
-    }
-    const AS = window.AlixoSanitize;
-    if (!AS || typeof AS.doc !== 'function') return null;   // sans assainisseur : rien n'est repris
-    let out = null;
-    try { out = AS.doc(d, { keepIds: true, same: trusted || null }); } catch (err) { console.error('Share (assainissement) :', err); return null; }
-    out.id = id;   // la fiche porte toujours l'identifiant de son document Firestore
     return out;
   }
   /* sortie de la fusion : un bloc qui n'est ni celui de ma version ni celui de la version reçue (assainie) — texte fusionné
@@ -861,20 +910,8 @@ window.AlixoShare = (() => {
   }
   /* contenu d'un fichier partagé → ArrayBuffer (null si absent / refusé) */
   async function fetchFile(sid, id, onProgress) {
-    try {
-      const ref = sharesRef.doc(sid).collection('files').doc(id);
-      const head = await ref.get(); if (!head.exists) return null;
-      const n = head.data().chunks || 0; if (!n) return null;
-      const parts = []; let total = 0;
-      for (let i = 0; i < n; i++) {
-        const c = await ref.collection('chunks').doc(String(i).padStart(4, '0')).get();
-        if (!c.exists) return null;
-        const u = c.data().data.toUint8Array(); parts.push(u); total += u.length;
-        if (onProgress) onProgress((i + 1) / n);
-      }
-      const out = new Uint8Array(total); let o = 0; for (const q of parts) { out.set(q, o); o += q.length; }
-      return out.buffer;
-    } catch (err) { console.error('Share (fichier) :', err); return null; }
+    try { return await readChunks(sharesRef.doc(sid).collection('files').doc(id), onProgress); }
+    catch (err) { console.error('Share (fichier) :', err); return null; }
   }
   /* fiches reçues : d'un dossier partagé (sid + dossier), d'un partage « fichier » seul, ou par identifiant */
   function sharedFilesIn(sid, fid) {
@@ -891,9 +928,6 @@ window.AlixoShare = (() => {
   /* informations d'un partage par son identifiant (propriétaire, droit, titre) */
   function shareMeta(sid) { const sh = shares.get(sid); return sh ? { sid, title: sh.title, owner: ownerLabel(sh), role: myRole(sh), kind: sh.kind, color: sh.color || DEFAULT_TINT, isOwner: isOwner(sh) } : null; }
 
-  /* 1.54 : une image reçue d'un autre appareil n'est acceptée que sous la forme d'une data URL image/* en base64 (jamais une chaîne
-     arbitraire qui finirait dans un attribut src) */
-  const isImageDataUrl = v => typeof v === 'string' && v.length < 40 * 1024 * 1024 && /^data:image\/(png|jpe?g|gif|webp|bmp|avif);base64,[A-Za-z0-9+/=]+$/.test(v);
   /* image d'une séance partagée, pour AlixoImages.get (appareil qui ne l'a pas) */
   async function fetchImage(iid) {
     const cands = [...shares.values()].filter(sh => (isMember(sh) || isOwner(sh)) && sh.kind !== 'event' && (sh.imgIds || []).includes(iid));
@@ -1075,7 +1109,7 @@ window.AlixoShare = (() => {
     const ref = sharesRef.doc(sid).collection('presence').doc(uid);
     try {
       if (remove) await ref.delete();
-      else await ref.set({ name: profile.pseudo || me.name, color: colorFor(uid), docId: myPres.docId, blockId: myPres.blockId || '', pageId: myPres.pageId || '', caret: Number.isInteger(myPres.caret) ? myPres.caret : -1, ts: now() });   // 1.56.0 : + onglet et position du curseur
+      else await ref.set({ name: displayName(), color: colorFor(uid), docId: myPres.docId, blockId: myPres.blockId || '', pageId: myPres.pageId || '', caret: Number.isInteger(myPres.caret) ? myPres.caret : -1, ts: now() });   // 1.56.0 : + onglet et position du curseur
     } catch { /* hors ligne ou règles non publiées */ }
   }
   /* appelée par l'application : séance affichée (ou null), bloc en cours d'édition, onglet affiché et position du curseur
@@ -1205,6 +1239,7 @@ window.AlixoShare = (() => {
 
   /* ---------------- actions ---------------- */
   async function createShare(kind, target) {
+    await ensurePseudo();   // 1.59.0 : jamais d'écriture sans pseudo (ownerName est vérifié par les règles)
     /* ownerName : le pseudo (1.53) — ownerEmail reste pour les e-mails envoyés par le serveur, jamais affiché aux membres */
     const sh = { owner: uid, ownerName: displayName(), ownerEmail: me.email, kind, target, title: '', color: '', members: {}, memberIds: [], invites: [], inviteEmails: [], inviteUids: [], excluded: [], createdAt: now(), updatedAt: now() };
     sh.title = titleOf(sh); sh.color = colorOf(sh);
@@ -1395,9 +1430,12 @@ window.AlixoShare = (() => {
   const linksRef = () => db.collection('sharelinks');
   const CODE_RE = /^[A-Za-z0-9]{20}$/;
   /* active (role 'read' | 'write'), change le droit ou désactive (role null) le lien d'un partage que je possède */
+  /* 1.59.0 : un lien activé maintenant porte anon: true (consultable sans compte, après la confirmation du propriétaire —
+     openShareDialog) ; un lien antérieur, sans anon, reste « compte requis » même si son droit change */
   async function setLink(sid, role) {
     const sh = shares.get(sid); if (!sh || !isOwner(sh)) throw new Error('Partage introuvable');
     const cur = sh.link && CODE_RE.test(String(sh.link.code || '')) ? sh.link : null;
+    if (role && !cur && sh.org) throw new Error('Un partage à l’entreprise n’a pas de lien public');
     if (!role) {
       if (cur) await linksRef().doc(cur.code).delete().catch(() => {});   // la fiche du lien d'abord (sa règle relit le partage)
       await sharesRef.doc(sid).update({ link: FV.delete(), updatedAt: now() });
@@ -1406,10 +1444,14 @@ window.AlixoShare = (() => {
       return null;
     }
     role = safeRole(role);
+    await ensurePseudo();
     const code = cur ? cur.code : randomCode(20);
     const link = { code, role };
+    if (!cur || cur.anon === true) link.anon = true;
     await sharesRef.doc(sid).update({ link, updatedAt: now() });   // le partage d'abord : la règle d'adhésion compare au code du partage
-    await linksRef().doc(code).set({ sid, title: sh.title || '', ownerPseudo: displayName(), role, createdAt: cur && cur.createdAt ? cur.createdAt : now() });
+    const pub = { sid, title: sh.title || '', ownerPseudo: displayName(), role, createdAt: cur && cur.createdAt ? cur.createdAt : now(), kind: SHARE_KINDS.includes(sh.kind) ? sh.kind : 'doc' };   // 1.59.0 : + kind (lecteur sans compte)
+    if (link.anon) pub.anon = true;   // 1.59.0 : lu par js/shareview.js avant d'écouter le partage (ancien lien → « compte requis »)
+    await linksRef().doc(code).set(pub);
     sh.link = link; const x = shares.get(sid); if (x) x.link = link;
     if (!cur) log(sid, 'link', '', '', role);
     return link;
@@ -1426,6 +1468,7 @@ window.AlixoShare = (() => {
     const have = shares.get(l.sid);
     if (have && (isOwner(have) || isMember(have))) { toast(isOwner(have) ? 'C’est votre propre partage' : `Vous faites déjà partie de « ${have.title} »`); openShared(l.sid); return true; }
     const role = safeRole(l.role);
+    try { await ensurePseudo(); } catch (err) { console.error('Share (pseudo) :', err); toast(friendly(err), { duration: 7000 }); return false; }   // 1.59.0
     const okk = await confirmDialog({ title: `Rejoindre « ${String(l.title || '')} » ?`, text: `Partagé par ${l.ownerPseudo ? '@' + String(l.ownerPseudo) : 'un membre d’Alixo'} · ${role === 'write' ? 'vous pourrez consulter et modifier' : 'vous pourrez consulter'}. Votre pseudo (${displayName()}) sera visible des autres membres.`, ok: 'Rejoindre', danger: false });
     if (!okk) return false;
     const member = { role, name: displayName(), since: now(), via: code };
@@ -1592,13 +1635,48 @@ window.AlixoShare = (() => {
      pied (contenu, journal, arrêt). Le partage n'est créé qu'à la première action (invitation, lien, entreprise) : tant
      qu'il n'existe pas, la fenêtre montre un partage « virtuel » (id null). Réutilisée tant qu'elle est ouverte sur la
      même cible : la liste se rafraîchit sans clignoter. `openShareFor` reste un alias (appels existants). */
+  /* 1.59.0 : avant d'activer le lien public — le propriétaire atteste qu'il a le droit de diffuser le contenu (case obligatoire,
+     jamais pré-cochée), est averti que le lien se consulte sans compte et sans trace de qui l'ouvre, que son pseudo est visible,
+     et, si une séance du partage contient des pages scannées, que leur diffusion exige l'accord écrit de l'auteur. Résout true
+     pour activer, false pour annuler (l'interrupteur revient à off). sh : le partage (id null tant qu'il n'est pas créé). */
+  const hasScanDoc = d => !!(window.AlixoWorkspace && typeof AlixoWorkspace.hasScan === 'function' && AlixoWorkspace.hasScan(d));
+  function shareHasScan(sh) {
+    if (!sh || sh.kind === 'event' || sh.kind === 'file') return false;
+    const ids = sh.kind === 'doc' ? [sh.target] : includedDocIds(sh);
+    return ids.some(id => hasScanDoc(state.docs.find(x => x.id === id)));
+  }
+  function confirmPublicLink(sh) {
+    return new Promise(resolve => {
+      let done = false;
+      const fin = v => { if (done) return; done = true; closeDialog('shlinkov'); resolve(v); };
+      openDialog({
+        id: 'shlinkov', cls: 'share-dlg narrow', eyebrow: 'Alixo Share',
+        title: 'Activer le lien public ?',
+        body: `<div class="po-hint" style="margin-top:0">Toute personne qui obtient ce lien pourra consulter ${kindThe(sh.kind)} « ${esc(sh.title || titleOf(sh) || '')} », sans compte et sans que vous sachiez qui. Votre pseudo @${esc(displayName())} sera visible. Vous pourrez désactiver le lien à tout moment.</div>
+          ${shareHasScan(sh) ? '<div class="po-hint sh-scanwarn">Ce partage contient des pages scannées : elles ne peuvent être diffusées par un lien qu’avec l’accord écrit de leur auteur.</div>' : ''}
+          <label class="plus-chk sh-linkaccept"><input type="checkbox" id="sh-link-accept"> <span>Ce contenu est le mien ou j’ai le droit de le diffuser (pas de polycopié, de page de manuel ni de document d’un tiers sans l’accord de son auteur).</span></label>`,
+        foot: '<button class="cta ghost" type="button" id="sh-link-cancel">Annuler</button><span class="dlg-spacer"></span><button class="cta" type="button" id="sh-link-go" disabled>Activer le lien</button>',
+        onClose: () => fin(false),
+        onMount: card => {
+          const chk = card.querySelector('#sh-link-accept'), go = card.querySelector('#sh-link-go');
+          chk.checked = false;   // jamais pré-cochée
+          chk.addEventListener('change', () => { go.disabled = !chk.checked; });
+          go.addEventListener('click', () => { if (chk.checked) fin(true); });
+          card.querySelector('#sh-link-cancel').addEventListener('click', () => fin(false));
+        }
+      });
+    });
+  }
   function openShareDialog(kind, target) {
     const key = kind + ':' + target;
     const cur = () => mySharesOf(kind, target)[0] || null;
     const virt = () => { const v = { id: null, owner: uid, kind, target, title: '', color: '', members: {}, invites: [] }; v.title = titleOf(v); v.color = colorOf(v); return v; };
     const sh = cur() || virt();
     const biz = () => (window.AlixoBusiness && AlixoBusiness.enabled ? AlixoBusiness : null);
-    const ctx = { uid, me: displayName(), webUrl: typeof ALIXO_WEB_URL === 'string' ? ALIXO_WEB_URL : undefined, pushErr: sh.id ? pushErr.get(sh.id) : '', canOrg: !!(biz() && AlixoBusiness.isMod()) };
+    /* 1.59.0 : lien public réservé aux 15 ans et plus — tranche d'âge du profil (AlixoApp.ageGroup : 'u15', '15-17', 'adult' ou
+       '' si la date de naissance manque, traitée comme inconnue donc refusée) */
+    const ag = AlixoApp.ageGroup ? AlixoApp.ageGroup() : '';
+    const ctx = { uid, me: displayName(), webUrl: typeof ALIXO_WEB_URL === 'string' ? ALIXO_WEB_URL : undefined, pushErr: sh.id ? pushErr.get(sh.id) : '', canOrg: !!(biz() && AlixoBusiness.isMod()), u15: ag !== '15-17' && ag !== 'adult' };
     const sub = kind === 'doc' ? 'Les personnes ajoutées voient cette séance en direct dans leur Alixo (« Partagés avec moi »).'
       : kind === 'folder' ? 'Séances, sous-dossiers et fichiers de moins de 20 Mo de ce dossier, en direct dans leur Alixo.'
       : kind === 'file' ? 'Le fichier s’ouvre dans leur Alixo, comme chez vous.'
@@ -1637,6 +1715,8 @@ window.AlixoShare = (() => {
             if (e.target.id === 'sh-link-role') { const s = cur(); if (!s) return; try { await setLink(s.id, e.target.value); toast('Droit du lien mis à jour'); refresh(); } catch (x) { err(x); } return; }
             if (e.target.id === 'sh-link-on') {
               const on = e.target.checked; e.target.disabled = true;
+              /* 1.59.0 : activation = publication sans compte → confirmation avec attestation (droits, pseudo visible) */
+              if (on && !(await confirmPublicLink(cur() || sh))) { e.target.checked = false; e.target.disabled = false; return; }
               try {
                 if (on) { const s = await ensure(); await setLink(s.id, 'read'); refresh('Lien activé — copiez-le pour l’envoyer.'); }
                 else { const s = cur(); if (s) await setLink(s.id, null); refresh('Lien désactivé : il ne permet plus de rejoindre ce partage.'); }
@@ -1726,7 +1806,7 @@ window.AlixoShare = (() => {
           return `<label class="${r.kind === 'f' ? 'sf' : ''} ${excluded.has(r.id) ? 'excl' : ''}" style="padding-left:${6 + r.depth * 16}px"><input type="checkbox" data-inc="${r.id}" ${excluded.has(r.id) ? '' : 'checked'}>${ico}${esc(r.name)}${r.kind === 'fl' && window.AlixoFiles ? ` <span class="po-hint" style="margin:0">${esc(AlixoFiles.fmtSize(r.size))}</span>` : ''}</label>`;
         }).join('') || '<div class="po-hint">Dossier vide.</div>'}</div>`;
     }
-    return `<div class="po-label" style="margin-top:0">Journal</div><div class="sh-log" id="sh-log"><div class="po-hint">Chargement du journal…</div></div>`;
+    return `<div class="po-label" style="margin-top:0">Journal</div>${sh.link && sh.link.anon === true ? '<div class="po-hint" style="margin:0 0 8px">Le lien public est actif : ce partage peut être consulté par des visiteurs sans compte, qui n’apparaissent pas ici (ni comptés, ni identifiés).</div>' : ''}<div class="sh-log" id="sh-log"><div class="po-hint">Chargement du journal…</div></div>`;
   }
   async function openShareManager(sid, tab = 'members') {
     const sh = shares.get(sid); if (!sh) return;
@@ -1783,7 +1863,8 @@ window.AlixoShare = (() => {
       title: `${sh.kind === 'folder' ? 'Dossier partagé' : 'Séance partagée'}<span class="dlg-chip">${write ? 'lecture et écriture' : 'lecture seule'}</span>`,
       sub: sh.kind === 'folder' ? `Dossier « ${esc(sh.title)} » partagé avec vous.` : 'Séance partagée avec vous.',
       body: `<div class="sh-ownercard"><div class="po-avatar">${esc(initial(ownerLabel(sh)))}</div><div class="po-accinfo"><div class="po-accname">@${esc(ownerLabel(sh) || 'membre')}</div><div class="po-accsync">Propriétaire du partage · ${Object.keys(sh.members || {}).length} membre${Object.keys(sh.members || {}).length > 1 ? 's' : ''}</div></div></div>
-        <div class="po-hint">${write ? 'Vos modifications sont envoyées au propriétaire en direct et notées dans son journal.' : 'Vous consultez la dernière version du propriétaire ; il peut vous donner le droit d’écriture.'} « Copier dans mes cours » en fait une copie indépendante dans votre bibliothèque.</div>`,
+        <div class="po-hint">${write ? 'Vos modifications sont envoyées au propriétaire en direct et notées dans son journal.' : 'Vous consultez la dernière version du propriétaire ; il peut vous donner le droit d’écriture.'} « Copier dans mes cours » en fait une copie indépendante dans votre bibliothèque.</div>
+        ${sh.link && sh.link.anon === true ? '<div class="po-hint sh-publicnote">Ce partage a un lien public : toute personne qui le détient peut consulter son contenu ; votre pseudo peut figurer dans ses données de modification.</div>' : ''}`,
       foot: `<button class="cta ghost ev-danger" id="sh-leave" type="button">Quitter le partage</button><span class="dlg-spacer"></span><button class="cta ghost" id="sh-copy2" type="button">Copier dans mes cours</button><button class="cta" type="button" data-dlg-close>Fermer</button>`,
       onMount: (card, close) => {
         card.querySelector('#sh-copy2').addEventListener('click', () => { close(); copyToLibrary(id); });
@@ -1795,7 +1876,7 @@ window.AlixoShare = (() => {
   /* ---------------- lien profond alixo://share/{sid} ---------------- */
   function handleDeepLink(url) {
     /* 1.53 : alixo://join/<code> — adhésion par lien de partage */
-    const j = String(url || '').match(/join\/([A-Za-z0-9]{20})/);
+    const j = String(url || '').match(/^alixo:\/\/join\/([A-Za-z0-9]{20})(?:[/?#]|$)/);
     if (j) { joinByCode(j[1]); return; }
     const m = String(url || '').match(/share\/([A-Za-z0-9_-]+)/);
     if (!m) return;

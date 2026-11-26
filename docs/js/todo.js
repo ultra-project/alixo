@@ -6,11 +6,17 @@
    1.41 : nouvelle interface — grande saisie rapide (Entrée pour ajouter, « ! » / « !! » / « #catégorie »),
    sections En retard / Aujourd’hui / À venir / Sans échéance / Terminées (repliables), vues Aujourd’hui,
    Importantes, Planifiées, cases rondes animées, édition du texte au clic. Le format des données ne change pas.
+   1.59 : refonte d'après la maquette (feuille todo.css) — colonne de gauche sur fond sombre, barre de saisie avec
+   boutons Échéance / Priorité / Catégorie et « Ajouter », sous-titre « date · n à faire · n terminées », lignes de
+   56 px dans une carte, menu « … » par tâche (modifier, échéance, priorité, catégorie, supprimer), les trois
+   dernières terminées puis « Afficher les n autres tâches terminées ». Cibles tactiles de 44 px.
    ============================================================ */
 'use strict';
 
 window.AlixoTodo = (() => {
   const CAT_COLORS = ['#33658a', '#2f7d68', '#c04343', '#b3762a', '#3d6bb5', '#a8556f', '#7a6852', '#2e8b8b', '#d06a3a', '#5b6b8c'];
+  /* couleur de catégorie : seulement « #rrggbb » (donnée synchronisée, insérée dans des attributs style) ; sinon la couleur par défaut */
+  const safeColor = c => /^#[0-9a-f]{6}$/i.test(String(c || '')) ? c : CAT_COLORS[0];
   const todos = () => (Array.isArray(state.todos) ? state.todos : (state.todos = []));
   const cats = () => (Array.isArray(state.todoCats) ? state.todoCats : (state.todoCats = []));
   const catOf = id => cats().find(c => c.id === id) || null;
@@ -37,13 +43,15 @@ window.AlixoTodo = (() => {
 
   /* sections repliées (préférence de l'appareil seulement) */
   const FOLD_KEY = 'alixo.todo.fold';
-  let fold = { done: true };
+  let fold = {};                 // 1.59 : « Terminées » dépliée (trois dernières, puis « Afficher les n autres… »)
   try { const f = JSON.parse(localStorage.getItem(FOLD_KEY) || 'null'); if (f && typeof f === 'object') fold = f; } catch { /* stockage indisponible */ }
   const saveFold = () => { try { localStorage.setItem(FOLD_KEY, JSON.stringify(fold)); } catch { /* stockage indisponible */ } };
 
   /* saisie rapide : réglages en attente (échéance, priorité, catégorie) — gardés d'un rendu à l'autre */
   const quick = { text: '', due: '', prio: 0, cat: null };
   let editing = null, pendingRender = false, justAdded = null;
+  const DONE_SHOWN = 3;            // terminées affichées avant « Afficher les n autres… »
+  let showAllDone = false;         // remis à faux quand on change de vue
 
   const ICON = {
     plus: '<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',
@@ -51,13 +59,15 @@ window.AlixoTodo = (() => {
     flag: '<svg viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></svg>',
     tag: '<svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8L3 12Z"/><circle cx="7.5" cy="8.5" r="1.3"/></svg>',
     check: '<svg viewBox="0 0 24 24"><path d="m6 12.5 4 4 8-9"/></svg>',
-    chev: '<svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg>',
+    chev: '<svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>',
     more: '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.4"/><circle cx="12" cy="12" r="1.4"/><circle cx="19" cy="12" r="1.4"/></svg>',
     x: '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>',
     pen: '<svg viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16v4Z"/></svg>',
     list: '<svg viewBox="0 0 24 24"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
     sun: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5.3 5.3l1.4 1.4M17.3 17.3l1.4 1.4M5.3 18.7l1.4-1.4M17.3 6.7l1.4-1.4"/></svg>',
     star: '<svg viewBox="0 0 24 24"><path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9L12 3.5Z"/></svg>',
+    dashed: '<svg viewBox="0 0 24 24" class="td-dot-none"><circle cx="12" cy="12" r="8" stroke-dasharray="3 3"/></svg>',
+    trash: '<svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13M10 11v6M14 11v6"/></svg>',
   };
 
   function persist() { save(); refresh(); }
@@ -83,7 +93,7 @@ window.AlixoTodo = (() => {
   }
   function addCat(name, color) {
     name = (name || '').trim(); if (!name) return null;
-    const c = { id: uid(), name: name.slice(0, 40), color: color || CAT_COLORS[cats().length % CAT_COLORS.length], createdAt: Date.now(), updatedAt: Date.now() };
+    const c = { id: uid(), name: name.slice(0, 40), color: safeColor(color || CAT_COLORS[cats().length % CAT_COLORS.length]), createdAt: Date.now(), updatedAt: Date.now() };
     cats().push(c); persist(); return c;
   }
   function removeCat(id) {
@@ -119,7 +129,7 @@ window.AlixoTodo = (() => {
 
   /* ---------------- pop-overs ---------------- */
   function openCatPopover(existing, anchor) {
-    let color = existing ? existing.color : CAT_COLORS[cats().length % CAT_COLORS.length];
+    let color = existing ? safeColor(existing.color) : CAT_COLORS[cats().length % CAT_COLORS.length];
     showPopover(`<h4>${existing ? 'Modifier la catégorie' : 'Nouvelle catégorie'}</h4>
       <div class="po-row"><input id="po-catname" value="${esc(existing ? existing.name : '')}" placeholder="Ex. Révisions, Administratif, TD…" maxlength="40" autocomplete="off"></div>
       <div class="po-label">Couleur</div>
@@ -128,7 +138,7 @@ window.AlixoTodo = (() => {
       anchor || centerRect(), pop => {
         const inp = pop.querySelector('#po-catname');
         pop.querySelector('#po-catcolors').addEventListener('click', e => { const b = e.target.closest('[data-c]'); if (!b) return; color = b.dataset.c; pop.querySelectorAll('#po-catcolors button').forEach(x => x.classList.toggle('sel', x === b)); });
-        const ok = () => { const v = inp.value.trim(); if (!v) { inp.focus(); return; } if (existing) { existing.name = v.slice(0, 40); existing.color = color; stamp(existing); persist(); } else { const c = addCat(v, color); selCat = c.id; render(); } hidePopover(); };
+        const ok = () => { const v = inp.value.trim(); if (!v) { inp.focus(); return; } if (existing) { existing.name = v.slice(0, 40); existing.color = safeColor(color); stamp(existing); persist(); } else { const c = addCat(v, color); selCat = c.id; render(); } hidePopover(); };
         pop.querySelector('#po-catok').addEventListener('click', ok);
         inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); ok(); } });
         const del = pop.querySelector('#po-catdel'); if (del) del.addEventListener('click', () => { hidePopover(); removeCat(existing.id); });
@@ -172,10 +182,59 @@ window.AlixoTodo = (() => {
     });
   }
   function openQuickCat(anchor) {
-    showPopover(`<h4>Catégorie</h4><div class="po-list td-po-cats"><button type="button" data-qcat="" class="${!quick.cat ? 'cur' : ''}"><i style="border:1.5px dashed var(--ink-3)"></i>Sans catégorie</button>${cats().map(c => `<button type="button" data-qcat="${c.id}" class="${quick.cat === c.id ? 'cur' : ''}"><i style="background:${c.color}"></i>${esc(c.name)}</button>`).join('')}</div>
+    showPopover(`<h4>Catégorie</h4><div class="po-list td-po-cats"><button type="button" data-qcat="" class="${!quick.cat ? 'cur' : ''}"><i style="border:1.5px dashed var(--ink-3)"></i>Sans catégorie</button>${cats().map(c => `<button type="button" data-qcat="${c.id}" class="${quick.cat === c.id ? 'cur' : ''}"><i style="background:${safeColor(c.color)}"></i>${esc(c.name)}</button>`).join('')}</div>
       <div class="po-row" style="justify-content:flex-end; margin-top:8px"><button class="cta ghost small" id="po-qnewcat" type="button">＋ Nouvelle catégorie</button></div>`, anchor, pop => {
       pop.querySelector('.po-list').addEventListener('click', e => { const b = e.target.closest('[data-qcat]'); if (!b) return; quick.cat = b.dataset.qcat || null; hidePopover(); render(); focusQuick(); });
       pop.querySelector('#po-qnewcat').addEventListener('click', () => openCatPopover(null, anchor));
+    });
+  }
+  function openQuickPrio(anchor) {
+    showPopover(`<h4>Priorité</h4><div class="po-list td-po-menu">${PRIO_NAMES.map((l, i) => `<button type="button" data-qprio-set="${i}" class="p${i} ${(quick.prio || 0) === i ? 'cur' : ''}">${i ? ICON.flag : ICON.check}${l}${i === 1 ? '<span class="td-po-aside">« ! »</span>' : i === 2 ? '<span class="td-po-aside">« !! »</span>' : ''}</button>`).join('')}</div>`, anchor, pop => {
+      pop.querySelector('.po-list').addEventListener('click', e => { const b = e.target.closest('[data-qprio-set]'); if (!b) return; quick.prio = +b.dataset.qprioSet || 0; hidePopover(); render(); focusQuick(); });
+      setTimeout(() => { const b = pop.querySelector('.po-list button'); if (b) b.focus(); }, 30);
+    });
+  }
+  /* menu « … » d'une tâche : modifier, échéance, priorité, catégorie, supprimer */
+  function openTaskMenu(t, anchor) {
+    const c = catOf(t.cat);
+    showPopover(`<div class="po-list td-po-menu" role="menu" aria-label="Actions de la tâche">
+      <button type="button" role="menuitem" data-m="edit">${ICON.pen}Modifier…</button>
+      <button type="button" role="menuitem" data-m="due">${ICON.cal}Échéance<span class="td-po-aside">${t.due ? esc(cap(dueLabel(t.due))) : 'aucune'}</span></button>
+      <button type="button" role="menuitem" data-m="prio" class="p${t.prio || 0}">${ICON.flag}Priorité<span class="td-po-aside">${PRIO_NAMES[t.prio || 0]}</span></button>
+      <button type="button" role="menuitem" data-m="cat">${ICON.tag}Catégorie<span class="td-po-aside">${c ? esc(c.name) : 'aucune'}</span></button>
+      <div class="td-po-sep" role="separator"></div>
+      <button type="button" role="menuitem" data-m="del" class="danger">${ICON.trash}Supprimer</button></div>`, anchor, pop => {
+      pop.querySelector('.po-list').addEventListener('click', e => {
+        const b = e.target.closest('[data-m]'); if (!b) return;
+        const m = b.dataset.m; hidePopover();
+        if (m === 'edit') openTaskPopover(t, anchor);
+        else if (m === 'del') remove(t.id);
+        else if (m === 'due') openTaskDue(t, anchor);
+        else if (m === 'prio') openTaskPrio(t, anchor);
+        else if (m === 'cat') openTaskCat(t, anchor);
+      });
+      setTimeout(() => { const b = pop.querySelector('.po-list button'); if (b) b.focus(); }, 30);
+    });
+  }
+  function openTaskDue(t, anchor) {
+    showPopover(`<h4>Échéance</h4><div class="po-list td-po-menu">${dueChoices().map(([k, l, v]) => `<button type="button" data-due="${v}" class="${t.due === v ? 'cur' : ''}">${ICON.cal}${l}<span class="td-po-aside">${esc(parseYmd(v).toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }))}</span></button>`).join('')}${t.due ? `<button type="button" data-due="">${ICON.x}Retirer l’échéance</button>` : ''}</div>
+      <div class="po-label">Autre date</div><div class="po-row"><input id="po-tdue2" type="date" value="${esc(t.due || '')}" aria-label="Autre date"></div>`, anchor, pop => {
+      const set = v => { t.due = v || ''; stamp(t); hidePopover(); persist(); };
+      pop.querySelector('.po-list').addEventListener('click', e => { const b = e.target.closest('[data-due]'); if (b) set(b.dataset.due); });
+      pop.querySelector('#po-tdue2').addEventListener('change', e => { if (e.target.value) set(e.target.value); });
+      setTimeout(() => { const b = pop.querySelector('.po-list button'); if (b) b.focus(); }, 30);
+    });
+  }
+  function openTaskPrio(t, anchor) {
+    showPopover(`<h4>Priorité</h4><div class="po-list td-po-menu">${PRIO_NAMES.map((l, i) => `<button type="button" data-prio="${i}" class="p${i} ${(t.prio || 0) === i ? 'cur' : ''}">${i ? ICON.flag : ICON.check}${l}</button>`).join('')}</div>`, anchor, pop => {
+      pop.querySelector('.po-list').addEventListener('click', e => { const b = e.target.closest('[data-prio]'); if (!b) return; t.prio = +b.dataset.prio; stamp(t); hidePopover(); persist(); });
+      setTimeout(() => { const b = pop.querySelector('.po-list button'); if (b) b.focus(); }, 30);
+    });
+  }
+  function openTaskCat(t, anchor) {
+    showPopover(`<h4>Catégorie</h4><div class="po-list td-po-cats"><button type="button" data-tcat="" class="${!t.cat ? 'cur' : ''}"><i style="border:1.5px dashed var(--ink-3)"></i>Sans catégorie</button>${cats().map(c => `<button type="button" data-tcat="${c.id}" class="${t.cat === c.id ? 'cur' : ''}"><i style="background:${safeColor(c.color)}"></i>${esc(c.name)}</button>`).join('')}</div>`, anchor, pop => {
+      pop.querySelector('.po-list').addEventListener('click', e => { const b = e.target.closest('[data-tcat]'); if (!b) return; t.cat = b.dataset.tcat || null; stamp(t); hidePopover(); persist(); });
+      setTimeout(() => { const b = pop.querySelector('.po-list button'); if (b) b.focus(); }, 30);
     });
   }
   function focusQuick() { const i = $('#lib-todo .td-quick-input'); if (i) { i.focus(); const n = i.value.length; try { i.setSelectionRange(n, n); } catch { /* champ non textuel */ } } }
@@ -194,16 +253,18 @@ window.AlixoTodo = (() => {
     const c = catOf(t.cat), late = isLate(t), isToday = !t.done && t.due === today();
     const showCat = c && (selCat === 'all' || SMART[selCat]);
     const fullDate = t.due ? parseYmd(t.due).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : '';
+    const short = t.text.length > 60 ? t.text.slice(0, 57) + '…' : t.text;
     const meta = [
-      t.due ? pill(`td-due ${late ? 'late' : ''} ${isToday ? 'today' : ''}`, ICON.cal, esc(dueLabel(t.due)), (late ? 'En retard — échéance : ' : 'Échéance : ') + fullDate, `data-more="${t.id}"`) : '',
-      t.prio ? pill(`td-prio p${t.prio}`, ICON.flag, t.prio === 2 ? 'Urgente' : 'Importante', 'Priorité', `data-more="${t.id}"`) : '',
-      showCat ? pill('td-cat', '<i></i>', esc(c.name), 'Catégorie', `style="--cc:${c.color}" data-more="${t.id}"`) : '',
+      t.prio ? pill(`td-prio p${t.prio}`, ICON.flag, t.prio === 2 ? 'Urgente' : 'Importante', 'Priorité — cliquer pour modifier', `data-more="${t.id}" role="button" tabindex="-1"`) : '',
+      showCat ? pill('td-cat', '<i></i>', esc(c.name), 'Catégorie — cliquer pour modifier', `style="--cc:${safeColor(c.color)}" data-more="${t.id}" role="button" tabindex="-1"`) : '',
+      t.due ? pill(`td-due ${late ? 'late' : ''} ${isToday ? 'today' : ''}`, ICON.cal, esc(dueLabel(t.due)), (late ? 'En retard — échéance : ' : 'Échéance : ') + fullDate, `data-more="${t.id}" role="button" tabindex="-1"`) : '',
       t.done && t.doneAt ? pill('td-done', '', `faite ${dayKey(t.doneAt) === today() ? 'aujourd’hui' : 'le ' + new Date(t.doneAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' })}`, '') : '',
     ].join('');
     return `<div class="td-item ${t.done ? 'done' : ''} ${late ? 'late' : ''} prio${t.prio || 0} ${justAdded === t.id ? 'td-new' : ''}" data-tid="${t.id}" draggable="true">
-      <button type="button" class="td-check" data-toggle="${t.id}" title="${t.done ? 'Marquer à faire' : 'Marquer comme faite'}" aria-label="${t.done ? 'Marquer à faire' : 'Marquer comme faite'}" aria-pressed="${t.done ? 'true' : 'false'}"><span class="td-ring"></span>${ICON.check}</button>
-      <div class="td-main"><div class="td-text" data-edit="${t.id}" tabindex="0" role="button" title="Cliquer pour modifier">${esc(t.text)}</div>${meta ? `<div class="td-meta">${meta}</div>` : ''}</div>
-      <div class="td-acts"><button type="button" class="td-act" data-more="${t.id}" title="Échéance, priorité, catégorie…" aria-label="Détails">${ICON.more}</button><button type="button" class="td-act td-x" data-del="${t.id}" title="Supprimer" aria-label="Supprimer">${ICON.x}</button></div></div>`;
+      <button type="button" class="td-check" data-toggle="${t.id}" title="${t.done ? 'Marquer à faire' : 'Marquer comme faite'}" aria-label="Marquer « ${esc(short)} » comme ${t.done ? 'à faire' : 'terminée'}" aria-pressed="${t.done ? 'true' : 'false'}"><span class="td-ring"></span>${ICON.check}</button>
+      <div class="td-main"><div class="td-text" data-edit="${t.id}" tabindex="0" role="button" title="Cliquer pour modifier">${esc(t.text)}</div></div>
+      ${meta ? `<div class="td-meta">${meta}</div>` : ''}
+      <button type="button" class="td-act" data-menu="${t.id}" title="Modifier, échéance, priorité, catégorie, supprimer" aria-label="Actions pour « ${esc(short)} »" aria-haspopup="menu">${ICON.more}</button></div>`;
   };
   const order = (a, b) => ((b.prio || 0) - (a.prio || 0)) || ((a.due || '9') < (b.due || '9') ? -1 : (a.due || '9') > (b.due || '9') ? 1 : 0) || (b.createdAt - a.createdAt);
   function sections(list) {
@@ -231,7 +292,7 @@ window.AlixoTodo = (() => {
     return `<div class="td-emptystate"><div class="td-empty-art" aria-hidden="true"><svg viewBox="0 0 120 120"><circle class="a1" cx="60" cy="60" r="44"/><circle class="a2" cx="60" cy="60" r="30"/><path class="a3" d="m46 61 10 10 19-21"/></svg></div><div class="td-empty-title">${title}</div><div class="td-empty-text">${text}</div></div>`;
   }
   function navBtn(k, icon, label, n, extra = '', cls = '', after = '') {
-    return `<button type="button" class="td-nav-btn ${selCat === k ? 'on' : ''} ${cls}" data-cat="${k}" ${extra}>${icon}<span class="td-nav-l">${label}</span><em>${n || ''}</em>${after}</button>`;
+    return `<button type="button" class="td-nav-btn ${selCat === k ? 'on' : ''} ${cls}" data-cat="${k}" ${selCat === k ? 'aria-current="true"' : ''} ${extra}>${icon}<span class="td-nav-l">${label}</span>${n ? `<em>${n}<span class="sr-only"> à faire</span></em>` : ''}${after}</button>`;
   }
   function render() {
     const root = $('#lib-todo'); if (!root) return;
@@ -249,7 +310,10 @@ window.AlixoTodo = (() => {
     const c = catOf(selCat);
     const title = c ? c.name : selCat === 'none' ? 'Sans catégorie' : SMART[selCat];
     const dateStr = cap(new Date().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' }));
-    const sub = nOpenView ? `${nOpenView} à faire${nLate && (selCat === 'all' || selCat === 'today') ? ` · <b class="late">${nLate} en retard</b>` : ''}` : (nDoneView ? 'tout est fait' : 'rien à faire');
+    const subParts = [nOpenView ? `${nOpenView} à faire` : (nDoneView ? 'tout est fait' : 'rien à faire')];
+    if (nLate && (selCat === 'all' || selCat === 'today')) subParts.push(`<b class="late">${nLate} en retard</b>`);
+    if (nDoneView) subParts.push(`${nDoneView} terminée${nDoneView > 1 ? 's' : ''}`);
+    const sub = subParts.join(' · ');
     const ringTotal = todayOpen + todayDone + (selCat === 'today' ? visible.filter(isLate).length : 0);
     const pct = ringTotal ? Math.round(100 * todayDone / ringTotal) : 0;
     const qd = quick.due, qc = catOf(quick.cat), qp = quick.prio;
@@ -261,39 +325,37 @@ window.AlixoTodo = (() => {
         ${navBtn('important', ICON.star, 'Importantes', all.filter(t => !t.done && t.prio).length)}
         ${navBtn('planned', ICON.cal, 'Planifiées', all.filter(t => !t.done && t.due).length)}
         <div class="td-nav-h"><span>Catégories</span><button type="button" class="td-nav-add" data-newcat title="Nouvelle catégorie" aria-label="Nouvelle catégorie">${ICON.plus}</button></div>
-        ${cats().map(x => navBtn(x.id, `<i class="td-dot" style="background:${x.color}"></i>`, esc(x.name), all.filter(t => t.cat === x.id && !t.done).length, `data-catedit="${x.id}" data-drop="${x.id}" title="Clic droit ou ✎ : modifier"`, 'td-catbtn', `<span class="td-catpen" data-cedit="${x.id}" title="Modifier">${ICON.pen}</span>`)).join('')}
-        ${navBtn('none', '<i class="td-dot none"></i>', 'Sans catégorie', all.filter(t => !t.cat && !t.done).length, 'data-drop="none"', 'td-catbtn')}
+        ${cats().map(x => navBtn(x.id, `<i class="td-dot" style="background:${safeColor(x.color)}"></i>`, esc(x.name), all.filter(t => t.cat === x.id && !t.done).length, `data-catedit="${x.id}" data-drop="${x.id}" title="Clic droit : modifier"`, 'td-catbtn', `<span class="td-catpen" data-cedit="${x.id}" title="Modifier">${ICON.pen}</span>`)).join('')}
+        ${navBtn('none', ICON.dashed, 'Sans catégorie', all.filter(t => !t.cat && !t.done).length, 'data-drop="none"', 'td-catbtn')}
         ${!cats().length ? '<div class="td-nav-hint">Les catégories regroupent vos tâches (révisions, administratif, TD, mémoire…). Glissez une tâche sur une catégorie pour l’y ranger.</div>' : ''}
       </aside>
       <div class="td-pane">
-        <header class="td-top" ${c ? `style="--cc:${c.color}"` : ''}>
+        <header class="td-top" ${c ? `style="--cc:${safeColor(c.color)}"` : ''}>
           <div class="td-top-l">
             <h2 class="td-title">${c ? '<i class="td-title-dot"></i>' : ''}${esc(title)}</h2>
             <div class="td-sub"><span class="td-date">${esc(dateStr)}</span> · ${sub}</div>
           </div>
-          ${ringTotal ? `<div class="td-ring-prog" style="--p:${pct}" title="${todayDone} sur ${ringTotal} faite${ringTotal > 1 ? 's' : ''} aujourd’hui"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5"/>${pct ? '<circle class="v" cx="18" cy="18" r="15.5" pathLength="100"/>' : ''}</svg><span>${todayDone}/${ringTotal}</span></div>` : ''}
-          ${c ? `<button type="button" class="cta ghost small td-editcat" data-cedit="${c.id}">${ICON.pen}Modifier</button>` : ''}
+          <div class="td-top-r">${selCat === 'today' && ringTotal ? `<div class="td-ring-prog" style="--p:${pct}" title="${todayDone} sur ${ringTotal} faite${ringTotal > 1 ? 's' : ''} aujourd’hui"><svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="15.5"/>${pct ? '<circle class="v" cx="18" cy="18" r="15.5" pathLength="100"/>' : ''}</svg><span>${todayDone}/${ringTotal}</span></div>` : ''}
+          ${c ? `<button type="button" class="td-editcat" data-cedit="${c.id}">${ICON.pen}Modifier la catégorie</button>` : ''}</div>
         </header>
         <form class="td-quick" data-addform autocomplete="off">
           <div class="td-quick-row">
             <span class="td-quick-plus" aria-hidden="true">${ICON.plus}</span>
-            <input class="td-quick-input" placeholder="Ajouter une tâche…" maxlength="320" aria-label="Nouvelle tâche (Entrée pour ajouter)" value="${esc(quick.text)}">
-            <kbd class="td-quick-kbd" title="Entrée pour ajouter">Entrée ↵</kbd>
+            <input class="td-quick-input" type="text" placeholder="Ajouter une tâche…" maxlength="320" aria-label="Ajouter une tâche (Entrée pour ajouter)" value="${esc(quick.text)}">
+            <button type="button" class="td-chip ${qd ? 'set' : ''} ${qd && qd < t0 ? 'late' : ''}" data-qdue aria-haspopup="dialog" aria-label="Échéance${qd ? ' : ' + esc(cap(dueLabel(qd))) : ''}">${ICON.cal}<span>${qd ? esc(cap(dueLabel(qd))) : 'Échéance'}</span>${qd ? `<i class="td-chip-x" data-qclear="due" title="Retirer l’échéance">${ICON.x}</i>` : ''}</button>
+            <button type="button" class="td-chip p${qp} ${qp ? 'set' : ''}" data-qprio aria-haspopup="menu" aria-label="Priorité${qp ? ' : ' + PRIO_NAMES[qp] : ''}">${ICON.flag}<span>${qp ? PRIO_NAMES[qp] : 'Priorité'}</span></button>
+            <button type="button" class="td-chip ${qc ? 'set' : ''}" data-qcat ${qc ? `style="--cc:${safeColor(qc.color)}"` : ''} aria-haspopup="menu" aria-label="Catégorie${qc ? ' : ' + esc(qc.name) : ''}">${qc ? '<i class="td-dot"></i>' : ICON.tag}<span>${qc ? esc(qc.name) : 'Catégorie'}</span></button>
+            <button type="submit" class="td-quick-add">Ajouter</button>
           </div>
-          <div class="td-quick-opts">
-            <button type="button" class="td-chip ${qd ? 'set' : ''} ${qd && qd < t0 ? 'late' : ''}" data-qdue>${ICON.cal}<span>${qd ? esc(cap(dueLabel(qd))) : 'Échéance'}</span>${qd ? `<i class="td-chip-x" data-qclear="due" title="Retirer">${ICON.x}</i>` : ''}</button>
-            <button type="button" class="td-chip p${qp} ${qp ? 'set' : ''}" data-qprio title="Cliquer pour changer la priorité">${ICON.flag}<span>${qp ? PRIO_NAMES[qp] : 'Priorité'}</span></button>
-            <button type="button" class="td-chip ${qc ? 'set' : ''}" data-qcat ${qc ? `style="--cc:${qc.color}"` : ''}>${qc ? '<i class="td-dot"></i>' : ICON.tag}<span>${qc ? esc(qc.name) : 'Catégorie'}</span></button>
-            <span class="td-quick-hint">« ! » importante · « !! » urgente${cats().length ? ' · « #catégorie »' : ''}</span>
-          </div>
+          <p class="td-quick-hint">Raccourcis à la saisie : « ! » importante · « !! » urgente · « #catégorie » · Entrée pour ajouter</p>
         </form>
         <div class="td-lists">
           ${nOpenView ? '' : emptyHTML(nOpenView, nDoneView)}
           ${secs.map(s => {
             const folded = !!fold[s.k];
             return `<section class="td-sec td-sec-${s.k} ${folded ? 'folded' : ''}">
-              <div class="td-sec-head"><button type="button" class="td-sec-fold" data-fold="${s.k}" aria-expanded="${folded ? 'false' : 'true'}">${ICON.chev}<span class="td-sec-t">${s.title}</span><em>${s.items.length}</em></button>${s.k === 'done' ? `<button type="button" class="td-sec-act" data-cleardone>Effacer</button>` : ''}</div>
-              ${folded ? '' : `<div class="td-sec-body">${s.items.map(taskHTML).join('')}</div>`}</section>`;
+              <div class="td-sec-head"><button type="button" class="td-sec-fold" data-fold="${s.k}" aria-expanded="${folded ? 'false' : 'true'}">${ICON.chev}<span class="td-sec-t">${s.title}</span><em aria-label="${s.items.length} tâche${s.items.length > 1 ? 's' : ''}">${s.items.length}</em></button>${s.k === 'done' ? `<button type="button" class="td-sec-act" data-cleardone>Effacer les terminées</button>` : ''}</div>
+              ${folded ? '' : `<div class="td-sec-body">${(s.k === 'done' && !showAllDone ? s.items.slice(0, DONE_SHOWN) : s.items).map(taskHTML).join('')}${s.k === 'done' && !showAllDone && s.items.length > DONE_SHOWN ? `<div class="td-more-done"><button type="button" data-alldone>Afficher ${s.items.length - DONE_SHOWN === 1 ? 'la dernière tâche terminée' : `les ${s.items.length - DONE_SHOWN} autres tâches terminées`}</button></div>` : ''}</div>`}</section>`;
           }).join('')}
         </div>
       </div>
@@ -354,26 +416,29 @@ window.AlixoTodo = (() => {
     });
     root.addEventListener('keydown', e => {
       if (e.target.closest('.td-quick-input') && e.key === 'Escape' && e.target.value) { e.preventDefault(); e.stopPropagation(); e.target.value = ''; quick.text = ''; return; }
-      const ed = e.target.closest('.td-text[data-edit]'); if (ed && (e.key === 'Enter' || e.key === 'F2')) { e.preventDefault(); startEdit(ed.dataset.edit); }
+      const ed = e.target.closest('.td-text[data-edit]'); if (ed && (e.key === 'Enter' || e.key === 'F2')) { e.preventDefault(); startEdit(ed.dataset.edit); return; }
+      const pl = e.target.closest('.td-pill[data-more]'); if (pl && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); const t = todos().find(x => x.id === pl.dataset.more); if (t) openTaskPopover(t, pl.getBoundingClientRect()); }
     });
     root.addEventListener('click', e => {
       const tg = e.target.closest('[data-toggle]'); if (tg) { checkAnim(tg.dataset.toggle, tg); return; }
       const del = e.target.closest('[data-del]'); if (del) { remove(del.dataset.del); return; }
+      const mn = e.target.closest('[data-menu]'); if (mn) { const t = todos().find(x => x.id === mn.dataset.menu); if (t) openTaskMenu(t, mn.getBoundingClientRect()); return; }
+      if (e.target.closest('[data-alldone]')) { showAllDone = true; render(); return; }
       const ce = e.target.closest('[data-cedit]'); if (ce) { e.stopPropagation(); openCatPopover(catOf(ce.dataset.cedit), ce.getBoundingClientRect()); return; }
       const ed = e.target.closest('[data-edit]'); if (ed) { startEdit(ed.dataset.edit); return; }
       const mo = e.target.closest('[data-more]'); if (mo) { const t = todos().find(x => x.id === mo.dataset.more); if (t) openTaskPopover(t, mo.getBoundingClientRect()); return; }
       const fl = e.target.closest('[data-fold]'); if (fl) { fold[fl.dataset.fold] = !fold[fl.dataset.fold]; saveFold(); render(); return; }
-      const ct = e.target.closest('[data-cat]'); if (ct) { if (selCat !== ct.dataset.cat) { selCat = ct.dataset.cat; Object.assign(quick, viewDefaults()); } render(); focusQuick(); return; }
+      const ct = e.target.closest('[data-cat]'); if (ct) { if (selCat !== ct.dataset.cat) { selCat = ct.dataset.cat; showAllDone = false; Object.assign(quick, viewDefaults()); } render(); focusQuick(); return; }
       if (e.target.closest('[data-newcat]')) { openCatPopover(null, e.target.closest('[data-newcat]').getBoundingClientRect()); return; }
       if (e.target.closest('[data-cleardone]')) { clearDone(); return; }
       const qx = e.target.closest('[data-qclear]'); if (qx) { e.stopPropagation(); quick[qx.dataset.qclear] = qx.dataset.qclear === 'due' ? '' : null; render(); focusQuick(); return; }
       const qd = e.target.closest('[data-qdue]'); if (qd) { openQuickDue(qd.getBoundingClientRect()); return; }
-      const qp = e.target.closest('[data-qprio]'); if (qp) { quick.prio = ((quick.prio || 0) + 1) % 3; render(); focusQuick(); return; }
+      const qp = e.target.closest('[data-qprio]'); if (qp) { openQuickPrio(qp.getBoundingClientRect()); return; }
       const qc = e.target.closest('[data-qcat]'); if (qc) { openQuickCat(qc.getBoundingClientRect()); return; }
     });
     root.addEventListener('contextmenu', e => {
       const ct = e.target.closest('[data-catedit]'); if (ct) { e.preventDefault(); openCatPopover(catOf(ct.dataset.catedit), ct.getBoundingClientRect()); return; }
-      const it = e.target.closest('.td-item'); if (it && !it.classList.contains('editing')) { const t = todos().find(x => x.id === it.dataset.tid); if (t) { e.preventDefault(); openTaskPopover(t, { left: e.clientX, top: e.clientY, bottom: e.clientY }); } }
+      const it = e.target.closest('.td-item'); if (it && !it.classList.contains('editing')) { const t = todos().find(x => x.id === it.dataset.tid); if (t) { e.preventDefault(); openTaskMenu(t, { left: e.clientX, top: e.clientY, bottom: e.clientY }); } }
     });
     /* glisser une tâche sur une catégorie (colonne de gauche) pour la reclasser */
     let drag = null;

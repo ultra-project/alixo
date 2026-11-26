@@ -145,10 +145,9 @@ html[data-theme="dark"] .coco-msg .coco-err { color: #e07070; }
   .coco-card, .coco-field, .coco-mascot { transition: none; }
 }
 
-/* ---------------- 4. fenêtres Quiz et Fiche (openDialog) ---------------- */
+/* ---------------- 4. fenêtres Quiz et Fiche (openDialog) — 1.59 : la fenêtre Quiz elle-même est dans aiquiz.css ---------------- */
 .dlg-card.coco-dlg .dlg-body { padding: 0 26px 18px; }
 .coco-dlg .aq-scope { --ai: #b3762a; --ai2: #d9a441; }
-.coco-dlg .aq-stage { width: 100%; padding: 8px 0 20px; }
 .coco-dlg .dlg-eyebrow { color: #b3762a; }
 html[data-theme="dark"] .coco-dlg .dlg-eyebrow { color: #d9a441; }
 .coco-fiche-dlg.dlg-card { width: min(1100px, 96vw); max-height: 94vh; }

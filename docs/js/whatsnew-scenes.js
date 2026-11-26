@@ -11,9 +11,35 @@
      une phrase, 2 à 4 puces commençant par un <b>mot-clé</b>, une illustration `art`), une « outro » ;
    - le texte reprend la section « Nouveautés x.y.z » du README en langage d'utilisateur (jamais de
      nom de fichier ni de fonction).
-   Aperçu : index.html?nouveautes=1.58.0 (ou nouveautes.html?v=1.58.0 en page seule).
+   Aperçu : index.html?nouveautes=1.59.0 (ou nouveautes.html?v=1.59.0 en page seule).
    ============================================================ */
 'use strict';
+
+/* 1.59 : lien de partage sans compte, scan qui trouve la feuille, quiz IA / onglets / tâches redessinés, « / » fantôme corrigé */
+AlixoWhatsNew.register('1.59.0', {
+  scenes: [
+    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Partagez d’un <em>lien</em>,<br>et trois écrans refaits', text: 'Un cours ouvert à qui a le lien, un scan plus sûr, et des corrections : en moins d’une minute.', dur: 5000 },
+    { title: 'Un cours, un <em>lien</em>', text: 'Boîte Partager : « Toute personne disposant du lien peut consulter ». Pas besoin de compte pour lire.',
+      bullets: ['<b>Sans compte</b> : le lien s’ouvre en lecture seule, sur ordinateur ou téléphone', '<b>Modifier</b> demande un compte : « Créer un compte » inscrit au partage', '<b>Vous gardez la main</b> : désactiver le lien coupe l’accès aussitôt'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.1 0l2.1-2.1a5 5 0 0 0-7.1-7.1L11 4.9"/><path d="M14 11a5 5 0 0 0-7.1 0l-2.1 2.1a5 5 0 0 0 7.1 7.1L13 19.1"/></svg>' }, accent: '#33658a', accent2: '#2e8b6a', dur: 8000 },
+    { title: 'Le scan <em>trouve</em> la feuille', text: 'Bois, marbre, nappe à carreaux, table blanche, main dans le cadre : les quatre coins tombent juste.',
+      bullets: ['<b>Au pixel près</b> sur l’écran « Vérifiez le cadrage »', '<b>Difficile ?</b> Le meilleur cadre trouvé est proposé, un coin se glisse au doigt', '<b>Sur le téléphone</b> : rien n’est envoyé pour l’analyse'],
+      art: { svg: '<svg viewBox="0 0 24 24"><path d="M4 8V6a2 2 0 0 1 2-2h2M16 4h2a2 2 0 0 1 2 2v2M20 16v2a2 2 0 0 1-2 2h-2M8 20H6a2 2 0 0 1-2-2v-2"/><path d="M8.5 7.5 16 8.5 15 16.5 7.5 15.5Z"/></svg>' }, accent: '#2e8b6a', accent2: '#3d6bb5', dur: 7500 },
+    { title: 'Le <em>quiz</em> d’Alixo AI, refait', text: 'Réglages, préparation, questions, correction et résultats : cinq écrans clairs.',
+      bullets: ['<b>Commencer</b> dès la première question prête', '<b>Clavier</b> : A B C D, V F, Entrée pour la suivante', '<b>Résultats</b> : score en anneau, « Refaire les questions ratées »'],
+      art: 'quiz', accent: '#b3762a', accent2: '#c04343', dur: 7500 },
+    { title: 'Des <em>onglets</em> en cartes', text: 'Jusqu’à trois : des pastilles. Au-delà : une fenêtre qui montre tous les onglets.',
+      bullets: ['<b>Cartes</b> : clic pour ouvrir, double-clic pour renommer', '<b>Glisser</b> pour réordonner, « … » pour dupliquer ou supprimer', '<b>Clavier</b> : flèches, Entrée, F2, Échap'],
+      art: 'storage', accent: '#3d6bb5', accent2: '#8a4b9c', dur: 7000 },
+    { title: 'Des <em>tâches</em> plus lisibles', text: 'Bibliothèque › Tâches : vos vues et catégories à gauche, une barre d’ajout à droite.',
+      bullets: ['<b>Ajouter</b> : Entrée, ou « ! », « !! », « #catégorie » dans la phrase', '<b>Échéance, priorité, catégorie</b> en trois boutons', '<b>Menu « … »</b> sur chaque tâche, terminées repliées'],
+      art: 'list', accent: '#8a4b9c', accent2: '#33658a', dur: 7000 },
+    { kicker: 'Correction', title: 'Fini le « / » <em>fantôme</em>', text: 'Le menu « / » s’ouvre toujours, et le caractère ne reste jamais dans votre texte.',
+      bullets: ['<b>AZERTY, clavier virtuel, IME</b> : même résultat', '<b>Listes</b> : l’aide-mémoire est enfin à côté de la puce', '<b>Collage, Échap, clic</b> referment le menu proprement'],
+      art: 'text', accent: '#c04343', accent2: '#b3762a', dur: 7000 },
+    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
+  ]
+});
 
 /* 1.58 : interface du quiz refaite — éditeur, Apparence en grille, Résultats en cartes, écrans de jeu et page des participants */
 AlixoWhatsNew.register('1.58.0', {
@@ -54,29 +80,6 @@ AlixoWhatsNew.register('1.57.0', {
     { kicker: 'Corrections', title: 'Des <em>corrections</em>', text: 'L’écriture au quotidien, plus fluide.',
       bullets: ['<b>Encadrés</b> : deux fois Entrée en fin d’encadré pour en sortir, à chaque fois', '<b>Coller</b> sur une sélection la remplace, au lieu d’ajouter dessous', '<b>Recadrer</b> une image : le cadre tombe juste, plus de doublon'],
       art: 'list', accent: '#b3762a', accent2: '#c04343', dur: 7500 },
-    { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
-  ]
-});
-
-/* 1.56 : PDF dans Alixo (annotations, pages, AlixoAI), bloc Scan, co-édition refaite, intégrations MCP */
-AlixoWhatsNew.register('1.56.0', {
-  scenes: [
-    { kind: 'intro', kicker: 'Mise à jour installée', title: 'Vos <em>PDF</em> dans Alixo,<br>et bien plus', text: 'Cinq nouveautés, en moins d’une minute.', dur: 5000 },
-    { title: 'Vos <em>PDF</em> s’ouvrent ici', text: 'Double-clic sur un PDF de la bibliothèque : il s’ouvre dans un onglet, comme une séance.',
-      bullets: ['<b>Annotez</b> : stylo, surligneur, post-it, tampons, signature', '<b>Réorganisez</b> les pages, fusionnez, remplissez les formulaires', '<b>Ctrl+S</b> enregistre dans le fichier lui-même'],
-      art: { image: 'nouveautes/1.56.0-pdf.jpg', alt: 'Un PDF ouvert dans Alixo avec le volet Alixo AI' }, accent: '#c04343', accent2: '#3d6bb5', dur: 8000 },
-    { title: 'AlixoAI <em>lit</em> vos PDF', text: 'Bouton « Alixo AI » de la barre, sur l’application PC ou Mac.',
-      bullets: ['<b>Résumer</b>, expliquer ou traduire un passage', '<b>Quiz</b> et <b>fiche de révision</b> à partir du PDF', '<b>En séance</b> : le PDF devient un cours Alixo'],
-      art: { icon: '✨' }, accent: '#6d5bd0', accent2: '#b3762a', dur: 7500 },
-    { title: '<em>Scannez</em> une feuille', text: 'Tapez « / » puis « Scanner un document » : un QR code, une photo, une page entière.',
-      bullets: ['<b>Portrait ou paysage</b>, plusieurs pages d’affilée', '<b>Noir et blanc</b> pour un rendu bien lisible', '<b>Annotez</b> au stylo, au surligneur et aux formes'],
-      art: { image: 'nouveautes/1.56.0-scan.jpg', alt: 'Une feuille scannée annotée au surligneur et au rectangle' }, accent: '#2e8b6a', accent2: '#33658a', dur: 7500 },
-    { title: 'Travailler <em>à plusieurs</em>', text: 'La modification en direct d’une séance partagée a été refaite de fond en comble.',
-      bullets: ['<b>Rien ne se perd</b> : les deux textes sont gardés', '<b>Votre curseur</b> ne bouge plus, l’onglet non plus', '<b>Hors ligne</b> : tout est fusionné au retour du réseau'],
-      art: 'list', accent: '#33658a', accent2: '#2e8b6a', dur: 7500 },
-    { title: 'Claude et Cursor <em>connectés</em>', text: 'Paramètres › Intégrations : un jeton, un guide à copier, et votre assistant voit vos cours.',
-      bullets: ['<b>Lire et chercher</b> dans toute la bibliothèque', '<b>Créer</b> des séances et des dossiers', '<b>Révoquer</b> un jeton à tout moment'],
-      art: { svg: '<svg viewBox="0 0 24 24"><path d="M9 7V3M15 7V3"/><path d="M6 7h12v4a6 6 0 0 1-12 0Z"/><path d="M12 17v4"/></svg>' }, accent: '#8a4b9c', accent2: '#3d6bb5', dur: 7500 },
     { kind: 'outro', kicker: 'Bonne séance', title: 'C’est à vous.', text: 'Le détail est sur alixoapp.com/versions — et dans Paramètres › À propos.', dur: 6000 }
   ]
 });

@@ -1,0 +1,30 @@
+/* ============================================================
+   Alixo Share — lecteur d'un lien de partage sans compte (1.59.0, js/shareview.js)
+   body.guest : le visiteur consulte en lecture seule ; ce qui suppose un compte
+   (partager, télécharger, pseudo, présence) est masqué.
+   ============================================================ */
+body.guest #btn-share, body.guest #btn-export, body.guest #access-chips, body.guest .sh-mypseudo, body.guest #ln-shared .ln-next { display: none !important; }
+/* bandeau en tête de la page « Partagés avec moi » du visiteur */
+.shv-banner { align-items: center; }
+.shv-banner .sh-txt span { display: block; margin-top: 2px; line-height: 1.4; }
+.shv-banner .cta { flex: none; }
+/* « Ce lien n'est plus valable », « Le propriétaire a désactivé le lien », erreur */
+.shv-notice { display: flex; justify-content: center; padding: 40px 12px; }
+.shv-card { max-width: 460px; width: 100%; text-align: center; padding: 28px 26px; border: 1px solid var(--border); border-radius: var(--r); background: var(--paper); box-shadow: 0 8px 28px rgba(0, 0, 0, .06); }
+.shv-card h3 { font-size: 18px; font-weight: 700; margin: 0 0 8px; color: var(--ink); }
+.shv-card p { font-size: 13.5px; line-height: 1.55; color: var(--ink-2); margin: 0 0 18px; }
+.shv-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+/* pied d'information du visiteur (identifiant anonyme, responsabilité, confidentialité, signalement) */
+.shv-legal { margin: 18px 0 0; font-size: 12px; line-height: 1.5; color: var(--ink-3, var(--ink-2)); }
+.shv-card .shv-legal { text-align: left; border-top: 1px solid var(--border); padding-top: 12px; }
+.shv-legal a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+.shv-legal a:hover { color: var(--ink); }
+#ro-banner .ro-privacy { color: inherit; text-decoration: underline; text-underline-offset: 2px; margin-right: 8px; }
+/* bandeau au-dessus de la séance : « créez un compte pour modifier » */
+body.guest #ro-banner .ro-guest { color: var(--ink-2); }
+body.guest #ro-banner button { background: var(--tint); color: #fff; padding: 5px 12px; }
+body.guest #ro-banner button:hover { background: var(--tint); filter: brightness(1.08); }
+@media (max-width: 760px) {
+  .shv-banner { flex-wrap: wrap; }
+  .shv-banner .cta { width: 100%; }
+}

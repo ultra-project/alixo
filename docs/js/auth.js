@@ -54,6 +54,14 @@ window.AlixoAuth = (() => {
   try { cached = JSON.parse(localStorage.getItem(SESSION_KEY)); } catch { cached = null; }
   if (cached && !cached.uid) cached = null;
 
+  /* 1.59.0 : lien de partage ouvert sans compte (…/docs/?join=<code de 20 caractères>) — js/shareview.js le lit avec une
+     connexion Firebase anonyme. Le code est le seul paramètre « join » qui ouvre Alixo sans écran de connexion ; un code
+     d'entreprise (ALXB-…, Alixo Business) garde son chemin : écran de connexion, champ pré-rempli. */
+  const SHARE_CODE_RE = /^[A-Za-z0-9]{20}$/;
+  const joinQuery = (() => { try { return new URLSearchParams(location.search).get('join') || ''; } catch { return ''; } })();
+  /* code d'un lien de partage à lire en visiteur : seulement sans session (un compte connecté passe par AlixoShare.joinByCode) */
+  const guestCode = () => (!cached && SHARE_CODE_RE.test(joinQuery) ? joinQuery : '');
+
   let auth = null;
   if (CONFIG && window.firebase) {
     try {
@@ -61,6 +69,24 @@ window.AlixoAuth = (() => {
       auth = firebase.auth();
       auth.languageCode = 'fr';
     } catch (e) { console.error('Firebase init impossible :', e); }
+  }
+
+  /* 1.59.0 : persistance de la session Firebase. Le visiteur anonyme (lecteur d'un lien de partage) n'est gardé que dans
+     l'onglet (SESSION) ; une vraie connexion repasse d'abord en LOCAL (la persistance choisie reste acquise à l'instance auth
+     tant qu'on ne la change pas) — sinon le compte se perdrait à la fermeture de l'onglet. */
+  async function persist(mode) {
+    if (!auth || typeof auth.setPersistence !== 'function') return;
+    const P = firebase.auth.Auth && firebase.auth.Auth.Persistence;
+    if (!P || !P[mode]) return;
+    try { await auth.setPersistence(P[mode]); } catch (e) { console.warn('Persistance de session :', e); }
+  }
+  /* une vraie connexion (e-mail, Google, Apple) : persistance LOCAL d'abord ; si elle échoue alors qu'un visiteur anonyme
+     était connecté, celui-ci revient en SESSION */
+  async function realSignIn(fn) {
+    const anon = !!(auth && auth.currentUser && auth.currentUser.isAnonymous);
+    await persist('LOCAL');
+    try { return await fn(); }
+    catch (e) { if (anon && auth.currentUser && auth.currentUser.isAnonymous) await persist('SESSION'); throw e; }
   }
 
   /* ---------- clé de stockage du compte courant (synchrone) ---------- */
@@ -187,7 +213,7 @@ window.AlixoAuth = (() => {
 
     /* 1.32 : code d'entreprise (Alixo Business) — saisi à la création du compte, ou pris dans l'adresse ?join=CODE */
     const JOIN_LS = 'alixo.joinCode';
-    const joinParam = (() => { try { return new URLSearchParams(location.search).get('join') || ''; } catch { return ''; } })();
+    const joinParam = SHARE_CODE_RE.test(joinQuery) ? '' : joinQuery;   // 1.59.0 : un code de lien de partage n'est pas un code d'entreprise
     const orgCode = () => ($a('#auth-org').value || '').trim().toUpperCase().replace(/\s+/g, '');
     const keepOrgCode = () => { try { const c = orgCode(); if (c) localStorage.setItem(JOIN_LS, c); } catch { /* stockage indisponible */ } };
     function setMode(m) {
@@ -261,13 +287,13 @@ window.AlixoAuth = (() => {
       try {
         let cred;
         if (mode === 'signup') {
-          cred = await auth.createUserWithEmailAndPassword(email, pass);
+          cred = await realSignIn(() => auth.createUserWithEmailAndPassword(email, pass));
           markNewAccount(cred.user); keepOrgCode();
           const name = $a('#auth-name').value.trim();
           if (name) { await cred.user.updateProfile({ displayName: name }); }
           busy(false); showVerify(cred.user); return;        // 1.29 : l'adresse doit être confirmée avant d'entrer
         } else {
-          cred = await auth.signInWithEmailAndPassword(email, pass);
+          cred = await realSignIn(() => auth.signInWithEmailAndPassword(email, pass));
           if (mustVerify(cred.user)) { busy(false); showVerify(cred.user); return; }
           if (orgCode()) { err('Un code d’entreprise s’utilise avec un nouveau compte (« Créer un compte »), pas avec un compte existant.'); busy(false); return; }
         }
@@ -300,10 +326,10 @@ window.AlixoAuth = (() => {
           }
           const tok = await window.alixoDesktop.googleOAuth(GOOGLE_DESKTOP.clientId, GOOGLE_DESKTOP.clientSecret || '');
           const gcred = firebase.auth.GoogleAuthProvider.credential(tok.idToken, tok.accessToken || null);
-          cred = await auth.signInWithCredential(gcred);
+          cred = await realSignIn(() => auth.signInWithCredential(gcred));
           if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) { markNewAccount(cred.user); keepOrgCode(); }
         } else {
-          cred = await auth.signInWithPopup(new firebase.auth.GoogleAuthProvider());
+          cred = await realSignIn(() => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
           if (cred && cred.additionalUserInfo && cred.additionalUserInfo.isNewUser) { markNewAccount(cred.user); keepOrgCode(); }
         }
         await done(cred.user);
@@ -324,14 +350,15 @@ window.AlixoAuth = (() => {
         if (isDesktop) {
           if (!window.alixoDesktop.appleOAuth) { err('Mettez Alixo à jour pour vous connecter avec Apple sur PC.'); busy(false); return; }
           const json = await window.alixoDesktop.appleOAuth(APPLE_RELAY_URL);
-          cred = await auth.signInWithCredential(credFromJSON(json));
+          cred = await realSignIn(() => auth.signInWithCredential(credFromJSON(json)));
         } else {
           try {
-            cred = await auth.signInWithPopup(appleProvider());
+            cred = await realSignIn(() => auth.signInWithPopup(appleProvider()));
           } catch (ex) {
             if (!POPUP_FALLBACK.has(ex && ex.code) && !standalone) throw ex;
             // pop-up impossible : on passe par une redirection, la connexion se termine au retour (finishRedirect)
             sessionStorage.setItem(REDIRECT_KEY, '1');
+            await persist('LOCAL');
             await auth.signInWithRedirect(appleProvider());
             return;
           }
@@ -404,6 +431,9 @@ window.AlixoAuth = (() => {
   if (auth) {
     let first = true;
     auth.onAuthStateChanged(user => {
+      /* 1.59.0 : visiteur anonyme (lecteur d'un lien de partage, js/shareview.js) : jamais de session alixo.session.v1, pas de
+         rechargement — la vraie connexion qui suivra (écran de connexion) passera ici avec un compte et fera setSession + reload */
+      if (user && user.isAnonymous) return;
       if (!first) return;
       first = false;
       if (redirectPending) return;   // finishRedirect s'en charge (nom Apple, nouveau compte)
@@ -425,6 +455,7 @@ window.AlixoAuth = (() => {
     // Écran de connexion au démarrage : service configuré, personne de connecté,
     // et l'utilisateur n'a pas choisi « continuer sans compte ».
     if (CONFIG && !cached && !localStorage.getItem(LOCAL_MODE_KEY)) {
+      if (guestCode()) return;   // 1.59.0 : lien de partage ouvert sans compte — lecture en visiteur (js/shareview.js), sans poser alixo.localmode
       if (document.body) showOverlay();
       else document.addEventListener('DOMContentLoaded', showOverlay);
     }
@@ -439,6 +470,16 @@ window.AlixoAuth = (() => {
     user: () => (auth ? auth.currentUser : null),
     firebaseAuth: () => auth,
     openAuthOverlay: () => { localStorage.removeItem(LOCAL_MODE_KEY); showOverlay(); },
+    /* 1.59.0 : lecteur d'un lien de partage sans compte (js/shareview.js) — code du lien à lire en visiteur ('' sinon) et
+       connexion Firebase anonyme (à activer : console Firebase › Authentication › Sign-in method › Anonyme, SETUP-COMPTES.md § 2) */
+    guestCode,
+    signInAnonymously: async () => {
+      if (!auth) throw new Error('Service en ligne non configuré (voir SETUP-COMPTES.md).');
+      await persist('SESSION');   // 1.59.0 : le visiteur ne survit pas à l'onglet
+      return auth.signInAnonymously();
+    },
+    /* 1.59.0 : fin de la lecture en visiteur (fermeture de l'onglet) — ne déconnecte qu'un anonyme, jamais un compte */
+    signOutGuest: () => { const u = auth && auth.currentUser; if (u && u.isAnonymous) { try { auth.signOut(); } catch { /* */ } } },
     /* 1.29 : compte ancien dont l'adresse n'est pas confirmée (rappel dans l'application) + envoi du lien */
     needsVerification: () => shouldVerify(auth && auth.currentUser),
     sendVerification: async () => { const u = auth && auth.currentUser; if (!u) throw new Error('Aucun compte connecté.'); await sendVerification(u); return u.email || ''; },
